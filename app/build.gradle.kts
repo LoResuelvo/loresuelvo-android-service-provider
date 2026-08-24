@@ -4,6 +4,22 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    // Added in Fase 1
+    // Hilt and KSP are loaded from buildscript classpath in the root
+    // build.gradle.kts so we can force com.squareup:javapoet:1.13.0
+    // on the plugin classpath. Both plugins are applied here with
+    // `id(...)` to share the classloader. See the comment in
+    // build.gradle.kts (root) for context.
+    id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.navigation.safeargs)
+    // Fix: Hilt 2.50 + KSP 2.0.21-1.0.28 incompatibility. KAPT is used
+    // for the Hilt annotation processor instead of KSP, even though
+    // the KSP plugin is applied. The combination works because Hilt's
+    // processor runs through KAPT (kapt configuration) while KSP is
+    // used for kotlinx-serialization and any future code generators.
+    id("org.jetbrains.kotlin.kapt")
 }
 
 // ==========================================
@@ -31,6 +47,9 @@ android {
         applicationId = "com.loresuelvo.serviceprovider"
         minSdk = 24
         targetSdk = 35
+
+        // Added in Fase 1: HiltTestRunner for instrumented tests with Hilt
+        testInstrumentationRunner = "com.loresuelvo.serviceprovider.HiltTestRunner"
     }
 
     buildTypes {
@@ -56,8 +75,6 @@ android {
         buildConfig = true
     }
 
-    // Fase 0 (setup): enable Robolectric + Android resources in unit tests.
-    // BDD: only run scenarios that don't carry the `@wip` marker.
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
@@ -179,27 +196,49 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.junit.ktx)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.security.crypto)
 
-    // Unit Testing (src/test)
+    // Hilt (added in Fase 1)
+    implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.navigation.compose)
+    kapt(libs.hilt.android.compiler)
+
+    // Networking (added in Fase 1)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.kotlinx.serialization.converter)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.kotlinx.serialization.json)
+
+    // Unit Testing (Capa de Dominio - src/test)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
+    // Compose UI testing in src/test/ via Robolectric.
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.cucumber.java)
     testImplementation(libs.cucumber.junit)
-    testImplementation(libs.okhttp.mockwebserver)
 
-    // UI Testing (src/androidTest)
+    // UI Testing (Capa de Aceptación/UI - src/androidTest)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.espresso.intents)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    // Hilt testing (added in Fase 1)
+    androidTestImplementation(libs.hilt.android.testing)
+    kaptAndroidTest(libs.hilt.android.compiler)
 
     // Debugging (Previews y Manifest para tests)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // Auth0
+    implementation("com.auth0.android:auth0:2.11.0")
+    testImplementation(kotlin("test"))
 }
