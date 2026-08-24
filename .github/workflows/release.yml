@@ -1,0 +1,101 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Create Gradle Properties
+        run: |
+          mkdir -p ~/.gradle
+          cat > ~/.gradle/gradle.properties <<EOF
+          # ==========================================
+          # STAGING
+          # ==========================================
+          AUTH0_DOMAIN_STAGING=${{ secrets.AUTH0_DOMAIN_STAGING }}
+          AUTH0_CLIENT_ID_STAGING=${{ secrets.AUTH0_CLIENT_ID_STAGING }}
+          AUTH0_CLIENT_SECRET_STAGING=${{ secrets.AUTH0_CLIENT_SECRET_STAGING }}
+          AUTH0_AUDIENCE_STAGING=${{ secrets.AUTH0_AUDIENCE_STAGING }}
+          AUTH0_SCHEME_STAGING=${{ secrets.AUTH0_SCHEME_STAGING }}
+          API_URL_STAGING=${{ secrets.API_URL_STAGING }}
+          NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL_STAGING=${{ secrets.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL_STAGING }}
+          # ==========================================
+          # PRODUCTION
+          # ==========================================
+          AUTH0_DOMAIN_PROD=${{ secrets.AUTH0_DOMAIN_PROD }}
+          AUTH0_CLIENT_ID_PROD=${{ secrets.AUTH0_CLIENT_ID_PROD }}
+          AUTH0_CLIENT_SECRET_PROD=${{ secrets.AUTH0_CLIENT_SECRET_PROD }}
+          AUTH0_AUDIENCE_PROD=${{ secrets.AUTH0_AUDIENCE_PROD }}
+          AUTH0_SCHEME_PROD=${{ secrets.AUTH0_SCHEME_PROD }}
+          API_URL_PROD=${{ secrets.API_URL_PROD }}
+          NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL_PROD=${{ secrets.NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL_PROD }}
+          EOF
+
+      - name: Build Staging APK
+        run: ./gradlew assembleStagingRelease
+
+      - name: Build Production Bundle
+        run: ./gradlew bundleProdRelease
+
+      - name: Upload Staging APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-apk
+          path: app/build/outputs/apk/staging/release/*.apk
+
+      - name: Upload Production Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-aab
+          path: app/build/outputs/bundle/prodRelease/*.aab
+
+  release-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Download Staging APK
+        uses: actions/download-artifact@v4
+        with:
+          name: staging-apk
+          path: artifacts
+
+      - name: Show generated artifact
+        run: |
+          echo "Staging release generated successfully"
+          ls -la artifacts
+
+  release-prod:
+    needs: release-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download Production Bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: prod-aab
+          path: artifacts
+
+      - name: Show generated artifact
+        run: |
+          echo "Production release generated successfully"
+          ls -la artifacts
