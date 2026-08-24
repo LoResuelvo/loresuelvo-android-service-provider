@@ -2,7 +2,32 @@
 <resources>
     <string name="app_name">LoResuelvo Prestador</string>
 
-    <!-- Home screen (placeholder Fase 0) -->
-    <string name="home_title">LoResuelvo — Prestador</string>
-    <string name="home_greeting">Hola, prestador</string>
+    <!-- Branding -->
+    <string name="app_logo_content_description">Logo de LoResuelvo</string>
+    <string name="brand_name">LoResuelvo</string>
+
+    <!-- Welcome screen -->
+    <string name="welcome_login">Iniciar sesión</string>
+    <string name="welcome_badge_verified">Profesionales certificados</string>
+    <string name="welcome_title">Ofrecé tus servicios profesionales</string>
+    <string name="welcome_subtitle">Conectá con clientes que necesitan lo que sabés hacer.</string>
+    <string name="welcome_register">Registrarme</string>
+    <string name="welcome_google">Continuar con Google</string>
+    <string name="welcome_legal">Al continuar aceptás nuestros Términos de Servicio y Política de Privacidad.</string>
+    <string name="welcome_categories_error">No pudimos cargar las categorías. Intentá de nuevo más tarde.</string>
+    <string name="welcome_auth_error">No pudimos iniciar sesión. Intentá de nuevo.</string>
+    <string name="welcome_auth_network_error">No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.</string>
+    <string name="welcome_auth_server_error">El servicio no está disponible (código %1$d). Intentá más tarde.</string>
+    <string name="welcome_auth_unauthorized_error">Tu sesión no es válida. Volvé a iniciar sesión.</string>
+
+    <!-- Welcome · how it works (3 pasos del prestador) -->
+    <string name="welcome_step1_title">Publicá tus servicios</string>
+    <string name="welcome_step1_description">Detallá lo que ofrecés y tu zona de cobertura.</string>
+    <string name="welcome_step2_title">Recibí solicitudes</string>
+    <string name="welcome_step2_description">Los clientes te contactan cuando te necesitan.</string>
+    <string name="welcome_step3_title">Cobrá tu trabajo</string>
+    <string name="welcome_step3_description">Cobrá de forma segura por el trabajo hecho.</string>
+
+    <!-- Home screen placeholder (llega en otra US) -->
+    <string name="home_placeholder_title">Inicio (próximamente)</string>
 </resources>

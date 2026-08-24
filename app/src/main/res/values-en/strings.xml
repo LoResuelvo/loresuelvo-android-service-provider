@@ -2,7 +2,32 @@
 <resources>
     <string name="app_name">LoResuelvo Provider</string>
 
-    <!-- Home screen (placeholder Fase 0) -->
-    <string name="home_title">LoResuelvo — Provider</string>
-    <string name="home_greeting">Hello, provider</string>
+    <!-- Branding -->
+    <string name="app_logo_content_description">LoResuelvo logo</string>
+    <string name="brand_name">LoResuelvo</string>
+
+    <!-- Welcome screen -->
+    <string name="welcome_login">Log in</string>
+    <string name="welcome_badge_verified">Certified professionals</string>
+    <string name="welcome_title">Offer your professional services</string>
+    <string name="welcome_subtitle">Connect with customers who need what you know how to do.</string>
+    <string name="welcome_register">Sign up</string>
+    <string name="welcome_google">Continue with Google</string>
+    <string name="welcome_legal">By continuing you accept our Terms of Service and Privacy Policy.</string>
+    <string name="welcome_categories_error">We couldn\'t load the categories. Please try again later.</string>
+    <string name="welcome_auth_error">We couldn\'t sign you in. Please try again.</string>
+    <string name="welcome_auth_network_error">We couldn\'t connect. Check your connection and try again.</string>
+    <string name="welcome_auth_server_error">The service is unavailable (code %1$d). Try again later.</string>
+    <string name="welcome_auth_unauthorized_error">Your session is invalid. Please sign in again.</string>
+
+    <!-- Welcome · how it works -->
+    <string name="welcome_step1_title">Publish your services</string>
+    <string name="welcome_step1_description">Detail what you offer and your coverage area.</string>
+    <string name="welcome_step2_title">Receive requests</string>
+    <string name="welcome_step2_description">Customers reach out when they need you.</string>
+    <string name="welcome_step3_title">Get paid for your work</string>
+    <string name="welcome_step3_description">Get paid securely for the work done.</string>
+
+    <!-- Home screen placeholder (lands in another US) -->
+    <string name="home_placeholder_title">Home (coming soon)</string>
 </resources>

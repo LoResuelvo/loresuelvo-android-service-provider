@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Ilustrative service categories for the Welcome chips.
+      Mirrors the consumer app so both apps share the same taxonomy
+      on the public, pre-auth surface.
+    -->
+    <string-array name="welcome_categories">
+        <item>Plomería</item>
+        <item>Electricidad</item>
+        <item>Pintura</item>
+        <item>Gas</item>
+        <item>Carpintería</item>
+        <item>Aire acondicionado</item>
+    </string-array>
+</resources>
