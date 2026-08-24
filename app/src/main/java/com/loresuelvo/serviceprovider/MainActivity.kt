@@ -3,28 +3,30 @@ package com.loresuelvo.serviceprovider
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.loresuelvo.serviceprovider.ui.screens.home.HomeScreen
+import com.loresuelvo.serviceprovider.ui.navigation.LoResuelvoNav
+import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * Single-Activity host. `@AndroidEntryPoint` is required so Hilt
+ * can resolve `@HiltViewModel` consumers inside the navigation
+ * graph (Welcome's ViewModel is the first one injected in the
+ * process). Without the annotation the first `hiltViewModel()` call
+ * crashes with `IllegalStateException: Given component holder class
+ * MainActivity does not implement interface
+ * dagger.hilt.internal.GeneratedComponent`.
+ *
+ * `onCreate` is intentionally minimal: composition root lives in
+ * [LoResuelvoNav] and theme wrapping lives in [LoresuelvoTheme].
+ */
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { LoResuelvoApp() }
-    }
-}
-
-@Composable
-private fun LoResuelvoApp() {
-    Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
-        HomeScreen(
-            title = stringResource(R.string.home_title),
-            greeting = stringResource(R.string.home_greeting),
-            modifier = Modifier.padding(padding),
-        )
+        setContent {
+            LoresuelvoTheme {
+                LoResuelvoNav()
+            }
+        }
     }
 }
