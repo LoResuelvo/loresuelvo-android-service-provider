@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dev-flavor manifest overlay. Attaches the cleartext-permitting
+  network security config to the application node so debug builds
+  can reach a plain-HTTP local backend. Merged only into the `dev`
+  flavor; staging/prod are unaffected.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:networkSecurityConfig="@xml/network_security_config" />
+
+</manifest>
