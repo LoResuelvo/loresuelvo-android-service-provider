@@ -210,7 +210,8 @@ Lectura de variables: prioridad `local.properties` > gradle property > env > def
 
 ## CI / CD
 
-- **CI** (`.github/workflows/ci.yml`): corre en cada push a `main` y cada PR. Ejecuta `make lint`, `make test`, `make e2e` (con `android-emulator-runner`) y `make build` para `FLAVOR=Staging`. Las credenciales se inyectan desde GitHub Secrets.
+- **CI** (`.github/workflows/ci.yml`): corre en cada push a `main` y cada PR. Ejecuta `make lint`, `make test`, `make e2e` con un AVD Pixel 2 API 35 prewarming y snapshot `ci-clean`, y `make build` para `FLAVOR=Staging`. Las credenciales se inyectan desde GitHub Secrets.
+- **Bootstrap AVD** (`.github/workflows/avd-bootstrap.yml`): workflow manual que crea y guarda el snapshot prewarming usado por CI. Incrementar `cache_version` al cambiar la configuración del emulador.
 - **Release** (`.github/workflows/release.yml`): corre cuando se pushea un tag `v*.*.*`. Construye Staging APK y Prod AAB, los sube como artifacts, y depende de los environments `staging` y `production` para protección.
 
 Secrets requeridos en GitHub:

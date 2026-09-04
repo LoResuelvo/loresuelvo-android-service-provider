@@ -90,6 +90,14 @@ Todos los targets aceptan `FLAVOR=Dev|Staging|Prod` (default: `Dev`).
 | `make clean` | `./gradlew clean`. |
 | `make devices` | `adb devices`. |
 
+### GitHub Actions
+
+El job de E2E usa un AVD Pixel 2 API 35 prewarming con el snapshot
+`ci-clean`, restaurado desde cache para evitar recrearlo en cada runner. Antes
+del primer CI, ejecutar manualmente el workflow `Bootstrap CI AVD`. Si cambia
+la configuración del emulador, incrementar `cache_version` y volver a ejecutar
+ese workflow.
+
 Para invocar `./gradlew` directamente con un test focalizado:
 
 ```bash
