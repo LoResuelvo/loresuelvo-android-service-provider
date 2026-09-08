@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   executeCheck,
   extractLocations,
@@ -10,6 +11,8 @@ import {
   summarizeFailureOutput,
 } from "../lib/execute-check.mjs";
 import { redactSecrets } from "../lib/redact-secrets.mjs";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 test("summarizeFailureOutput strips stack noise and stays bounded", () => {
   const output = [
@@ -153,7 +156,7 @@ test("no_wip_in_scope checks only declared Android feature scope", async (t) => 
 });
 
 test("command execution times out and records a bounded diagnostic", async () => {
-  const repoRoot = process.cwd();
+  const repoRoot = ROOT;
   const result = await executeCheck({
     check: {
       id: "delivery_unit",
