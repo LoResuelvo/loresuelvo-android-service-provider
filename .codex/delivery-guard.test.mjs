@@ -52,7 +52,7 @@ test("Codex hook configuration points to the repository-relative guard", async (
     hooks: [
       {
         type: "command",
-        command: "node \"$(git rev-parse --show-toplevel)/.codex/delivery-guard.mjs\"",
+        command: "\"$(git rev-parse --show-toplevel)/scripts/with-node-24.sh\" node \"$(git rev-parse --show-toplevel)/.codex/delivery-guard.mjs\"",
         timeout: 1200,
         statusMessage: "Verifying delivery evidence",
       },
@@ -60,12 +60,19 @@ test("Codex hook configuration points to the repository-relative guard", async (
   });
 });
 
+test("Codex MCP starts through the repository-relative Node.js 24 wrapper", async () => {
+  const config = await fs.readFile(path.join(repositoryRoot, ".codex/config.toml"), "utf8");
+  assert.match(config, /command = "scripts\/with-node-24\.sh"/);
+  assert.match(config, /args = \["node", "tools\/delivery-mcp\/server\.mjs"\]/);
+  assert.doesNotMatch(config, /command = "node"/);
+});
+
 test("versioned Git hooks delegate to the delivery CLI without running suites", async () => {
   const expectedCommands = {
-    "pre-commit": "node tools/delivery-mcp/cli.mjs hook pre-commit",
-    "commit-msg": "node tools/delivery-mcp/cli.mjs hook commit-msg \"$1\"",
-    "post-commit": "node tools/delivery-mcp/cli.mjs hook post-commit",
-    "pre-push": "node tools/delivery-mcp/cli.mjs hook pre-push",
+    "pre-commit": "exec \"$REPOSITORY_ROOT/scripts/with-node-24.sh\" node \"$REPOSITORY_ROOT/tools/delivery-mcp/cli.mjs\" hook pre-commit",
+    "commit-msg": "exec \"$REPOSITORY_ROOT/scripts/with-node-24.sh\" node \"$REPOSITORY_ROOT/tools/delivery-mcp/cli.mjs\" hook commit-msg \"$1\"",
+    "post-commit": "exec \"$REPOSITORY_ROOT/scripts/with-node-24.sh\" node \"$REPOSITORY_ROOT/tools/delivery-mcp/cli.mjs\" hook post-commit",
+    "pre-push": "exec \"$REPOSITORY_ROOT/scripts/with-node-24.sh\" node \"$REPOSITORY_ROOT/tools/delivery-mcp/cli.mjs\" hook pre-push",
   };
 
   for (const [hookName, command] of Object.entries(expectedCommands)) {

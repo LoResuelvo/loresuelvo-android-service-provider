@@ -1,7 +1,8 @@
 .PHONY: help up build lint test e2e test-all-once ci clean devices \
 	delivery-install delivery-mcp delivery-test delivery-smoke delivery-inspect \
 	delivery-prepare delivery-context delivery-ci delivery-finalize \
-	delivery-verify-head delivery-hooks-install delivery-hooks-status
+	delivery-verify-head delivery-job-wait delivery-job-cancel \
+	delivery-hooks-install delivery-hooks-status
 
 # Keep Android toolchain resolution in one place. The wrapper sets up Java,
 # Android SDK, ADB, and emulator paths before executing the requested command.
@@ -11,8 +12,13 @@ ADB := adb
 
 FLAVOR ?= Dev
 DELIVERY_DIR ?= tools/delivery-mcp
-DELIVERY_NODE ?= node
-DELIVERY_CLI = $(DELIVERY_NODE) $(DELIVERY_DIR)/cli.mjs
+NODE24_ENV := ./scripts/with-node-24.sh
+# Set DELIVERY_NODE to an explicit Node executable; the wrapper validates that
+# it reports major version 24 before any delivery command starts.
+DELIVERY_NODE ?=
+DELIVERY_NODE_ARGS = $(if $(strip $(DELIVERY_NODE)),--node $(DELIVERY_NODE))
+DELIVERY_RUN = $(NODE24_ENV) $(DELIVERY_NODE_ARGS)
+DELIVERY_CLI = $(DELIVERY_RUN) node $(DELIVERY_DIR)/cli.mjs
 
 help:
 	@echo "Available commands:"
@@ -36,6 +42,8 @@ help:
 	@echo "  make delivery-ci ARGS=\"...\""
 	@echo "  make delivery-finalize ARGS=\"...\""
 	@echo "  make delivery-verify-head ARGS=\"...\""
+	@echo "  make delivery-job-wait ARGS=\"--job-id <job-id> [--timeout-ms <ms>]\""
+	@echo "  make delivery-job-cancel ARGS=\"--job-id <job-id> [--reason <text>]\""
 	@echo "  make delivery-hooks-install"
 	@echo "  make delivery-hooks-status"
 	@echo ""
@@ -66,16 +74,16 @@ devices:
 	$(ANDROID_ENV) $(ADB) devices
 
 delivery-install:
-	npm ci --prefix $(DELIVERY_DIR)
+	$(DELIVERY_RUN) npm ci --prefix $(DELIVERY_DIR)
 
 delivery-mcp:
-	$(DELIVERY_NODE) $(DELIVERY_DIR)/server.mjs $(ARGS)
+	$(DELIVERY_RUN) node $(DELIVERY_DIR)/server.mjs $(ARGS)
 
 delivery-test:
 	$(DELIVERY_CLI) test $(ARGS)
 
 delivery-smoke:
-	$(DELIVERY_NODE) $(DELIVERY_DIR)/smoke.mjs $(ARGS)
+	$(DELIVERY_RUN) node $(DELIVERY_DIR)/smoke.mjs $(ARGS)
 
 delivery-inspect:
 	$(DELIVERY_CLI) inspect $(ARGS)
@@ -94,6 +102,12 @@ delivery-finalize:
 
 delivery-verify-head:
 	$(DELIVERY_CLI) verify-head $(ARGS)
+
+delivery-job-wait:
+	$(DELIVERY_CLI) job-wait $(ARGS)
+
+delivery-job-cancel:
+	$(DELIVERY_CLI) job-cancel $(ARGS)
 
 delivery-hooks-install:
 	$(DELIVERY_CLI) hooks install $(ARGS)

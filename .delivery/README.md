@@ -39,13 +39,14 @@ check ID and run with bounded output and timeouts. Runtime jobs, logs, caches,
 and generated evidence belong under `.delivery/runtime/` and are ignored by
 Git. The required runtime is Node.js 24 LTS (`>=24 <25`).
 
-Use the package-local commands from the repository root:
+Use the repository Make targets from the repository root so Node 24 is
+discovered and validated consistently:
 
 ```bash
-npm ci --prefix tools/delivery-mcp
-npm --prefix tools/delivery-mcp test
-npm --prefix tools/delivery-mcp run smoke
-npm --prefix tools/delivery-mcp run mcp
+make delivery-install
+make delivery-test
+make delivery-smoke
+make delivery-mcp
 ```
 
 The CLI entry point is `tools/delivery-mcp/cli.mjs`; use the repository Make
@@ -63,6 +64,14 @@ npm --prefix tools/delivery-mcp run cli -- ci --sha <commit-sha>
 npm --prefix tools/delivery-mcp run cli -- hooks status
 ```
 
+Recoverable jobs returned by prepare, test, verification, or finalization can
+be controlled without an MCP client:
+
+```bash
+make delivery-job-wait ARGS="--job-id <job-id> --timeout-ms 60000"
+make delivery-job-cancel ARGS="--job-id <job-id> --reason 'No longer needed'"
+```
+
 `make delivery-test ARGS="..."` delegates to that CLI test command for
 focused TDD modes. The policy's delivery-tooling Gate A check is the complete
 unit suite `npm --prefix tools/delivery-mcp test`.
@@ -70,8 +79,10 @@ unit suite `npm --prefix tools/delivery-mcp test`.
 The repository's canonical GNU Make entry point is `Makefile`. Android
 targets (`build`, `lint`, `test`, `e2e`, `clean`, and `devices`) delegate
 toolchain setup and command execution through
-`scripts/with-android-env.sh`; delivery targets remain direct Node entry
-points and do not require an Android emulator.
+`scripts/with-android-env.sh`. Delivery targets, repository Git hooks, and
+Codex delivery entry points similarly delegate Node 24 discovery and
+validation through `scripts/with-node-24.sh`; they do not require an Android
+emulator.
 
 The safe Android checks delegated to `make` are exactly:
 
@@ -86,8 +97,10 @@ make build FLAVOR=Staging
 make e2e FLAVOR=Staging
 ```
 
-They require a Java 17 and Gradle toolchain configured by the host. The
-instrumented check needs a connected device or emulator.
+The Android wrapper discovers Java 17 and the Android SDK from explicit
+environment values, `local.properties`, standard locations, or a
+repository-sibling `.toolchains` directory. The instrumented check still
+needs a connected device or emulator.
 
 ## Commit format
 
@@ -99,11 +112,10 @@ The allowed types are `feat`, `fix`, `refactor`, `test`, `chore`, `docs`,
 
 ## CI and Android topology
 
-The checked-in CI workflow runs Java 17, Staging lint/JVM/build checks, and
-instrumented tests on a Pixel 6/API 34 x86_64 emulator. It does not yet invoke
-the delivery package test or smoke commands; those remain part of shadow-mode
-validation until a human updates the workflow. There is no checked-in AVD
-bootstrap workflow or prewarmed snapshot. Gate C and Gate D use Dev
+The checked-in CI workflow runs the delivery package tests and smoke check,
+then Java 17, Staging lint/JVM/build checks, and instrumented tests on a Pixel
+6/API 34 x86_64 emulator. There is no checked-in AVD bootstrap workflow or
+prewarmed snapshot. Gate C and Gate D use Dev
 instrumented tests; Gate R reproduces the Staging checks and requires the
 failed CI SHA plus Staging credentials. Do not substitute Dev for Gate R.
 

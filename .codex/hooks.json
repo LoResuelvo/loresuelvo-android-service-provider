@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/.codex/delivery-guard.mjs\"",
+            "command": "\"$(git rev-parse --show-toplevel)/scripts/with-node-24.sh\" node \"$(git rev-parse --show-toplevel)/.codex/delivery-guard.mjs\"",
             "timeout": 1200,
             "statusMessage": "Verifying delivery evidence"
           }

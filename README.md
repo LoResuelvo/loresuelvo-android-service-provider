@@ -10,7 +10,8 @@ Compose. Agent rules and repository conventions live in
 - JDK 17 (`java -version`).
 - Android SDK Platform 35, Build Tools 35, Platform Tools, and command-line
   tools.
-- Node.js 24 LTS (`node --version`) for `tools/delivery-mcp`.
+- Node.js 24 LTS (`scripts/with-node-24.sh node --version`) for
+  `tools/delivery-mcp`.
 - GNU `make` and Bash.
 - An Android emulator or device only for instrumented checks (`make e2e`).
 
@@ -36,7 +37,7 @@ Verify the installation:
 ```bash
 scripts/with-android-env.sh sdkmanager --version
 scripts/with-android-env.sh java -version
-node --version
+scripts/with-node-24.sh node --version
 ```
 
 Every Android Make target delegates to `scripts/with-android-env.sh`. The
@@ -48,6 +49,12 @@ repository-sibling toolchain locations. It does not install toolchains or
 start an emulator; a missing JDK or SDK fails with an actionable diagnostic.
 Keep machine-specific SDK values in your shell or the ignored
 `local.properties` file; never commit them.
+
+Every delivery Make target, installed Git hook, and Codex delivery entry point
+delegates to `scripts/with-node-24.sh`. The wrapper honors an explicit
+`DELIVERY_NODE`, otherwise it discovers a repository-sibling `.toolchains`
+Node 24 installation or a Node 24 executable on `PATH`. It rejects other Node
+major versions with an actionable diagnostic.
 
 ## Setup
 
@@ -69,7 +76,7 @@ Keep machine-specific SDK values in your shell or the ignored
 3. Install the isolated delivery tooling:
 
    ```bash
-   npm ci --prefix tools/delivery-mcp
+   make delivery-install
    ```
 
 4. Build the Dev variant:
@@ -107,6 +114,8 @@ All Android targets accept `FLAVOR=Dev|Staging|Prod`; Dev is the default.
 | `make delivery-ci ARGS="--sha <commit-sha>"` | Inspect CI for a commit SHA. |
 | `make delivery-verify-head ARGS="--intent close_us --scope <feature>"` | Record Gate D evidence for the current HEAD. |
 | `make delivery-finalize ARGS="--intent close_us --scope <feature>"` | Finalize a batch or User Story. |
+| `make delivery-job-wait ARGS="--job-id <job-id>"` | Await a recoverable delivery job for a bounded interval. |
+| `make delivery-job-cancel ARGS="--job-id <job-id>"` | Cooperatively cancel a recoverable delivery job. |
 | `make delivery-hooks-install` | Install the repository Git hooks locally. |
 | `make delivery-hooks-status` | Report hook and enforcement state. |
 
@@ -181,6 +190,6 @@ and call the result CI parity.
 
 ### Delivery package or Node version failure
 
-Check `node --version` is 24.x, then run `npm ci --prefix tools/delivery-mcp`.
+Run `scripts/with-node-24.sh node --version`, then `make delivery-install`.
 Read [`AGENTS.md`](AGENTS.md) and [`.delivery/README.md`](.delivery/README.md)
 for policy, evidence, job recovery, and repair details.

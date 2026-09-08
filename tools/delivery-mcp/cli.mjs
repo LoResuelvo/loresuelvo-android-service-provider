@@ -9,6 +9,8 @@ import {
   DeliveryFinalizeInputSchema,
   DeliveryVerifyHeadInputSchema,
   DeliveryTestInputSchema,
+  DeliveryJobWaitInputSchema,
+  DeliveryJobCancelInputSchema,
   formatInputIssues,
 } from "./lib/input-schema.mjs";
 import { inspectCi } from "./lib/ci-provider.mjs";
@@ -32,6 +34,7 @@ import {
 import { captureGitSnapshot } from "./lib/git-snapshot.mjs";
 import { findRepoRoot } from "./lib/repo-root.mjs";
 import { redactSecrets } from "./lib/redact-secrets.mjs";
+import { waitForJob, cancelDeliveryJob } from "./lib/jobs.mjs";
 
 function usage() {
   return `Usage:
@@ -42,6 +45,8 @@ function usage() {
   make delivery-finalize ARGS="--intent <close_us|close_batch> [options]"
   make delivery-verify-head ARGS="[--intent close_us] [--us-id 33] [--scope-files ...]"
   make delivery-test ARGS="[options]"
+  make delivery-job-wait ARGS="--job-id <job-id> [--timeout-ms <milliseconds>]"
+  make delivery-job-cancel ARGS="--job-id <job-id> [--reason <text>]"
   make delivery-hooks-install
   make delivery-hooks-status
 
@@ -97,7 +102,15 @@ Options for delivery:verify-head:
   --us-id <numeric-id>
   --scope <app/src/test/resources/features/...feature> Repeat for the completed scope
   --scope-files <comma-separated feature files>
-  --force                                        Re-run checks instead of reusing cached evidence`;
+  --force                                        Re-run checks instead of reusing cached evidence
+
+Options for delivery-job-wait:
+  --job-id <job-id>                              Required recoverable job identifier
+  --timeout-ms <ms>                              Bounded wait: 100-180000 (default 60000)
+
+Options for delivery-job-cancel:
+  --job-id <job-id>                              Required recoverable job identifier
+  --reason <text>                                Optional cancellation reason (max 500 characters)`;
 }
 
 function takeValue(args, index, option) {
@@ -112,15 +125,45 @@ function parseArguments(argv) {
   let subAction = "";
   let hookArgs = [];
 
-  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "finalize", "verify-head", "verify_head", "test"].includes(args[0])) {
+  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel"].includes(args[0])) {
     command = args.shift();
     if (command === "verify_head") command = "verify-head";
+  }
+
+  if (command === "job") {
+    subAction = args.shift() || "";
+    if (subAction === "wait") command = "job-wait";
+    else if (subAction === "cancel") command = "job-cancel";
+    else throw new Error(`Unknown job action: ${subAction || "(missing)"}`);
   }
 
   if (command === "hooks" || command === "hook") {
     subAction = args.shift() || "";
     hookArgs = args;
     return { command, subAction, hookArgs, input: {}, pretty: false, help: false };
+  }
+
+  if (command === "job-wait" || command === "job-cancel") {
+    const input = {};
+    let pretty = false;
+    for (let index = 0; index < args.length; index += 1) {
+      const option = args[index];
+      if (option === "--help" || option === "-h") {
+        return { help: true, command, contextAction: "set", input, pretty };
+      }
+      if (option === "--pretty") {
+        pretty = true;
+        continue;
+      }
+
+      const value = takeValue(args, index, option);
+      index += 1;
+      if (option === "--job-id") input.jobId = value;
+      else if (option === "--timeout-ms" && command === "job-wait") input.timeoutMs = Number.parseInt(value, 10);
+      else if (option === "--reason" && command === "job-cancel") input.reason = value;
+      else throw new Error(`Unknown option for ${command}: ${option}`);
+    }
+    return { help: false, command, contextAction: "set", input, pretty };
   }
 
   const input = { intent: "prepare_commit", scopeFiles: [] };
@@ -227,6 +270,17 @@ function exitCode(command, status) {
   }
   if (status === "passed" || status === "no_changes" || status === "job_started" || status === "running") return 0;
   return status === "failed" ? 3 : 2;
+}
+
+function jobWaitExitCode(status) {
+  if (["passed", "no_changes", "running"].includes(status)) return 0;
+  if (["failed", "timed_out", "cancelled"].includes(status)) return 3;
+  return 2;
+}
+
+function jobCancelExitCode(status) {
+  if (["passed", "failed", "timed_out", "cancelled"].includes(status)) return 0;
+  return 2;
 }
 
 function writeJson(value, pretty) {
@@ -413,6 +467,25 @@ async function main() {
     process.exitCode = ["passed", "no_changes", "job_started", "running"].includes(res.status)
       ? 0
       : res.status === "failed" ? 3 : 2;
+    return;
+  }
+
+  // 5.9. Human job control (make delivery-job-wait / delivery-job-cancel)
+  if (options.command === "job-wait") {
+    const parsed = DeliveryJobWaitInputSchema.safeParse(options.input);
+    if (!parsed.success) throw new Error(formatInputIssues(parsed.error));
+    const result = await waitForJob({ repoRoot: root, ...parsed.data });
+    writeJson(result, options.pretty);
+    process.exitCode = jobWaitExitCode(result.status);
+    return;
+  }
+
+  if (options.command === "job-cancel") {
+    const parsed = DeliveryJobCancelInputSchema.safeParse(options.input);
+    if (!parsed.success) throw new Error(formatInputIssues(parsed.error));
+    const result = await cancelDeliveryJob({ repoRoot: root, ...parsed.data });
+    writeJson(result, options.pretty);
+    process.exitCode = jobCancelExitCode(result.status);
     return;
   }
 

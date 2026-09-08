@@ -48,6 +48,11 @@ Android SDK environment setup. Keep machine-specific toolchain values in the
 shell or ignored `local.properties`; never encode them in Make targets or
 documentation.
 
+Delivery Make targets, repository Git hooks, and Codex delivery entry points
+route through `scripts/with-node-24.sh`. The wrapper honors `DELIVERY_NODE`,
+then discovers a repository-sibling `.toolchains` Node 24 installation or a
+Node 24 executable on `PATH`; it rejects other Node major versions.
+
 ## Architecture
 
 ```text
@@ -161,6 +166,10 @@ Agents use the MCP operations `delivery_test`, `delivery_inspect`,
 Humans can use the matching `make delivery-*` targets. The executor uses
 `shell: false`, rejects arbitrary commands and environment assignments, and
 keeps generated evidence under `.delivery/runtime/`.
+
+For a recoverable background job, humans use `make delivery-job-wait
+ARGS="--job-id <job-id>"` or `make delivery-job-cancel ARGS="--job-id
+<job-id>"`; agents use the corresponding MCP operations.
 
 ### Gates
 

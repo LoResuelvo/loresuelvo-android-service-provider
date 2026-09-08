@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 set -e
-node tools/delivery-mcp/cli.mjs hook commit-msg "$1"
+REPOSITORY_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+exec "$REPOSITORY_ROOT/scripts/with-node-24.sh" node "$REPOSITORY_ROOT/tools/delivery-mcp/cli.mjs" hook commit-msg "$1"
