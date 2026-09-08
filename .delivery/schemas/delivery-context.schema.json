@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DeliveryContext",
+  "type": "object",
+  "required": ["schemaVersion", "createdAt", "branch", "headSha", "snapshotHash", "intent"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "createdAt": { "type": "string" },
+    "branch": { "type": "string" },
+    "headSha": { "type": "string" },
+    "snapshotHash": { "type": "string" },
+    "intent": {
+      "type": "string",
+      "enum": ["prepare_commit", "close_scenario", "close_batch", "close_us", "repair_ci"]
+    },
+    "usId": { "type": ["string", "null"] },
+    "featureFile": { "type": ["string", "null"] },
+    "scenarioName": { "type": ["string", "null"] },
+    "scopeFiles": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "repairsSha": { "type": ["string", "null"] },
+    "consumed": { "type": "boolean" },
+    "consumedAt": { "type": ["string", "null"] }
+  }
+}

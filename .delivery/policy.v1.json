@@ -1,0 +1,438 @@
+{
+  "$schema": "./schemas/policy.schema.json",
+  "version": 1,
+  "policyName": "loresuelvo-android-service-provider-delivery-policy",
+  "limits": {
+    "maxStagedFiles": 500,
+    "maxDiffSizeBytes": 2097152,
+    "maxSignals": 20,
+    "maxDiagnostics": 20,
+    "maxCheckLogBytes": 5242880,
+    "maxFailureSummaryLines": 6
+  },
+  "ci": {
+    "maxInFlightCommits": 4
+  },
+  "maintainabilityThresholds": {},
+  "analysis": {
+    "dependencyImpact": {
+      "enabled": false,
+      "adapter": "android"
+    },
+    "cucumberImpact": {
+      "enabled": false,
+      "adapter": "android-jvm"
+    },
+    "maintainability": {
+      "enabled": false,
+      "adapter": "android-compose"
+    }
+  },
+  "classification": {
+    "rules": [
+      {
+        "id": "human_only",
+        "category": "human_only",
+        "match": {
+          "prefixes": [
+            ".github/workflows/"
+          ]
+        },
+        "isGateCTrigger": false,
+        "isGate0Trigger": false,
+        "productSource": false
+      },
+      {
+        "id": "delivery_tooling",
+        "category": "delivery_tooling",
+        "match": {
+          "prefixes": [
+            "tools/delivery-mcp/",
+            ".delivery/",
+            ".githooks/",
+            ".codex/"
+          ]
+        },
+        "isGateCTrigger": false,
+        "isGate0Trigger": false,
+        "productSource": false
+      },
+      {
+        "id": "documentation",
+        "category": "non_code_docs_config",
+        "match": {
+          "exact": [
+            "AGENTS.md",
+            "CLAUDE.md",
+            "README.md",
+            "LICENSE",
+            ".gitignore"
+          ],
+          "prefixes": [
+            "docs/",
+            "skills/"
+          ],
+          "extensions": [
+            ".md",
+            ".mdx",
+            ".txt",
+            ".svg",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".ico"
+          ]
+        },
+        "isGateCTrigger": false,
+        "isGate0Trigger": false,
+        "productSource": false
+      },
+      {
+        "id": "bdd_features",
+        "category": "bdd_feature",
+        "match": {
+          "patterns": [
+            "^app/src/test/resources/features/.*\\.feature$"
+          ]
+        },
+        "isGateCTrigger": false,
+        "isGate0Trigger": true,
+        "productSource": false
+      },
+      {
+        "id": "jvm_tests",
+        "category": "jvm_test",
+        "match": {
+          "patterns": [
+            "^app/src/test/.*\\.(?:kt|java)$"
+          ]
+        },
+        "isGateCTrigger": false,
+        "isGate0Trigger": true,
+        "productSource": false
+      },
+      {
+        "id": "instrumented_tests",
+        "category": "instrumented_test",
+        "match": {
+          "prefixes": [
+            "app/src/androidTest/"
+          ]
+        },
+        "isGateCTrigger": true,
+        "isGate0Trigger": false,
+        "productSource": false
+      },
+      {
+        "id": "data_kotlin",
+        "category": "data_kotlin",
+        "match": {
+          "patterns": [
+            "^app/src/main(?:/[^/]*)?/data/.*\\.kt$",
+            "^app/src/main/.*/data/.*\\.kt$"
+          ]
+        },
+        "isGateCTrigger": true,
+        "isGate0Trigger": false,
+        "productSource": true
+      },
+      {
+        "id": "di_kotlin",
+        "category": "di_kotlin",
+        "match": {
+          "patterns": [
+            "^app/src/main(?:/[^/]*)?/di/.*\\.kt$",
+            "^app/src/main/.*/di/.*\\.kt$"
+          ]
+        },
+        "isGateCTrigger": true,
+        "isGate0Trigger": false,
+        "productSource": true
+      },
+      {
+        "id": "ui_kotlin",
+        "category": "compose_ui",
+        "match": {
+          "patterns": [
+            "^app/src/main(?:/[^/]*)?/ui/.*\\.kt$",
+            "^app/src/main/.*/ui/.*\\.kt$"
+          ]
+        },
+        "isGateCTrigger": true,
+        "isGate0Trigger": false,
+        "productSource": true
+      },
+      {
+        "id": "main_resources",
+        "category": "android_resource",
+        "match": {
+          "prefixes": [
+            "app/src/main/res/"
+          ]
+        },
+        "isGateCTrigger": true,
+        "isGate0Trigger": false,
+        "productSource": true
+      },
+      {
+        "id": "android_manifests",
+        "category": "android_manifest",
+        "match": {
+          "exact": [
+            "app/src/main/AndroidManifest.xml"
+          ],
+          "patterns": [
+            "^app/src/[^/]+/AndroidManifest\\.xml$"
+          ]
+        },
+        "isGateCTrigger": true,
+        "isGate0Trigger": false,
+        "productSource": true
+      },
+      {
+        "id": "build_infrastructure",
+        "category": "build_infrastructure",
+        "match": {
+          "exact": [
+            "build.gradle.kts",
+            "app/build.gradle.kts",
+            "settings.gradle.kts",
+            "gradle.properties",
+            "gradlew",
+            "gradlew.bat",
+            "makefile"
+          ],
+          "prefixes": [
+            "gradle/",
+            "scripts/"
+          ]
+        },
+        "isGateCTrigger": true,
+        "isGate0Trigger": false,
+        "productSource": false
+      },
+      {
+        "id": "domain_kotlin",
+        "category": "isolated_domain_kotlin",
+        "match": {
+          "patterns": [
+            "^app/src/main/.*/domain/.*\\.kt$",
+            "^app/src/main/domain/.*\\.kt$"
+          ]
+        },
+        "isGateCTrigger": false,
+        "isGate0Trigger": false,
+        "productSource": true
+      },
+      {
+        "id": "production_kotlin",
+        "category": "production_kotlin",
+        "match": {
+          "patterns": [
+            "^app/src/main/.*\\.(?:kt|java)$"
+          ]
+        },
+        "isGateCTrigger": false,
+        "isGate0Trigger": false,
+        "productSource": true
+      }
+    ],
+    "fallback": {
+      "category": "unknown_functional",
+      "isGateCTrigger": true,
+      "isGate0Trigger": false,
+      "productSource": "auto"
+    }
+  },
+  "checkCatalog": {
+    "delivery_unit": {
+      "kind": "command",
+      "label": "Delivery tooling tests",
+      "command": "npm",
+      "args": [
+        "--prefix",
+        "tools/delivery-mcp",
+        "test"
+      ],
+      "display": "npm --prefix tools/delivery-mcp test",
+      "timeoutMs": 300000
+    },
+    "jvm_test_dev": {
+      "kind": "command",
+      "label": "Dev JVM tests",
+      "command": "make",
+      "args": [
+        "test",
+        "FLAVOR=Dev"
+      ],
+      "display": "make test FLAVOR=Dev",
+      "timeoutMs": 900000
+    },
+    "lint_dev": {
+      "kind": "command",
+      "label": "Dev Android lint",
+      "command": "make",
+      "args": [
+        "lint",
+        "FLAVOR=Dev"
+      ],
+      "display": "make lint FLAVOR=Dev",
+      "timeoutMs": 900000
+    },
+    "build_dev": {
+      "kind": "command",
+      "label": "Dev Android build",
+      "command": "make",
+      "args": [
+        "build",
+        "FLAVOR=Dev"
+      ],
+      "display": "make build FLAVOR=Dev",
+      "timeoutMs": 900000
+    },
+    "e2e_dev": {
+      "kind": "command",
+      "label": "Dev instrumented tests",
+      "command": "make",
+      "args": [
+        "e2e",
+        "FLAVOR=Dev"
+      ],
+      "display": "make e2e FLAVOR=Dev",
+      "timeoutMs": 1800000
+    },
+    "jvm_test_staging": {
+      "kind": "command",
+      "label": "Staging JVM tests",
+      "command": "make",
+      "args": [
+        "test",
+        "FLAVOR=Staging"
+      ],
+      "display": "make test FLAVOR=Staging",
+      "timeoutMs": 900000
+    },
+    "lint_staging": {
+      "kind": "command",
+      "label": "Staging Android lint",
+      "command": "make",
+      "args": [
+        "lint",
+        "FLAVOR=Staging"
+      ],
+      "display": "make lint FLAVOR=Staging",
+      "timeoutMs": 900000
+    },
+    "build_staging": {
+      "kind": "command",
+      "label": "Staging Android build",
+      "command": "make",
+      "args": [
+        "build",
+        "FLAVOR=Staging"
+      ],
+      "display": "make build FLAVOR=Staging",
+      "timeoutMs": 900000
+    },
+    "e2e_staging": {
+      "kind": "command",
+      "label": "Staging instrumented tests",
+      "command": "make",
+      "args": [
+        "e2e",
+        "FLAVOR=Staging"
+      ],
+      "display": "make e2e FLAVOR=Staging",
+      "timeoutMs": 1800000
+    },
+    "no_wip_in_scope": {
+      "kind": "builtin",
+      "label": "No @wip tags in completed scope",
+      "handler": "no_wip_in_scope",
+      "display": "verify no @wip tags in completed feature scope",
+      "requires": [
+        "scopeFeatures"
+      ]
+    }
+  },
+  "gates": {
+    "0": {
+      "id": "0",
+      "description": "Complete Dev JVM tests for BDD feature and glue compatibility",
+      "priority": 1,
+      "checkIds": [
+        "jvm_test_dev"
+      ],
+      "postPushChecks": []
+    },
+    "NONE": {
+      "id": "NONE",
+      "description": "No local verification is required for documentation-only or empty changes",
+      "priority": 0,
+      "checkIds": [],
+      "postPushChecks": []
+    },
+    "A": {
+      "id": "A",
+      "description": "Isolated Kotlin or delivery tooling verification",
+      "priority": 2,
+      "checkIds": [
+        "jvm_test_dev"
+      ],
+      "postPushChecks": []
+    },
+    "B": {
+      "id": "B",
+      "description": "Complete Dev JVM tests for one BDD scenario closure",
+      "priority": 3,
+      "checkIds": [
+        "jvm_test_dev"
+      ],
+      "postPushChecks": []
+    },
+    "C": {
+      "id": "C",
+      "description": "Shared Android architecture, UI, resources, build, and instrumented verification",
+      "priority": 4,
+      "checkIds": [
+        "lint_dev",
+        "jvm_test_dev",
+        "build_dev",
+        "e2e_dev"
+      ],
+      "postPushChecks": []
+    },
+    "D": {
+      "id": "D",
+      "description": "Batch or User Story closure with complete Dev regression",
+      "priority": 5,
+      "checkIds": [
+        "no_wip_in_scope",
+        "lint_dev",
+        "jvm_test_dev",
+        "build_dev",
+        "e2e_dev"
+      ],
+      "postPushChecks": [
+        "ci_green"
+      ]
+    },
+    "R": {
+      "id": "R",
+      "description": "CI repair path with complete Staging verification",
+      "priority": 6,
+      "checkIds": [
+        "delivery_unit",
+        "lint_staging",
+        "jvm_test_staging",
+        "build_staging",
+        "e2e_staging"
+      ],
+      "postPushChecks": [
+        "ci_green"
+      ]
+    }
+  }
+}

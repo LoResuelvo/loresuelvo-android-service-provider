@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DeliveryExecutionResult",
+  "type": "object",
+  "required": ["schemaVersion", "status", "snapshotHash", "runKey", "cached", "policy", "gate", "summary", "checks", "diagnostics", "evidence"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "status": { "type": "string", "enum": ["passed", "failed", "blocked", "needs_input", "review_required", "no_changes"] },
+    "snapshotHash": { "type": "string" },
+    "runKey": { "type": ["string", "null"] },
+    "cached": { "type": "boolean" },
+    "policy": {
+      "type": "object",
+      "required": ["version", "hash"],
+      "properties": {
+        "version": { "type": "integer", "minimum": 1 },
+        "hash": { "type": "string" }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "required": ["id", "reasonCodes", "checkIds", "parameters", "postPushChecks"],
+      "properties": {
+        "id": { "type": "string", "enum": ["NONE", "0", "A", "B", "C", "D", "R"] },
+        "reasonCodes": { "type": "array", "items": { "type": "string" } },
+        "checkIds": { "type": "array", "items": { "type": "string" } },
+        "parameters": { "type": "object" },
+        "postPushChecks": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["passed", "failed", "skipped", "durationMs"],
+      "properties": {
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "durationMs": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "durationMs"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string", "enum": ["passed", "failed"] },
+          "durationMs": { "type": "integer", "minimum": 0 },
+          "exitCode": { "type": ["integer", "null"] },
+          "summaryLines": { "type": "array", "items": { "type": "string" } },
+          "logPath": { "type": "string" },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "passed": { "type": "integer", "minimum": 0 },
+              "failed": { "type": "integer", "minimum": 0 },
+              "skipped": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": ["code", "message", "retryable"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "retryable": { "type": "boolean" },
+          "checkId": { "type": "string" },
+          "file": { "type": "string" },
+          "line": { "type": "integer" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["recordPath"],
+      "properties": {
+        "recordPath": { "type": ["string", "null"] }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "required": [
+        "signature",
+        "checkId",
+        "exitCode",
+        "message",
+        "locations",
+        "summaryLines",
+        "attemptCount",
+        "logPath"
+      ],
+      "properties": {
+        "signature": { "type": "string" },
+        "code": { "type": "string" },
+        "checkId": { "type": "string" },
+        "exitCode": { "type": ["integer", "null"] },
+        "message": { "type": "string" },
+        "locations": { "type": "array", "items": { "type": "string" } },
+        "summaryLines": { "type": "array", "items": { "type": "string" }, "maxItems": 6 },
+        "attemptCount": { "type": "integer", "minimum": 1 },
+        "logPath": { "type": "string" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "status": { "type": "string" },
+        "snapshotHash": { "type": "string" },
+        "reason": { "type": "string" },
+        "decisions": { "type": "object" }
+      }
+    },
+    "requiredAcknowledgement": {
+      "type": "object",
+      "required": ["snapshotHash", "signals", "template"],
+      "properties": {
+        "snapshotHash": { "type": "string" },
+        "signals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "rule", "file", "line", "message"],
+            "properties": {
+              "id": { "type": "string" },
+              "rule": { "type": "string" },
+              "file": { "type": "string" },
+              "line": { "type": "integer" },
+              "message": { "type": "string" }
+            }
+          }
+        },
+        "template": {
+          "type": "object",
+          "required": ["snapshotHash", "decisions"],
+          "properties": {
+            "snapshotHash": { "type": "string" },
+            "decisions": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

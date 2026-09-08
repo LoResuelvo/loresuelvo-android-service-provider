@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CiInspectionResult",
+  "type": "object",
+  "required": ["schemaVersion", "sha", "status", "retryable"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "enum": [1] },
+    "sha": { "type": "string" },
+    "workflow": {
+      "type": ["object", "null"],
+      "properties": {
+        "id": { "type": ["string", "number"] },
+        "name": { "type": "string" }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_found",
+        "queued",
+        "in_progress",
+        "passed",
+        "failed",
+        "cancelled",
+        "timed_out",
+        "provider_error"
+      ]
+    },
+    "failedJobs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "failure": {
+      "type": ["object", "null"],
+      "properties": {
+        "message": { "type": "string" },
+        "excerpt": { "type": "string" }
+      }
+    },
+    "url": { "type": ["string", "null"] },
+    "retryable": { "type": "boolean" }
+  }
+}
