@@ -49,7 +49,7 @@ test("Android classification covers the required path families", () => {
     ["gradle/libs.versions.toml", "build_infrastructure", true],
     ["gradle.properties", "build_infrastructure", true],
     ["gradlew", "build_infrastructure", true],
-    ["makefile", "build_infrastructure", true],
+    ["Makefile", "build_infrastructure", true],
     ["scripts/run_acceptance_tests.sh", "build_infrastructure", true],
     ["tools/delivery-mcp/lib/select-gate.mjs", "delivery_tooling", false],
     [".delivery/policy.v1.json", "delivery_tooling", false],
@@ -109,4 +109,3 @@ test("CI repository resolution prefers explicit/env/remote target", () => {
   const mock = new MockCiProvider({ abc1234: { status: "passed" } });
   return mock.inspectCommit("abc1234", { repoRoot: ROOT }).then((result) => assert.equal(result.status, "passed"));
 });
-

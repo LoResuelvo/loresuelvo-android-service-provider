@@ -41,6 +41,13 @@ The stack is:
 Use JDK 17 to run Gradle. The Android module currently compiles against Java
 11 bytecode, while the CI and local toolchain requirement is JDK 17.
 
+The canonical GNU Make entry point is `Makefile`. Its Android targets route
+Gradle, ADB, and instrumented-test commands through
+`scripts/with-android-env.sh`, which is the shared boundary for Java and
+Android SDK environment setup. Keep machine-specific toolchain values in the
+shell or ignored `local.properties`; never encode them in Make targets or
+documentation.
+
 ## Architecture
 
 ```text
@@ -122,8 +129,8 @@ The provider has no reliable feature-file-to-runner command, so delivery Gate
 Useful focused checks are:
 
 ```bash
-./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
-./gradlew :app:testDevDebugUnitTest --tests '*WelcomeCucumberTest'
+scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
+scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeCucumberTest'
 ```
 
 Do not call instrumented tests acceptance scenarios: the JVM Cucumber layer

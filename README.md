@@ -18,9 +18,12 @@ The Gradle module targets Java 11 bytecode, but Gradle must run on JDK 17.
 
 ### Configure the Android SDK
 
-Set the SDK variables in your shell:
+Set the SDK and Java variables in your shell when they are not already
+configured by your development environment:
 
 ```bash
+# Example location; use the Java 17 installation provided by your environment.
+export JAVA_HOME="$HOME/.jdks/jdk-17"
 export ANDROID_HOME="$HOME/Android/Sdk"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export PATH="$ANDROID_HOME/platform-tools:$PATH"
@@ -31,14 +34,20 @@ export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 Verify the installation:
 
 ```bash
-sdkmanager --version
-java -version
+scripts/with-android-env.sh sdkmanager --version
+scripts/with-android-env.sh java -version
 node --version
 ```
 
-If the SDK is installed elsewhere, put `sdk.dir=/absolute/path/to/Android/Sdk`
-in a local `local.properties` file. That file is ignored and must not be
-committed.
+Every Android Make target delegates to `scripts/with-android-env.sh`. The
+wrapper applies the configured JDK and Android SDK environment before running
+Gradle, ADB, or the instrumented-test helper, so local and CI invocations use
+the same entry point. It honors explicit `JAVA_HOME`, `ANDROID_SDK_ROOT`, and
+`ANDROID_HOME` values, the SDK entry in `local.properties`, and standard
+repository-sibling toolchain locations. It does not install toolchains or
+start an emulator; a missing JDK or SDK fails with an actionable diagnostic.
+Keep machine-specific SDK values in your shell or the ignored
+`local.properties` file; never commit them.
 
 ## Setup
 
@@ -55,8 +64,8 @@ committed.
 
    `AUTH0_AUDIENCE` is the logical Auth0 API identifier. For a physical
    device, `API_URL` must be reachable from that device; with a local server,
-   `adb reverse tcp:8080 tcp:8080` and `API_URL=http://127.0.0.1:8080` are
-   convenient Dev settings.
+   `scripts/with-android-env.sh adb reverse tcp:8080 tcp:8080` and
+   `API_URL=http://127.0.0.1:8080` are convenient Dev settings.
 3. Install the isolated delivery tooling:
 
    ```bash
@@ -80,14 +89,14 @@ All Android targets accept `FLAVOR=Dev|Staging|Prod`; Dev is the default.
 | Command | Purpose |
 | --- | --- |
 | `make help` | List available targets. |
-| `make build` | Assemble the selected debug APK. |
-| `make lint` | Run Android Lint. |
-| `make test` | Run JVM unit tests and Cucumber JVM. |
-| `make e2e` | Run instrumented UI tests; requires a device/emulator. |
+| `make build` | Assemble the selected debug APK through the Android environment wrapper. |
+| `make lint` | Run Android Lint through the Android environment wrapper. |
+| `make test` | Run JVM unit tests and Cucumber JVM through the Android environment wrapper. |
+| `make e2e` | Run instrumented UI tests through the wrapper; requires a device/emulator. |
 | `make test-all-once` | Run JVM and instrumented tests. |
 | `make ci` | Run build, lint, JVM, and instrumented checks. |
-| `make clean` | Remove Gradle build outputs. |
-| `make devices` | List ADB devices. |
+| `make clean` | Remove Gradle build outputs through the Android environment wrapper. |
+| `make devices` | List ADB devices through the Android environment wrapper. |
 | `make delivery-install` | Install the isolated Node delivery package. |
 | `make delivery-mcp` | Start the Delivery MCP server. |
 | `make delivery-test ARGS="..."` | Run focused delivery TDD checks through the CLI. |
@@ -104,8 +113,8 @@ All Android targets accept `FLAVOR=Dev|Staging|Prod`; Dev is the default.
 For a focused JVM test during local iteration:
 
 ```bash
-./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
-./gradlew :app:testDevDebugUnitTest --tests '*WelcomeCucumberTest'
+scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
+scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeCucumberTest'
 ```
 
 The delivery policy deliberately uses the complete Dev JVM task for BDD Gate 0
@@ -160,7 +169,7 @@ Set `ANDROID_HOME`/`ANDROID_SDK_ROOT`, or add `sdk.dir` to `local.properties`.
 
 ### `No connected devices`
 
-Start an API 34+ emulator or connect a device, verify `adb devices`, and then
+Start an API 34+ emulator or connect a device, verify `make devices`, and then
 run `make e2e FLAVOR=Dev`. A blocked device check must remain visible in the
 delivery result.
 

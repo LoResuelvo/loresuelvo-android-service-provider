@@ -67,6 +67,12 @@ npm --prefix tools/delivery-mcp run cli -- hooks status
 focused TDD modes. The policy's delivery-tooling Gate A check is the complete
 unit suite `npm --prefix tools/delivery-mcp test`.
 
+The repository's canonical GNU Make entry point is `Makefile`. Android
+targets (`build`, `lint`, `test`, `e2e`, `clean`, and `devices`) delegate
+toolchain setup and command execution through
+`scripts/with-android-env.sh`; delivery targets remain direct Node entry
+points and do not require an Android emulator.
+
 The safe Android checks delegated to `make` are exactly:
 
 ```text

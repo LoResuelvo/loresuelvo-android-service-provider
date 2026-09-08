@@ -3,6 +3,12 @@
 	delivery-prepare delivery-context delivery-ci delivery-finalize \
 	delivery-verify-head delivery-hooks-install delivery-hooks-status
 
+# Keep Android toolchain resolution in one place. The wrapper sets up Java,
+# Android SDK, ADB, and emulator paths before executing the requested command.
+ANDROID_ENV := ./scripts/with-android-env.sh
+GRADLEW := ./gradlew
+ADB := adb
+
 FLAVOR ?= Dev
 DELIVERY_DIR ?= tools/delivery-mcp
 DELIVERY_NODE ?= node
@@ -33,31 +39,31 @@ help:
 	@echo "  make delivery-hooks-install"
 	@echo "  make delivery-hooks-status"
 	@echo ""
-	@echo "  Android targets accept FLAVOR=Dev|Staging|Prod (default: Dev)"
+	@echo "Android targets use scripts/with-android-env.sh and accept FLAVOR=Dev|Staging|Prod (default: Dev)."
 
 up: build
 
 build:
-	./gradlew assemble$(FLAVOR)Debug
+	$(ANDROID_ENV) $(GRADLEW) assemble$(FLAVOR)Debug
 
 lint:
-	./gradlew lint$(FLAVOR)Debug
+	$(ANDROID_ENV) $(GRADLEW) lint$(FLAVOR)Debug
 
 test:
-	./gradlew test$(FLAVOR)DebugUnitTest
+	$(ANDROID_ENV) $(GRADLEW) test$(FLAVOR)DebugUnitTest
 
 e2e:
-	bash scripts/run_acceptance_tests.sh $(FLAVOR)
+	$(ANDROID_ENV) bash scripts/run_acceptance_tests.sh $(FLAVOR)
 
 test-all-once: test e2e
 
 ci: build lint test-all-once
 
 clean:
-	./gradlew clean
+	$(ANDROID_ENV) $(GRADLEW) clean
 
 devices:
-	adb devices
+	$(ANDROID_ENV) $(ADB) devices
 
 delivery-install:
 	npm ci --prefix $(DELIVERY_DIR)
