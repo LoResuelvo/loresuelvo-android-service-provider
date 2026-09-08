@@ -1,374 +1,248 @@
 # AGENTS.md — LoResuelvo Android Service Provider
 
-Última actualización: 2026-08-24 (Fase 1 — US-33 Pantalla inicial de bienvenida prestador)
+Last updated: 2026-09-07 (Delivery migration, US 33).
 
-Fuente canónica para agentes. Leer este archivo primero y cargar skills locales solo cuando apliquen. La documentación para humanos vive en `README.md` (setup y comandos).
+This is the canonical contract for agents working in this repository. Read it
+before loading a skill. Human setup belongs in [`README.md`](README.md), and
+the operational delivery reference belongs in
+[`.delivery/README.md`](.delivery/README.md).
 
-## Modo skills-first
+## Working agreement
 
-1. Leer las reglas globales de este archivo.
-2. Elegir la skill adecuada del índice de skills.
-3. Cargar solo `skills/<skill>/SKILL.md` y referencias puntuales cuando apliquen.
-4. Evitar abrir documentación o código no relacionado con la tarea.
+1. Read this file and load only the skill that matches the task.
+2. Keep source code, tests, diagnostics, comments, skills, agent rules,
+   commit messages, and internal documentation in English. User-visible text
+   remains in localized Android resources.
+3. Inspect the working tree before editing. Preserve unrelated user changes.
+4. Do not use `--no-verify`, `DELIVERY_SKIP_CI_CHECK`, destructive Git
+   commands, or copied runtime evidence.
+5. The target repository is the only implementation workspace for this
+   migration. Do not modify sibling repositories.
 
-## Estado actual: Fase 1 (Walking skeleton BDD/TDD)
+## Repository scope and current baseline
 
-**Objetivo**: introducir Hilt + KSP + Retrofit + Auth0 + Navigation Compose, junto con el primer `.feature` real (`provider-welcome.feature`) y su Welcome screen completo para prestadores. La infra de BDD/TDD queda validada para futuras US.
+This application serves LoResuelvo providers. Its package is
+`com.loresuelvo.serviceprovider`; flavors are `Dev`, `Staging`, and `Prod`.
+The current walking skeleton contains the Welcome journey, Hilt, Retrofit,
+OkHttp, Auth0, Navigation Compose, and Cucumber JVM infrastructure. There is
+no image-upload workflow in this application; do not add an image-upload skill
+until that product flow exists.
 
-**Lo que entra en esta fase** (Fase 1):
+The stack is:
 
-- ✅ Hilt + KSP + KAPT (con `force("com.squareup:javapoet:1.13.0")`).
-- ✅ Retrofit + OkHttp + `kotlinx-serialization` + `retrofit2-kotlinx-serialization-converter`.
-- ✅ Auth0 SDK 2.11.0 (`WebAuthProvider` con Universal Login).
-- ✅ Navigation Compose con `Route` + `LoResuelvoNavHost` + `LoResuelvoNav` (Welcome como `startDestination`).
-- ✅ Clean Architecture liviana + Ports & Adapters (espejo del consumer).
-- ✅ `.feature` BDD con escenarios `@wip` + step defs (esperando destrabar).
+- Kotlin 2.0.21, Android Gradle Plugin 8.13.2, and the Gradle wrapper.
+- Jetpack Compose, Material 3, Navigation Compose, and StateFlow/UDF.
+- Hilt with KAPT/KSP, Retrofit 2.11.0, OkHttp 4.12.0, and Auth0 SDK 2.11.0.
+- JUnit4, MockK, Turbine, Robolectric, MockWebServer, Cucumber JVM, and Hilt
+  Android testing.
+- Node.js 24 LTS for `tools/delivery-mcp`. Its package declares
+  `engines.node` as `>=24 <25`.
 
-**Lo que NO está todavía**:
+Use JDK 17 to run Gradle. The Android module currently compiles against Java
+11 bytecode, while the CI and local toolchain requirement is JDK 17.
 
-- Home del prestador (la ruta existe en `Route.Home` pero renderiza un placeholder).
-- Perfil / categorías profesionales / zona de cobertura / descripción.
-- Post-auth sync (`GET /me`) y refresh tokens.
-- Conversaciones con clientes, multimedia, etc.
-- Smart-router (Welcome cuando no hay sesión, Home cuando hay sesión). Llega con la primera US autenticada.
+## Architecture
 
----
-
-## Stack tecnológico
-
-- **Lenguaje/Build**: Kotlin 2.0.21, AGP 8.13.2, Gradle Wrapper, `libs.versions.toml` como catálogo de versiones.
-- **UI**: Jetpack Compose (BOM 2024.09), Material 3, Navigation Compose (`androidx.navigation:navigation-compose`), `minSdk 24` / `targetSdk 35`.
-- **Estado**: `StateFlow` + UDF. Los `UiState` son `data class` inmutables; los `ViewModel` exponen `StateFlow<UiState>`.
-- **DI**: Hilt + `hilt-navigation-compose` para `hiltViewModel()` en composables. `LoresuelvoApp` con `@HiltAndroidApp`. `MainActivity` con `@AndroidEntryPoint`.
-- **Auth**: Auth0 SDK 2.11.0.
-- **Networking**: Retrofit 2.11.0 + OkHttp 4.12.0 + `kotlinx-serialization` 1.7.3.
-- **Storage**: EncryptedSharedPreferences (AES256_GCM/SIV) para tokens.
-- **Testing**: JUnit4, MockK, Turbine, `kotlinx-coroutines-test`, Robolectric, `okhttp-mockwebserver`, Compose-test, Cucumber JVM 7.x para BDD, Hilt Android Testing.
-
-## Arquitectura (Clean Architecture liviana + Ports & Adapters)
-
-El proyecto sigue una estructura limpia de capas desacopladas, protegiendo el dominio de la infraestructura y de la UI.
-
-```mermaid
-graph TD
-  subgraph Capa de Presentación
-    UI[ui/ Composables + ViewModels + Navigation]
-  end
-
-  subgraph Capa de Aplicación
-    UC[domain/usecase/ Casos de Uso]
-  end
-
-  subgraph Capa de Dominio
-    D[domain/ Entidades + Puertos + Use Cases]
-  end
-
-  subgraph Capa de Infraestructura
-    I[data/ Adapters + DTOs + Mappers + ApiClient + Auth0]
-  end
-
-  UI --> UC
-  UI --> D
-  UC --> D
-  I -.->|Implementa| D
-  I --> D
+```text
+ui → domain/usecase → domain
+data ───────────────→ domain
 ```
 
-- **Capa de Dominio (`domain/`)**: tipos puros, entidades, value objects, **puertos** (interfaces) y casos de uso. **PURO**: no importa `data/`, `ui/`, `android.*`, ni libs externas (`okhttp3`, `retrofit2`, `kotlinx.serialization`, `dagger`, `hilt`). Validar con grep.
-- **Capa de Infraestructura (`data/`)**: adapters que implementan los puertos del dominio. DTOs snake_case del backend con `@SerialName`, mappers DTO↔dominio, `ApiClient`, `Auth0AuthProvider`, `EncryptedAuthSessionStore`, etc. **Único lugar donde pueden vivir DTOs.**
-- **Capa de Aplicación (`domain/usecase/`)**: casos de uso que orquestan puertos. Sin estado. **No** tragan errores: propagan excepciones o traducen a `sealed interface XxxOutcome` con `Success`/`Failure` tipados.
-- **Capa de Presentación (`ui/`)**: composables, `ViewModel`s, navegación, theme, componentes reutilizables.
+`domain/` contains pure entities, ports, typed outcomes, and use cases.
+`domain/usecase/` orchestrates ports without infrastructure imports.
+`data/` owns adapters, HTTP, Auth0, Android storage, DTOs, and mappers.
+`ui/` owns composables, ViewModels, navigation, state, and events.
 
-### Patrones aplicados explícitamente
+Examples in the provider application are:
 
-- **Observer**: `StateFlow` + `collectAsState()` en composables; `viewModelScope.launch` en ViewModels.
-- **Adapter**: `ApiCategoryRepository` adapta el cliente HTTP al puerto `CategoryRepository`; `Auth0AuthProvider` adapta el SDK de Auth0 al puerto `AuthProvider`. Ver `data/auth/Auth0AuthProvider.kt:16-37` y `data/api/ApiCategoryRepository.kt:16-32`.
-- **Factory**: Hilt actúa como factory de dependencias. Los ViewModels se obtienen con `hiltViewModel()` en composables. **No** usar `viewModelFactory { initializer { ... } }` en producción.
-- **Dependency Injection**: Hilt. **Cero** `object` global mutable nuevo.
+- `domain/category/CategoryRepository.kt` and
+  `domain/usecase/category/GetCategoriesUseCase.kt`;
+- `data/api/ApiCategoryRepository.kt`, `data/api/BackendApi.kt`, and
+  `data/api/mapper/CategoryMapper.kt`;
+- `ui/auth/WelcomeViewModel.kt` and
+  `ui/screens/auth/WelcomeScreen.kt`.
 
-### Regla de dependencia estricta
+### Dependency rules
 
-**Las capas internas nunca dependen de capas externas.** `domain/` y `domain/usecase/` no deben importar nada de `data/`, `ui/`, `android.*`, ni libs externas. Si un test falla, el build falla.
+- Inner layers must not import `data`, `ui`, `android.*`, Dagger/Hilt,
+  OkHttp, Retrofit, or serialization.
+- DTOs belong only in `data/api/dto/`; backend `snake_case` must not leak into
+  domain or UI types.
+- Mappers only translate transport data. Business rules belong in domain or
+  use cases.
+- Each use case is a class with one `operator fun invoke(...)` and follows the
+  `VerbSubjectUseCase` naming convention.
+- Outcomes and failures are typed `sealed interface`s, never generic error
+  strings.
+- UI exposes immutable `StateFlow` state and handles events in ViewModels.
+- Do not add mutable global `object`s. Use Hilt injection instead.
+
+Validate domain purity and UI boundaries with these checks (zero matches are
+expected):
 
 ```bash
-# Validación rápida (debe devolver 0 líneas)
-grep -RInE "import (com\.loresuelvo\.serviceprovider\.(data|application|ui)|android\.|dagger|hilt|okhttp3|retrofit2|kotlinx\.serialization)" \
+grep -RInE 'import (com\.loresuelvo\.serviceprovider\.(data|ui)|android\.|dagger|hilt|okhttp3|retrofit2|kotlinx\.serialization)' \
   app/src/main/java/com/loresuelvo/serviceprovider/domain/
+grep -RIn 'import com\.loresuelvo\.serviceprovider\.data\.' \
+  app/src/main/java/com/loresuelvo/serviceprovider/ui/
 ```
 
-### Regla de pureza del dominio
+### Hilt and security
 
-Los tipos en `domain/` siempre son **camelCase**. Si el backend devuelve `given_name` o `profile_photo_url`, el dominio define `givenName` y `profilePhotoUrl`. La conversión ocurre exclusivamente en mappers dentro de `data/` (ej: `data/api/mapper/CategoryMapper.kt`).
+- `LoresuelvoApp` is annotated with `@HiltAndroidApp`.
+- `MainActivity` is annotated with `@AndroidEntryPoint` and only hosts
+  `LoResuelvoNav`.
+- ViewModels use `@HiltViewModel` and constructor injection; routes use
+  `hiltViewModel()`.
+- Process-wide Retrofit, OkHttp, repositories, and the encrypted session
+  store belong in `SingletonComponent` modules.
+- Never log tokens, request/response payloads, or credentials.
+- Secrets and flavor values come from `local.properties`, Gradle properties,
+  or CI environment variables. Never commit `local.properties`.
+- Cleartext HTTP is limited to the Dev network-security overlay. Staging and
+  production are HTTPS-only.
 
-### Regla de DTOs
+## Test topology
 
-DTOs del backend (snake_case, anotados con `@SerialName`) **solo** viven en `data/api/dto/`. Nunca se filtran a `domain/` ni a `ui/`. Mapeo en `data/api/mapper/`.
+Do not confuse the following layers:
 
----
+| Layer | Command | Scope |
+| --- | --- | --- |
+| JVM unit and Cucumber JVM | `make test FLAVOR=Dev` | `testDevDebugUnitTest`; no device |
+| Android Lint | `make lint FLAVOR=Dev` | `lintDevDebug` |
+| Debug build | `make build FLAVOR=Dev` | `assembleDevDebug` |
+| Instrumented UI | `make e2e FLAVOR=Dev` | `connectedDevDebugAndroidTest`; device/emulator required |
 
-## Estructura de carpetas
+Gherkin files live under `app/src/test/resources/features/`. Cucumber glue
+and runners live under `app/src/test/java/com/loresuelvo/serviceprovider/bdd/`.
+The provider has no reliable feature-file-to-runner command, so delivery Gate
+0 and Gate B run the complete Dev JVM test task. Instrumented tests live under
+`app/src/androidTest/` and are not Cucumber scenarios.
 
-```txt
-app/
-  src/
-    main/
-      java/com/loresuelvo/serviceprovider/
-        MainActivity.kt                       # @AndroidEntryPoint, setContent { LoresuelvoTheme { LoResuelvoNav() } }
-        LoresuelvoApp.kt                      # @HiltAndroidApp
-        data/                                 # Adapters, DTOs, mappers, ApiClient, Auth0
-          auth/                               # Auth0AuthProvider, Auth0WebAuthLauncher, EncryptedSessionPrefs, EncryptedAuthSessionStore
-          api/                                # BackendApi, AuthInterceptor, ApiCategoryRepository, ApiErrorMapping, ApiConfig
-          api/dto/                            # CategoryDto, ApiErrorDto
-          api/mapper/                         # CategoryMapper
-        domain/                               # PURO: entidades, puertos, casos de uso
-          auth/                               # AuthProvider, AuthSessionStore, AuthenticationOutcome, LogoutOutcome, User, AuthSession
-          category/                           # Category, CategoriesOutcome, CategoryRepository
-          usecase/category/                   # GetCategoriesUseCase
-          api/                                # ApiError (sealed)
-        di/                                   # Hilt modules
-        ui/
-          auth/                              # WelcomeVM/State
-          components/                        # Botones (PrimaryButton, GoogleButton), branding (AppLogo)
-          navigation/                        # LoResuelvoNav, LoResuelvoNavHost, Route
-          screens/auth/                      # WelcomeScreen + components (Scaffold, TopBar, Hero, HowItWorksStep, VerificationBadge, CategoryChipRow)
-          theme/                             # Color.kt, Theme.kt
-      res/
-        values/strings.xml                    # Strings de UI en español (default)
-        values-en/strings.xml                 # Strings en inglés
-        values/arrays.xml                     # welcome_categories (es)
-        values-en/arrays.xml                  # welcome_categories (en)
-        drawable-nodpi/logo.png               # Branding
-        xml/                                  # backup_rules, data_extraction_rules, locales_config
-    test/
-      java/.../bdd/
-                      # BddSmokeCucumberTest + BddSmokeSteps (smoke)
-                      # auth/welcome/  -> WelcomeCucumberTest + WelcomeSteps + CucumberWorld + FakeAuthProvider + FakeCategoryRepository
-      java/.../ui/auth/WelcomeViewModelTest.kt
-      resources/features/smoke/BddSmoke.feature
-      resources/features/auth/provider-welcome.feature
-    androidTest/
-      java/.../HiltTestRunner.kt
-      java/.../acceptance/auth/WelcomeScreenAcceptanceTest.kt
-      java/.../ExampleInstrumentedTest.kt
-skills/                                      # Skills locales para agentes (Fase 1+)
-AGENTS.md                                    # Este archivo (canónico)
-CLAUDE.md                                    # Apunta a AGENTS.md
-README.md                                    # Setup + comandos + troubleshooting
-```
-
----
-
-## Comandos de validación
-
-Comandos actuales del repo:
+Useful focused checks are:
 
 ```bash
-make help
-make build         # assembleDevDebug
-make lint          # lintDevDebug
-make test          # testDevDebugUnitTest (incluye BDD Cucumber)
-make e2e           # connectedDevDebugAndroidTest con package=...acceptance
-make test-all-once # test + e2e
-make ci            # build + lint + test-all-once
-make clean
-make devices
+./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
+./gradlew :app:testDevDebugUnitTest --tests '*WelcomeCucumberTest'
 ```
 
-Variables: `FLAVOR=Dev|Staging|Prod` (default: `Dev`).
+Do not call instrumented tests acceptance scenarios: the JVM Cucumber layer
+contains acceptance specifications, while device tests verify Android UI
+boundaries.
 
-### Política
+## Delivery workflow
 
-1. **TDD/BDD primero**: el test se escribe antes del impl. RED local, GREEN local, REFACTOR.
-2. **Durante iteración**: ejecutar pruebas focalizadas (`./gradlew :app:testDevDebugUnitTest --tests *WelcomeViewModelTest*`).
-3. **Antes de PR**: `make lint && make test && make build` verde. Si cambió un flujo BDD, también `make e2e`.
-4. **Antes de merge a `main`**: `make ci` verde completo.
-5. **Fail-fast**: detenerse en la primera falla, corregir y re-ejecutar.
+The delivery runtime is isolated in `tools/delivery-mcp/` and uses Node 24.
+The policy in `.delivery/policy.v1.json` is the single source of truth for
+classification and gates. Safe commands are exact allowlisted commands:
 
----
+```text
+npm --prefix tools/delivery-mcp test
+make test FLAVOR=Dev
+make lint FLAVOR=Dev
+make build FLAVOR=Dev
+make e2e FLAVOR=Dev
+make test FLAVOR=Staging
+make lint FLAVOR=Staging
+make build FLAVOR=Staging
+make e2e FLAVOR=Staging
+```
 
-## Flavors
+Agents use the MCP operations `delivery_test`, `delivery_inspect`,
+`delivery_prepare`, `delivery_job_wait`, `delivery_job_cancel`,
+`delivery_verify_head`, `delivery_ci_inspect`, and `delivery_finalize`.
+Humans can use the matching `make delivery-*` targets. The executor uses
+`shell: false`, rejects arbitrary commands and environment assignments, and
+keeps generated evidence under `.delivery/runtime/`.
 
-Tres flavors (`dev`/`staging`/`prod`) sobre el dimension `environment`. Cada uno expone `BuildConfig.API_URL`, `BuildConfig.AUTH0_DOMAIN`, `BuildConfig.AUTH0_CLIENT_ID`, `BuildConfig.AUTH0_SCHEME` y `BuildConfig.AUTH0_AUDIENCE`.
+### Gates
 
-| Flavor    | applicationId                       | versionNameSuffix |
-|-----------|-------------------------------------|-------------------|
-| `dev`     | `com.loresuelvo.serviceprovider.dev`| `-dev`            |
-| `staging` | `com.loresuelvo.serviceprovider.staging` | `-staging`    |
-| `prod`    | `com.loresuelvo.serviceprovider`    | (none)            |
+| Gate | Checks | Use |
+| --- | --- | --- |
+| `NONE` | none | Documentation-only or empty diff |
+| `0` | complete Dev JVM test task | BDD feature/glue compatibility |
+| `A` | Dev JVM tests; delivery tooling also runs delivery unit tests | Isolated domain Kotlin or delivery tooling |
+| `B` | complete Dev JVM test task | Closing one BDD scenario |
+| `C` | Dev lint, JVM tests, build, instrumented UI | Shared UI, DI, data, resource, manifest, or build changes |
+| `D` | no `@wip`, Gate C checks, and post-push CI green | Complete batch or User Story |
+| `R` | delivery tests plus Staging lint, JVM tests, build, instrumented UI, and post-push CI green | One-time CI repair for `repairsSha` |
 
-El scheme de Auth0 por flavor:
+Gate selection is conservative. Ambiguous Kotlin or build changes select Gate
+C; missing analyzers never produce Gate `NONE`. Disabled dependency-impact,
+Cucumber-impact, and maintainability analyzers report `not_applicable` and are
+not imported or executed.
 
-| Flavor    | `AUTH0_SCHEME` por defecto          |
-|-----------|-------------------------------------|
-| `dev`     | `com.loresuelvo.provider`           |
-| `staging` | `com.loresuelvo.provider.staging`   |
-| `prod`    | `com.loresuelvo.provider.prod`      |
+Gate C and Gate D require a reachable device/emulator for `make e2e`; a
+blocked environment must report the missing prerequisite instead of silently
+skipping the check. Gate R requires real Staging credentials and must not
+substitute Dev for CI parity.
 
-Lectura de variables: prioridad `local.properties` > gradle property > env > default. Ver `app/build.gradle.kts:34-39` (`envVar(...)`).
+### Shadow mode, hooks, and repair
 
----
+Keep `DELIVERY_REQUIRE_EVIDENCE` disabled during shadow validation. Run the
+delivery unit tests, smoke test, classification matrix, and representative
+shadow inspections before installing or enforcing hooks. Hooks are lightweight:
+they validate commit format, staged-snapshot receipts, and the CI window; they
+never execute test suites.
 
-## CI / CD
+Do not bypass a failed CI check with `--no-verify` or
+`DELIVERY_SKIP_CI_CHECK`. For a failed remote SHA, inspect it with
+`delivery_ci_inspect`, stage the atomic repair, and prepare with intent
+`repair_ci` and that exact `repairsSha`. Gate R produces a single-use repair
+receipt. Workflow changes and workflow CI failures are `HUMAN_ONLY` and must
+be escalated.
 
-- **CI** (`.github/workflows/ci.yml`): corre en cada push a `main` y cada PR. Ejecuta `make lint`, `make test`, `make e2e` con un AVD Pixel 2 API 35 prewarming y snapshot `ci-clean`, y `make build` para `FLAVOR=Staging`. Las credenciales se inyectan desde GitHub Secrets.
-- **Bootstrap AVD** (`.github/workflows/avd-bootstrap.yml`): workflow manual que crea y guarda el snapshot prewarming usado por CI. Incrementar `cache_version` al cambiar la configuración del emulador.
-- **Release** (`.github/workflows/release.yml`): corre cuando se pushea un tag `v*.*.*`. Construye Staging APK y Prod AAB, los sube como artifacts, y depende de los environments `staging` y `production` para protección.
+## Commits and CI
 
-Secrets requeridos en GitHub:
+The canonical migration format is:
 
-- `AUTH0_DOMAIN_STAGING`, `AUTH0_CLIENT_ID_STAGING`, `AUTH0_AUDIENCE_STAGING`, `API_URL_STAGING`.
-- `AUTH0_DOMAIN_PROD`, `AUTH0_CLIENT_ID_PROD`, `AUTH0_AUDIENCE_PROD`, `API_URL_PROD`.
-- `AUTH0_CLIENT_SECRET_STAGING`, `AUTH0_CLIENT_SECRET_PROD` (sólo release).
-- `AUTH0_SCHEME_STAGING`, `AUTH0_SCHEME_PROD` (sólo release).
-- `NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL_STAGING`, `NEXT_PUBLIC_PUBLIC_MEDIA_BASE_URL_PROD` (sólo release).
+```text
+<type>[33]: imperative English description
+```
 
-`AUTH0_SCHEME_STAGING` y `AUTH0_SCHEME_PROD` tienen defaults en `app/build.gradle.kts`; el CI los sobrescribe explícitamente para self-documentar el contrato.
+Use one of `feat`, `fix`, `refactor`, `test`, `chore`, `docs`, `build`, `ci`,
+`perf`, or `style`. Keep commits atomic, stage exact files, and prepare the
+staged snapshot before committing. A receipt is bound to the staged tree,
+policy, intent, scope, and HEAD; changing any of these invalidates it.
 
----
+The checked-in CI currently uses Java 17, Staging credentials, and a
+Pixel 6/API 34 x86_64 emulator provided by `ReactiveCircus/android-emulator-
+runner`. There is no checked-in AVD bootstrap workflow or prewarmed snapshot;
+do not document one or rely on one. The delivery CI window is limited by the
+policy (`maxInFlightCommits` is currently four). Do not manually poll runs.
 
-## BDD con Cucumber JVM
+## Skill routing
 
-La capa BDD vive **en el source set de JVM** (`src/test/`), no en `androidTest/`:
+Load only the relevant skill:
 
-- `.feature`: `app/src/test/resources/features/<area>/<user-journey>.feature`
-- Step definitions + glue runner: `app/src/test/java/com/loresuelvo/serviceprovider/bdd/<area>/<journey>/...`
+- [android-clean-architecture](skills/android-clean-architecture/SKILL.md) for
+  `domain/`, `data/`, `ui/`, or dependency-boundary changes.
+- [android-bdd-tdd-process](skills/android-bdd-tdd-process/SKILL.md) for
+  behavior, scenarios, step definitions, and tests.
+- [android-testing-gates](skills/android-testing-gates/SKILL.md) before a PR,
+  release, merge, or delivery-gate diagnosis.
+- [android-api-client-governance](skills/android-api-client-governance/SKILL.md)
+  for Retrofit, DTO, mapper, interceptor, or network changes.
+- [android-hilt-governance](skills/android-hilt-governance/SKILL.md) for Hilt
+  modules, bindings, ViewModels, or Hilt Android tests.
+- [android-commit-governance](skills/android-commit-governance/SKILL.md) for
+  commits, PRs, or history review.
+- [android-doc-governance](skills/android-doc-governance/SKILL.md) for this
+  contract, README, CLAUDE, skills, or documented commands.
+- [android-us-delivery](skills/android-us-delivery/SKILL.md) for a complete
+  User Story delivery lifecycle.
+- [android-ai-development-workflow](skills/android-ai-development-workflow/SKILL.md)
+  when coordinating agent batches and handoffs.
 
-Filtro actual: `cucumber.filter.tags=not @wip` configurado en `app/build.gradle.kts:84-93`. Cada `.feature` nuevo arranca con escenarios marcados `@wip` y se destraban cuando el step def + impl están listos.
+## Agent and human boundaries
 
-Cada runner BDD usa su **propio glue package** (no un umbrella recursivo) para evitar que dos runners registren los mismos step defs y Cucumber tire `DuplicateStepDefinitionException`. Ver `BddSmokeCucumberTest` (`glue = bdd.smoke`) vs `WelcomeCucumberTest` (`glue = bdd.auth.welcome`).
+Agents must keep delivery evidence and commits attributable to the exact
+staged snapshot. Humans own workflow changes, unavailable credentials,
+environment repair, and any requested `HUMAN_ONLY` action. A clean
+documentation-only Gate `NONE` run is never sufficient proof that the Android
+workflow is ready for enforcement.
 
-Referencia completa del proceso BDD/TDD: skill `android-bdd-tdd-process` (espejo del consumer).
-
----
-
-## Reglas críticas (Fase 1+)
-
-### Topología (regla de `MainActivity`)
-
-- `MainActivity.onCreate` debe ser **≤ 15 líneas** y limitarse a:
-  ```kotlin
-  @AndroidEntryPoint
-  class MainActivity : ComponentActivity() {
-      override fun onCreate(savedInstanceState: Bundle?) {
-          super.onCreate(savedInstanceState)
-          setContent {
-              LoresuelvoTheme {
-                  LoResuelvoNav()
-              }
-          }
-      }
-  }
-  ```
-- **`@AndroidEntryPoint` es OBLIGATORIO.** Sin él, el primer `hiltViewModel()` que se invoque desde el composable crashea el proceso con `IllegalStateException: Given component holder class MainActivity does not implement interface dagger.hilt.internal.GeneratedComponent`.
-- Toda la lógica de composición (NavHost, decisión de `startDestination`, `composable` con `hiltViewModel()`) vive en `LoResuelvoNav`.
-
-### Calidad
-
-- Alta cohesión, bajo acoplamiento, estricto desacoplamiento de capas.
-- **Una responsabilidad por archivo**. No agrupar `WelcomeScreen` + `CompleteProfileScreen` en un solo `AuthScreens.kt`.
-- Tipos explícitos en fronteras de API, auth y datos compartidos.
-- Preferir `sealed interface` para outcomes de use cases y errores de UI.
-- **Patrón UDF**: `UiState` inmutable, eventos como `sealed interface XxxEvent` emitidos por `Channel` o `SharedFlow`.
-- **No** introducir `object` global mutable nuevo.
-
-### Use cases y errores
-
-- Los use cases **no** tragan errores. Traducen `ApiError` a `XxxOutcome.Failure.*` tipado, o propagan la excepción.
-- Cada use case es una clase con un solo `operator fun invoke(...)`. Nombre: `VerbSubjectUseCase`.
-- Los `Outcome.Failure` deben ser `sealed interface` con subclases tipadas, no strings.
-
-### i18n
-
-- **Todo** texto visible al usuario debe estar en `app/src/main/res/values/strings.xml` (es) y `values-en/strings.xml` (en).
-- Cero literales en español en `app/src/main/java/.../`.
-
-### Logging
-
-- **Cero** `Log.d/w/e` directo en `app/src/main/`. Usar `Logger.*` (gated por `BuildConfig.DEBUG`) cuando llegue el módulo.
-- No loguear payloads ni tokens.
-
-### Seguridad
-
-- Cero secretos en código. La configuración pública de Auth0 y la URL del backend se leen de `BuildConfig` con fallbacks; los valores reales vienen de `local.properties` o del pipeline.
-- No commitear `local.properties`. Está en `.gitignore`.
-- Tokens: nunca se loguean, nunca se persisten en `SharedPreferences` plano. `EncryptedAuthSessionStore` usa `EncryptedSharedPreferences` (AES256_GCM/SIV).
-- **Cleartext HTTP**: bloqueado por defecto (`targetSdk 35`). Para dev en LAN/loopback usar `adb reverse tcp:8080 tcp:8080` + `API_URL=http://127.0.0.1:8080` (sólo `devDebug` lo permite). **Staging/prod son HTTPS-only**.
-
-### DI (Hilt)
-
-- `@HiltAndroidApp` en `LoresuelvoApp`. `@AndroidEntryPoint` en `MainActivity`. `@HiltViewModel` en todos los ViewModels.
-- Módulos: `di/NetworkModule`, `di/RepositoryModule`, `di/AuthModule`, `data/auth/SessionStoreModule`. Cada uno con `@InstallIn(SingletonComponent::class)` según el scope.
-- Repositorios: `@Binds @Singleton` en `RepositoryModule`. No instanciar repos a mano.
-- ViewModels: `hiltViewModel<T>()` en composables. **No** usar `viewModelFactory { initializer { ... } }` en producción.
-- Tests con Hilt: `@HiltAndroidTest` + `@UninstallModules(...)` + `@TestInstallIn(..., replaces = [...])` que provee fakes. Ver skill `android-hilt-governance`.
-
-### Aceptación: mutar el session store desde tests
-
-- `EncryptedAuthSessionStore` está `@Singleton` y la `MainActivity` observa el mismo flow. Para mutarlo desde acceptance tests, resolver vía `@EntryPoint`:
-  ```kotlin
-  private val sessionStore: AuthSessionStore by lazy {
-      EntryPointAccessors.fromApplication(
-          ApplicationProvider.getApplicationContext<Application>(),
-          AuthSessionStoreEntryPoint::class.java,
-      ).authSessionStore()
-  }
-  ```
-
-### Aceptación: Locale del CI
-
-- El emulator del CI bootea con `en-US` por default. `WelcomeScreen` (y todos los Composables que usen `stringResource(R.string.*)`) renderizan la versión `values-en/strings.xml`.
-- Los acceptance tests no deben asumir el locale del dispositivo. Resolver el mismo recurso desde la Activity de la regla Compose:
-  ```kotlin
-  private fun localizedString(@StringRes resourceId: Int): String =
-      composeTestRule.activity.getString(resourceId)
-  ```
-- Ver `WelcomeScreenAcceptanceTest`. Los strings visibles siguen definidos en `values/strings.xml` y `values-en/strings.xml`.
-
-### Dependencias
-
-- **No** agregar deps nuevas sin discutir versiones en `libs.versions.toml` y este archivo.
-- La regla de Hilt + KSP requiere `force("com.squareup:javapoet:1.13.0")` en el buildscript classpath. No remover hasta que Hilt 2.51+ lo arregle.
-
----
-
-## Índice de skills (a poblar en Fase 1+)
-
-Cuando copiemos/adaptemos skills del consumer, deberían vivir en `skills/<skill>/SKILL.md`. Aún no hay skills copiados.
-
----
-
-## Mapa rápido de decisión
-
-- "¿Toco una capa o import entre capas?": `android-clean-architecture` (espejo del consumer).
-- "¿Voy a escribir código con tests?": `android-bdd-tdd-process` (espejo del consumer).
-- "¿Estoy por cerrar un PR / quiero validar antes de pushear?": `android-testing-gates` (espejo del consumer).
-- "¿Voy a tocar el cliente HTTP, DTOs, mappers, interceptors?": `android-api-client-governance` (espejo del consumer).
-- "¿Voy a agregar un módulo Hilt, un `@HiltViewModel`, o un test con Hilt?": `android-hilt-governance` (espejo del consumer).
-- "¿Voy a tocar `AGENTS.md`, `CLAUDE.md`, skills o `README.md`?": `android-doc-governance` (espejo del consumer).
-- "¿Voy a hacer commit o PR?": `android-commit-governance` (espejo del consumer).
-
----
-
-## Idioma y estilo
-
-- Texto visible para usuarios: español, centralizado en `strings.xml`.
-- Código, tests, nombres de variables, comentarios técnicos: inglés.
-- Steps de BDD: español (alineado con el webapp y consumer).
-- Commits y mensajes de PR: inglés, Conventional Commits.
-- Comentarios explicativos (que agreguen info, no describan lo obvio) en español.
-
----
-
-## Checklist final para agentes (Fase 1+)
-
-1. **No** agregar dependencias nuevas. Si la tarea las pide, abrir thread antes.
-2. TDD/BDD primero: el test (unit + `.feature` + step def) se escribe antes del impl.
-3. Diff revisado: sin archivos generados accidentales, sin archivos debug.
-4. Sin secretos, sin logs sensibles, sin literales en español en código.
-5. Cero `Log.d/e/w` directo en código de producción.
-6. Strings de UI en `strings.xml` (es + en).
-7. `domain/` permanece puro (verificar con grep antes de PR).
-8. `make lint && make test && make build` verde.
-9. Si cambió un flujo BDD o un composable, `make e2e` verde.
-10. `AGENTS.md` actualizado si cambió arquitectura, convención, o comandos.
-11. Resumen final conciso con archivos tocados, validación y riesgos residuales.
+Before handoff, report changed paths, checks run, checks blocked with their
+precise reason, hook/enforcement state, CI SHA state, disabled analyzers, and
+remaining human work. Do not include copied logs, tokens, or generated runtime
+state in the report.

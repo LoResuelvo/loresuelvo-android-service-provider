@@ -1,143 +1,177 @@
 # LoResuelvo Android Service Provider
 
-Aplicación Android para **prestadores** de LoResuelvo. Construida con Kotlin + Jetpack Compose.
+Android application for LoResuelvo providers, built with Kotlin and Jetpack
+Compose. Agent rules and repository conventions live in
+[`AGENTS.md`](AGENTS.md). Delivery operations are documented in
+[`.delivery/README.md`](.delivery/README.md).
 
-> Para reglas de arquitectura, convenciones, comandos y skills, ver [`AGENTS.md`](./AGENTS.md). Este README es solo para humanos que arrancan.
+## Requirements
 
----
+- JDK 17 (`java -version`).
+- Android SDK Platform 35, Build Tools 35, Platform Tools, and command-line
+  tools.
+- Node.js 24 LTS (`node --version`) for `tools/delivery-mcp`.
+- GNU `make` and Bash.
+- An Android emulator or device only for instrumented checks (`make e2e`).
 
-## Requisitos
+The Gradle module targets Java 11 bytecode, but Gradle must run on JDK 17.
 
-- **JDK 17** (`java -version`).
-- **Android SDK Platform 35** + Build Tools 35 + Platform Tools + Command Line Tools.
-- Variable `ANDROID_HOME` apuntando al SDK (ver abajo).
-- **WSL/Linux/macOS** con `make` y `bash` (los scripts usan GNU make).
+### Configure the Android SDK
 
-### Configurar el SDK
-
-Agregar a `~/.bashrc` (o `~/.zshrc`):
+Set the SDK variables in your shell:
 
 ```bash
-export ANDROID_HOME=$HOME/Android/Sdk
-export ANDROID_SDK_ROOT=$ANDROID_HOME
-export PATH=$ANDROID_HOME/platform-tools:$PATH
-export PATH=$ANDROID_HOME/emulator:$PATH
-export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+export PATH="$ANDROID_HOME/emulator:$PATH"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 ```
 
-Aplicar y verificar:
+Verify the installation:
 
 ```bash
-source ~/.bashrc
 sdkmanager --version
+java -version
+node --version
 ```
 
----
+If the SDK is installed elsewhere, put `sdk.dir=/absolute/path/to/Android/Sdk`
+in a local `local.properties` file. That file is ignored and must not be
+committed.
 
-## Estado del proyecto — Fase 0 (Setup de ambiente)
+## Setup
 
-Esta es la rama de setup: la app **no tiene features de producto todavía**.
+1. Clone the repository and enter its root.
+2. Create `local.properties` with Dev values, for example:
 
-Lo que ya está en verde:
-
-- Build `./gradlew assembleDevDebug` ✅
-- Unit tests JVM `./gradlew testDevDebugUnitTest` ✅ (incluye Cucumber BDD smoke)
-- Lint `./gradlew lintDevDebug` ✅
-- Acceptance `./gradlew connectedDevDebugAndroidTest` ✅ (Compose-test contra `HomeScreen` placeholder)
-- CI en GitHub Actions (`.github/workflows/ci.yml`) ✅
-- Release workflow (`.github/workflows/release.yml`) ✅
-- 3 flavors (`dev`/`staging`/`prod`) con variables de entorno y Auth0 scheme propio
-
-Próxima fase (**Fase 1 — Walking skeleton BDD/TDD**):
-
-- Wiring de Hilt + KSP + Retrofit + OkHttp + Auth0 SDK.
-- Patrón Navigation Compose (NavHost, rutas, smart-router de auth).
-- Primer `.feature` real y su step def siguiendo el skill `android-bdd-tdd-process`.
-
----
-
-## Setup inicial
-
-1. Clonar el repo.
-2. Crear `local.properties` (NO commitear) en la raíz con tus credenciales de Auth0 por flavor:
    ```properties
    AUTH0_DOMAIN=loresuelvo-dev.auth0.com
-   AUTH0_CLIENT_ID=tu_client_id_dev
+   AUTH0_CLIENT_ID=your_dev_client_id
    AUTH0_SCHEME=com.loresuelvo.provider
    AUTH0_AUDIENCE=http://localhost:8080
    API_URL=http://10.0.2.2:8080
    ```
-   `AUTH0_AUDIENCE` es el identificador lógico de la API registrado en Auth0; no tiene que ser una URL alcanzable. En un teléfono físico, `API_URL` sí debe apuntar a una dirección alcanzable de la PC, por ejemplo `http://192.168.1.41:8080`.
 
-   Para `staging` y `prod`, usar `AUTH0_DOMAIN_STAGING`, `AUTH0_CLIENT_ID_STAGING`, `AUTH0_SCHEME_STAGING`, `AUTH0_AUDIENCE_STAGING`, `API_URL_STAGING`, etc.
-3. `./gradlew :app:assembleDevDebug` para verificar que compila.
+   `AUTH0_AUDIENCE` is the logical Auth0 API identifier. For a physical
+   device, `API_URL` must be reachable from that device; with a local server,
+   `adb reverse tcp:8080 tcp:8080` and `API_URL=http://127.0.0.1:8080` are
+   convenient Dev settings.
+3. Install the isolated delivery tooling:
 
----
+   ```bash
+   npm ci --prefix tools/delivery-mcp
+   ```
 
-## Comandos
+4. Build the Dev variant:
 
-Todos los targets aceptan `FLAVOR=Dev|Staging|Prod` (default: `Dev`).
+   ```bash
+   make build FLAVOR=Dev
+   ```
 
-| Comando | Qué hace |
-|---|---|
-| `make help` | Lista los targets disponibles. |
-| `make build` | `./gradlew assemble<Flavor>Debug` |
-| `make lint` | `./gradlew lint<Flavor>Debug` |
-| `make test` | `./gradlew test<Flavor>DebugUnitTest` (JVM, rápido, incluye BDD) |
-| `make e2e` | Acceptance tests con Compose-test / Espresso (requiere emulador o device). |
-| `make test-all-once` | `make test` + `make e2e`. |
-| `make ci` | `make build` + `make lint` + `make test-all-once`. Usar antes de merge. |
-| `make clean` | `./gradlew clean`. |
-| `make devices` | `adb devices`. |
+Staging and Prod values are injected through the corresponding
+`*_STAGING` and `*_PROD` Gradle properties or CI secrets. Staging and Prod
+must use HTTPS endpoints.
 
-### GitHub Actions
+## Commands
 
-El job de E2E usa un AVD Pixel 2 API 35 prewarming con el snapshot
-`ci-clean`, restaurado desde cache para evitar recrearlo en cada runner. Antes
-del primer CI, ejecutar manualmente el workflow `Bootstrap CI AVD`. Si cambia
-la configuración del emulador, incrementar `cache_version` y volver a ejecutar
-ese workflow.
+All Android targets accept `FLAVOR=Dev|Staging|Prod`; Dev is the default.
 
-Para invocar `./gradlew` directamente con un test focalizado:
+| Command | Purpose |
+| --- | --- |
+| `make help` | List available targets. |
+| `make build` | Assemble the selected debug APK. |
+| `make lint` | Run Android Lint. |
+| `make test` | Run JVM unit tests and Cucumber JVM. |
+| `make e2e` | Run instrumented UI tests; requires a device/emulator. |
+| `make test-all-once` | Run JVM and instrumented tests. |
+| `make ci` | Run build, lint, JVM, and instrumented checks. |
+| `make clean` | Remove Gradle build outputs. |
+| `make devices` | List ADB devices. |
+| `make delivery-install` | Install the isolated Node delivery package. |
+| `make delivery-mcp` | Start the Delivery MCP server. |
+| `make delivery-test ARGS="..."` | Run focused delivery TDD checks through the CLI. |
+| `make delivery-smoke` | Verify MCP startup and tool discovery. |
+| `make delivery-inspect ARGS="--intent prepare_commit"` | Inspect the staged snapshot and selected gate. |
+| `make delivery-prepare ARGS="--intent prepare_commit"` | Run the policy-selected pre-commit gate. |
+| `make delivery-context ARGS="--inspect"` | Inspect validated delivery context. |
+| `make delivery-ci ARGS="--sha <commit-sha>"` | Inspect CI for a commit SHA. |
+| `make delivery-verify-head ARGS="--intent close_us --scope <feature>"` | Record Gate D evidence for the current HEAD. |
+| `make delivery-finalize ARGS="--intent close_us --scope <feature>"` | Finalize a batch or User Story. |
+| `make delivery-hooks-install` | Install the repository Git hooks locally. |
+| `make delivery-hooks-status` | Report hook and enforcement state. |
+
+For a focused JVM test during local iteration:
 
 ```bash
-./gradlew :app:testDevDebugUnitTest --tests "*SmokeUnitTest*"
+./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
+./gradlew :app:testDevDebugUnitTest --tests '*WelcomeCucumberTest'
 ```
 
-Para correr solo el BDD:
+The delivery policy deliberately uses the complete Dev JVM task for BDD Gate 0
+and Gate B because this repository has no reliable feature-file-to-runner
+command. Do not silently replace a blocked instrumented run with a unit run.
 
-```bash
-./gradlew :app:testDevDebugUnitTest --tests "*BddSmokeCucumberTest"
-```
+Commits use the canonical migration format
+`<type>[33]: imperative English description`; keep each commit atomic and
+prepare its exact staged snapshot through the Delivery MCP.
 
----
+## Android test topology
 
-## Estructura actual (Fase 0)
+- Features: `app/src/test/resources/features/`.
+- Cucumber glue and runners:
+  `app/src/test/java/com/loresuelvo/serviceprovider/bdd/`.
+- JVM tests: `app/src/test/`; no device is required.
+- Instrumented UI tests: `app/src/androidTest/`; a device or emulator is
+  required.
+- The provider Welcome examples are `provider-welcome.feature`,
+  `WelcomeViewModelTest`, and `WelcomeScreenAcceptanceTest`.
 
-```
-app/
-  src/
-    main/
-      java/com/loresuelvo/serviceprovider/
-        MainActivity.kt                       # setContent { LoResuelvoApp() }
-        LoresuelvoApp.kt                      # Application class
-        ui/screens/home/HomeScreen.kt         # placeholder Compose
-      res/
-        values/strings.xml                    # Strings de UI en español (default)
-        values-en/strings.xml                 # Strings en inglés
-    test/
-      java/.../bdd/smoke/                     # Glue runner + steps BDD
-      resources/features/smoke/               # .feature de Cucumber
-    androidTest/
-      java/.../acceptance/                    # Acceptance con Compose-test
-```
+## CI
 
----
+The checked-in workflow runs Java 17, Staging lint and JVM tests, instrumented
+tests on a Pixel 6/API 34 x86_64 emulator, and a Staging build. It does not use
+a prewarmed snapshot and there is no checked-in AVD bootstrap workflow. Local
+emulator availability is independent from CI; use `make devices` before
+`make e2e`.
+
+Required Staging values are supplied as CI secrets:
+
+`AUTH0_DOMAIN_STAGING`, `AUTH0_CLIENT_ID_STAGING`, `AUTH0_AUDIENCE_STAGING`,
+`API_URL_STAGING`, and `AUTH0_SCHEME_STAGING`.
+
+## Delivery and hooks
+
+The Delivery MCP is the canonical path for agent checks. It supports
+`delivery_test`, `delivery_inspect`, `delivery_prepare`, job waiting and
+cancellation, CI inspection, HEAD verification, and finalization. Generated
+receipts, logs, jobs, and ledger state remain under `.delivery/runtime/`.
+
+The first rollout is shadow mode: `DELIVERY_REQUIRE_EVIDENCE` remains disabled
+until delivery tests, smoke, the Android gate matrix, and real-repository
+checks pass. Hooks never run test suites. Do not use `--no-verify` or
+`DELIVERY_SKIP_CI_CHECK`; CI repairs require the failed SHA and Gate R.
 
 ## Troubleshooting
 
 ### `SDK location not found`
 
-Crear `local.properties` en la raíz con `sdk.dir=/path/to/Android/Sdk` (o setear `ANDROID_HOME`).
+Set `ANDROID_HOME`/`ANDROID_SDK_ROOT`, or add `sdk.dir` to `local.properties`.
 
-Para más ayuda, ver [`AGENTS.md`](./AGENTS.md).
+### `No connected devices`
+
+Start an API 34+ emulator or connect a device, verify `adb devices`, and then
+run `make e2e FLAVOR=Dev`. A blocked device check must remain visible in the
+delivery result.
+
+### Staging build reports missing variables
+
+Provide all `*_STAGING` values before running `make lint`, `make test`,
+`make build`, or `make e2e` with `FLAVOR=Staging`. Do not substitute Dev values
+and call the result CI parity.
+
+### Delivery package or Node version failure
+
+Check `node --version` is 24.x, then run `npm ci --prefix tools/delivery-mcp`.
+Read [`AGENTS.md`](AGENTS.md) and [`.delivery/README.md`](.delivery/README.md)
+for policy, evidence, job recovery, and repair details.
