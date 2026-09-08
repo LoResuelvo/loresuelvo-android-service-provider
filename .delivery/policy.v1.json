@@ -58,6 +58,18 @@
         "productSource": false
       },
       {
+        "id": "main_resources",
+        "category": "android_resource",
+        "match": {
+          "prefixes": [
+            "app/src/main/res/"
+          ]
+        },
+        "isGateCTrigger": true,
+        "isGate0Trigger": false,
+        "productSource": true
+      },
+      {
         "id": "documentation",
         "category": "non_code_docs_config",
         "match": {
@@ -158,18 +170,6 @@
           "patterns": [
             "^app/src/main(?:/[^/]*)?/ui/.*\\.kt$",
             "^app/src/main/.*/ui/.*\\.kt$"
-          ]
-        },
-        "isGateCTrigger": true,
-        "isGate0Trigger": false,
-        "productSource": true
-      },
-      {
-        "id": "main_resources",
-        "category": "android_resource",
-        "match": {
-          "prefixes": [
-            "app/src/main/res/"
           ]
         },
         "isGateCTrigger": true,

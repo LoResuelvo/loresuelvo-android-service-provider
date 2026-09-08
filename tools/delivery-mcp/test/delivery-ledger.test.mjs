@@ -17,6 +17,8 @@ import {
   LEDGER_DIR,
   LEDGER_FILE,
 } from "../lib/delivery-ledger.mjs";
+import { captureGitSnapshot } from "../lib/git-snapshot.mjs";
+import { runPostCommitHook, runPreCommitHook } from "../lib/git-hooks.mjs";
 
 const sourceRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../..");
 
@@ -232,6 +234,76 @@ test("prepared Android evidence binds snapshot, policy, gate, and is single-use"
   assert.equal(stale.reason, "STALE_PREPARED_EVIDENCE");
 });
 
+test("shadow pre-commit rejects a mutated prepared snapshot without consuming its receipt", async (t) => {
+  const repoRoot = await createGitRepo(t);
+  const commit = await commitAndroidFile(repoRoot, "Shadow.kt");
+  const trackedPath = path.join(repoRoot, commit.stagedFile);
+
+  await fs.writeFile(trackedPath, "package com.loresuelvo.serviceprovider\nclass PreparedProvider\n", "utf8");
+  execFileSync("git", ["add", commit.stagedFile], { cwd: repoRoot });
+  const snapshot = await captureGitSnapshot({ cwd: repoRoot });
+  const policyHash = "2".repeat(64);
+  const runKey = "3".repeat(64);
+  const evidence = await writeExecutionRecord(repoRoot, "prepared-shadow", {
+    snapshotHash: snapshot.snapshotHash,
+    runKey,
+    policyHash,
+  });
+  const inspection = { gate: { id: "A" }, policy: { hash: policyHash } };
+
+  await recordPreparedEvidence({
+    repoRoot,
+    snapshot,
+    inspection,
+    intent: "prepare_commit",
+    usId: "33",
+    scopeFiles: [commit.stagedFile],
+    runKey,
+    status: "passed",
+    recordPath: evidence.recordPath,
+  });
+  const prepared = await verifyPreparedEvidence({
+    repoRoot,
+    snapshot,
+    inspection,
+    intent: "prepare_commit",
+  });
+  assert.equal(prepared.valid, true);
+
+  await fs.writeFile(trackedPath, "package com.loresuelvo.serviceprovider\nclass MutatedProvider\n", "utf8");
+  execFileSync("git", ["add", commit.stagedFile], { cwd: repoRoot });
+  const mutatedSnapshot = await captureGitSnapshot({ cwd: repoRoot });
+  const mismatch = await verifyPreparedEvidence({
+    repoRoot,
+    snapshot: mutatedSnapshot,
+    inspection,
+    intent: "prepare_commit",
+  });
+  assert.equal(mismatch.valid, false);
+  assert.equal(mismatch.reason, "PREPARED_EVIDENCE_SNAPSHOT_MISMATCH");
+
+  const previousRequireEvidence = process.env.DELIVERY_REQUIRE_EVIDENCE;
+  delete process.env.DELIVERY_REQUIRE_EVIDENCE;
+  try {
+    const shadow = await runPreCommitHook({ repoRoot });
+    assert.equal(shadow.passed, true);
+    assert.equal(shadow.verified, false);
+    assert.equal(shadow.reason, "PREPARED_EVIDENCE_SNAPSHOT_MISMATCH");
+  } finally {
+    if (previousRequireEvidence === undefined) delete process.env.DELIVERY_REQUIRE_EVIDENCE;
+    else process.env.DELIVERY_REQUIRE_EVIDENCE = previousRequireEvidence;
+  }
+
+  execFileSync("git", ["commit", "-m", "feat[33]: mutate prepared provider"], {
+    cwd: repoRoot,
+    stdio: "ignore",
+  });
+  const postCommit = await runPostCommitHook({ repoRoot });
+  assert.equal(postCommit.verificationStatus, "not_run");
+  assert.equal(postCommit.reason, "PREPARED_EVIDENCE_MISMATCH");
+  assert.equal((await getLastPreparedEvidence({ repoRoot })).consumedByCommitSha, null);
+});
+
 test("ledger paths are confined to ignored runtime and reject invalid commit identifiers", async (t) => {
   const repoRoot = await createGitRepo(t);
   assert.match(LEDGER_DIR, /^\.delivery\/runtime\//);
@@ -241,4 +313,3 @@ test("ledger paths are confined to ignored runtime and reject invalid commit ide
     /Invalid commit SHA/
   );
 });
-
