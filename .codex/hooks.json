@@ -1,0 +1,18 @@
+{
+  "description": "Optional anticipatory delivery guard for Codex environments. Provides early feedback before Git executes its authoritative hooks.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/delivery-guard.mjs\"",
+            "timeout": 1200,
+            "statusMessage": "Verifying delivery evidence"
+          }
+        ]
+      }
+    ]
+  }
+}

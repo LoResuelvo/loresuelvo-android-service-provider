@@ -14,3 +14,15 @@
 .cxx
 local.properties
 .kotlin/
+
+# Delivery tooling runtime and local dependencies
+node_modules/
+/tools/delivery-mcp/node_modules/
+/.delivery/runtime/
+
+# Clone-local agent configuration
+/.agents/mcp_config.json
+/.agents/hooks.json
+/.agents/hooks/
+/.agents/rules/loresuelvo-delivery.md
+/.agents/local/

@@ -1,0 +1,4 @@
+[mcp_servers.loresuelvo-delivery]
+command = "node"
+args = ["tools/delivery-mcp/server.mjs"]
+tool_timeout_sec = 900
