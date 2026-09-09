@@ -59,9 +59,10 @@ make build FLAVOR=Dev
 make e2e FLAVOR=Dev
 ```
 
-The current CI workflow uses Java 17 and a Pixel 6/API 34 x86_64 emulator.
-There is no checked-in AVD bootstrap workflow or prewarmed snapshot. Do not
-document or assume a device-management target.
+The current CI workflow uses Java 17 and a prewarmed Pixel 6/API 34 x86_64
+emulator. Regenerate its cache through the checked-in
+`.github/workflows/avd-bootstrap.yml` workflow when the emulator configuration
+changes. Do not document or assume a device-management target.
 
 ## Shadow rollout and evidence
 

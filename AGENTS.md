@@ -1,6 +1,6 @@
 # AGENTS.md — LoResuelvo Android Service Provider
 
-Last updated: 2026-09-07 (Delivery migration, US 33).
+Last updated: 2026-09-08.
 
 This is the canonical contract for agents working in this repository. Read it
 before loading a skill. Human setup belongs in [`README.md`](README.md), and
@@ -118,12 +118,12 @@ grep -RIn 'import com\.loresuelvo\.serviceprovider\.data\.' \
 
 Do not confuse the following layers:
 
-| Layer | Command | Scope |
-| --- | --- | --- |
-| JVM unit and Cucumber JVM | `make test FLAVOR=Dev` | `testDevDebugUnitTest`; no device |
-| Android Lint | `make lint FLAVOR=Dev` | `lintDevDebug` |
-| Debug build | `make build FLAVOR=Dev` | `assembleDevDebug` |
-| Instrumented UI | `make e2e FLAVOR=Dev` | `connectedDevDebugAndroidTest`; device/emulator required |
+| Layer                     | Command                 | Scope                                                    |
+| ------------------------- | ----------------------- | -------------------------------------------------------- |
+| JVM unit and Cucumber JVM | `make test FLAVOR=Dev`  | `testDevDebugUnitTest`; no device                        |
+| Android Lint              | `make lint FLAVOR=Dev`  | `lintDevDebug`                                           |
+| Debug build               | `make build FLAVOR=Dev` | `assembleDevDebug`                                       |
+| Instrumented UI           | `make e2e FLAVOR=Dev`   | `connectedDevDebugAndroidTest`; device/emulator required |
 
 Gherkin files live under `app/src/test/resources/features/`. Cucumber glue
 and runners live under `app/src/test/java/com/loresuelvo/serviceprovider/bdd/`.
@@ -173,15 +173,15 @@ ARGS="--job-id <job-id>"` or `make delivery-job-cancel ARGS="--job-id
 
 ### Gates
 
-| Gate | Checks | Use |
-| --- | --- | --- |
-| `NONE` | none | Documentation-only or empty diff |
-| `0` | complete Dev JVM test task | BDD feature/glue compatibility |
-| `A` | Dev JVM tests; delivery tooling also runs delivery unit tests | Isolated domain Kotlin or delivery tooling |
-| `B` | complete Dev JVM test task | Closing one BDD scenario |
-| `C` | Dev lint, JVM tests, build, instrumented UI | Shared UI, DI, data, resource, manifest, or build changes |
-| `D` | no `@wip`, Gate C checks, and post-push CI green | Complete batch or User Story |
-| `R` | delivery tests plus Staging lint, JVM tests, build, instrumented UI, and post-push CI green | One-time CI repair for `repairsSha` |
+| Gate   | Checks                                                                                      | Use                                                       |
+| ------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `NONE` | none                                                                                        | Documentation-only or empty diff                          |
+| `0`    | complete Dev JVM test task                                                                  | BDD feature/glue compatibility                            |
+| `A`    | Dev JVM tests; delivery tooling also runs delivery unit tests                               | Isolated domain Kotlin or delivery tooling                |
+| `B`    | complete Dev JVM test task                                                                  | Closing one BDD scenario                                  |
+| `C`    | Dev lint, JVM tests, build, instrumented UI                                                 | Shared UI, DI, data, resource, manifest, or build changes |
+| `D`    | no `@wip`, Gate C checks, and post-push CI green                                            | Complete batch or User Story                              |
+| `R`    | delivery tests plus Staging lint, JVM tests, build, instrumented UI, and post-push CI green | One-time CI repair for `repairsSha`                       |
 
 Gate selection is conservative. Ambiguous Kotlin or build changes select Gate
 C; missing analyzers never produce Gate `NONE`. Disabled dependency-impact,
@@ -221,10 +221,11 @@ Use one of `feat`, `fix`, `refactor`, `test`, `chore`, `docs`, `build`, `ci`,
 staged snapshot before committing. A receipt is bound to the staged tree,
 policy, intent, scope, and HEAD; changing any of these invalidates it.
 
-The checked-in CI currently uses Java 17, Staging credentials, and a
-Pixel 6/API 34 x86_64 emulator provided by `ReactiveCircus/android-emulator-
-runner`. There is no checked-in AVD bootstrap workflow or prewarmed snapshot;
-do not document one or rely on one. The delivery CI window is limited by the
+The checked-in CI uses Java 17, Staging credentials, and a prewarmed Pixel
+6/API 34 x86_64 emulator provided by `ReactiveCircus/android-emulator-runner`.
+The AVD cache is generated manually through
+`.github/workflows/avd-bootstrap.yml`; increment its `cache_version` input when
+the emulator configuration changes. The delivery CI window is limited by the
 policy (`maxInFlightCommits` is currently four). Do not manually poll runs.
 
 ## Skill routing

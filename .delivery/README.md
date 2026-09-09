@@ -112,10 +112,11 @@ The allowed types are `feat`, `fix`, `refactor`, `test`, `chore`, `docs`,
 
 ## CI and Android topology
 
-The checked-in CI workflow runs the delivery package tests and smoke check,
-then Java 17, Staging lint/JVM/build checks, and instrumented tests on a Pixel
-6/API 34 x86_64 emulator. There is no checked-in AVD bootstrap workflow or
-prewarmed snapshot. Gate C and Gate D use Dev
+The checked-in CI workflow runs the delivery package tests and smoke check in
+parallel with Java 17, Staging lint/JVM/build checks, and instrumented tests on
+a prewarmed Pixel 6/API 34 x86_64 emulator. The checked-in
+`.github/workflows/avd-bootstrap.yml` workflow regenerates the AVD cache when
+needed. Gate C and Gate D use Dev
 instrumented tests; Gate R reproduces the Staging checks and requires the
 failed CI SHA plus Staging credentials. Do not substitute Dev for Gate R.
 

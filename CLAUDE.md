@@ -9,7 +9,8 @@ Quick facts:
 - Provider package: `com.loresuelvo.serviceprovider`.
 - Android build: Kotlin, Compose, Hilt, Retrofit, Auth0, and Cucumber JVM.
 - Delivery tooling: Node.js 24 LTS in `tools/delivery-mcp/`.
-- CI emulator: Pixel 6/API 34; no bootstrap workflow or prewarmed snapshot.
+- CI emulator: prewarmed Pixel 6/API 34; regenerate it with
+  `.github/workflows/avd-bootstrap.yml` when the cache version changes.
 - Use `make test`, `make lint`, `make build`, and `make e2e` according to the
   test topology in `AGENTS.md`.
 - Commit format: `<type>[33]: imperative English description`.

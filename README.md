@@ -89,6 +89,13 @@ Staging and Prod values are injected through the corresponding
 `*_STAGING` and `*_PROD` Gradle properties or CI secrets. Staging and Prod
 must use HTTPS endpoints.
 
+## CI emulator cache
+
+The CI instrumented-test job restores a prewarmed Pixel 6/API 34 emulator
+snapshot. Run the manual
+`.github/workflows/avd-bootstrap.yml` workflow with an incremented
+`cache_version` input when the emulator configuration changes.
+
 ## Commands
 
 All Android targets accept `FLAVOR=Dev|Staging|Prod`; Dev is the default.
@@ -148,10 +155,11 @@ prepare its exact staged snapshot through the Delivery MCP.
 ## CI
 
 The checked-in workflow runs Java 17, Staging lint and JVM tests, instrumented
-tests on a Pixel 6/API 34 x86_64 emulator, and a Staging build. It does not use
-a prewarmed snapshot and there is no checked-in AVD bootstrap workflow. Local
-emulator availability is independent from CI; use `make devices` before
-`make e2e`.
+tests on a prewarmed Pixel 6/API 34 x86_64 emulator, and a Staging build.
+Delivery tooling checks run in a separate parallel job. Run the manual
+`.github/workflows/avd-bootstrap.yml` workflow when the AVD cache needs to be
+regenerated. Local emulator availability is independent from CI; use `make devices`
+before `make e2e`.
 
 Required Staging values are supplied as CI secrets:
 

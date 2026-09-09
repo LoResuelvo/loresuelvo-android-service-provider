@@ -1,0 +1,71 @@
+name: Bootstrap CI AVD
+
+on:
+  workflow_dispatch:
+    inputs:
+      cache_version:
+        description: Version of the prewarmed AVD cache; increment it to regenerate the cache
+        required: true
+        default: v1
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  prepare-avd:
+    name: Prepare Pixel 6 API 34 snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Create and prewarm AVD snapshot
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          avd-name: test
+          force-avd-creation: true
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            adb -s emulator-5554 emu avd snapshot save ci-clean
+            sleep 10
+            adb -s emulator-5554 emu avd snapshot list
+            adb -s emulator-5554 emu avd snapshot list | grep -q 'ci-clean'
+
+      - name: Wait for emulator shutdown before caching
+        run: |
+          set -eu
+          i=0
+          while adb -s emulator-5554 get-state >/dev/null 2>&1; do
+            if [ "$i" -ge 60 ]; then
+              echo "The emulator did not shut down within 60 seconds"
+              exit 1
+            fi
+            i=$((i + 1))
+            sleep 1
+          done
+          sleep 2
+
+      - name: Verify AVD files before caching
+        run: |
+          set -eu
+          avd_home="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+          test -f "$avd_home/test.ini"
+          test -d "$avd_home/test.avd"
+          find "$avd_home/test.avd" -maxdepth 3 -type f -path '*/snapshots/*' -print
+
+      - name: Save prewarmed AVD cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.android/avd/test.avd
+            ~/.android/avd/test.ini
+          key: ${{ runner.os }}-avd-api34-x86_64-pixel6-${{ inputs.cache_version }}

@@ -48,5 +48,5 @@ git diff --check
 Verify every Markdown link resolves, every documented command exists, and
 examples such as `WelcomeViewModel`, `provider-welcome.feature`,
 `ApiCategoryRepository`, and `make e2e FLAVOR=Dev` still exist. Confirm the
-docs agree with CI's Pixel 6/API 34 emulator and its lack of an AVD bootstrap
+docs agree with CI's Pixel 6/API 34 emulator and its checked-in AVD bootstrap
 workflow. Do not mention unavailable packages, paths, or commands.
