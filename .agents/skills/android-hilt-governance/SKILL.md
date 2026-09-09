@@ -1,3 +1,7 @@
+---
+name: android-hilt-governance
+description: Apply when adding or changing Hilt modules, bindings, scopes, Hilt ViewModels, or Hilt Android tests.
+---
 # android-hilt-governance
 
 Load this skill when adding or changing Hilt modules, bindings, scopes,

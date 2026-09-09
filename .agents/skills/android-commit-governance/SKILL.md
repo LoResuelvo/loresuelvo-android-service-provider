@@ -1,3 +1,7 @@
+---
+name: android-commit-governance
+description: Apply when creating a commit, preparing a pull request, or reviewing commit history under the repository commit contract.
+---
 # android-commit-governance
 
 Load this skill when creating a commit, preparing a pull request, or reviewing

@@ -231,23 +231,23 @@ policy (`maxInFlightCommits` is currently four). Do not manually poll runs.
 
 Load only the relevant skill:
 
-- [android-clean-architecture](skills/android-clean-architecture/SKILL.md) for
+- [android-clean-architecture](.agents/skills/android-clean-architecture/SKILL.md) for
   `domain/`, `data/`, `ui/`, or dependency-boundary changes.
-- [android-bdd-tdd-process](skills/android-bdd-tdd-process/SKILL.md) for
+- [android-bdd-tdd-process](.agents/skills/android-bdd-tdd-process/SKILL.md) for
   behavior, scenarios, step definitions, and tests.
-- [android-testing-gates](skills/android-testing-gates/SKILL.md) before a PR,
+- [android-testing-gates](.agents/skills/android-testing-gates/SKILL.md) before a PR,
   release, merge, or delivery-gate diagnosis.
-- [android-api-client-governance](skills/android-api-client-governance/SKILL.md)
+- [android-api-client-governance](.agents/skills/android-api-client-governance/SKILL.md)
   for Retrofit, DTO, mapper, interceptor, or network changes.
-- [android-hilt-governance](skills/android-hilt-governance/SKILL.md) for Hilt
+- [android-hilt-governance](.agents/skills/android-hilt-governance/SKILL.md) for Hilt
   modules, bindings, ViewModels, or Hilt Android tests.
-- [android-commit-governance](skills/android-commit-governance/SKILL.md) for
+- [android-commit-governance](.agents/skills/android-commit-governance/SKILL.md) for
   commits, PRs, or history review.
-- [android-doc-governance](skills/android-doc-governance/SKILL.md) for this
+- [android-doc-governance](.agents/skills/android-doc-governance/SKILL.md) for this
   contract, README, CLAUDE, skills, or documented commands.
-- [android-us-delivery](skills/android-us-delivery/SKILL.md) for a complete
+- [android-us-delivery](.agents/skills/android-us-delivery/SKILL.md) for a complete
   User Story delivery lifecycle.
-- [android-ai-development-workflow](skills/android-ai-development-workflow/SKILL.md)
+- [android-ai-development-workflow](.agents/skills/android-ai-development-workflow/SKILL.md)
   when coordinating agent batches and handoffs.
 
 ## Agent and human boundaries

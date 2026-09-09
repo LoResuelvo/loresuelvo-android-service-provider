@@ -1,3 +1,7 @@
+---
+name: android-bdd-tdd-process
+description: Apply when adding observable behavior, changing a provider journey, or writing BDD scenarios and tests; use testing gates for delivery validation.
+---
 # android-bdd-tdd-process
 
 Load this skill when adding behavior, changing a provider journey, or adding

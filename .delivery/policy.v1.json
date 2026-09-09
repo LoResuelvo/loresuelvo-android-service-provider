@@ -82,7 +82,7 @@
           ],
           "prefixes": [
             "docs/",
-            "skills/"
+            ".agents/skills/"
           ],
           "extensions": [
             ".md",

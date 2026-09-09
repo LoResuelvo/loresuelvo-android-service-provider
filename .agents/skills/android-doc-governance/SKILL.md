@@ -1,3 +1,7 @@
+---
+name: android-doc-governance
+description: Apply when changing repository documentation, agent contracts, skills, commands, or documented conventions.
+---
 # android-doc-governance
 
 Load this skill when changing `AGENTS.md`, `CLAUDE.md`, `README.md`, a skill,

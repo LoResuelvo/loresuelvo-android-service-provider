@@ -1,3 +1,7 @@
+---
+name: android-clean-architecture
+description: Apply when changing domain, data, UI, use cases, or reviewing application-layer dependency boundaries.
+---
 # android-clean-architecture
 
 Load this skill when changing `domain/`, `data/`, `ui/`,

@@ -1,3 +1,7 @@
+---
+name: android-api-client-governance
+description: Apply when adding or changing Retrofit endpoints, DTOs, mappers, interceptors, authenticators, API configuration, or network tests; keep HTTP details out of domain code.
+---
 # android-api-client-governance
 
 Load this skill when adding or changing a Retrofit endpoint, DTO, mapper,

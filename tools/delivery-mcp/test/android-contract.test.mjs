@@ -58,7 +58,7 @@ test("Android classification covers the required path families", () => {
     [".delivery/policy.v1.json", "delivery_tooling", false],
     [".githooks/pre-commit", "delivery_tooling", false],
     [".codex/config.toml", "delivery_tooling", false],
-    ["skills/android-testing-gates/SKILL.md", "non_code_docs_config", false],
+    [".agents/skills/android-testing-gates/SKILL.md", "non_code_docs_config", false],
     ["AGENTS.md", "non_code_docs_config", false],
     [".github/workflows/ci.yml", "human_only", false],
   ];

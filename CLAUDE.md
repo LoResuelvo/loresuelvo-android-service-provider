@@ -1,7 +1,8 @@
 # CLAUDE.md — LoResuelvo Android Service Provider
 
 [`AGENTS.md`](AGENTS.md) is the canonical context for this repository. Read
-it before acting and load the matching skill from `skills/` for the task.
+it before acting and load the matching skill from `.agents/skills/` for the
+task.
 
 Quick facts:
 

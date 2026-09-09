@@ -1,3 +1,7 @@
+---
+name: android-testing-gates
+description: Apply before pull requests, releases, merges to main, or when diagnosing delivery-gate execution; use BDD/TDD for small behavior iterations.
+---
 # android-testing-gates
 
 Load this skill before a pull request, release, merge to `main`, or when
