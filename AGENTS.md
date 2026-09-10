@@ -1,6 +1,6 @@
 # AGENTS.md — LoResuelvo Android Service Provider
 
-Last updated: 2026-09-08.
+Last updated: 2026-09-10.
 
 This is the canonical contract for agents working in this repository. Read it
 before loading a skill. Human setup belongs in [`README.md`](README.md), and
@@ -9,7 +9,8 @@ the operational delivery reference belongs in
 
 ## Working agreement
 
-1. Read this file and load only the skill that matches the task.
+1. Read this file and load every skill directly relevant to the task; do not
+   load unrelated skills.
 2. Keep source code, tests, diagnostics, comments, skills, agent rules,
    commit messages, and internal documentation in English. User-visible text
    remains in localized Android resources.
@@ -246,6 +247,17 @@ Load only the relevant skill:
   commits, PRs, or history review.
 - [android-doc-governance](.agents/skills/android-doc-governance/SKILL.md) for this
   contract, README, CLAUDE, skills, or documented commands.
+- [android-compose-quality-governance](.agents/skills/android-compose-quality-governance/SKILL.md)
+  for Compose screens, state collection, navigation, accessibility, or
+  adaptive UI.
+- [android-maintainability-governance](.agents/skills/android-maintainability-governance/SKILL.md)
+  for code review, refactors, complexity, coupling, or oversized files.
+- [android-static-analysis-governance](.agents/skills/android-static-analysis-governance/SKILL.md)
+  for lint, architecture guards, forbidden patterns, or configured quality
+  analyzers.
+- [android-testability-governance](.agents/skills/android-testability-governance/SKILL.md)
+  for deterministic test design, DI boundaries, state/effect coverage, or
+  testability reviews.
 - [android-us-delivery](.agents/skills/android-us-delivery/SKILL.md) for a complete
   User Story delivery lifecycle.
 - [android-ai-development-workflow](.agents/skills/android-ai-development-workflow/SKILL.md)
