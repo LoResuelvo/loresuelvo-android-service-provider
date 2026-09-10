@@ -30,6 +30,7 @@ const snapshot = {
   branch: "feature/android-delivery",
   headSha: "a".repeat(40),
   snapshotHash: "b".repeat(64),
+  stagedTreeSha: "c".repeat(40),
 };
 
 test("saveDeliveryContext and loadDeliveryContext preserve Android scope and numeric work item", async (t) => {
@@ -51,6 +52,7 @@ test("saveDeliveryContext and loadDeliveryContext preserve Android scope and num
   assert.equal(saved.branch, snapshot.branch);
   assert.equal(saved.headSha, snapshot.headSha);
   assert.equal(saved.snapshotHash, snapshot.snapshotHash);
+  assert.equal(saved.stagedTreeSha, snapshot.stagedTreeSha);
   assert.equal(saved.intent, "close_scenario");
   assert.equal(saved.usId, "33");
   assert.equal(saved.featureFile, "app/src/test/resources/features/welcome.feature");
@@ -82,6 +84,13 @@ test("validateDeliveryContext expires on identity changes and detects numeric wo
   });
   assert.equal(treeMismatch.reason, "CONTEXT_SNAPSHOT_MISMATCH");
   assert.equal(treeMismatch.expired, true);
+
+  const stagedTreeMismatch = validateDeliveryContext({
+    context,
+    snapshot: { ...snapshot, stagedTreeSha: "d".repeat(40) },
+  });
+  assert.equal(stagedTreeMismatch.reason, "CONTEXT_TREE_MISMATCH");
+  assert.equal(stagedTreeMismatch.expired, true);
 
   const branchMismatch = validateDeliveryContext({
     context,
@@ -178,4 +187,3 @@ test("inferWipRemovalScenario recognizes one Android feature scenario only", () 
   assert.equal(inferWipRemovalScenario(diff, [file, "app/src/test/resources/features/other.feature"]), null);
   assert.equal(inferWipRemovalScenario(diff, ["app/src/main/README.md"]), null);
 });
-

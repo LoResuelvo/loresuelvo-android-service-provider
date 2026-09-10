@@ -9,6 +9,7 @@
     "branch": { "type": "string" },
     "headSha": { "type": "string" },
     "snapshotHash": { "type": "string" },
+    "stagedTreeSha": { "type": ["string", "null"] },
     "intent": {
       "type": "string",
       "enum": ["prepare_commit", "close_scenario", "close_batch", "close_us", "repair_ci"]

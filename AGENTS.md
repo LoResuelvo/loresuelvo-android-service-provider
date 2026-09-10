@@ -206,8 +206,15 @@ Do not bypass a failed CI check with `--no-verify` or
 `DELIVERY_SKIP_CI_CHECK`. For a failed remote SHA, inspect it with
 `delivery_ci_inspect`, stage the atomic repair, and prepare with intent
 `repair_ci` and that exact `repairsSha`. Gate R produces a single-use repair
-receipt. Workflow changes and workflow CI failures are `HUMAN_ONLY` and must
-be escalated.
+receipt for agents. A human who intentionally delegates verification to
+remote CI may instead run `make delivery-context
+ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"` after the
+final `git add`; `post-commit` accepts that context only when parent, branch,
+staged tree, and message match exactly, records the commit as `not_run`, and
+consumes the context. `DELIVERY_REQUIRE_EVIDENCE=1` continues to reject this
+human path. A cancelled CI run is ignored only when a reachable descendant
+commit has passed CI. Workflow changes and workflow CI failures are
+`HUMAN_ONLY` and must be escalated.
 
 ## Commits and CI
 

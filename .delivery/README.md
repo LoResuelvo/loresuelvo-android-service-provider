@@ -147,10 +147,20 @@ policy, intent, and scope. A changed staged file invalidates the receipt.
 Long Gate C/D/R, HEAD verification, and bounded CI waits may return a `jobId`;
 await it with `delivery_job_wait`; `delivery_job_cancel` is cooperative and
 leaves a recoverable cancelled/failed job record, so a caller may retry with a
-fresh snapshot. Do not busy-poll. CI repair uses
-`delivery_ci_inspect` followed by `delivery_prepare` with intent `repair_ci`
-and the exact `repairsSha`. `--no-verify` and
-`DELIVERY_SKIP_CI_CHECK` are forbidden.
+fresh snapshot. Do not busy-poll. CI repair starts with
+`delivery_ci_inspect` and has two auditable paths:
+
+- Agents call `delivery_prepare` with intent `repair_ci` and the exact
+  `repairsSha`; Gate R issues a single-use repair receipt.
+- Humans may delegate verification to remote CI by running
+  `make delivery-context ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"`
+  immediately after the final `git add`. The following commit is recorded as
+  `not_run`, but only when its parent, branch, staged tree, and message match
+  the context exactly. `DELIVERY_REQUIRE_EVIDENCE=1` rejects this path.
+
+Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`. A cancelled CI run is
+resolved only when a reachable descendant has passed CI; cancellation without
+that green descendant remains a repair incident.
 
 The workflow remains in shadow mode: `DELIVERY_REQUIRE_EVIDENCE` is disabled,
 and hooks are not installed automatically. During shadow validation, a human

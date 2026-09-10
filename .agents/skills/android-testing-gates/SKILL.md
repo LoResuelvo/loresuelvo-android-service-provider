@@ -75,9 +75,14 @@ format, receipts, and the CI window but never run test suites.
 ## CI failure repair
 
 Stop ordinary pushes when CI fails. Inspect the exact SHA with
-`delivery_ci_inspect`, make one atomic fix, and call `delivery_prepare` with
-intent `repair_ci` and that exact `repairsSha`. Gate R issues a single-use
-repair receipt. Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`.
+`delivery_ci_inspect`, make one atomic fix, and choose an auditable path:
+agents call `delivery_prepare` with intent `repair_ci` and that exact
+`repairsSha` so Gate R issues a single-use repair receipt; humans may instead
+run `make delivery-context ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"`
+after the final `git add` to delegate verification to remote CI. The human
+commit remains `not_run` and is rejected when `DELIVERY_REQUIRE_EVIDENCE=1` is
+enabled. Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`. A cancelled run
+is resolved only by a reachable descendant with passed CI.
 Workflow files and workflow-job failures are `HUMAN_ONLY` and must be
 escalated.
 

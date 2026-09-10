@@ -72,6 +72,12 @@ Do not execute hooks with `--no-verify`, and do not use
 `DELIVERY_SKIP_CI_CHECK`. If preparation fails, fix the causal issue or
 escalate; do not commit around it.
 
+For a human CI repair that delegates verification to remote CI, run
+`make delivery-context ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"`
+after the final `git add`. The context is accepted only for the exact parent,
+branch, staged tree, and valid commit message; the resulting commit remains
+`not_run` and is rejected when `DELIVERY_REQUIRE_EVIDENCE=1` is enabled.
+
 ## Pull requests
 
 Use an English title with the same

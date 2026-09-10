@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import {
   getHooksStatus,
@@ -14,6 +15,11 @@ import {
   validateCommitMessage,
 } from "../lib/git-hooks.mjs";
 import { getCommitEvidence } from "../lib/delivery-ledger.mjs";
+import { captureGitSnapshot } from "../lib/git-snapshot.mjs";
+import { loadDeliveryContext, saveDeliveryContext } from "../lib/delivery-context.mjs";
+import { MockCiProvider } from "../lib/ci-provider.mjs";
+
+const sourceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
 async function createTempRepo(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "android-delivery-hooks-"));
@@ -23,6 +29,20 @@ async function createTempRepo(t) {
   execFileSync("git", ["config", "user.email", "delivery-tests@example.com"], { cwd: root });
   execFileSync("git", ["config", "commit.gpgsign", "false"], { cwd: root });
   await fs.mkdir(path.join(root, ".delivery/runtime"), { recursive: true });
+  await fs.mkdir(path.join(root, ".delivery/schemas"), { recursive: true });
+  await fs.copyFile(
+    path.join(sourceRoot, ".delivery", "schemas", "delivery-context.schema.json"),
+    path.join(root, ".delivery", "schemas", "delivery-context.schema.json"),
+  );
+  await fs.copyFile(
+    path.join(sourceRoot, ".delivery", "schemas", "ci-inspection-result.schema.json"),
+    path.join(root, ".delivery", "schemas", "ci-inspection-result.schema.json"),
+  );
+  await fs.copyFile(
+    path.join(sourceRoot, ".delivery", "schemas", "policy.schema.json"),
+    path.join(root, ".delivery", "schemas", "policy.schema.json"),
+  );
+  await fs.copyFile(path.join(sourceRoot, ".delivery", "policy.v1.json"), path.join(root, ".delivery", "policy.v1.json"));
   await fs.mkdir(path.join(root, ".githooks"), { recursive: true });
   await fs.writeFile(path.join(root, "README.md"), "# Fixture\n", "utf8");
   execFileSync("git", ["add", "README.md"], { cwd: root });
@@ -115,6 +135,85 @@ test("post-commit records an unverified human commit without consuming a receipt
   const entry = await getCommitEvidence({ repoRoot: root, commitSha: sha });
   assert.equal(entry.verificationStatus, "not_run");
   assert.equal(entry.usId, "33");
+});
+
+test("exact manual repair context authorizes an unverified repair commit for one push", async (t) => {
+  const root = await createTempRepo(t);
+  const remoteDir = await fs.mkdtemp(path.join(os.tmpdir(), "android-delivery-remote-"));
+  t.after(() => fs.rm(remoteDir, { recursive: true, force: true }));
+  execFileSync("git", ["init", "--bare", "-b", "main"], { cwd: remoteDir });
+  execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: root });
+  execFileSync("git", ["push", "-u", "origin", "main"], { cwd: root, stdio: "ignore" });
+
+  await fs.writeFile(path.join(root, "broken.txt"), "broken\n", "utf8");
+  execFileSync("git", ["add", "broken.txt"], { cwd: root });
+  execFileSync("git", ["commit", "-m", "fix: introduce failure"], { cwd: root, stdio: "ignore" });
+  const failedPost = await runPostCommitHook({ repoRoot: root });
+  assert.equal(failedPost.verificationStatus, "not_run");
+  execFileSync("git", ["push", "origin", "main"], { cwd: root, stdio: "ignore" });
+
+  const mockCi = new MockCiProvider();
+  mockCi.setFixture(failedPost.commitSha, { status: "failed" });
+
+  await fs.writeFile(path.join(root, "broken.txt"), "fixed\n", "utf8");
+  execFileSync("git", ["add", "broken.txt"], { cwd: root });
+  const snapshot = await captureGitSnapshot({ cwd: root });
+  await saveDeliveryContext({
+    repoRoot: root,
+    snapshot,
+    intent: "repair_ci",
+    repairsSha: failedPost.commitSha,
+  });
+
+  execFileSync("git", ["commit", "-m", "fix: repair failed commit"], { cwd: root, stdio: "ignore" });
+  const repairPost = await runPostCommitHook({ repoRoot: root });
+  assert.equal(repairPost.verificationStatus, "not_run");
+  assert.equal(repairPost.reason, "MANUAL_REPAIR_WITHOUT_RECEIPT");
+  assert.equal(repairPost.ledgerEntry.intent, "repair_ci");
+  assert.equal(repairPost.ledgerEntry.repairsSha, failedPost.commitSha);
+  assert.equal(repairPost.ledgerEntry.manualRepairContextValidated, true);
+  assert.equal((await loadDeliveryContext({ repoRoot: root })).consumed, true);
+
+  const pushLine = `refs/heads/main ${repairPost.commitSha} refs/heads/main ${failedPost.commitSha}`;
+  const previousStrict = process.env.DELIVERY_REQUIRE_EVIDENCE;
+  process.env.DELIVERY_REQUIRE_EVIDENCE = "1";
+  try {
+    const strictPush = await runPrePushHook({ repoRoot: root, stdinLines: [pushLine], ciProvider: mockCi });
+    assert.equal(strictPush.passed, false);
+    assert.equal(strictPush.reason, "UNVERIFIED_COMMIT_PUSH_BLOCKED");
+  } finally {
+    if (previousStrict === undefined) delete process.env.DELIVERY_REQUIRE_EVIDENCE;
+    else process.env.DELIVERY_REQUIRE_EVIDENCE = previousStrict;
+  }
+
+  const humanPush = await runPrePushHook({ repoRoot: root, stdinLines: [pushLine], ciProvider: mockCi });
+  assert.equal(humanPush.passed, true, JSON.stringify(humanPush));
+});
+
+test("manual repair context is not retained when the staged tree changes", async (t) => {
+  const root = await createTempRepo(t);
+
+  await fs.writeFile(path.join(root, "repair.txt"), "first\n", "utf8");
+  execFileSync("git", ["add", "repair.txt"], { cwd: root });
+  const snapshot = await captureGitSnapshot({ cwd: root });
+  await saveDeliveryContext({
+    repoRoot: root,
+    snapshot,
+    intent: "repair_ci",
+    repairsSha: snapshot.headSha,
+  });
+
+  await fs.writeFile(path.join(root, "extra.txt"), "changed after context\n", "utf8");
+  execFileSync("git", ["add", "extra.txt"], { cwd: root });
+  execFileSync("git", ["commit", "-m", "fix: changed repair snapshot"], { cwd: root, stdio: "ignore" });
+  const post = await runPostCommitHook({ repoRoot: root });
+
+  assert.equal(post.verificationStatus, "not_run");
+  assert.equal(post.reason, "NO_PREPARED_RECEIPT");
+  assert.equal(post.ledgerEntry.intent, null);
+  assert.equal(post.ledgerEntry.repairsSha, null);
+  assert.equal(post.ledgerEntry.manualRepairContextValidated, false);
+  assert.equal((await loadDeliveryContext({ repoRoot: root })).consumed, false);
 });
 
 test("pre-push rejects the deprecated CI bypass before inspecting Git state", async (t) => {

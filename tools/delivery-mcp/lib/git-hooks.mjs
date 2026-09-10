@@ -262,6 +262,26 @@ export async function runCommitMsgHook({ repoRoot, messageFilePath } = {}) {
   return { passed: true, validation, contextValidation };
 }
 
+async function getMatchingManualRepairContext({ repoRoot, committedMessage, parentSha, branch, treeSha }) {
+  try {
+    const context = await loadDeliveryContext({ repoRoot });
+    const messageValidation = validateCommitMessage(committedMessage, context);
+    const repairsShaIsValid = /^[a-f0-9]{7,40}$/i.test(context?.repairsSha || "");
+    const matchesCommittedSnapshot =
+      context?.consumed === false &&
+      context.intent === "repair_ci" &&
+      repairsShaIsValid &&
+      context.headSha === parentSha &&
+      context.branch === branch &&
+      Boolean(context.stagedTreeSha) &&
+      context.stagedTreeSha === treeSha &&
+      messageValidation.valid;
+    return matchesCommittedSnapshot ? context : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function runPostCommitHook({ repoRoot } = {}) {
   const root = findRepoRoot(repoRoot);
   let commitSha = "";
@@ -326,6 +346,14 @@ export async function runPostCommitHook({ repoRoot } = {}) {
     cwd: root,
     encoding: "utf8",
   }).trim();
+
+  const manualRepairContext = await getMatchingManualRepairContext({
+    repoRoot: root,
+    committedMessage,
+    parentSha: parents[0] || null,
+    branch,
+    treeSha,
+  });
 
   let commitFiles = [];
   try {
@@ -393,8 +421,11 @@ export async function runPostCommitHook({ repoRoot } = {}) {
     };
   }
 
-  // Record as not_run without consuming receipt or delivery context
-  const notRunReason = !prepared
+  // Human commits remain unverified, but an exact repair context preserves the
+  // failed SHA so pre-push can validate lineage and authorize one CI attempt.
+  const notRunReason = manualRepairContext
+    ? "MANUAL_REPAIR_WITHOUT_RECEIPT"
+    : !prepared
     ? "NO_PREPARED_RECEIPT"
     : prepared.consumedByCommitSha
     ? "STALE_PREPARED_RECEIPT"
@@ -409,8 +440,15 @@ export async function runPostCommitHook({ repoRoot } = {}) {
     parentSha: parents[0] || null,
     treeSha,
     stagedFiles: commitFiles,
-    usId: inferredUsId,
+    intent: manualRepairContext?.intent || "prepare_commit",
+    usId: manualRepairContext?.usId || inferredUsId,
+    repairsSha: manualRepairContext?.repairsSha || null,
+    manualRepairContextValidated: Boolean(manualRepairContext),
   });
+
+  if (manualRepairContext) {
+    await consumeDeliveryContext({ repoRoot: root, context: manualRepairContext });
+  }
 
   return {
     recorded: true,
@@ -560,6 +598,7 @@ export async function runPrePushHook({ repoRoot, stdinLines = [], ciProvider = n
       targetSha: localEntry?.repairsSha,
       excludeShas: currentSet,
       commitCount: commits.length,
+      historyHeadSha: localSha,
     });
 
     if (!ciEvaluation.allowed) {

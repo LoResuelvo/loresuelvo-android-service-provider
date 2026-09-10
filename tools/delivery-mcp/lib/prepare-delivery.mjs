@@ -216,6 +216,7 @@ export async function prepareDelivery({
     ciProvider: effectiveProvider,
     intent: resolvedInput.intent,
     repairsSha: resolvedInput.repairsSha,
+    historyHeadSha: snapshot.headSha,
   });
 
   if (!ciEvaluation.allowed) {

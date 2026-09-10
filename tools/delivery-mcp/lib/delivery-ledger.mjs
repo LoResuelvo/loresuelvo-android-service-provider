@@ -326,6 +326,7 @@ export async function recordCommitEvidence({
   repairPushConsumedAt = null,
   repairAuthState = null,
   repairAuthSha = null,
+  manualRepairContextValidated = false,
 } = {}) {
   const root = findRepoRoot(repoRoot);
   const cleanSha = assertCommitSha(commitSha);
@@ -348,6 +349,11 @@ export async function recordCommitEvidence({
   const effectiveRepairAuthSha = isRepair ? (repairAuthSha || cleanSha) : null;
 
   const isNotRun = effectiveStatus === "not_run";
+  const isValidatedManualRepair =
+    isNotRun &&
+    manualRepairContextValidated === true &&
+    intent === "repair_ci" &&
+    Boolean(effectiveRepairsSha);
   const entry = {
     schemaVersion: 2,
     commitSha: cleanSha,
@@ -368,18 +374,19 @@ export async function recordCommitEvidence({
           recordDigest: null,
           gateId: null,
           policyHash: null,
-          intent: null,
+          intent: isValidatedManualRepair ? "repair_ci" : null,
           featureFile: null,
           scenarioName: null,
           scopeFiles: [],
-          repairsSha: null,
-          supersedes: [],
-          repairStatus: null,
+          repairsSha: isValidatedManualRepair ? effectiveRepairsSha : null,
+          supersedes: isValidatedManualRepair ? effectiveSupersedes : [],
+          repairStatus: isValidatedManualRepair ? effectiveRepairStatus : null,
           repairedFailure: null,
-          repairAuthState: null,
-          repairAuthSha: null,
+          repairAuthState: isValidatedManualRepair ? effectiveRepairAuthState : null,
+          repairAuthSha: isValidatedManualRepair ? effectiveRepairAuthSha : null,
           repairPushConsumed: false,
           repairPushConsumedAt: null,
+          manualRepairContextValidated: isValidatedManualRepair,
         }
       : {
           notRunReason: null,
@@ -406,6 +413,7 @@ export async function recordCommitEvidence({
           repairAuthSha: effectiveRepairAuthSha,
           repairPushConsumed: Boolean(repairPushConsumed || ["submitted", "ci_pending", "validated", "ci_failed"].includes(effectiveRepairAuthState)),
           repairPushConsumedAt: repairPushConsumedAt || null,
+          manualRepairContextValidated: false,
           recordedAt: new Date().toISOString(),
         }),
   };
@@ -1593,11 +1601,38 @@ export async function queryCommitEvidence({ repoRoot, commitSha } = {}) {
       entry.recordPath === null &&
       entry.recordDigest === null &&
       entry.gateId === null &&
-      entry.policyHash === null &&
-      entry.intent === null;
+      entry.policyHash === null;
+    const hasValidManualRepairAuthorization =
+      (entry.repairPushConsumed === false &&
+        entry.repairPushConsumedAt === null &&
+        entry.repairAuthState === "bound_to_commit") ||
+      (entry.repairPushConsumed === true &&
+        typeof entry.repairPushConsumedAt === "string" &&
+        ["submitted", "ci_pending", "validated", "ci_failed"].includes(entry.repairAuthState));
+    const isValidatedManualRepair =
+      entry.manualRepairContextValidated === true &&
+      entry.intent === "repair_ci" &&
+      typeof entry.repairsSha === "string" &&
+      /^[a-f0-9]{7,40}$/i.test(entry.repairsSha) &&
+      Array.isArray(entry.supersedes) &&
+      entry.supersedes.includes(entry.repairsSha) &&
+      hasCanonicalFiles(entry.supersedes) &&
+      ["unverified", "validated", "failed"].includes(entry.repairStatus) &&
+      entry.repairAuthSha === cleanSha &&
+      hasValidManualRepairAuthorization;
+    const isOrdinaryNotRun =
+      entry.manualRepairContextValidated !== true &&
+      entry.intent === null &&
+      entry.repairsSha === null &&
+      Array.isArray(entry.supersedes) &&
+      entry.supersedes.length === 0 &&
+      entry.repairStatus === null &&
+      entry.repairAuthState === null &&
+      entry.repairAuthSha === null;
     if (
       entry.commitSha !== cleanSha ||
       !hasNoReceiptFields ||
+      (!isValidatedManualRepair && !isOrdinaryNotRun) ||
       !hasCanonicalFiles(entry.stagedFiles) ||
       typeof entry.treeSha !== "string" ||
       !/^[a-f0-9]{40}$/i.test(entry.treeSha) ||
@@ -1759,6 +1794,27 @@ export function sortCommitsTopologically(root, shas) {
   }
 }
 
+function filterEntriesReachableFrom(root, entries, historyHeadSha = "HEAD") {
+  try {
+    const reachableShas = new Set(
+      execFileSync("git", ["rev-list", historyHeadSha], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      })
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((sha) => sha.toLowerCase())
+    );
+    return entries.filter((entry) => reachableShas.has(String(entry.commitSha).toLowerCase()));
+  } catch {
+    // Keep the full ledger when Git cannot resolve the history anchor. This is
+    // fail-closed: CI evaluation may block, but it never silently drops evidence.
+    return entries;
+  }
+}
+
 export async function validateRepairLineage({
   repoRoot,
   repairSha,
@@ -1914,12 +1970,16 @@ export async function validateRepairLineage({
   const hasGateR =
     repairEntry?.gateId === "R" &&
     (repairEntry?.status === "passed" || repairEntry?.verificationStatus === "passed");
+  const hasValidatedManualContext =
+    repairEntry?.verificationStatus === "not_run" &&
+    repairEntry?.intent === "repair_ci" &&
+    repairEntry?.manualRepairContextValidated === true;
 
-  if (!hasGateR) {
+  if (!hasGateR && !hasValidatedManualContext) {
     return {
       valid: false,
       reason: "REPAIR_GATE_INVALID",
-      message: `Repair commit ${cleanRepairSha.slice(0, 8)} does not have an approved Gate R evidence.`,
+      message: `Repair commit ${cleanRepairSha.slice(0, 8)} has neither approved Gate R evidence nor a validated manual repair context.`,
       repairEntry: repairEntry || null,
       targetEntry,
       targetSha: fullTargetSha,
@@ -2092,7 +2152,12 @@ export async function validateRepairLineage({
     };
   }
 
-  if (!repairEvidence?.valid || repairEvidence?.state !== "verified") {
+  const hasVerifiedReceipt = repairEvidence?.valid && repairEvidence?.state === "verified";
+  const hasValidatedManualSnapshot =
+    repairEvidence?.state === "not_run" &&
+    repairEvidence?.entry?.intent === "repair_ci" &&
+    repairEvidence?.entry?.manualRepairContextValidated === true;
+  if (!hasVerifiedReceipt && !hasValidatedManualSnapshot) {
     return {
       valid: false,
       reason: "REPAIR_SNAPSHOT_MISMATCH",
@@ -2263,9 +2328,11 @@ export async function getActiveCiIncidents({
   repoRoot,
   ciProvider = null,
   excludeShas = [],
+  historyHeadSha = "HEAD",
 } = {}) {
   const root = findRepoRoot(repoRoot);
-  const rawEntries = await listCommitEvidence({ repoRoot: root });
+  const ledgerEntries = await listCommitEvidence({ repoRoot: root });
+  const rawEntries = filterEntriesReachableFrom(root, ledgerEntries, historyHeadSha);
   const excludeSet = new Set(
     Array.from(excludeShas || []).map((s) => String(s).trim().toLowerCase())
   );
@@ -2279,7 +2346,7 @@ export async function getActiveCiIncidents({
     return empty;
   }
 
-  const repairResolution = await resolveRepairChain({ repoRoot: root, ciProvider });
+  const repairResolution = await resolveRepairChain({ repoRoot: root, commits: rawEntries, ciProvider });
   const supersededFailures = new Set(
     (repairResolution.supersededFailures || []).map((s) => s.toLowerCase())
   );
@@ -2353,6 +2420,33 @@ export async function getActiveCiIncidents({
     return matching;
   }
 
+  const ciBySha = new Map();
+  async function inspectCached(sha) {
+    const normalizedSha = String(sha).trim().toLowerCase();
+    if (ciBySha.has(normalizedSha)) return ciBySha.get(normalizedSha);
+    const ci = await inspectCi({ sha: normalizedSha, repoRoot: root, provider: ciProvider });
+    ciBySha.set(normalizedSha, ci);
+    return ci;
+  }
+
+  async function hasGreenDescendant(ancestorSha) {
+    for (const candidate of entries) {
+      const candidateSha = candidate.commitSha.toLowerCase();
+      if (candidateSha === ancestorSha) continue;
+      try {
+        execFileSync("git", ["merge-base", "--is-ancestor", ancestorSha, candidateSha], {
+          cwd: root,
+          stdio: ["ignore", "ignore", "ignore"],
+        });
+      } catch {
+        continue;
+      }
+      const candidateCi = await inspectCached(candidateSha);
+      if (candidateCi.status === "passed") return true;
+    }
+    return false;
+  }
+
   const allIncidents = [];
   const activeCiIncidents = [];
 
@@ -2369,7 +2463,7 @@ export async function getActiveCiIncidents({
     } else {
       let ci;
       try {
-        ci = await inspectCi({ sha, repoRoot: root, provider: ciProvider });
+        ci = await inspectCached(sha);
       } catch (err) {
         throw err;
       }
@@ -2381,65 +2475,73 @@ export async function getActiveCiIncidents({
       } else if (["in_progress", "queued", "not_found"].includes(ci.status)) {
         status = "pending";
       } else if (["failed", "cancelled", "timed_out"].includes(ci.status)) {
-        const repairs = findRepairsForSha(sha);
-        if (repairs.length > 0) {
-          const latestRepair = repairs[repairs.length - 1];
-          const rSha = latestRepair.commitSha.toLowerCase();
-          repairSha = rSha;
-
-          let rCi;
-          try {
-            rCi = await inspectCi({ sha: rSha, repoRoot: root, provider: ciProvider });
-          } catch (err) {
-            throw err;
-          }
-
-          if (rCi.status === "passed") {
-            // A green receipt resolves the target only after the exact same
-            // repair has passed lineage validation in resolveRepairChain.
-            status = validatedRepairSet.has(rSha)
-              ? (supersededFailures.has(sha) ? "superseded" : "passed")
-              : "repair_submitted";
-          } else if (["in_progress", "queued"].includes(rCi.status)) {
-            status = "repair_submitted";
-          } else if (["failed", "cancelled", "timed_out"].includes(rCi.status)) {
-            status = "repair_failed";
-          } else if (rCi.status === "provider_error") {
-            status = "provider_error";
-          } else {
-            if (latestRepair.repairPushConsumed || isCommitInRemote(root, rSha)) {
-              status = "repair_submitted";
-            } else {
-              status = "repair_prepared";
-            }
-          }
+        if (ci.status === "cancelled" && await hasGreenDescendant(sha)) {
+          // GitHub can cancel an older run when concurrency replaces it with a
+          // newer run. A green descendant proves the current descendant state
+          // passed CI, so the superseded cancellation must not block delivery.
+          supersededFailures.add(sha);
+          status = "superseded";
         } else {
-          let auth = null;
-          try {
-            auth = await getRepairAuthorization({ repoRoot: root, targetSha: sha });
-          } catch {
-            auth = null;
-          }
-          let lastPrepared = null;
-          try {
-            lastPrepared = await getLastPreparedEvidence({ repoRoot: root });
-          } catch {
-            lastPrepared = null;
-          }
+          const repairs = findRepairsForSha(sha);
+          if (repairs.length > 0) {
+            const latestRepair = repairs[repairs.length - 1];
+            const rSha = latestRepair.commitSha.toLowerCase();
+            repairSha = rSha;
 
-          if (auth && (auth.state === "prepared" || auth.state === "bound_to_commit")) {
-            status = "repair_prepared";
-            repairSha = auth.commitSha || null;
-          } else if (
-            lastPrepared?.repairsSha &&
-            matchesTarget(lastPrepared.repairsSha, sha) &&
-            !lastPrepared.consumedByCommitSha
-          ) {
-            status = "repair_prepared";
-            repairSha = null;
+            let rCi;
+            try {
+              rCi = await inspectCached(rSha);
+            } catch (err) {
+              throw err;
+            }
+
+            if (rCi.status === "passed") {
+              // A green receipt resolves the target only after the exact same
+              // repair has passed lineage validation in resolveRepairChain.
+              status = validatedRepairSet.has(rSha)
+                ? (supersededFailures.has(sha) ? "superseded" : "passed")
+                : "repair_submitted";
+            } else if (["in_progress", "queued"].includes(rCi.status)) {
+              status = "repair_submitted";
+            } else if (["failed", "cancelled", "timed_out"].includes(rCi.status)) {
+              status = "repair_failed";
+            } else if (rCi.status === "provider_error") {
+              status = "provider_error";
+            } else {
+              if (latestRepair.repairPushConsumed || isCommitInRemote(root, rSha)) {
+                status = "repair_submitted";
+              } else {
+                status = "repair_prepared";
+              }
+            }
           } else {
-            status = "repair_required";
-            repairSha = null;
+            let auth = null;
+            try {
+              auth = await getRepairAuthorization({ repoRoot: root, targetSha: sha });
+            } catch {
+              auth = null;
+            }
+            let lastPrepared = null;
+            try {
+              lastPrepared = await getLastPreparedEvidence({ repoRoot: root });
+            } catch {
+              lastPrepared = null;
+            }
+
+            if (auth && (auth.state === "prepared" || auth.state === "bound_to_commit")) {
+              status = "repair_prepared";
+              repairSha = auth.commitSha || null;
+            } else if (
+              lastPrepared?.repairsSha &&
+              matchesTarget(lastPrepared.repairsSha, sha) &&
+              !lastPrepared.consumedByCommitSha
+            ) {
+              status = "repair_prepared";
+              repairSha = null;
+            } else {
+              status = "repair_required";
+              repairSha = null;
+            }
           }
         }
       }
@@ -2483,6 +2585,7 @@ export async function evaluateCiWindow({
   repairsSha = null,
   excludeShas = [],
   commitCount = 0,
+  historyHeadSha = "HEAD",
 } = {}) {
   const root = findRepoRoot(repoRoot);
   const effectivePolicy = policy || (await loadDeliveryPolicy({ repoRoot: root }));
@@ -2514,7 +2617,8 @@ export async function evaluateCiWindow({
   const excludeSet = new Set(
     Array.from(excludeShas || []).map((s) => String(s).trim().toLowerCase())
   );
-  const relevantEntries = (rawEntries || []).filter(
+  const historyEntries = filterEntriesReachableFrom(root, rawEntries || [], historyHeadSha);
+  const relevantEntries = historyEntries.filter(
     (e) => !excludeSet.has(String(e.commitSha).trim().toLowerCase())
   );
   const priorShas = relevantEntries.map((e) => e.commitSha);
@@ -2523,12 +2627,17 @@ export async function evaluateCiWindow({
   let supersededSet = new Set();
   let repairResolution = null;
   try {
-    repairResolution = await resolveRepairChain({ repoRoot: root, ciProvider: effectiveProvider });
+    repairResolution = await resolveRepairChain({
+      repoRoot: root,
+      commits: historyEntries,
+      ciProvider: effectiveProvider,
+    });
     supersededSet = new Set((repairResolution.supersededFailures || []).map((s) => s.toLowerCase()));
     activeIncidents = await getActiveCiIncidents({
       repoRoot: root,
       ciProvider: effectiveProvider,
       excludeShas: excludeSet,
+      historyHeadSha,
     });
   } catch (error) {
     if (

@@ -382,7 +382,12 @@ export async function finalizeDelivery({
       }
       throw error;
     }
-    const supersededFailures = repairResolution.supersededFailures || [];
+    const supersededFailures = [
+      ...(repairResolution.supersededFailures || []),
+      ...((activeIncidents.allIncidents || [])
+        .filter((incident) => incident.status === "superseded")
+        .map((incident) => incident.failedSha)),
+    ].filter((sha, index, all) => all.indexOf(sha) === index);
     const failedRepairs = repairResolution.failedRepairs || [];
     const invalidRepairs = repairResolution.invalidRepairs || [];
     const supersededSet = new Set(supersededFailures.map((s) => s.toLowerCase()));
@@ -463,7 +468,8 @@ export async function finalizeDelivery({
       const normalizedSha = sha.toLowerCase();
 
       if (supersededSet.has(normalizedSha)) {
-        // Historical failure formally superseded by a green repair commit; does not block
+        // Historical failure formally superseded by a green repair or a green
+        // descendant after CI concurrency cancellation; it does not block.
         continue;
       }
 

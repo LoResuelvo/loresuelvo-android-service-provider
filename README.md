@@ -118,6 +118,7 @@ All Android targets accept `FLAVOR=Dev|Staging|Prod`; Dev is the default.
 | `make delivery-inspect ARGS="--intent prepare_commit"` | Inspect the staged snapshot and selected gate. |
 | `make delivery-prepare ARGS="--intent prepare_commit"` | Run the policy-selected pre-commit gate. |
 | `make delivery-context ARGS="--inspect"` | Inspect validated delivery context. |
+| `make delivery-context ARGS="--intent repair_ci --repairs-sha <sha>"` | Bind an exact human CI-repair context after staging. |
 | `make delivery-ci ARGS="--sha <commit-sha>"` | Inspect CI for a commit SHA. |
 | `make delivery-verify-head ARGS="--intent close_us --scope <feature>"` | Record Gate D evidence for the current HEAD. |
 | `make delivery-finalize ARGS="--intent close_us --scope <feature>"` | Finalize a batch or User Story. |
@@ -178,7 +179,19 @@ receipts, logs, jobs, and ledger state remain under `.delivery/runtime/`.
 The first rollout is shadow mode: `DELIVERY_REQUIRE_EVIDENCE` remains disabled
 until delivery tests, smoke, the Android gate matrix, and real-repository
 checks pass. Hooks never run test suites. Do not use `--no-verify` or
-`DELIVERY_SKIP_CI_CHECK`; CI repairs require the failed SHA and Gate R.
+`DELIVERY_SKIP_CI_CHECK`; agent CI repairs require the failed SHA and Gate R.
+Humans may delegate the repair verification to remote CI by recording an exact
+`repair_ci` context after the final `git add`:
+
+```bash
+make delivery-context ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"
+git commit -m "fix: repair the failed commit"
+git push origin main
+```
+
+The context is accepted only when the commit parent, branch, staged tree, and
+message match. The repair commit remains `not_run`, so
+`DELIVERY_REQUIRE_EVIDENCE=1` still blocks it.
 
 ## Troubleshooting
 
@@ -191,6 +204,19 @@ Set `ANDROID_HOME`/`ANDROID_SDK_ROOT`, or add `sdk.dir` to `local.properties`.
 Start an API 34+ emulator or connect a device, verify `make devices`, and then
 run `make e2e FLAVOR=Dev`. A blocked device check must remain visible in the
 delivery result.
+
+### `git push` reports a prior CI failure
+
+Inspect the exact SHA first:
+
+```bash
+make delivery-ci ARGS="--sha <failed-sha>"
+```
+
+Agents must run the Staging Gate R repair flow. Humans can either do the same
+or record the exact staged repair context shown above. A cancelled run that was
+superseded by a green descendant is resolved automatically; an actual failed
+run still requires an explicit repair.
 
 ### Staging build reports missing variables
 
