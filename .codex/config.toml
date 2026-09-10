@@ -1,4 +1,0 @@
-[mcp_servers.loresuelvo-delivery]
-command = "scripts/with-node-24.sh"
-args = ["node", "tools/delivery-mcp/server.mjs"]
-tool_timeout_sec = 900

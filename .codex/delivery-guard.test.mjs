@@ -60,11 +60,13 @@ test("Codex hook configuration points to the repository-relative guard", async (
   });
 });
 
-test("Codex MCP starts through the repository-relative Node.js 24 wrapper", async () => {
-  const config = await fs.readFile(path.join(repositoryRoot, ".codex/config.toml"), "utf8");
-  assert.match(config, /command = "scripts\/with-node-24\.sh"/);
-  assert.match(config, /args = \["node", "tools\/delivery-mcp\/server\.mjs"\]/);
-  assert.doesNotMatch(config, /command = "node"/);
+test("Codex MCP setup documents the repository-relative Node.js 24 command", async () => {
+  const readme = await fs.readFile(path.join(repositoryRoot, ".codex/README.md"), "utf8");
+  assert.match(
+    readme,
+    /codex mcp add loresuelvo-delivery -- scripts\/with-node-24\.sh node tools\/delivery-mcp\/server\.mjs/
+  );
+  assert.match(readme, /default_tools_approval_mode = "approve"/);
 });
 
 test("versioned Git hooks delegate to the delivery CLI without running suites", async () => {

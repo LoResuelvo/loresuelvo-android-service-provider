@@ -21,6 +21,7 @@ node_modules/
 /.delivery/runtime/
 
 # Clone-local agent configuration
+/.codex/config.toml
 /.agents/mcp_config.json
 /.agents/hooks.json
 /.agents/hooks/
