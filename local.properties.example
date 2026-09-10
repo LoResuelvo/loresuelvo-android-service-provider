@@ -5,6 +5,7 @@ AUTH0_DOMAIN=loresuelvo-dev.auth0.com
 AUTH0_CLIENT_ID=
 AUTH0_SCHEME=com.loresuelvo.provider
 AUTH0_AUDIENCE=http://localhost:8080
+AUTH0_PROVIDER_DATABASE_CONNECTION=
 API_URL=http://10.0.2.2:8080
 #
 # Staging flavor (CI reads from secrets; this is for local staging builds)
@@ -12,6 +13,7 @@ AUTH0_DOMAIN_STAGING=
 AUTH0_CLIENT_ID_STAGING=
 AUTH0_SCHEME_STAGING=com.loresuelvo.provider.staging
 AUTH0_AUDIENCE_STAGING=
+AUTH0_PROVIDER_DATABASE_CONNECTION_STAGING=
 API_URL_STAGING=
 #
 # Production flavor
@@ -19,4 +21,5 @@ AUTH0_DOMAIN_PROD=
 AUTH0_CLIENT_ID_PROD=
 AUTH0_SCHEME_PROD=com.loresuelvo.provider.prod
 AUTH0_AUDIENCE_PROD=
+AUTH0_PROVIDER_DATABASE_CONNECTION_PROD=
 API_URL_PROD=

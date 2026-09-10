@@ -1,7 +1,6 @@
 package com.loresuelvo.serviceprovider.bdd.auth.signup
 
 import io.cucumber.java.After
-import io.cucumber.java.PendingException
 import io.cucumber.java.es.Cuando
 import io.cucumber.java.es.Dado
 import io.cucumber.java.es.Entonces
@@ -10,11 +9,10 @@ import io.cucumber.java.es.Y
 /**
  * Step definitions for the 01-PSU provider signup boundary.
  *
- * The first assertion records the known app-side delegation and then marks
- * the step pending because the feature also names an Auth0 database
- * connection that is not present in this repository. This prevents a test
- * double from falsely proving tenant configuration. The scenario remains
- * `@wip` until that external prerequisite is resolved.
+ * The first assertion covers the app-owned delegation and the adapter's
+ * request shape with a synthetic configuration. It deliberately does not
+ * claim that a real Auth0 tenant has the connection available; that hosted
+ * check remains human-owned.
  */
 class ProviderSignupSteps {
 
@@ -37,9 +35,7 @@ class ProviderSignupSteps {
     @Entonces("la app inicia Auth0 Universal Login en modo de registro para la conexión de correo electrónico y contraseña del prestador")
     fun auth0SignupStartsForProviderConnection() {
         world.assertSignupDelegated()
-        throw PendingException(
-            "Auth0 provider database connection identifier and tenant configuration are not available; only app-side signup delegation is verified.",
-        )
+        world.assertSignupConfiguredForProviderConnection()
     }
 
     @Y("la app nunca solicita ni almacena una contraseña por sí misma")

@@ -44,6 +44,7 @@ abstract class AuthModule {
             clientId = BuildConfig.AUTH0_CLIENT_ID,
             scheme = BuildConfig.AUTH0_SCHEME,
             audience = BuildConfig.AUTH0_AUDIENCE,
+            providerDatabaseConnection = BuildConfig.AUTH0_PROVIDER_DATABASE_CONNECTION,
         )
 
         @Provides

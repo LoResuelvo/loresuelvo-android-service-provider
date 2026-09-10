@@ -7,10 +7,9 @@ import org.junit.runner.RunWith
 /**
  * Cucumber JVM entry point for `provider-signup.feature`.
  *
- * The feature remains filtered by `@wip` until the Auth0 tenant's
- * provider database connection is configured and verified. Keeping a
- * dedicated runner lets the step definitions be registered now without
- * coupling them to the welcome journey runner.
+ * Scenario 01 is app-owned and exercises the configured signup request with a
+ * synthetic connection. The remaining hosted tenant checks and scenarios stay
+ * outside this runner's deterministic proof.
  */
 @RunWith(Cucumber::class)
 @CucumberOptions(

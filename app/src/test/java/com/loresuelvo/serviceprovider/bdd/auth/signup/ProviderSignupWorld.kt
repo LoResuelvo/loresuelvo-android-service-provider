@@ -1,6 +1,9 @@
 package com.loresuelvo.serviceprovider.bdd.auth.signup
 
 import android.content.Context
+import com.auth0.android.provider.WebAuthProvider
+import com.loresuelvo.serviceprovider.data.auth.Auth0Config
+import com.loresuelvo.serviceprovider.data.auth.configureSignup
 import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
@@ -9,6 +12,8 @@ import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import io.mockk.mockk
+import io.mockk.every
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -22,11 +27,11 @@ import org.junit.Assert.assertFalse
 /**
  * Deterministic world for 01-PSU.
  *
- * This world exercises the app-owned boundary only: selecting signup calls
- * [WelcomeViewModel.signup], which delegates to [AuthProvider.signup]. The
- * fake deliberately does not model an Auth0 tenant or invent a database
- * connection identifier. That part of the acceptance contract stays pending
- * until the tenant configuration is supplied and verified.
+ * This world exercises the app-owned boundary: selecting signup calls
+ * [WelcomeViewModel.signup], which delegates to [AuthProvider.signup], and
+ * the production signup adapter adds the configured connection to the Auth0
+ * request. The synthetic configuration proves request construction only; it
+ * does not model a real Auth0 tenant.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderSignupWorld : AutoCloseable {
@@ -62,6 +67,27 @@ class ProviderSignupWorld : AutoCloseable {
         assertEquals(1, authProvider.signupCalls)
     }
 
+    fun assertSignupConfiguredForProviderConnection() {
+        val builder = configuredBuilder()
+
+        builder.configureSignup(
+            Auth0Config(
+                domain = "synthetic.auth0.com",
+                clientId = "synthetic-client-id",
+                scheme = SYNTHETIC_SCHEME,
+                audience = SYNTHETIC_AUDIENCE,
+                providerDatabaseConnection = SYNTHETIC_CONNECTION,
+            ),
+        )
+
+        verify {
+            builder.withScheme(SYNTHETIC_SCHEME)
+            builder.withAudience(SYNTHETIC_AUDIENCE)
+            builder.withParameters(mapOf("screen_hint" to "signup"))
+            builder.withConnection(SYNTHETIC_CONNECTION)
+        }
+    }
+
     /**
      * The provider port accepts only an Activity context. There is no
      * password argument or password storage in the app-owned signup boundary;
@@ -86,6 +112,20 @@ class ProviderSignupWorld : AutoCloseable {
 
     override fun close() {
         Dispatchers.resetMain()
+    }
+
+    private fun configuredBuilder(): WebAuthProvider.Builder =
+        mockk<WebAuthProvider.Builder>().also { builder ->
+            every { builder.withScheme(any()) } returns builder
+            every { builder.withAudience(any()) } returns builder
+            every { builder.withParameters(any()) } returns builder
+            every { builder.withConnection(any()) } returns builder
+        }
+
+    private companion object {
+        const val SYNTHETIC_CONNECTION = "Username-Password-Authentication"
+        const val SYNTHETIC_SCHEME = "com.loresuelvo.provider.synthetic"
+        const val SYNTHETIC_AUDIENCE = "https://api.synthetic.loresuelvo.test"
     }
 
     private class RecordingAuthProvider : AuthProvider {
