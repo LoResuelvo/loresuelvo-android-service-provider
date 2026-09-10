@@ -65,17 +65,27 @@ New continuation, escalation, or close conditions:
 ## Granularity rules
 
 - `MICROSTEP`: one observable behavior; no commit or push by the developer.
-- `SCENARIO`: one approved scenario; stop at GREEN or escalation.
+- `SCENARIO`: one approved scenario; authorize every atomic commit required to
+  reach GREEN rather than a predetermined count; stop at GREEN or escalation.
 - `SCENARIO_GROUP`: two or three related scenarios; each must be GREEN before
-  continuation, and degrade to `SCENARIO` when coupling or ambiguity appears.
+  continuation, each may contain several atomic commits, and the group degrades
+  to `SCENARIO` when coupling or ambiguity appears.
+
+An intermediate atomic commit must be coherent, compilable, testable, and
+independently reversible. It may leave the active scenario `@wip`. The final
+functional commit that makes the scenario GREEN removes `@wip`; never create a
+separate tag-only or closure-only commit.
 
 ## Delivery and closure
 
-Use `delivery_test` during RED/GREEN. At a commit boundary, stage exactly and
-call `delivery_prepare`; wait for a returned job ID with bounded
-`delivery_job_wait`. For a completed HEAD, call `delivery_verify_head` with
-`close_batch` or `close_us`, then use the same intent in `delivery_finalize`.
-Do not create empty commits to manufacture evidence.
+Use `delivery_test` during RED/GREEN. At every atomic commit boundary, stage
+exactly and call `delivery_prepare`; wait for a returned job ID with bounded
+`delivery_job_wait`, then commit and, when authorized, push before starting the
+next boundary. Use `prepare_commit` for intermediate boundaries and
+`close_scenario` for the final functional boundary that makes a scenario
+GREEN. For a completed HEAD, call `delivery_verify_head` with `close_batch` or
+`close_us`, then use the same intent in `delivery_finalize`. Do not create
+empty commits to manufacture evidence.
 
 ## Compact handoff
 

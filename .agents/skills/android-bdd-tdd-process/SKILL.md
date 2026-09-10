@@ -27,13 +27,27 @@ The current journey is `features/auth/provider-welcome.feature`, with glue in
 
 ## Required loop
 
-1. Write or update the Gherkin scenario before production code.
+1. Write every Gherkin acceptance scenario before production code, present the
+   scenarios for functional approval, and mark approved pending scenarios
+   `@wip`.
 2. Add the smallest step definitions needed to fail for the right reason.
 3. Add or update JVM unit tests for the behavior and error branches.
 4. Implement the smallest production change.
 5. Refactor while the focused tests remain green.
 6. Add an instrumented UI test when the change crosses Activity, navigation,
    or real Android boundaries.
+
+After approval, scenario wording is immutable: do not rewrite, remove, or
+weaken `Given`, `When`, or `Then` without renewed functional approval. Complete
+one scenario in GREEN before starting the next, including inside a
+`SCENARIO_GROUP`.
+
+Use `delivery_test` for the interactive RED/GREEN loop. A RED result never
+authorizes a commit. A scenario may advance through several committed internal
+boundaries while its outer Gherkin remains `@wip`; each boundary must be
+coherent, compilable, and GREEN at its own test layer. On the final functional
+boundary, make the complete scenario GREEN, remove `@wip`, stage that exact
+change, and call `delivery_prepare` with `close_scenario`.
 
 Each scenario has a stable ID such as `01-PWB`, one action per step, and one
 `When`. Keep scenario state in a world/context, never in mutable globals. Use
@@ -59,7 +73,7 @@ Assert typed outcomes and observable effects in JVM tests, not localized UI
 strings. Resolve localized strings through the Activity in instrumented tests
 when locale-dependent UI is under test.
 
-## Commands
+## Human or focused diagnostic commands
 
 Focused JVM checks:
 
@@ -79,6 +93,9 @@ make build FLAVOR=Dev
 `make e2e` runs `connectedDevDebugAndroidTest` and needs an available device.
 Delivery Gate 0 and Gate B intentionally run the complete Dev JVM task because
 there is no reliable feature-file-to-runner command.
+
+Agents use these raw commands only for focused diagnosis when the processed
+Delivery MCP result is insufficient; they are not the ordinary TDD loop.
 
 ## Anti-patterns
 

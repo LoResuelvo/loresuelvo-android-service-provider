@@ -27,12 +27,19 @@ Choose one batch granularity:
 Use `MICROSTEP` for ambiguity or high risk, `SCENARIO` ordinarily, and
 `SCENARIO_GROUP` only when continuation conditions are predictable.
 
+Granularity limits behavioral scope and reporting cadence; it never fixes the
+number of commits. `SCENARIO` and `SCENARIO_GROUP` authorize every atomic,
+deployable boundary required inside the approved scenarios.
+
 ## Agent lifecycle and tools
 
 Keep one clean developer context per batch. The orchestrator retains the plan,
 decisions, and compact state; the developer owns only the assigned boundary.
-Rotate at a GREEN scenario, a deployable commit, or an escalation—not in the
-middle of a gate and not to reset a CI diagnosis.
+The same developer persists through the atomic commits of that batch and,
+within an approved `SCENARIO_GROUP`, through its consecutive scenarios. Rotate
+when the batch is GREEN or at an escalation; an exceptional rotation may occur
+at another deployable commit. Never rotate in the middle of a gate or to reset
+a CI diagnosis.
 
 Before delegation, confirm access to the complete Delivery MCP surface:
 `delivery_test`, `delivery_inspect`, `delivery_prepare`, `delivery_job_wait`,
@@ -64,18 +71,33 @@ evidence.
 
 ## Batch execution
 
-For `SCENARIO` and `SCENARIO_GROUP`, the developer:
+For `SCENARIO` and `SCENARIO_GROUP`, the developer works one scenario and one
+atomic boundary at a time:
 
-1. follows the Android BDD/TDD loop with `delivery_test`;
+1. follows the Android BDD/TDD loop with `delivery_test` for the active
+   boundary;
 2. applies the relevant architecture, API, Hilt, and testing skills;
-3. removes `@wip` only when the scenario is GREEN;
-4. stages the exact boundary and calls `delivery_prepare`;
-5. commits with `<type>[33]: imperative English description` only after
-   `status: passed`, then pushes when authorized;
-6. emits the compact handoff and ends the batch.
+3. when the boundary is coherent, compilable, and GREEN at its own test layer,
+   stages it exactly and calls `delivery_prepare` with `prepare_commit`;
+4. with `status: passed`, commits and, when authorized, pushes that boundary
+   before starting the next one; intermediate commits may leave the outer
+   scenario `@wip`;
+5. in the final functional boundary, makes the complete scenario GREEN,
+   removes its `@wip`, and prepares with `close_scenario`;
+6. commits with
+   `<type>[<us-number>]: imperative English description`, using the User Story
+   identifier from the issue title, only after `status: passed`, then pushes when
+   authorized;
+7. advances to the next scenario only inside an approved `SCENARIO_GROUP`;
+   otherwise emits the compact handoff and ends the batch.
 
-For `MICROSTEP`, the developer stops after validation and leaves commit and
-push ownership with the orchestrator unless the contract says otherwise.
+For `MICROSTEP`, the developer stops after validation without staging,
+preparing, committing, or pushing; those owners remain with the orchestrator
+unless the contract says otherwise.
+
+Never target a commit count. Do not commit RED work, split by file or layer,
+leave a commit dependent on uncommitted code, combine unrelated boundaries, or
+create a tag-only/closure-only commit.
 
 ## Repair and escalation
 

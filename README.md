@@ -137,9 +137,11 @@ The delivery policy deliberately uses the complete Dev JVM task for BDD Gate 0
 and Gate B because this repository has no reliable feature-file-to-runner
 command. Do not silently replace a blocked instrumented run with a unit run.
 
-Commits use the canonical migration format
-`<type>[33]: imperative English description`; keep each commit atomic and
-prepare its exact staged snapshot through the Delivery MCP.
+Commits use the canonical format
+`<type>[<us-number>]: imperative English description`, where the bracketed
+value is the User Story identifier from the issue title rather than the
+GitHub issue number. Keep each commit atomic and prepare its exact staged snapshot
+through the Delivery MCP.
 
 ## Android test topology
 

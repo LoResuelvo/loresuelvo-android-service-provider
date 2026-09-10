@@ -16,8 +16,10 @@ remain in their dedicated skills.
 2. Write every acceptance scenario before production code. Give each scenario
    one `When`, a stable ID, and observable outcomes. The current provider
    example is `app/src/test/resources/features/auth/provider-welcome.feature`.
-3. Confirm the functional boundary and the owner of staging, commit, and push.
-4. Do not include `.github/workflows/**` in an agent change; workflow changes
+3. Present the scenarios and wait for explicit functional approval. Commit the
+   approved feature contract separately before production work.
+4. Confirm the functional boundary and the owner of staging, commit, and push.
+5. Do not include `.github/workflows/**` in an agent change; workflow changes
    are `HUMAN_ONLY`.
 
 ## Development loop
@@ -32,11 +34,19 @@ Work outside-in in an approved batch:
    behavior is involved.
 5. Run `delivery_test` for focused TDD. Gate 0 and Gate B use the complete Dev
    JVM task because no reliable feature-file runner exists.
-6. When the scenario is GREEN, remove its `@wip` tag in the same logical
-   change, stage the exact boundary, and call `delivery_prepare`.
-7. Commit only after preparation returns `status: passed`, using
-   `<type>[33]: imperative English description`. Push immediately when the
-   batch contract authorizes it.
+6. At every coherent, compilable, independently testable boundary, stage the
+   exact change and call `delivery_prepare`; with `status: passed`, commit and
+   when authorized push before starting the next boundary. Do not target a
+   commit count.
+7. When the complete scenario is GREEN, remove its `@wip` tag in that final
+   functional change and prepare it with intent `close_scenario`.
+8. Commit only after preparation returns `status: passed`, using
+   `<type>[<us-number>]: imperative English description`, where the bracketed
+   value is the User Story identifier from the issue title rather than the
+   GitHub issue number. Push immediately when the batch contract
+   authorizes it.
+9. Continue to another scenario only inside an approved `SCENARIO_GROUP` after
+   the current scenario is GREEN; otherwise hand off and end the batch.
 
 Use `make test`, `make lint`, `make build`, and `make e2e` for human checks or
 focused diagnosis. The policy-selected MCP operation remains the authoritative

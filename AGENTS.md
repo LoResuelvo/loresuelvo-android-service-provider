@@ -211,16 +211,27 @@ be escalated.
 
 ## Commits and CI
 
-The canonical migration format is:
+The canonical commit format is:
 
 ```text
-<type>[33]: imperative English description
+<type>[<us-number>]: imperative English description
 ```
+
+Use the numeric User Story identifier in the issue title. For example, work
+for `US-35` uses `[35]` even when GitHub assigns the issue a different number.
 
 Use one of `feat`, `fix`, `refactor`, `test`, `chore`, `docs`, `build`, `ci`,
 `perf`, or `style`. Keep commits atomic, stage exact files, and prepare the
 staged snapshot before committing. A receipt is bound to the staged tree,
 policy, intent, scope, and HEAD; changing any of these invalidates it.
+
+Batch granularity does not determine commit count. A `SCENARIO` or
+`SCENARIO_GROUP` authorizes the atomic commits needed within its approved
+behavioral scope. Each commit must be coherent, compilable, testable, and
+independently reversible; do not split by file or layer, and do not combine
+unrelated boundaries to reduce commit count. Intermediate commits may keep the
+active scenario `@wip`. Remove `@wip` only in the final functional commit that
+makes that scenario GREEN, and never create an artificial closure-only commit.
 
 The checked-in CI uses Java 17, Staging credentials, and a prewarmed Pixel
 6/API 34 x86_64 emulator provided by `ReactiveCircus/android-emulator-runner`.

@@ -104,9 +104,12 @@ needs a connected device or emulator.
 
 ## Commit format
 
-Delivery migration work uses the canonical imperative English format
-`<type>[33]: description`, for example `feat[33]: add provider delivery
-check`. Parenthesized scopes and the legacy `[US-33]` spelling are rejected.
+Delivery work uses the canonical imperative English format
+`<type>[<us-number>]: description`. The bracketed value is the numeric User
+Story identifier from the issue title, not the GitHub issue number. For
+example, work for `US-35` in issue `#7` uses
+`feat[35]: establish provider signup session`. Parenthesized scopes and
+spellings such as `[US-35]` are rejected.
 The allowed types are `feat`, `fix`, `refactor`, `test`, `chore`, `docs`,
 `build`, `ci`, `perf`, and `style`.
 
