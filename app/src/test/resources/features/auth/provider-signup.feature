@@ -19,7 +19,6 @@ Característica: Registro de prestadores mediante Auth0 Universal Login
     Y el token de acceso está disponible para las llamadas HTTP autenticadas
     Y la app continúa al formulario de perfil profesional
 
-  @wip
   Escenario: 03-PSU Cancelar el registro de prestador
     Dado que el prestador comenzó sin una sesión local
     Cuando el prestador cancela el registro en Auth0

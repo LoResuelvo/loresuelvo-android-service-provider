@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.bdd.auth.signup
 
+import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import io.cucumber.java.After
 import io.cucumber.java.PendingException
 import io.cucumber.java.es.Cuando
@@ -44,5 +45,26 @@ class ProviderSignupSteps {
     @Y("la app nunca solicita ni almacena una contraseña por sí misma")
     fun appDoesNotHandlePassword() {
         world.assertNoPasswordHandledByApp()
+    }
+
+    @Dado("que el prestador comenzó sin una sesión local")
+    fun prestadorComenzoSinSesionAlternativo() {
+        world.seedNoLocalSession()
+    }
+
+    @Cuando("el prestador cancela el registro en Auth0")
+    fun prestadorCancelaRegistro() {
+        world.configureSignupOutcome(AuthenticationOutcome.Cancelled)
+        world.cancelSignup()
+    }
+
+    @Entonces("la pantalla de bienvenida permanece visible")
+    fun welcomeRemainsVisible() {
+        world.assertWelcomeRemainsVisible()
+    }
+
+    @Y("no se persiste ninguna sesión")
+    fun noSessionIsPersisted() {
+        world.assertNoSessionPersisted()
     }
 }

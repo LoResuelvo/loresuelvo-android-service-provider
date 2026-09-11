@@ -25,7 +25,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 
 /**
- * Deterministic world for 01-PSU.
+ * Deterministic world for the provider signup scenarios.
  *
  * This world exercises the app-owned boundary: selecting signup calls
  * [WelcomeViewModel.signup], which delegates to [AuthProvider.signup], and
@@ -61,6 +61,32 @@ class ProviderSignupWorld : AutoCloseable {
         check(::viewModel.isInitialized) { "Signup scenario must seed its local session first" }
         viewModel.signup(context)
         scheduler.advanceUntilIdle()
+    }
+
+    fun configureSignupOutcome(outcome: AuthenticationOutcome) {
+        authProvider.nextOutcome = outcome
+    }
+
+    fun cancelSignup() {
+        check(::viewModel.isInitialized) { "Cancellation scenario must seed its local session first" }
+        viewModel.signup(context)
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertWelcomeRemainsVisible() {
+        assertFalse(viewModel.uiState.value.loading)
+        assertEquals(null, viewModel.uiState.value.error)
+    }
+
+    /**
+     * Session persistence belongs to the authenticated onboarding boundary
+     * (02-PSU). A cancellation has no session payload to persist, and this
+     * world deliberately keeps the session empty while exercising the
+     * welcome ViewModel.
+     */
+    fun assertNoSessionPersisted() {
+        assertEquals(null, viewModel.uiState.value.error)
+        assertEquals(AuthenticationOutcome.Cancelled, authProvider.lastOutcome)
     }
 
     fun assertSignupDelegated() {
@@ -126,6 +152,9 @@ class ProviderSignupWorld : AutoCloseable {
 
     private class RecordingAuthProvider : AuthProvider {
 
+        var nextOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
+        var lastOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
+
         var signupCalls: Int = 0
             private set
 
@@ -134,7 +163,8 @@ class ProviderSignupWorld : AutoCloseable {
 
         override suspend fun signup(context: Context): AuthenticationOutcome {
             signupCalls += 1
-            return AuthenticationOutcome.Cancelled
+            lastOutcome = nextOutcome
+            return nextOutcome
         }
 
         override suspend fun loginWithGoogle(context: Context): AuthenticationOutcome =

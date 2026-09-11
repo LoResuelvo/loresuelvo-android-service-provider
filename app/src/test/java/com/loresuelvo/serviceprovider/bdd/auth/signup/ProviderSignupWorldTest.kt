@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.bdd.auth.signup
 
+import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -20,6 +21,22 @@ class ProviderSignupWorldTest {
             world.assertSignupDelegated()
             world.assertSignupConfigured()
             world.assertNoPasswordHandledByApp()
+            assertEquals(1, world.signupCalls())
+        } finally {
+            world.close()
+        }
+    }
+
+    @Test
+    fun cancelling_signup_keeps_welcome_available_without_a_session() {
+        val world = ProviderSignupWorld()
+        try {
+            world.seedNoLocalSession()
+            world.configureSignupOutcome(AuthenticationOutcome.Cancelled)
+            world.cancelSignup()
+
+            world.assertWelcomeRemainsVisible()
+            world.assertNoSessionPersisted()
             assertEquals(1, world.signupCalls())
         } finally {
             world.close()

@@ -167,6 +167,21 @@ class WelcomeViewModelTest {
         }
 
     @Test
+    fun should_keep_welcome_state_when_signup_is_cancelled() = runTest(scheduler) {
+        authProvider.nextOutcome = AuthenticationOutcome.Cancelled
+
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.signup(context)
+        advanceUntilIdle()
+
+        assertEquals(1, authProvider.signupCalls)
+        assertEquals(false, viewModel!!.uiState.value.loading)
+        assertEquals(null, viewModel!!.uiState.value.error)
+    }
+
+    @Test
     fun should_clear_loading_when_authentication_succeeds() = runTest(scheduler) {
         authProvider.nextOutcome = AuthenticationOutcome.Success(
             com.loresuelvo.serviceprovider.domain.auth.AuthSession(
