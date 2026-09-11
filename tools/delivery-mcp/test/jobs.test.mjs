@@ -98,6 +98,41 @@ test("waitForJob returns terminal results and times out active jobs without chan
   assert.ok(Date.now() - started >= 100);
   assert.equal(timeout.status, "running");
   assert.match(timeout.message, /still in progress/);
+  assert.equal((await getDeliveryJob({ repoRoot, jobId: active.jobId })).status, "running");
+});
+
+test("createDeliveryJob and updateDeliveryJob support worker tokens deterministically", async (t) => {
+  const repoRoot = await createTempRepo(t);
+  const explicitToken = "explicit-worker-token-xyz";
+  const job = await createDeliveryJob({ repoRoot, type: "prepare", workerToken: explicitToken });
+  assert.equal(job.workerToken, explicitToken);
+
+  const updated = await updateDeliveryJob({
+    repoRoot,
+    jobId: job.jobId,
+    updates: { status: "running", pid: process.pid, startedAt: new Date().toISOString(), workerToken: explicitToken },
+  });
+  assert.equal(updated.status, "running");
+  assert.equal(updated.workerToken, explicitToken);
+});
+
+test("job state and run-key locks remain isolated across repository roots", async (t) => {
+  const roots = await Promise.all([createTempRepo(t), createTempRepo(t)]);
+  const runKey = "same-run-key";
+  const [left, right] = await Promise.all(roots.map((repoRoot, index) => createDeliveryJob({
+    repoRoot,
+    runKey,
+    type: index === 0 ? "prepare" : "inspect",
+    workerToken: `token-${index}`,
+  })));
+
+  assert.notEqual(left.jobId, right.jobId);
+  assert.equal((await findActiveDeliveryJob({ repoRoot: roots[0], runKey })).jobId, left.jobId);
+  assert.equal((await findActiveDeliveryJob({ repoRoot: roots[1], runKey })).jobId, right.jobId);
+  assert.equal((await getDeliveryJob({ repoRoot: roots[0], jobId: right.jobId })), null);
+  assert.equal((await getDeliveryJob({ repoRoot: roots[1], jobId: left.jobId })), null);
+  assert.equal((await getDeliveryJob({ repoRoot: roots[0], jobId: left.jobId })).workerToken, "token-0");
+  assert.equal((await getDeliveryJob({ repoRoot: roots[1], jobId: right.jobId })).workerToken, "token-1");
 });
 
 test("queued jobs expire and dead workers are recovered with a terminal diagnostic", async (t) => {

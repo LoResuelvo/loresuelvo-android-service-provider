@@ -70,6 +70,7 @@ be controlled without an MCP client:
 ```bash
 make delivery-job-wait ARGS="--job-id <job-id> --timeout-ms 60000"
 make delivery-job-cancel ARGS="--job-id <job-id> --reason 'No longer needed'"
+make delivery-repair-recover ARGS="--target-sha <failed-sha> --expected-authorization-commit-sha <never-remote-sha>"
 ```
 
 `make delivery-test ARGS="..."` delegates to that CLI test command for
@@ -152,23 +153,32 @@ fresh snapshot. Do not busy-poll. CI repair starts with
 
 - Agents call `delivery_prepare` with intent `repair_ci` and the exact
   `repairsSha`; Gate R issues a single-use repair receipt.
-- Humans may delegate verification to remote CI by running
-  `make delivery-context ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"`
-  immediately after the final `git add`. The following commit is recorded as
-  `not_run`, but only when its parent, branch, staged tree, and message match
-  the context exactly. `DELIVERY_REQUIRE_EVIDENCE=1` rejects this path.
+- Humans may inspect or clear delivery context with `make delivery-context`.
+  Hooks do not apply context to commit-message validation; post-commit consumes
+  it only when an exact prepared receipt is successfully bound. Use the
+  explicit `delivery_prepare`/`delivery_inspect` operations for a repair
+  receipt and remote-CI delegation.
 
 Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`. A cancelled CI run is
 resolved only when a reachable descendant has passed CI; cancellation without
 that green descendant remains a repair incident.
 
 The workflow remains in shadow mode: `DELIVERY_REQUIRE_EVIDENCE` is disabled,
-and hooks are not installed automatically. During shadow validation, a human
-commit without a receipt is recorded as `not_run`; an autonomous agent must
-still prepare its exact staged snapshot. Install hooks only after the Node
-contracts, Android smoke matrix, and real-repository checks pass. Enable
-evidence enforcement only for autonomous agents after the complete receipt
-lifecycle has been verified.
+and hooks are not installed automatically. Delivery hooks are advisory for
+runtime state and never block a human commit or push; only `commit-msg` may
+block, and only for stateless deterministic commit-message format. A valid
+prepared receipt may be bound by `post-commit`; ordinary human commits and
+invalid/missing receipts are never recorded as `not_run`. An autonomous agent
+must still prepare its exact staged snapshot. Install hooks only after the Node
+contracts, Android smoke matrix, and real-repository checks pass.
+
+If a remote rejects a repair push after authorization, recover the stale
+never-remote binding explicitly with `delivery-repair-recover`. The operation
+requires both the failed target SHA and the expected authorization commit SHA,
+checks the target remains the active failed incident, confirms the authorization
+commit is absent from remote Git and CI, and appends an audit event without
+deleting prior evidence. Ambiguous Git, ledger, lock, or provider state is
+refused closed. Repeating the same request is idempotent.
 
 See [`AGENTS.md`](../AGENTS.md) for the repository contract and
 [`policy.v1.json`](policy.v1.json) plus

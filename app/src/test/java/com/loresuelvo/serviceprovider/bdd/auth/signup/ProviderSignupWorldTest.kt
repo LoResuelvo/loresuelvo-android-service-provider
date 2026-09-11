@@ -5,8 +5,8 @@ import org.junit.Test
 
 /**
  * Focused JVM check for the deterministic 01-PSU world. It proves the
- * app-owned signup delegation, configured request shape, and password-free
- * port with synthetic configuration, without contacting Auth0.
+ * app-owned signup delegation, signup request hint, and password-free port
+ * with synthetic configuration, without contacting Auth0.
  */
 class ProviderSignupWorldTest {
 
@@ -18,7 +18,7 @@ class ProviderSignupWorldTest {
             world.selectSignup()
 
             world.assertSignupDelegated()
-            world.assertSignupConfiguredForProviderConnection()
+            world.assertSignupConfigured()
             world.assertNoPasswordHandledByApp()
             assertEquals(1, world.signupCalls())
         } finally {

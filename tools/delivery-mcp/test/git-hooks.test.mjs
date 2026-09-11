@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -14,7 +15,13 @@ import {
   runPrePushHook,
   validateCommitMessage,
 } from "../lib/git-hooks.mjs";
-import { getCommitEvidence } from "../lib/delivery-ledger.mjs";
+import {
+  getCommitEvidence,
+  getLastPreparedEvidence,
+  getRepairAuthorization,
+  recordPreparedEvidence,
+  saveRepairAuthorization,
+} from "../lib/delivery-ledger.mjs";
 import { captureGitSnapshot } from "../lib/git-snapshot.mjs";
 import { loadDeliveryContext, saveDeliveryContext } from "../lib/delivery-context.mjs";
 import { MockCiProvider } from "../lib/ci-provider.mjs";
@@ -42,6 +49,10 @@ async function createTempRepo(t) {
     path.join(sourceRoot, ".delivery", "schemas", "policy.schema.json"),
     path.join(root, ".delivery", "schemas", "policy.schema.json"),
   );
+  await fs.copyFile(
+    path.join(sourceRoot, ".delivery", "schemas", "execution-result.schema.json"),
+    path.join(root, ".delivery", "schemas", "execution-result.schema.json"),
+  );
   await fs.copyFile(path.join(sourceRoot, ".delivery", "policy.v1.json"), path.join(root, ".delivery", "policy.v1.json"));
   await fs.mkdir(path.join(root, ".githooks"), { recursive: true });
   await fs.writeFile(path.join(root, "README.md"), "# Fixture\n", "utf8");
@@ -51,6 +62,33 @@ async function createTempRepo(t) {
     stdio: "ignore",
   });
   return root;
+}
+
+async function writePreparedRecord(root, { snapshotHash, runKey, policyHash }) {
+  const recordPath = `.delivery/runtime/records/${runKey}.json`;
+  const record = {
+    schemaVersion: 1,
+    status: "passed",
+    snapshotHash,
+    runKey,
+    cached: false,
+    policy: { version: 1, hash: policyHash },
+    gate: {
+      id: "A",
+      reasonCodes: ["ANDROID_TEST_EVIDENCE"],
+      checkIds: ["jvm_test_dev"],
+      parameters: {},
+      postPushChecks: [],
+    },
+    summary: { passed: 1, failed: 0, skipped: 0, durationMs: 1 },
+    checks: [{ id: "jvm_test_dev", status: "passed", durationMs: 1 }],
+    diagnostics: [],
+    evidence: { recordPath },
+  };
+  const raw = `${JSON.stringify(record, null, 2)}\n`;
+  await fs.mkdir(path.dirname(path.join(root, recordPath)), { recursive: true });
+  await fs.writeFile(path.join(root, recordPath), raw, { mode: 0o600 });
+  return { recordPath, recordDigest: crypto.createHash("sha256").update(raw).digest("hex") };
 }
 
 test("commit governance accepts the Android types and numeric [33] only", () => {
@@ -81,7 +119,7 @@ test("hooks install configures .githooks and reports each executable hook", asyn
   }
 });
 
-test("pre-commit stays lightweight in shadow mode and blocks only when evidence is required", async (t) => {
+test("pre-commit remains advisory even when evidence is required", async (t) => {
   const root = await createTempRepo(t);
   const previous = process.env.DELIVERY_REQUIRE_EVIDENCE;
   delete process.env.DELIVERY_REQUIRE_EVIDENCE;
@@ -93,7 +131,8 @@ test("pre-commit stays lightweight in shadow mode and blocks only when evidence 
 
     process.env.DELIVERY_REQUIRE_EVIDENCE = "1";
     const strict = await runPreCommitHook({ repoRoot: root });
-    assert.equal(strict.passed, false);
+    assert.equal(strict.passed, true);
+    assert.equal(strict.advisory, true);
     assert.equal(strict.reason, "MISSING_PREPARED_EVIDENCE");
   } finally {
     if (previous === undefined) delete process.env.DELIVERY_REQUIRE_EVIDENCE;
@@ -117,9 +156,15 @@ test("commit-msg validates a file and rejects the legacy [US-33] spelling", asyn
   const fractional = await runCommitMsgHook({ repoRoot: root, messageFilePath: fractionalPath });
   assert.equal(fractional.passed, false);
   assert.equal(fractional.reason, "INVALID_US_ID");
+
+  const staleSnapshot = await captureGitSnapshot({ cwd: root });
+  await saveDeliveryContext({ repoRoot: root, snapshot: staleSnapshot, intent: "close_us", usId: "99" });
+  const staleContext = await runCommitMsgHook({ repoRoot: root, messageFilePath: validPath });
+  assert.equal(staleContext.passed, true);
+  assert.equal(Object.hasOwn(staleContext, "contextValidation"), false);
 });
 
-test("post-commit records an unverified human commit without consuming a receipt", async (t) => {
+test("post-commit remains advisory and does not mutate evidence", async (t) => {
   const root = await createTempRepo(t);
   await fs.writeFile(path.join(root, "manual.txt"), "human change\n", "utf8");
   execFileSync("git", ["add", "manual.txt"], { cwd: root });
@@ -129,15 +174,56 @@ test("post-commit records an unverified human commit without consuming a receipt
   });
   const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
   const result = await runPostCommitHook({ repoRoot: root });
-  assert.equal(result.recorded, true);
+  assert.equal(result.recorded, false);
+  assert.equal(result.advisory, true);
   assert.equal(result.commitSha, sha);
-  assert.equal(result.verificationStatus, "not_run");
   const entry = await getCommitEvidence({ repoRoot: root, commitSha: sha });
-  assert.equal(entry.verificationStatus, "not_run");
-  assert.equal(entry.usId, "33");
+  assert.equal(entry, null);
 });
 
-test("exact manual repair context authorizes an unverified repair commit for one push", async (t) => {
+test("post-commit binds and consumes an exact prepared receipt", async (t) => {
+  const root = await createTempRepo(t);
+  await fs.writeFile(path.join(root, "prepared.txt"), "prepared\n", "utf8");
+  execFileSync("git", ["add", "prepared.txt"], { cwd: root });
+  const snapshot = await captureGitSnapshot({ cwd: root });
+  const policyHash = "a".repeat(64);
+  const runKey = "b".repeat(64);
+  const evidence = await writePreparedRecord(root, { snapshotHash: snapshot.snapshotHash, runKey, policyHash });
+  await recordPreparedEvidence({
+    repoRoot: root,
+    snapshot,
+    inspection: { gate: { id: "A" }, policy: { hash: policyHash } },
+    runKey,
+    status: "passed",
+    recordPath: evidence.recordPath,
+    usId: "35",
+  });
+
+  execFileSync("git", ["commit", "-m", "feat[35]: bind prepared receipt"], { cwd: root, stdio: "ignore" });
+  const post = await runPostCommitHook({ repoRoot: root });
+  assert.equal(post.recorded, true, JSON.stringify(post));
+  assert.equal(post.verificationStatus, "passed");
+  const entry = await getCommitEvidence({ repoRoot: root, commitSha: post.commitSha });
+  assert.equal(entry.verificationStatus, "passed");
+  assert.equal(entry.parentSha, snapshot.headSha);
+  assert.deepEqual(entry.stagedFiles, ["prepared.txt"]);
+  assert.equal((await getLastPreparedEvidence({ repoRoot: root })).consumedByCommitSha, post.commitSha);
+});
+
+test("post-commit leaves a created commit accepted when prepared evidence is corrupt", async (t) => {
+  const root = await createTempRepo(t);
+  await fs.writeFile(path.join(root, ".delivery/runtime/last-prepared.json"), "not-json\n", { mode: 0o600 });
+  await fs.writeFile(path.join(root, "corrupt.txt"), "corrupt\n", "utf8");
+  execFileSync("git", ["add", "corrupt.txt"], { cwd: root });
+  execFileSync("git", ["commit", "-m", "docs[35]: tolerate corrupt receipt"], { cwd: root, stdio: "ignore" });
+  const post = await runPostCommitHook({ repoRoot: root });
+  assert.equal(post.recorded, false);
+  assert.equal(post.advisory, true);
+  assert.equal(post.reason, "MISSING_PREPARED_EVIDENCE");
+  assert.ok(post.commitSha);
+});
+
+test("manual repair context remains advisory and unconsumed for one push", async (t) => {
   const root = await createTempRepo(t);
   const remoteDir = await fs.mkdtemp(path.join(os.tmpdir(), "android-delivery-remote-"));
   t.after(() => fs.rm(remoteDir, { recursive: true, force: true }));
@@ -149,7 +235,8 @@ test("exact manual repair context authorizes an unverified repair commit for one
   execFileSync("git", ["add", "broken.txt"], { cwd: root });
   execFileSync("git", ["commit", "-m", "fix: introduce failure"], { cwd: root, stdio: "ignore" });
   const failedPost = await runPostCommitHook({ repoRoot: root });
-  assert.equal(failedPost.verificationStatus, "not_run");
+  assert.equal(failedPost.recorded, false);
+  assert.equal(failedPost.advisory, true);
   execFileSync("git", ["push", "origin", "main"], { cwd: root, stdio: "ignore" });
 
   const mockCi = new MockCiProvider();
@@ -167,20 +254,17 @@ test("exact manual repair context authorizes an unverified repair commit for one
 
   execFileSync("git", ["commit", "-m", "fix: repair failed commit"], { cwd: root, stdio: "ignore" });
   const repairPost = await runPostCommitHook({ repoRoot: root });
-  assert.equal(repairPost.verificationStatus, "not_run");
-  assert.equal(repairPost.reason, "MANUAL_REPAIR_WITHOUT_RECEIPT");
-  assert.equal(repairPost.ledgerEntry.intent, "repair_ci");
-  assert.equal(repairPost.ledgerEntry.repairsSha, failedPost.commitSha);
-  assert.equal(repairPost.ledgerEntry.manualRepairContextValidated, true);
-  assert.equal((await loadDeliveryContext({ repoRoot: root })).consumed, true);
+  assert.equal(repairPost.recorded, false);
+  assert.equal(repairPost.advisory, true);
+  assert.equal((await loadDeliveryContext({ repoRoot: root })).consumed, false);
 
   const pushLine = `refs/heads/main ${repairPost.commitSha} refs/heads/main ${failedPost.commitSha}`;
   const previousStrict = process.env.DELIVERY_REQUIRE_EVIDENCE;
   process.env.DELIVERY_REQUIRE_EVIDENCE = "1";
   try {
     const strictPush = await runPrePushHook({ repoRoot: root, stdinLines: [pushLine], ciProvider: mockCi });
-    assert.equal(strictPush.passed, false);
-    assert.equal(strictPush.reason, "UNVERIFIED_COMMIT_PUSH_BLOCKED");
+    assert.equal(strictPush.passed, true);
+    assert.equal(strictPush.advisory, true);
   } finally {
     if (previousStrict === undefined) delete process.env.DELIVERY_REQUIRE_EVIDENCE;
     else process.env.DELIVERY_REQUIRE_EVIDENCE = previousStrict;
@@ -208,24 +292,56 @@ test("manual repair context is not retained when the staged tree changes", async
   execFileSync("git", ["commit", "-m", "fix: changed repair snapshot"], { cwd: root, stdio: "ignore" });
   const post = await runPostCommitHook({ repoRoot: root });
 
-  assert.equal(post.verificationStatus, "not_run");
-  assert.equal(post.reason, "NO_PREPARED_RECEIPT");
-  assert.equal(post.ledgerEntry.intent, null);
-  assert.equal(post.ledgerEntry.repairsSha, null);
-  assert.equal(post.ledgerEntry.manualRepairContextValidated, false);
+  assert.equal(post.recorded, false);
+  assert.equal(post.advisory, true);
   assert.equal((await loadDeliveryContext({ repoRoot: root })).consumed, false);
 });
 
-test("pre-push rejects the deprecated CI bypass before inspecting Git state", async (t) => {
+test("pre-push ignores delivery runtime bypass state and remains advisory", async (t) => {
   const root = await createTempRepo(t);
   const previous = process.env.DELIVERY_SKIP_CI_CHECK;
   process.env.DELIVERY_SKIP_CI_CHECK = "1";
   try {
     const result = await runPrePushHook({ repoRoot: root, stdinLines: [] });
-    assert.equal(result.passed, false);
-    assert.equal(result.reason, "DEPRECATED_CI_BYPASS_REJECTED");
+    assert.equal(result.passed, true);
+    assert.equal(result.advisory, true);
   } finally {
     if (previous === undefined) delete process.env.DELIVERY_SKIP_CI_CHECK;
     else process.env.DELIVERY_SKIP_CI_CHECK = previous;
   }
+});
+
+test("remote-rejected pushes do not consume repair authorization through pre-push", async (t) => {
+  const root = await createTempRepo(t);
+  const remoteDir = await fs.mkdtemp(path.join(os.tmpdir(), "android-delivery-rejected-remote-"));
+  t.after(() => fs.rm(remoteDir, { recursive: true, force: true }));
+  execFileSync("git", ["init", "--bare", "-b", "main"], { cwd: remoteDir, stdio: "ignore" });
+  execFileSync("git", ["remote", "add", "origin", remoteDir], { cwd: root });
+  execFileSync("git", ["push", "-u", "origin", "main"], { cwd: root, stdio: "ignore" });
+  const targetSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+
+  await fs.writeFile(path.join(root, "repair.txt"), "repair\n", "utf8");
+  execFileSync("git", ["add", "repair.txt"], { cwd: root });
+  execFileSync("git", ["commit", "-m", "fix[35]: rejected repair"], { cwd: root, stdio: "ignore" });
+  const repairSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  await saveRepairAuthorization({
+    repoRoot: root,
+    authorization: { targetSha, commitSha: repairSha, state: "bound_to_commit", attemptCount: 0, snapshotHash: "b".repeat(64) },
+  });
+  const beforePush = await getRepairAuthorization({ repoRoot: root, targetSha });
+
+  const prePush = await runPrePushHook({
+    repoRoot: root,
+    stdinLines: [`refs/heads/main ${repairSha} refs/heads/main ${targetSha}`],
+  });
+  assert.equal(prePush.passed, true);
+  assert.equal(prePush.advisory, true);
+  assert.deepEqual(await getRepairAuthorization({ repoRoot: root, targetSha }), beforePush);
+
+  const rejectHook = path.join(remoteDir, "hooks", "pre-receive");
+  await fs.writeFile(rejectHook, "#!/bin/sh\nexit 1\n", "utf8");
+  await fs.chmod(rejectHook, 0o755);
+  assert.throws(() => execFileSync("git", ["push", "origin", "main"], { cwd: root, stdio: "ignore" }));
+  const authorization = await getRepairAuthorization({ repoRoot: root, targetSha });
+  assert.deepEqual(authorization, beforePush);
 });

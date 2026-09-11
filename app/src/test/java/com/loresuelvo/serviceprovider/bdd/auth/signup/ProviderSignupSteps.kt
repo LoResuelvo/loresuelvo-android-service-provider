@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.bdd.auth.signup
 
 import io.cucumber.java.After
+import io.cucumber.java.PendingException
 import io.cucumber.java.es.Cuando
 import io.cucumber.java.es.Dado
 import io.cucumber.java.es.Entonces
@@ -9,10 +10,9 @@ import io.cucumber.java.es.Y
 /**
  * Step definitions for the 01-PSU provider signup boundary.
  *
- * The first assertion covers the app-owned delegation and the adapter's
- * request shape with a synthetic configuration. It deliberately does not
- * claim that a real Auth0 tenant has the connection available; that hosted
- * check remains human-owned.
+ * The first assertions cover app-owned delegation and the adapter's signup
+ * request shape. The step remains pending for the tenant-selected connection
+ * because that hosted check is human-owned.
  */
 class ProviderSignupSteps {
 
@@ -35,7 +35,10 @@ class ProviderSignupSteps {
     @Entonces("la app inicia Auth0 Universal Login en modo de registro para la conexión de correo electrónico y contraseña del prestador")
     fun auth0SignupStartsForProviderConnection() {
         world.assertSignupDelegated()
-        world.assertSignupConfiguredForProviderConnection()
+        world.assertSignupConfigured()
+        throw PendingException(
+            "Auth0 tenant-selected connection and hosted signup screen require human-owned smoke verification.",
+        )
     }
 
     @Y("la app nunca solicita ni almacena una contraseña por sí misma")

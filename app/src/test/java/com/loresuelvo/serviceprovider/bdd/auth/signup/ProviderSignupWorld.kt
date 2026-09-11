@@ -11,9 +11,9 @@ import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
-import io.mockk.mockk
 import io.mockk.every
-import io.mockk.verify
+import io.mockk.mockk
+import io.mockk.verifyOrder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -29,9 +29,9 @@ import org.junit.Assert.assertFalse
  *
  * This world exercises the app-owned boundary: selecting signup calls
  * [WelcomeViewModel.signup], which delegates to [AuthProvider.signup], and
- * the production signup adapter adds the configured connection to the Auth0
- * request. The synthetic configuration proves request construction only; it
- * does not model a real Auth0 tenant.
+ * the production signup adapter adds the configured signup hint and account
+ * parameters to the Auth0 request. The synthetic configuration proves request
+ * construction only; it does not model a real Auth0 tenant.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderSignupWorld : AutoCloseable {
@@ -67,7 +67,7 @@ class ProviderSignupWorld : AutoCloseable {
         assertEquals(1, authProvider.signupCalls)
     }
 
-    fun assertSignupConfiguredForProviderConnection() {
+    fun assertSignupConfigured() {
         val builder = configuredBuilder()
 
         builder.configureSignup(
@@ -76,15 +76,13 @@ class ProviderSignupWorld : AutoCloseable {
                 clientId = "synthetic-client-id",
                 scheme = SYNTHETIC_SCHEME,
                 audience = SYNTHETIC_AUDIENCE,
-                providerDatabaseConnection = SYNTHETIC_CONNECTION,
             ),
         )
 
-        verify {
+        verifyOrder {
             builder.withScheme(SYNTHETIC_SCHEME)
             builder.withAudience(SYNTHETIC_AUDIENCE)
             builder.withParameters(mapOf("screen_hint" to "signup"))
-            builder.withConnection(SYNTHETIC_CONNECTION)
         }
     }
 
@@ -119,11 +117,9 @@ class ProviderSignupWorld : AutoCloseable {
             every { builder.withScheme(any()) } returns builder
             every { builder.withAudience(any()) } returns builder
             every { builder.withParameters(any()) } returns builder
-            every { builder.withConnection(any()) } returns builder
         }
 
     private companion object {
-        const val SYNTHETIC_CONNECTION = "Username-Password-Authentication"
         const val SYNTHETIC_SCHEME = "com.loresuelvo.provider.synthetic"
         const val SYNTHETIC_AUDIENCE = "https://api.synthetic.loresuelvo.test"
     }

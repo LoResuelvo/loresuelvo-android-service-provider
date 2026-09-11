@@ -122,6 +122,13 @@ export function summarizeFailureOutput(output, maxLines = 6) {
   return unique;
 }
 
+export function createDeliveryCheckEnvironment(environment = process.env) {
+  const childEnv = { ...environment };
+  delete childEnv.DELIVERY_JOB_ID;
+  delete childEnv.DELIVERY_JOB_TOKEN;
+  return childEnv;
+}
+
 async function executeCommandCheck({ check, repoRoot, logPath, limits = {} }) {
   assertSafeRepoPath(repoRoot, logPath, "Log path");
   assertCommandAllowed(check.command, check.args, check.dynamicAllowlist);
@@ -149,9 +156,11 @@ async function executeCommandCheck({ check, repoRoot, logPath, limits = {} }) {
   const maxLogBytes = limits.maxCheckLogBytes ?? 5242880;
   const maxSummaryLines = limits.maxFailureSummaryLines ?? 6;
 
+  const childEnv = createDeliveryCheckEnvironment();
+
   const child = spawn(check.command, check.args, {
     cwd: repoRoot,
-    env: process.env,
+    env: childEnv,
     shell: false,
     stdio: ["ignore", "pipe", "pipe"],
     detached: process.platform !== "win32",

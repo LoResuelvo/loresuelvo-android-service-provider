@@ -7,9 +7,9 @@ import org.junit.runner.RunWith
 /**
  * Cucumber JVM entry point for `provider-signup.feature`.
  *
- * Scenario 01 is app-owned and exercises the configured signup request with a
- * synthetic connection. The remaining hosted tenant checks and scenarios stay
- * outside this runner's deterministic proof.
+ * Scenario 01 covers the app-owned delegation and signup request shape. The
+ * tenant-selected connection and remaining hosted checks stay outside this
+ * runner's deterministic proof.
  */
 @RunWith(Cucumber::class)
 @CucumberOptions(

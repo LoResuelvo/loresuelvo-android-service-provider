@@ -198,23 +198,24 @@ substitute Dev for CI parity.
 
 Keep `DELIVERY_REQUIRE_EVIDENCE` disabled during shadow validation. Run the
 delivery unit tests, smoke test, classification matrix, and representative
-shadow inspections before installing or enforcing hooks. Hooks are lightweight:
-they validate commit format, staged-snapshot receipts, and the CI window; they
-never execute test suites.
+shadow inspections before installing or enforcing hooks. Hooks are lightweight
+and advisory for delivery evidence, repair, and CI state: they never block a
+human commit or push on runtime state and never execute test suites. A valid
+prepared receipt may be bound by `post-commit`; ordinary human commits are not
+recorded as `not_run`. `commit-msg` is stateless and may still block only
+deterministic commit-message format.
 
 Do not bypass a failed CI check with `--no-verify` or
 `DELIVERY_SKIP_CI_CHECK`. For a failed remote SHA, inspect it with
 `delivery_ci_inspect`, stage the atomic repair, and prepare with intent
 `repair_ci` and that exact `repairsSha`. Gate R produces a single-use repair
 receipt for agents. A human who intentionally delegates verification to
-remote CI may instead run `make delivery-context
-ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"` after the
-final `git add`; `post-commit` accepts that context only when parent, branch,
-staged tree, and message match exactly, records the commit as `not_run`, and
-consumes the context. `DELIVERY_REQUIRE_EVIDENCE=1` continues to reject this
-human path. A cancelled CI run is ignored only when a reachable descendant
-commit has passed CI. Workflow changes and workflow CI failures are
-`HUMAN_ONLY` and must be escalated.
+remote CI may inspect or clear delivery context; commit-message validation does
+not apply it, and post-commit consumes it only when an exact prepared receipt
+is bound. Use the explicit delivery prepare/inspect operations for a repair
+receipt and remote-CI delegation. A cancelled CI run is ignored only when a
+reachable descendant commit has passed CI. Workflow changes and workflow CI
+failures are `HUMAN_ONLY` and must be escalated.
 
 ## Commits and CI
 

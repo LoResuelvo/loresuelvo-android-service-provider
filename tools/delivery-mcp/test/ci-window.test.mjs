@@ -58,7 +58,18 @@ async function commitWindowFixture(root, fileName, contents, message) {
   await fs.writeFile(path.join(root, fileName), contents, "utf8");
   execFileSync("git", ["add", fileName], { cwd: root });
   execFileSync("git", ["commit", "-m", message], { cwd: root, stdio: "ignore" });
-  return runPostCommitHook({ repoRoot: root });
+  const post = await runPostCommitHook({ repoRoot: root });
+  await recordCommitEvidence({
+    repoRoot: root,
+    commitSha: post.commitSha,
+    verificationStatus: "not_run",
+    notRunReason: "human_commit_no_receipt",
+    branch: "main",
+    parentSha: null,
+    treeSha: execFileSync("git", ["rev-parse", "HEAD^{tree}"], { cwd: root, encoding: "utf8" }).trim(),
+    stagedFiles: [fileName],
+  });
+  return post;
 }
 
 const policy = { ci: { maxInFlightCommits: 4 } };

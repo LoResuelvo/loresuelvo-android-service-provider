@@ -299,8 +299,8 @@ test("shadow pre-commit rejects a mutated prepared snapshot without consuming it
     stdio: "ignore",
   });
   const postCommit = await runPostCommitHook({ repoRoot });
-  assert.equal(postCommit.verificationStatus, "not_run");
-  assert.equal(postCommit.reason, "PREPARED_EVIDENCE_MISMATCH");
+  assert.equal(postCommit.recorded, false);
+  assert.equal(postCommit.advisory, true);
   assert.equal((await getLastPreparedEvidence({ repoRoot })).consumedByCommitSha, null);
 });
 

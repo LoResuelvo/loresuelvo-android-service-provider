@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  createDeliveryCheckEnvironment,
   executeCheck,
   extractLocations,
   resolveCheck,
@@ -56,6 +57,15 @@ test("redactSecrets removes credentials before summaries or logs are persisted",
   assert.ok(!redacted.includes("sk-1234567890abcdef"));
   assert.ok(!redacted.includes("private material"));
   assert.match(redacted, /REDACTED/);
+});
+
+test("nested delivery checks do not inherit worker identity variables", () => {
+  const childEnv = createDeliveryCheckEnvironment({
+    PATH: "/usr/bin",
+    DELIVERY_JOB_ID: "job-secret",
+    DELIVERY_JOB_TOKEN: "token-secret",
+  });
+  assert.deepEqual(childEnv, { PATH: "/usr/bin" });
 });
 
 test("resolveCheck accepts only exact Android policy commands", () => {

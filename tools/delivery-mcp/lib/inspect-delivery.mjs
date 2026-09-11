@@ -11,6 +11,7 @@ import {
 } from "./delivery-context.mjs";
 import { inspectCi } from "./ci-provider.mjs";
 import { listCommitEvidence } from "./delivery-ledger.mjs";
+import { hasUnrecoveredRepair } from "./repair-recovery.mjs";
 
 function isLedgerFailure(error) {
   return (
@@ -149,15 +150,16 @@ export async function inspectDelivery({
         gateResult.diagnostics.unshift(ledgerDiagnostic);
       }
       const targetSha = effectiveRepairsSha.toLowerCase();
-      const alreadyRepaired = !ledgerDiagnostic && ledgerEntries.some((entry) => {
-        if (!entry.repairsSha) return false;
-        const entryRepairs = String(entry.repairsSha).toLowerCase();
-        return (
-          entryRepairs === targetSha ||
-          entryRepairs.startsWith(targetSha) ||
-          targetSha.startsWith(entryRepairs)
-        );
-      });
+      let alreadyRepaired = false;
+      if (!ledgerDiagnostic) {
+        try {
+          alreadyRepaired = await hasUnrecoveredRepair({ repoRoot: root, ledgerEntries, targetSha });
+        } catch {
+          ledgerDiagnostic = { code: "REPAIR_RECOVERY_AUDIT_UNREADABLE", message: "Repair recovery audit state is ambiguous", retryable: false };
+          gateResult.status = "blocked";
+          gateResult.diagnostics.unshift(ledgerDiagnostic);
+        }
+      }
       if (ledgerDiagnostic) {
         // Ledger validation failure is terminal for repair_ci.
       } else if (alreadyRepaired) {

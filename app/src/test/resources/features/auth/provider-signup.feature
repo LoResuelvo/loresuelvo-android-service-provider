@@ -4,6 +4,7 @@ Característica: Registro de prestadores mediante Auth0 Universal Login
   Quiero registrarme en LoResuelvo
   Para comenzar a ofrecer mis servicios profesionales
 
+  @wip
   Escenario: 01-PSU Iniciar el registro de prestador
     Dado que el prestador no tiene una sesión local
     Cuando el prestador selecciona "Registrarme" desde la pantalla de bienvenida

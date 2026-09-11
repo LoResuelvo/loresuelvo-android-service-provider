@@ -171,6 +171,7 @@ export async function createDeliveryJob({
   runKey = null,
   snapshotHash = null,
   gateId = null,
+  workerToken = undefined,
   queueLeaseMs = DEFAULT_JOB_QUEUE_LEASE_MS,
 }) {
   const root = findRepoRoot(repoRoot);
@@ -187,7 +188,7 @@ export async function createDeliveryJob({
     startedAt: null,
     finishedAt: null,
     pid: null,
-    workerToken: crypto.randomBytes(16).toString("hex"),
+    workerToken: workerToken !== undefined ? workerToken : crypto.randomBytes(16).toString("hex"),
     workerIdentity: null,
     runKey,
     snapshotHash,
@@ -242,11 +243,16 @@ export async function updateDeliveryJob({ repoRoot, jobId, updates }) {
   if (
     Object.prototype.hasOwnProperty.call(effectiveUpdates, "pid") &&
     Number.isInteger(effectiveUpdates.pid) &&
-    effectiveUpdates.pid > 0 &&
-    !Object.prototype.hasOwnProperty.call(effectiveUpdates, "workerIdentity")
+    effectiveUpdates.pid > 0
   ) {
-    const identity = await readProcessIdentity(effectiveUpdates.pid);
-    if (identity) effectiveUpdates.workerIdentity = identity;
+    if (!Object.prototype.hasOwnProperty.call(effectiveUpdates, "workerIdentity")) {
+      const identity = await readProcessIdentity(effectiveUpdates.pid);
+      if (identity) effectiveUpdates.workerIdentity = identity;
+    }
+    if (!Object.prototype.hasOwnProperty.call(effectiveUpdates, "workerToken")) {
+      const token = await readProcessToken(effectiveUpdates.pid);
+      if (token) effectiveUpdates.workerToken = token;
+    }
   }
   const updated = { ...current, ...effectiveUpdates };
   await writeJobAtomic(root, jobId, updated);

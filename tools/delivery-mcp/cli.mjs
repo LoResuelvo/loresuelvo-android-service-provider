@@ -35,6 +35,7 @@ import { captureGitSnapshot } from "./lib/git-snapshot.mjs";
 import { findRepoRoot } from "./lib/repo-root.mjs";
 import { redactSecrets } from "./lib/redact-secrets.mjs";
 import { waitForJob, cancelDeliveryJob } from "./lib/jobs.mjs";
+import { recoverStaleRepairAuthorization } from "./lib/repair-recovery.mjs";
 
 function usage() {
   return `Usage:
@@ -47,6 +48,7 @@ function usage() {
   make delivery-test ARGS="[options]"
   make delivery-job-wait ARGS="--job-id <job-id> [--timeout-ms <milliseconds>]"
   make delivery-job-cancel ARGS="--job-id <job-id> [--reason <text>]"
+  make delivery-repair-recover ARGS="--target-sha <sha> --expected-authorization-commit-sha <sha>"
   make delivery-hooks-install
   make delivery-hooks-status
 
@@ -125,9 +127,10 @@ function parseArguments(argv) {
   let subAction = "";
   let hookArgs = [];
 
-  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel"].includes(args[0])) {
+  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel", "repair-recover", "recover-repair"].includes(args[0])) {
     command = args.shift();
     if (command === "verify_head") command = "verify-head";
+    if (command === "recover-repair") command = "repair-recover";
   }
 
   if (command === "job") {
@@ -164,6 +167,23 @@ function parseArguments(argv) {
       else throw new Error(`Unknown option for ${command}: ${option}`);
     }
     return { help: false, command, contextAction: "set", input, pretty };
+  }
+
+  if (command === "repair-recover") {
+    const input = {};
+    let pretty = false;
+    for (let index = 0; index < args.length; index += 1) {
+      const option = args[index];
+      if (option === "--help" || option === "-h") return { help: true, command, input, pretty };
+      if (option === "--pretty") { pretty = true; continue; }
+      const value = takeValue(args, index, option);
+      index += 1;
+      if (option === "--target-sha" || option === "--target") input.targetSha = value;
+      else if (option === "--expected-authorization-commit-sha" || option === "--expected-commit-sha" || option === "--expected") input.expectedAuthorizationCommitSha = value;
+      else if (option === "--timeout-ms") input.lockTimeoutMs = Number.parseInt(value, 10);
+      else throw new Error(`Unknown option for repair-recover: ${option}`);
+    }
+    return { help: false, command, input, pretty };
   }
 
   const input = { intent: "prepare_commit", scopeFiles: [] };
@@ -359,9 +379,9 @@ async function main() {
         process.exitCode = 0;
       } else {
         process.stderr.write(
-          `[delivery-hook] post-commit: evidence was not recorded (${res.reason || "unknown"})\n`
+          `[delivery-hook] post-commit advisory: evidence was not recorded (${res.reason || "unknown"})\n`
         );
-        process.exitCode = 1;
+        process.exitCode = 0;
       }
       return;
     }
@@ -471,6 +491,13 @@ async function main() {
   }
 
   // 5.9. Human job control (make delivery-job-wait / delivery-job-cancel)
+  if (options.command === "repair-recover") {
+    const result = await recoverStaleRepairAuthorization({ repoRoot: root, ...options.input });
+    writeJson(result, options.pretty);
+    process.exitCode = result.recovered ? 0 : 2;
+    return;
+  }
+
   if (options.command === "job-wait") {
     const parsed = DeliveryJobWaitInputSchema.safeParse(options.input);
     if (!parsed.success) throw new Error(formatInputIssues(parsed.error));

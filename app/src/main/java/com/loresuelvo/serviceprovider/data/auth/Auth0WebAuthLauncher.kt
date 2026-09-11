@@ -20,7 +20,6 @@ data class Auth0Config(
     val clientId: String,
     val scheme: String,
     val audience: String,
-    val providerDatabaseConnection: String,
 )
 
 /**
@@ -117,11 +116,6 @@ internal fun WebAuthProvider.Builder.configureSignup(
     withScheme(config.scheme)
         .withAudience(config.audience)
         .withScreenHint("signup")
-        .apply {
-            if (config.providerDatabaseConnection.isNotBlank()) {
-                withConnection(config.providerDatabaseConnection)
-            }
-        }
 
 internal fun WebAuthProvider.Builder.configureGoogleLogin(
     config: Auth0Config,
