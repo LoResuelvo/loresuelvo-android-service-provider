@@ -4,7 +4,6 @@ Característica: Registro de prestador con foto de perfil
   Quiero seleccionar, previsualizar y cargar una foto válida
   Para completar mi registro profesional en la plataforma
 
-  @wip
   Escenario: 01-PPH Seleccionar y visualizar una foto en el formulario existente
     Dado que el prestador completó nombre, apellido y seleccionó un rubro
     Cuando el prestador selecciona desde el dispositivo una foto JPEG legible de menos de 5 MiB
@@ -21,7 +20,6 @@ Característica: Registro de prestador con foto de perfil
     Y la nueva foto debe cargarse y confirmarse antes del registro
     Y el nombre, apellido, rubro y las zonas de cobertura seleccionadas permanecen sin cambios
 
-  @wip
   Escenario: 03-PPH Cancelar la selección de foto
     Dado el prestador abrió el selector del dispositivo desde el formulario
     Cuando el prestador cancela el selector sin elegir un archivo
@@ -29,7 +27,6 @@ Característica: Registro de prestador con foto de perfil
     Y la selección anterior y su estado de confirmación permanecen sin cambios
     Y los demás datos del formulario permanecen sin cambios
 
-  @wip
   Esquema del escenario: 04-PPH Aceptar los formatos admitidos hasta el límite exacto de tamaño
     Dado que el prestador está en el formulario de perfil
     Y una imagen legible tiene el formato "<Formato real>" y tamaño <Tamaño en bytes> bytes

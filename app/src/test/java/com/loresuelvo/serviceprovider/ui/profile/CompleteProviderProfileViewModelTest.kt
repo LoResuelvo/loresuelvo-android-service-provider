@@ -10,7 +10,11 @@ import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
+import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
+import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
+import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
@@ -46,6 +50,7 @@ class CompleteProviderProfileViewModelTest {
     private lateinit var categoryRepository: FakeCategoryRepository
     private lateinit var providerRepository: FakeProviderRepository
     private lateinit var sessionStore: RecordingAuthSessionStore
+    private lateinit var photoPreparer: FakeProfilePhotoPreparer
     private var viewModel: CompleteProviderProfileViewModel? = null
 
     private val defaultCategories = listOf(
@@ -67,6 +72,7 @@ class CompleteProviderProfileViewModelTest {
         providerRepository = FakeProviderRepository()
         sessionStore = RecordingAuthSessionStore()
         sessionStore.saveSession(defaultSession)
+        photoPreparer = FakeProfilePhotoPreparer()
     }
 
     private fun newViewModel(): CompleteProviderProfileViewModel =
@@ -74,6 +80,7 @@ class CompleteProviderProfileViewModelTest {
             getCategories = GetCategoriesUseCase(categoryRepository),
             registerProvider = RegisterProviderUseCase(providerRepository),
             sessionStore = sessionStore,
+            prepareProfilePhoto = PrepareProfilePhotoUseCase(photoPreparer),
         )
 
     @After
@@ -430,6 +437,57 @@ class CompleteProviderProfileViewModelTest {
         assertEquals(1, providerRepository.registerCalls)
     }
 
+    @Test
+    fun `selecting valid photo updates selectedPhoto and clears error`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        val validPhoto = SelectedProfilePhoto("photo.jpg", "image/jpeg", 1024L, "/path/photo.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(validPhoto)
+
+        viewModel!!.onPhotoSelected("content://media/1")
+        advanceUntilIdle()
+
+        assertEquals(validPhoto, viewModel!!.uiState.value.selectedPhoto)
+        assertNull(viewModel!!.uiState.value.photoError)
+        assertEquals(false, viewModel!!.uiState.value.photoLoading)
+    }
+
+    @Test
+    fun `cancelling photo picker preserves previous selection and causes no error`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        val validPhoto = SelectedProfilePhoto("photo.jpg", "image/jpeg", 1024L, "/path/photo.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(validPhoto)
+        viewModel!!.onPhotoSelected("content://media/1")
+        advanceUntilIdle()
+
+        viewModel!!.onPhotoSelectionCancelled()
+        advanceUntilIdle()
+
+        assertEquals(validPhoto, viewModel!!.uiState.value.selectedPhoto)
+        assertNull(viewModel!!.uiState.value.photoError)
+    }
+
+    @Test
+    fun `selecting invalid photo preserves previous photo and sets photo error`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        val validPhoto = SelectedProfilePhoto("photo.jpg", "image/jpeg", 1024L, "/path/photo.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(validPhoto)
+        viewModel!!.onPhotoSelected("content://media/1")
+        advanceUntilIdle()
+
+        photoPreparer.outcome = PhotoValidationOutcome.Invalid.ExceedsMaxSize
+        viewModel!!.onPhotoSelected("content://media/too_large")
+        advanceUntilIdle()
+
+        assertEquals(validPhoto, viewModel!!.uiState.value.selectedPhoto)
+        assertEquals(PhotoFormError.ExceedsMaxSize, viewModel!!.uiState.value.photoError)
+    }
+
     private class FakeCategoryRepository : CategoryRepository {
         var outcome: CategoriesOutcome = CategoriesOutcome.Success(emptyList())
         var getCategoriesCalls: Int = 0
@@ -475,5 +533,20 @@ class CompleteProviderProfileViewModelTest {
             clearSessionCalls += 1
             state.value = null
         }
+    }
+
+    private class FakeProfilePhotoPreparer : ProfilePhotoPreparer {
+        var outcome: PhotoValidationOutcome = PhotoValidationOutcome.Valid(
+            SelectedProfilePhoto(
+                originalName = "test_photo.jpg",
+                mimeType = "image/jpeg",
+                sizeBytes = 1024L,
+                localPath = "/cache/test_photo.jpg",
+            ),
+        )
+
+        override suspend fun preparePhoto(source: String): PhotoValidationOutcome = outcome
+
+        override suspend fun cleanPhoto(photo: SelectedProfilePhoto) {}
     }
 }

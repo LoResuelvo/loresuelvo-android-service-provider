@@ -9,7 +9,11 @@ import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
+import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
+import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
+import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
@@ -45,9 +49,11 @@ class CompleteProviderProfileWorld : AutoCloseable {
     private val categoryRepository = FakeCategoryRepository()
     private val providerRepository = FakeProviderRepository()
     private val sessionStore = FakeAuthSessionStore()
+    private val photoPreparer = FakeProfilePhotoPreparer()
 
     private val getCategories = GetCategoriesUseCase(categoryRepository)
     private val registerProvider = RegisterProviderUseCase(providerRepository)
+    private val prepareProfilePhoto = PrepareProfilePhotoUseCase(photoPreparer)
 
     lateinit var viewModel: CompleteProviderProfileViewModel
         private set
@@ -83,6 +89,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
             getCategories = getCategories,
             registerProvider = registerProvider,
             sessionStore = sessionStore,
+            prepareProfilePhoto = prepareProfilePhoto,
         )
         effectsJob?.cancel()
         effectsJob = CoroutineScope(dispatcher).launch {
@@ -375,5 +382,20 @@ class CompleteProviderProfileWorld : AutoCloseable {
         override fun clearSession() {
             _session.value = null
         }
+    }
+
+    private class FakeProfilePhotoPreparer : ProfilePhotoPreparer {
+        var outcome: PhotoValidationOutcome = PhotoValidationOutcome.Valid(
+            SelectedProfilePhoto(
+                originalName = "test_photo.jpg",
+                mimeType = "image/jpeg",
+                sizeBytes = 1024L,
+                localPath = "/cache/test_photo.jpg",
+            ),
+        )
+
+        override suspend fun preparePhoto(source: String): PhotoValidationOutcome = outcome
+
+        override suspend fun cleanPhoto(photo: SelectedProfilePhoto) {}
     }
 }

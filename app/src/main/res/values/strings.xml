@@ -38,9 +38,26 @@
     <string name="provider_profile_retry">Reintentar</string>
     <string name="provider_profile_submit">Continuar</string>
     <string name="provider_profile_submitting">Guardando…</string>
-    <string name="provider_profile_disclaimer">Podrás configurar tu foto de perfil y zonas de atención en los próximos pasos.</string>
+    <string name="provider_profile_disclaimer">Podrás configurar tus zonas de atención en los próximos pasos.</string>
     <string name="provider_profile_already_registered_error">Esta cuenta ya está registrada. Por favor, iniciá sesión.</string>
     <string name="provider_profile_generic_error">No pudimos guardar tu perfil. Revisá tu conexión e intentá de nuevo.</string>
+
+    <!-- Provider profile photo -->
+    <string name="provider_profile_photo_section_title">Foto de perfil</string>
+    <string name="provider_profile_photo_select">Seleccionar foto</string>
+    <string name="provider_profile_photo_change">Cambiar foto</string>
+    <string name="provider_profile_photo_upload">Cargar foto</string>
+    <string name="provider_profile_photo_preview_description">Vista previa de la foto de perfil</string>
+    <string name="provider_profile_photo_ready">Foto lista para el registro</string>
+    <string name="provider_profile_photo_uploading">Cargando foto…</string>
+    <string name="provider_profile_photo_error_format">El formato de la imagen no está admitido. Usá JPEG, PNG o WebP.</string>
+    <string name="provider_profile_photo_error_size">La foto no puede superar los 5 MiB.</string>
+    <string name="provider_profile_photo_error_empty">El archivo seleccionado está vacío.</string>
+    <string name="provider_profile_photo_error_unreadable">No se pudo leer el archivo seleccionado.</string>
+    <string name="provider_profile_photo_error_corrupt">El archivo de imagen está dañado o no es válido.</string>
+    <string name="provider_profile_photo_error_upload">No se pudo cargar la foto. Revisá tu conexión e intentá de nuevo.</string>
+    <string name="provider_profile_photo_required_error">Debés seleccionar y cargar una foto de perfil antes de continuar.</string>
+    <string name="provider_profile_zones_required_error">Debés seleccionar al menos una zona de cobertura.</string>
 
     <!-- Welcome · how it works (3 pasos del prestador) -->
     <string name="welcome_step1_title">Publicá tus servicios</string>

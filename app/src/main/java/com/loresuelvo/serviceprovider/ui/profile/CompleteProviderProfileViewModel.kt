@@ -7,7 +7,9 @@ import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
+import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -28,6 +30,7 @@ class CompleteProviderProfileViewModel @Inject constructor(
     private val getCategories: GetCategoriesUseCase,
     private val registerProvider: RegisterProviderUseCase,
     private val sessionStore: AuthSessionStore,
+    private val prepareProfilePhoto: PrepareProfilePhotoUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CompleteProviderProfileUiState())
@@ -68,6 +71,69 @@ class CompleteProviderProfileViewModel @Inject constructor(
 
     fun onCategorySelected(category: Category) {
         _uiState.update { it.copy(selectedCategory = category, error = null) }
+    }
+
+    fun onPhotoSelected(source: String) {
+        _uiState.update { it.copy(photoLoading = true) }
+        viewModelScope.launch {
+            when (val outcome = prepareProfilePhoto(source)) {
+                is PhotoValidationOutcome.Valid -> {
+                    _uiState.update {
+                        it.copy(
+                            selectedPhoto = outcome.photo,
+                            isPhotoConfirmed = false,
+                            confirmedPhotoFileId = null,
+                            photoLoading = false,
+                            photoError = null,
+                        )
+                    }
+                }
+                is PhotoValidationOutcome.Invalid.UnsupportedFormat -> {
+                    _uiState.update {
+                        it.copy(
+                            photoLoading = false,
+                            photoError = PhotoFormError.UnsupportedFormat,
+                        )
+                    }
+                }
+                is PhotoValidationOutcome.Invalid.ExceedsMaxSize -> {
+                    _uiState.update {
+                        it.copy(
+                            photoLoading = false,
+                            photoError = PhotoFormError.ExceedsMaxSize,
+                        )
+                    }
+                }
+                is PhotoValidationOutcome.Invalid.EmptyFile -> {
+                    _uiState.update {
+                        it.copy(
+                            photoLoading = false,
+                            photoError = PhotoFormError.EmptyFile,
+                        )
+                    }
+                }
+                is PhotoValidationOutcome.Invalid.Unreadable -> {
+                    _uiState.update {
+                        it.copy(
+                            photoLoading = false,
+                            photoError = PhotoFormError.Unreadable,
+                        )
+                    }
+                }
+                is PhotoValidationOutcome.Invalid.CorruptContent -> {
+                    _uiState.update {
+                        it.copy(
+                            photoLoading = false,
+                            photoError = PhotoFormError.CorruptContent,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun onPhotoSelectionCancelled() {
+        // Preserves previous photo selection, confirmation state, and form inputs
     }
 
     fun submit() {

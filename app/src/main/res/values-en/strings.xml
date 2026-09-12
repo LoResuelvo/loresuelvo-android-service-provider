@@ -38,9 +38,26 @@
     <string name="provider_profile_retry">Retry</string>
     <string name="provider_profile_submit">Continue</string>
     <string name="provider_profile_submitting">Saving…</string>
-    <string name="provider_profile_disclaimer">You will be able to configure your profile picture and service areas in the next steps.</string>
+    <string name="provider_profile_disclaimer">You will be able to configure your service areas in the next steps.</string>
     <string name="provider_profile_already_registered_error">This account is already registered. Please sign in.</string>
     <string name="provider_profile_generic_error">We couldn\'t save your profile. Check your connection and try again.</string>
+
+    <!-- Provider profile photo -->
+    <string name="provider_profile_photo_section_title">Profile picture</string>
+    <string name="provider_profile_photo_select">Select photo</string>
+    <string name="provider_profile_photo_change">Change photo</string>
+    <string name="provider_profile_photo_upload">Upload photo</string>
+    <string name="provider_profile_photo_preview_description">Profile photo preview</string>
+    <string name="provider_profile_photo_ready">Photo ready for registration</string>
+    <string name="provider_profile_photo_uploading">Uploading photo…</string>
+    <string name="provider_profile_photo_error_format">Image format not supported. Use JPEG, PNG, or WebP.</string>
+    <string name="provider_profile_photo_error_size">Photo cannot exceed 5 MiB.</string>
+    <string name="provider_profile_photo_error_empty">The selected file is empty.</string>
+    <string name="provider_profile_photo_error_unreadable">Could not read the selected file.</string>
+    <string name="provider_profile_photo_error_corrupt">The image file is corrupt or invalid.</string>
+    <string name="provider_profile_photo_error_upload">Could not upload photo. Check your connection and try again.</string>
+    <string name="provider_profile_photo_required_error">You must select and upload a profile photo before continuing.</string>
+    <string name="provider_profile_zones_required_error">You must select at least one service area.</string>
 
     <!-- Welcome · how it works -->
     <string name="welcome_step1_title">Publish your services</string>

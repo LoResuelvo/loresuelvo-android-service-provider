@@ -1,5 +1,8 @@
 package com.loresuelvo.serviceprovider.ui.screens.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +69,16 @@ fun CompleteProviderProfileRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onPhotoSelected(uri.toString())
+        } else {
+            viewModel.onPhotoSelectionCancelled()
+        }
+    }
+
     LaunchedEffect(viewModel, navController) {
         viewModel.effects.collect { effect ->
             when (effect) {
@@ -91,6 +104,11 @@ fun CompleteProviderProfileRoute(
         onSurnameChanged = viewModel::onSurnameChanged,
         onCategorySelected = viewModel::onCategorySelected,
         onRetryCategories = viewModel::retryLoadingCategories,
+        onSelectPhoto = {
+            photoPickerLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+            )
+        },
         onSubmit = viewModel::submit,
         modifier = modifier,
     )
@@ -108,6 +126,8 @@ fun CompleteProviderProfileScreen(
     onSurnameChanged: (String) -> Unit = {},
     onCategorySelected: (Category) -> Unit = {},
     onRetryCategories: () -> Unit = {},
+    onSelectPhoto: () -> Unit = {},
+    onUploadPhoto: () -> Unit = {},
     onSubmit: () -> Unit = {},
 ) {
     Surface(
@@ -251,6 +271,16 @@ fun CompleteProviderProfileScreen(
                     )
                 }
             }
+
+            // Profile photo section
+            ProfilePhotoSection(
+                selectedPhoto = uiState.selectedPhoto,
+                isPhotoConfirmed = uiState.isPhotoConfirmed,
+                photoLoading = uiState.photoLoading,
+                photoError = uiState.photoError,
+                onSelectPhoto = onSelectPhoto,
+                onUploadPhoto = onUploadPhoto,
+            )
 
             // Disclaimer / Information
             Text(

@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.profile
 
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
 
 /**
  * UI state for the complete provider profile screen.
@@ -10,9 +11,25 @@ data class CompleteProviderProfileUiState(
     val surname: String = "",
     val selectedCategory: Category? = null,
     val categoriesState: CategoriesLoadState = CategoriesLoadState.Loading,
+    val selectedPhoto: SelectedProfilePhoto? = null,
+    val isPhotoConfirmed: Boolean = false,
+    val confirmedPhotoFileId: String? = null,
+    val photoLoading: Boolean = false,
+    val photoError: PhotoFormError? = null,
     val loading: Boolean = false,
     val error: ProfileFormError? = null,
 )
+
+/**
+ * Typed validation and processing errors for the provider profile photo.
+ */
+sealed interface PhotoFormError {
+    data object UnsupportedFormat : PhotoFormError
+    data object ExceedsMaxSize : PhotoFormError
+    data object EmptyFile : PhotoFormError
+    data object Unreadable : PhotoFormError
+    data object CorruptContent : PhotoFormError
+}
 
 /**
  * State of service categories fetching.
