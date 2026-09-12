@@ -28,6 +28,12 @@ sealed class Route(val path: String) {
     data object CompleteProviderProfile : Route("complete_provider_profile")
 
     /**
+     * Provider Mercado Pago linking destination. Reached after provider profile
+     * completion succeeds.
+     */
+    data object MercadoPagoConnect : Route("mercadopago_connect")
+
+    /**
      * Authenticated home / inbox. The actual screen body is added
      * alongside the post-login user stories; today this entry exists
      * so the navigation graph compiles while the Welcome smart-router

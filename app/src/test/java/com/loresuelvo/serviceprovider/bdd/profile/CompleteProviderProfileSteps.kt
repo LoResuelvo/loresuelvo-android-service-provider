@@ -8,7 +8,6 @@ import io.cucumber.java.es.Y
 
 /**
  * Step definitions for provider profile BDD scenarios.
- * Strictly implements only active scenarios (01-CPP, 06-CPP, 02-CPP, 03-CPP, 04-CPP, 05-CPP, 09-CPP).
  */
 class CompleteProviderProfileSteps {
 
@@ -152,6 +151,62 @@ class CompleteProviderProfileSteps {
         world.assertMissingCategoryError()
     }
 
+    // --- 07-CPP Steps ---
+
+    @Dado("que el prestador completó nombre, apellido y seleccionó un rubro")
+    fun prestadorCompletoDatosValidos() {
+        world.seedAuthenticatedSession()
+        world.navigateToProfileDestination()
+        world.fillValidProfileData()
+    }
+
+    @Y("la API de registro devuelve un error recuperable")
+    fun apiRegistroDevuelveErrorRecuperable() {
+        world.configureRegistrationRecoverableError()
+    }
+
+    @Cuando("se muestra el error")
+    fun seMuestraElError() {
+        world.attemptSubmit()
+        world.assertRecoverableErrorDisplayed()
+    }
+
+    @Entonces("se preservan el nombre, apellido y la selección de rubro")
+    fun sePreservanDatosIngresados() {
+        world.assertProfileDataPreserved()
+    }
+
+    @Y("el prestador puede corregir y reintentar")
+    fun prestadorPuedeCorregirYReintentar() {
+        world.correctAndRetry()
+        world.assertRegistrationSucceeded()
+    }
+
+    // --- 08-CPP Steps ---
+
+    @Dado("que el correo del prestador ya está registrado en el backend")
+    fun correoYaEstaRegistradoEnBackend() {
+        world.seedAuthenticatedSession()
+        world.navigateToProfileDestination()
+        world.configureRegistrationAlreadyRegistered()
+    }
+
+    @Cuando("se intenta el registro")
+    fun seIntentaElRegistro() {
+        world.fillValidProfileData()
+        world.attemptSubmit()
+    }
+
+    @Entonces("la app muestra un mensaje amigable indicando que la cuenta ya existe")
+    fun appMuestraMensajeCuentaYaExiste() {
+        world.assertAlreadyRegisteredFriendlyError()
+    }
+
+    @Y("el prestador permanece en el formulario")
+    fun prestadorPermaneceEnFormulario() {
+        world.assertRemainsOnForm()
+    }
+
     // --- 09-CPP Steps ---
 
     @Dado("que el prestador envió el formulario")
@@ -180,5 +235,34 @@ class CompleteProviderProfileSteps {
     @Y("el botón permanece deshabilitado con un indicador de carga")
     fun botonPermaneceDeshabilitadoConIndicadorDeCarga() {
         world.assertSubmitDisabledWithLoading()
+    }
+
+    // --- 10-CPP Steps ---
+
+    @Dado("que el prestador ingresó nombre, apellido válidos y seleccionó un rubro")
+    fun prestadorIngresoNombreApellidoValidosYSeleccionoRubro() {
+        world.seedAuthenticatedSession()
+        world.navigateToProfileDestination()
+        world.fillValidProfileData()
+    }
+
+    @Y("los datos de foto y zonas de cobertura están disponibles")
+    fun datosFotoYZonasDisponibles() {
+        world.ensurePrerequisitesAvailable()
+    }
+
+    @Cuando("el registro se completa exitosamente")
+    fun registroSeCompletaExitosamente() {
+        world.completeRegistrationSuccessfully()
+    }
+
+    @Entonces("el prestador navega al paso de vinculación de Mercado Pago")
+    fun prestadorNavegaPasoMercadoPago() {
+        world.assertNavigatedToMercadoPago()
+    }
+
+    @Y("el formulario ya no es accesible mediante navegación hacia atrás")
+    fun formularioYaNoEsAccesibleAtras() {
+        world.assertProfileFormPoppedFromBackstack()
     }
 }

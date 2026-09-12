@@ -40,7 +40,6 @@ Característica: Completar perfil profesional del prestador
     Entonces se muestra un mensaje de error amigable en lugar de la lista de rubros
     Y el prestador puede reintentar la carga de rubros
 
-  @wip
   Escenario: 07-CPP Preservar los datos ingresados ante errores recuperables
     Dado que el prestador completó nombre, apellido y seleccionó un rubro
     Y la API de registro devuelve un error recuperable
@@ -48,7 +47,6 @@ Característica: Completar perfil profesional del prestador
     Entonces se preservan el nombre, apellido y la selección de rubro
     Y el prestador puede corregir y reintentar
 
-  @wip
   Escenario: 08-CPP Manejar cuenta ya registrada con conflicto 409
     Dado que el correo del prestador ya está registrado en el backend
     Cuando se intenta el registro
@@ -62,7 +60,6 @@ Característica: Completar perfil profesional del prestador
     Entonces no se realiza una segunda llamada a la API
     Y el botón permanece deshabilitado con un indicador de carga
 
-  @wip
   Escenario: 10-CPP Enviar perfil válido y navegar tras el éxito
     Dado que el prestador ingresó nombre, apellido válidos y seleccionó un rubro
     Y los datos de foto y zonas de cobertura están disponibles

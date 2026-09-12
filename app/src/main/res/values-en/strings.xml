@@ -24,6 +24,23 @@
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Complete your professional profile</string>
     <string name="provider_profile_description">Add the information your customers need to get to know you and find your services.</string>
+    <string name="provider_profile_name_label">First name</string>
+    <string name="provider_profile_name_placeholder">e.g. John</string>
+    <string name="provider_profile_name_error">First name is required</string>
+    <string name="provider_profile_surname_label">Last name</string>
+    <string name="provider_profile_surname_placeholder">e.g. Smith</string>
+    <string name="provider_profile_surname_error">Last name is required</string>
+    <string name="provider_profile_category_label">Main category</string>
+    <string name="provider_profile_category_placeholder">Select a category</string>
+    <string name="provider_profile_category_error">You must select a category</string>
+    <string name="provider_profile_category_loading">Loading categories…</string>
+    <string name="provider_profile_category_load_error">Failed to load categories.</string>
+    <string name="provider_profile_retry">Retry</string>
+    <string name="provider_profile_submit">Continue</string>
+    <string name="provider_profile_submitting">Saving…</string>
+    <string name="provider_profile_disclaimer">You will be able to configure your profile picture and service areas in the next steps.</string>
+    <string name="provider_profile_already_registered_error">This account is already registered. Please sign in.</string>
+    <string name="provider_profile_generic_error">We couldn\'t save your profile. Check your connection and try again.</string>
 
     <!-- Welcome · how it works -->
     <string name="welcome_step1_title">Publish your services</string>
@@ -33,6 +50,7 @@
     <string name="welcome_step3_title">Get paid for your work</string>
     <string name="welcome_step3_description">Get paid securely for the work done.</string>
 
-    <!-- Home screen placeholder (lands in another US) -->
+    <!-- Navigation placeholders -->
     <string name="home_placeholder_title">Home (coming soon)</string>
+    <string name="mercadopago_placeholder_title">Mercado Pago linking (coming soon)</string>
 </resources>

@@ -9,6 +9,7 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
+import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
@@ -62,17 +63,32 @@ class ProviderSignupSessionStore : AuthSessionStore {
     }
 }
 
-/** The Welcome screen only needs a deterministic public-category response. */
+/** Category repository fake for UI tests. */
 class ProviderSignupCategoryRepository : CategoryRepository {
 
+    var categories: List<Category> = listOf(
+        Category(id = 1, name = "Plomería"),
+        Category(id = 2, name = "Electricidad"),
+    )
+
     override suspend fun getCategories(): CategoriesOutcome =
-        CategoriesOutcome.Success(emptyList())
+        CategoriesOutcome.Success(categories)
 }
 
+/** Provider registration repository fake for UI tests. */
 class ProviderSignupProviderRepository : ProviderRepository {
 
-    override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome =
-        RegistrationOutcome.Success(providerId = 1)
+    var outcome: RegistrationOutcome = RegistrationOutcome.Success(providerId = 1)
+    var registerCalls: Int = 0
+        private set
+    var lastCommand: ProviderRegistrationCommand? = null
+        private set
+
+    override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome {
+        registerCalls += 1
+        lastCommand = command
+        return outcome
+    }
 }
 
 @Module
@@ -112,9 +128,21 @@ object ProviderSignupRepositoryTestModule {
 
     @Provides
     @Singleton
-    fun provideCategoryRepository(): CategoryRepository = ProviderSignupCategoryRepository()
+    fun provideCategoryRepository(): ProviderSignupCategoryRepository = ProviderSignupCategoryRepository()
 
     @Provides
     @Singleton
-    fun provideProviderRepository(): ProviderRepository = ProviderSignupProviderRepository()
+    fun provideCategoryRepositoryBinding(
+        implementation: ProviderSignupCategoryRepository,
+    ): CategoryRepository = implementation
+
+    @Provides
+    @Singleton
+    fun provideProviderRepository(): ProviderSignupProviderRepository = ProviderSignupProviderRepository()
+
+    @Provides
+    @Singleton
+    fun provideProviderRepositoryBinding(
+        implementation: ProviderSignupProviderRepository,
+    ): ProviderRepository = implementation
 }

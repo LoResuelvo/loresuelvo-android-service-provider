@@ -10,8 +10,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
-import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileScreen
-import kotlinx.coroutines.flow.collect
+import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
 
 /**
  * Composition root for the provider app. Welcome is the initial destination
@@ -30,7 +29,7 @@ fun LoResuelvoNav() {
         navController = navController,
         startDestination = Route.Welcome.path,
         welcome = { WelcomeRoute(navController) },
-        professionalProfile = { CompleteProviderProfileScreen() },
+        professionalProfile = { CompleteProviderProfileRoute(navController) },
         home = { HomePlaceholder() },
     )
 }

@@ -9,10 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
 import com.loresuelvo.serviceprovider.R
 
 /**
@@ -37,6 +35,7 @@ fun LoResuelvoNavHost(
     welcome: @Composable () -> Unit,
     professionalProfile: @Composable () -> Unit,
     home: @Composable () -> Unit,
+    mercadoPago: @Composable () -> Unit = { MercadoPagoPlaceholder() },
 ) {
     Box(modifier = Modifier.padding(contentPadding)) {
         NavHost(
@@ -46,6 +45,7 @@ fun LoResuelvoNavHost(
             composable(Route.Welcome.path) { welcome() }
             composable(Route.CompleteProviderProfile.path) { professionalProfile() }
             composable(Route.Home.path) { home() }
+            composable(Route.MercadoPagoConnect.path) { mercadoPago() }
         }
     }
 }
@@ -59,5 +59,15 @@ fun LoResuelvoNavHost(
 fun HomePlaceholder() {
     Box(modifier = Modifier.padding(24.dp)) {
         Text(text = stringResource(R.string.home_placeholder_title))
+    }
+}
+
+/**
+ * Placeholder Mercado Pago linking body reached after profile completion.
+ */
+@Composable
+fun MercadoPagoPlaceholder() {
+    Box(modifier = Modifier.padding(24.dp)) {
+        Text(text = stringResource(R.string.mercadopago_placeholder_title))
     }
 }

@@ -24,6 +24,23 @@
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>
     <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>
+    <string name="provider_profile_name_label">Nombre</string>
+    <string name="provider_profile_name_placeholder">Ej. Juan</string>
+    <string name="provider_profile_name_error">El nombre es obligatorio</string>
+    <string name="provider_profile_surname_label">Apellido</string>
+    <string name="provider_profile_surname_placeholder">Ej. Pérez</string>
+    <string name="provider_profile_surname_error">El apellido es obligatorio</string>
+    <string name="provider_profile_category_label">Rubro principal</string>
+    <string name="provider_profile_category_placeholder">Seleccioná un rubro</string>
+    <string name="provider_profile_category_error">Debés seleccionar un rubro</string>
+    <string name="provider_profile_category_loading">Cargando rubros…</string>
+    <string name="provider_profile_category_load_error">No se pudieron cargar los rubros.</string>
+    <string name="provider_profile_retry">Reintentar</string>
+    <string name="provider_profile_submit">Continuar</string>
+    <string name="provider_profile_submitting">Guardando…</string>
+    <string name="provider_profile_disclaimer">Podrás configurar tu foto de perfil y zonas de atención en los próximos pasos.</string>
+    <string name="provider_profile_already_registered_error">Esta cuenta ya está registrada. Por favor, iniciá sesión.</string>
+    <string name="provider_profile_generic_error">No pudimos guardar tu perfil. Revisá tu conexión e intentá de nuevo.</string>
 
     <!-- Welcome · how it works (3 pasos del prestador) -->
     <string name="welcome_step1_title">Publicá tus servicios</string>
@@ -33,6 +50,7 @@
     <string name="welcome_step3_title">Cobrá tu trabajo</string>
     <string name="welcome_step3_description">Cobrá de forma segura por el trabajo hecho.</string>
 
-    <!-- Home screen placeholder (llega en otra US) -->
+    <!-- Navigation placeholders -->
     <string name="home_placeholder_title">Inicio (próximamente)</string>
+    <string name="mercadopago_placeholder_title">Vinculación con Mercado Pago (próximamente)</string>
 </resources>

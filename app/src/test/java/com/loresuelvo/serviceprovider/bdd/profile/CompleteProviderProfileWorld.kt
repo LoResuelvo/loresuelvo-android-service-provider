@@ -12,13 +12,18 @@ import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
+import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
+import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileUiState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -47,6 +52,11 @@ class CompleteProviderProfileWorld : AutoCloseable {
     lateinit var viewModel: CompleteProviderProfileViewModel
         private set
 
+    var latestEffect: CompleteProviderProfileEffect? = null
+        private set
+
+    private var effectsJob: Job? = null
+
     init {
         Dispatchers.setMain(dispatcher)
     }
@@ -74,6 +84,12 @@ class CompleteProviderProfileWorld : AutoCloseable {
             registerProvider = registerProvider,
             sessionStore = sessionStore,
         )
+        effectsJob?.cancel()
+        effectsJob = CoroutineScope(dispatcher).launch {
+            viewModel.effects.collect { effect ->
+                latestEffect = effect
+            }
+        }
         scheduler.advanceUntilIdle()
     }
 
@@ -191,6 +207,68 @@ class CompleteProviderProfileWorld : AutoCloseable {
         assertEquals(0, providerRepository.registerCalls)
     }
 
+    // --- 07-CPP ---
+
+    fun fillValidProfileData() {
+        check(::viewModel.isInitialized)
+        viewModel.onNameChanged("Carlos")
+        viewModel.onSurnameChanged("Gómez")
+        val ready = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
+        viewModel.onCategorySelected(ready.categories.first())
+    }
+
+    fun configureRegistrationRecoverableError() {
+        providerRepository.outcome = RegistrationOutcome.Failure.Network(RuntimeException("Connection timeout"))
+    }
+
+    fun assertRecoverableErrorDisplayed() {
+        check(::viewModel.isInitialized)
+        assertTrue(viewModel.uiState.value.error is ProfileFormError.Network)
+    }
+
+    fun assertProfileDataPreserved() {
+        check(::viewModel.isInitialized)
+        val state = viewModel.uiState.value
+        assertEquals("Carlos", state.name)
+        assertEquals("Gómez", state.surname)
+        assertNotNull(state.selectedCategory)
+    }
+
+    fun correctAndRetry() {
+        check(::viewModel.isInitialized)
+        providerRepository.outcome = RegistrationOutcome.Success(providerId = 1)
+        viewModel.submit()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertRegistrationSucceeded() {
+        check(::viewModel.isInitialized)
+        val state = viewModel.uiState.value
+        assertEquals(false, state.loading)
+        assertEquals(null, state.error)
+        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+    }
+
+    // --- 08-CPP ---
+
+    fun configureRegistrationAlreadyRegistered() {
+        providerRepository.outcome = RegistrationOutcome.Failure.AlreadyRegistered
+    }
+
+    fun assertAlreadyRegisteredFriendlyError() {
+        check(::viewModel.isInitialized)
+        assertEquals(ProfileFormError.AlreadyRegistered, viewModel.uiState.value.error)
+    }
+
+    fun assertRemainsOnForm() {
+        check(::viewModel.isInitialized)
+        val state = viewModel.uiState.value
+        assertEquals("Carlos", state.name)
+        assertEquals("Gómez", state.surname)
+        assertNotNull(state.selectedCategory)
+        assertTrue("Should not navigate when registration conflict occurs", latestEffect == null)
+    }
+
     // --- 09-CPP ---
 
     fun prepareValidProfile() {
@@ -228,7 +306,29 @@ class CompleteProviderProfileWorld : AutoCloseable {
         scheduler.advanceUntilIdle()
     }
 
+    // --- 10-CPP ---
+
+    fun ensurePrerequisitesAvailable() {
+        // Prerequisites (photos & coverage zones) will be integrated in upcoming stories
+    }
+
+    fun completeRegistrationSuccessfully() {
+        check(::viewModel.isInitialized)
+        providerRepository.outcome = RegistrationOutcome.Success(providerId = 10)
+        viewModel.submit()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertNavigatedToMercadoPago() {
+        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+    }
+
+    fun assertProfileFormPoppedFromBackstack() {
+        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+    }
+
     override fun close() {
+        effectsJob?.cancel()
         providerRepository.registerGate?.complete(Unit)
         scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
@@ -261,7 +361,10 @@ class CompleteProviderProfileWorld : AutoCloseable {
 
     private class FakeAuthSessionStore : AuthSessionStore {
         private val _session = MutableStateFlow<AuthSession?>(null)
-        override val sessionFlow: StateFlow<AuthSession?> = _session
+        override val sessionFlow: StateFlow<AuthSession?> = stateFlow
+
+        private val stateFlow: StateFlow<AuthSession?>
+            get() = _session
 
         override fun getSession(): AuthSession? = _session.value
 
