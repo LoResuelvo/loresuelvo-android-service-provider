@@ -4,8 +4,12 @@ import app.cash.turbine.test
 import com.loresuelvo.serviceprovider.bdd.auth.welcome.FakeAuthProvider
 import com.loresuelvo.serviceprovider.bdd.auth.welcome.FakeCategoryRepository
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.usecase.auth.EstablishAuthSessionUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -17,6 +21,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -43,6 +49,7 @@ class WelcomeViewModelTest {
 
     private lateinit var authProvider: FakeAuthProvider
     private lateinit var categoryRepository: FakeCategoryRepository
+    private lateinit var sessionStore: RecordingAuthSessionStore
     private var viewModel: WelcomeViewModel? = null
 
     private val context = mockk<android.content.Context>(relaxed = true)
@@ -52,6 +59,7 @@ class WelcomeViewModelTest {
         Dispatchers.setMain(dispatcher)
         authProvider = FakeAuthProvider()
         categoryRepository = FakeCategoryRepository()
+        sessionStore = RecordingAuthSessionStore()
         // Intentionally NOT building the ViewModel here: each test
         // configures the fakes it cares about and constructs its own
         // VM so the call counters reflect a single VM lifecycle.
@@ -61,6 +69,7 @@ class WelcomeViewModelTest {
         WelcomeViewModel(
             authProvider = authProvider,
             getCategories = GetCategoriesUseCase(categoryRepository),
+            establishAuthSession = EstablishAuthSessionUseCase(sessionStore),
         )
 
     @After
@@ -206,6 +215,27 @@ class WelcomeViewModelTest {
     }
 
     @Test
+    fun should_persist_a_successful_signup_session_once() = runTest(scheduler) {
+        val session = AuthSession(
+            user = User(
+                id = "auth0|provider",
+                email = "provider@example.com",
+            ),
+            accessToken = "synthetic-provider-access-token",
+        )
+        authProvider.nextOutcome = AuthenticationOutcome.Success(session)
+
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.signup(context)
+        advanceUntilIdle()
+
+        assertEquals(session, sessionStore.getSession())
+        assertEquals(1, sessionStore.saveCalls)
+    }
+
+    @Test
     fun should_serialize_all_authentication_actions_while_signup_is_in_flight() =
         runTest(scheduler) {
             val authenticationGate = CompletableDeferred<Unit>()
@@ -234,4 +264,24 @@ class WelcomeViewModelTest {
             assertEquals(false, viewModel!!.uiState.value.loading)
             assertEquals(null, viewModel!!.uiState.value.error)
         }
+
+    private class RecordingAuthSessionStore : AuthSessionStore {
+
+        private val state = MutableStateFlow<AuthSession?>(null)
+        override val sessionFlow: StateFlow<AuthSession?> = state
+
+        var saveCalls: Int = 0
+            private set
+
+        override fun getSession(): AuthSession? = state.value
+
+        override fun saveSession(session: AuthSession) {
+            saveCalls += 1
+            state.value = session
+        }
+
+        override fun clearSession() {
+            state.value = null
+        }
+    }
 }

@@ -7,6 +7,7 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.auth.EstablishAuthSessionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 class WelcomeViewModel @Inject constructor(
     private val authProvider: AuthProvider,
     private val getCategories: GetCategoriesUseCase,
+    private val establishAuthSession: EstablishAuthSessionUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WelcomeUiState())
@@ -94,9 +96,7 @@ class WelcomeViewModel @Inject constructor(
                         _uiState.update { it.copy(error = WelcomeError.Authentication) }
                     }
                     is AuthenticationOutcome.Success -> {
-                        // Sync against GET /me will land alongside the provider
-                        // onboarding feature; for now we just clear the
-                        // spinner.
+                        establishAuthSession(outcome.session)
                         _uiState.update { it.copy(error = null) }
                     }
                 }

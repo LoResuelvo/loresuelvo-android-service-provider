@@ -28,6 +28,21 @@ class ProviderSignupWorldTest {
     }
 
     @Test
+    fun successful_signup_persists_session_for_authenticated_calls() {
+        val world = ProviderSignupWorld()
+        try {
+            world.seedNoLocalSession()
+            world.configureSuccessfulSignup()
+            world.finishSuccessfulSignup()
+
+            world.assertSessionPersisted()
+            world.assertAccessTokenAvailable()
+        } finally {
+            world.close()
+        }
+    }
+
+    @Test
     fun cancelling_signup_keeps_welcome_available_without_a_session() {
         val world = ProviderSignupWorld()
         try {

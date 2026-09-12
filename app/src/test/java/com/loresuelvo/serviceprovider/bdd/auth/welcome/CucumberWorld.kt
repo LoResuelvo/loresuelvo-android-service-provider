@@ -3,6 +3,8 @@ package com.loresuelvo.serviceprovider.bdd.auth.welcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.usecase.auth.EstablishAuthSessionUseCase
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeUiState
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import io.mockk.mockk
@@ -36,6 +38,7 @@ class CucumberWorld : AutoCloseable {
 
     val authProvider = FakeAuthProvider()
     val categoryRepository = FakeCategoryRepository()
+    private val sessionStore = mockk<AuthSessionStore>(relaxed = true)
     private val getCategories = com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase(
         categoryRepository,
     )
@@ -47,7 +50,11 @@ class CucumberWorld : AutoCloseable {
     }
 
     fun buildViewModel() {
-        viewModel = WelcomeViewModel(authProvider, getCategories)
+        viewModel = WelcomeViewModel(
+            authProvider = authProvider,
+            getCategories = getCategories,
+            establishAuthSession = EstablishAuthSessionUseCase(sessionStore),
+        )
     }
 
     fun seedNoSession() {

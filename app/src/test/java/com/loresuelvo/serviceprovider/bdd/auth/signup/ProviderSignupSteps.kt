@@ -14,7 +14,9 @@ import io.cucumber.java.es.Y
  * The 01-PSU connection assertion covers the app-owned signup request shape
  * and remains pending for the tenant-selected connection because that hosted
  * check is human-owned. The 03-PSU and 04-PSU steps exercise deterministic
- * cancellation and recoverable-failure outcomes.
+ * cancellation and recoverable-failure outcomes. The 02-PSU steps exercise
+ * the app-owned session and onboarding hand-off once the deterministic fake
+ * returns valid credentials.
  */
 class ProviderSignupSteps {
 
@@ -46,6 +48,32 @@ class ProviderSignupSteps {
     @Y("la app nunca solicita ni almacena una contraseña por sí misma")
     fun appDoesNotHandlePassword() {
         world.assertNoPasswordHandledByApp()
+    }
+
+    @Dado("que Auth0 devolverá credenciales válidas del prestador")
+    fun auth0ReturnsValidProviderCredentials() {
+        world.seedNoLocalSession()
+        world.configureSuccessfulSignup()
+    }
+
+    @Cuando("el registro del prestador finaliza correctamente")
+    fun providerSignupFinishesSuccessfully() {
+        world.finishSuccessfulSignup()
+    }
+
+    @Entonces("la app persiste la sesión autenticada")
+    fun appPersistsAuthenticatedSession() {
+        world.assertSessionPersisted()
+    }
+
+    @Y("el token de acceso está disponible para las llamadas HTTP autenticadas")
+    fun accessTokenIsAvailableForAuthenticatedCalls() {
+        world.assertAccessTokenAvailable()
+    }
+
+    @Y("la app continúa al formulario de perfil profesional")
+    fun appContinuesToProfessionalProfileForm() {
+        world.assertProfessionalProfileNavigationRequested()
     }
 
     @Dado("que el prestador comenzó sin una sesión local")

@@ -5,10 +5,14 @@ import com.auth0.android.provider.WebAuthProvider
 import com.loresuelvo.serviceprovider.data.auth.Auth0Config
 import com.loresuelvo.serviceprovider.data.auth.configureSignup
 import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
+import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.usecase.auth.EstablishAuthSessionUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeError
@@ -23,6 +27,8 @@ import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -34,8 +40,11 @@ import org.junit.Assert.assertTrue
  * [WelcomeViewModel.signup], which delegates to [AuthProvider.signup], and
  * the production signup adapter adds the configured signup hint and account
  * parameters to the Auth0 request. The synthetic configuration proves request
- * construction only; it does not model a real Auth0 tenant. Failure outcomes
- * stay typed and are asserted through the safe Welcome UI state.
+ * construction only; it does not model a real Auth0 tenant. The successful
+ * signup fixture also owns a deterministic session store so the scenario can
+ * prove the shared bearer-token boundary without a real Auth0 or backend.
+ * Failure outcomes stay typed and are asserted through the safe Welcome UI
+ * state.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderSignupWorld : AutoCloseable {
@@ -44,6 +53,7 @@ class ProviderSignupWorld : AutoCloseable {
     private val dispatcher = StandardTestDispatcher(scheduler)
     private val context = mockk<Context>(relaxed = true)
     private val authProvider = RecordingAuthProvider()
+    private val sessionStore = RecordingSessionStore()
     private val getCategories = GetCategoriesUseCase(
         object : CategoryRepository {
             override suspend fun getCategories(): CategoriesOutcome =
@@ -58,7 +68,11 @@ class ProviderSignupWorld : AutoCloseable {
     }
 
     fun seedNoLocalSession() {
-        viewModel = WelcomeViewModel(authProvider, getCategories)
+        viewModel = WelcomeViewModel(
+            authProvider = authProvider,
+            getCategories = getCategories,
+            establishAuthSession = EstablishAuthSessionUseCase(sessionStore),
+        )
     }
 
     fun selectSignup() {
@@ -71,6 +85,10 @@ class ProviderSignupWorld : AutoCloseable {
         authProvider.nextOutcome = outcome
     }
 
+    fun configureSuccessfulSignup() {
+        authProvider.nextOutcome = VALID_SESSION_OUTCOME
+    }
+
     fun cancelSignup() {
         check(::viewModel.isInitialized) { "Cancellation scenario must seed its local session first" }
         viewModel.signup(context)
@@ -79,6 +97,12 @@ class ProviderSignupWorld : AutoCloseable {
 
     fun finishSignupAttempt() {
         check(::viewModel.isInitialized) { "Failure scenario must seed its local session first" }
+        viewModel.signup(context)
+        scheduler.advanceUntilIdle()
+    }
+
+    fun finishSuccessfulSignup() {
+        check(::viewModel.isInitialized) { "Success scenario must seed its local session first" }
         viewModel.signup(context)
         scheduler.advanceUntilIdle()
     }
@@ -161,6 +185,19 @@ class ProviderSignupWorld : AutoCloseable {
         }
     }
 
+    fun assertSessionPersisted() {
+        assertEquals(VALID_SESSION, sessionStore.getSession())
+        assertEquals(1, sessionStore.saveCalls)
+    }
+
+    fun assertAccessTokenAvailable() {
+        assertEquals(VALID_SESSION.accessToken, sessionStore.getSession()?.accessToken)
+    }
+
+    fun assertProfessionalProfileNavigationRequested() {
+        throw AssertionError("Professional-profile navigation is not wired yet")
+    }
+
     /**
      * The provider port accepts only an Activity context. There is no
      * password argument or password storage in the app-owned signup boundary;
@@ -199,6 +236,35 @@ class ProviderSignupWorld : AutoCloseable {
     private companion object {
         const val SYNTHETIC_SCHEME = "com.loresuelvo.provider.synthetic"
         const val SYNTHETIC_AUDIENCE = "https://api.synthetic.loresuelvo.test"
+
+        val VALID_SESSION = AuthSession(
+            user = User(
+                id = "auth0|provider",
+                email = "provider@example.com",
+            ),
+            accessToken = "synthetic-provider-access-token",
+        )
+        val VALID_SESSION_OUTCOME = AuthenticationOutcome.Success(VALID_SESSION)
+    }
+
+    private class RecordingSessionStore : AuthSessionStore {
+
+        private val _sessionFlow = MutableStateFlow<AuthSession?>(null)
+        override val sessionFlow: StateFlow<AuthSession?> = _sessionFlow
+
+        var saveCalls: Int = 0
+            private set
+
+        override fun getSession(): AuthSession? = _sessionFlow.value
+
+        override fun saveSession(session: AuthSession) {
+            saveCalls += 1
+            _sessionFlow.value = session
+        }
+
+        override fun clearSession() {
+            _sessionFlow.value = null
+        }
     }
 
     private class RecordingAuthProvider : AuthProvider {
