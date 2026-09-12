@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const NumericUsIdSchema = z
   .string()
-  .regex(/^[0-9]+$/, "User Story identifier must contain digits only");
+  .regex(/^[0-9]+(?:\.[0-9]+)?$/, "User Story identifier must contain digits only");
 
 export const DeliveryInspectInputSchema = z.object({
   intent: z

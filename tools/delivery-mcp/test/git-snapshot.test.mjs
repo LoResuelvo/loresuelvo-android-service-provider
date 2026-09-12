@@ -24,9 +24,10 @@ async function createGitRepo(t) {
   return repoRoot;
 }
 
-test("extractUsId accepts integer work-item ids and rejects dotted or legacy forms", () => {
+test("extractUsId accepts integer and fractional work-item ids and rejects invalid or legacy forms", () => {
   assert.equal(extractUsId("feat[33]: add provider delivery"), "33");
-  assert.equal(extractUsId("fix[33.1]: repair provider test"), null);
+  assert.equal(extractUsId("fix[33.1]: repair provider test"), "33.1");
+  assert.equal(extractUsId("feat[35.1]: add provider profile form"), "35.1");
   assert.equal(extractUsId("refactor[1.2.3]: simplify adapter"), null);
   assert.equal(extractUsId("feat[US-33]: legacy spelling"), null);
   assert.equal(extractUsId("docs: update Android README"), null);

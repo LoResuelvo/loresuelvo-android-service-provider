@@ -221,7 +221,7 @@ test("verifyHeadDelivery and finalizeDelivery reject non-numeric User Story ids"
   );
 
   await assert.rejects(
-    () => verifyHeadDelivery({ repoRoot, intent: "close_us", usId: "33.1", scopeFiles: [feature] }),
+    () => verifyHeadDelivery({ repoRoot, intent: "close_us", usId: "33.1.2", scopeFiles: [feature] }),
     /digits only/,
   );
 

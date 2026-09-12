@@ -5,8 +5,8 @@ import { findRepoRoot } from "./repo-root.mjs";
 
 const execFileAsync = util.promisify(execFile);
 
-const US_ID_REGEX = /\[([0-9]+)\]/;
-const US_ID_ALL_REGEX = /\[([0-9]+)\]/g;
+const US_ID_REGEX = /\[([0-9]+(?:\.[0-9]+)?)\]/;
+const US_ID_ALL_REGEX = /\[([0-9]+(?:\.[0-9]+)?)\]/g;
 const DEFAULT_LIMITS = {
   maxStagedFiles: 500,
   maxDiffSizeBytes: 2 * 1024 * 1024,

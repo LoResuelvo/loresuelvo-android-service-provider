@@ -97,7 +97,9 @@ test("commit governance accepts the Android types and numeric [33] only", () => 
   }
   assert.equal(validateCommitMessage("revert[33]: restore prior behavior").reason, "INVALID_TYPE");
   assert.equal(validateCommitMessage("feat[US-33]: update delivery contract").reason, "INVALID_US_ID");
-  assert.equal(validateCommitMessage("feat[33.1]: update delivery contract").reason, "INVALID_US_ID");
+  assert.equal(validateCommitMessage("feat[33.1]: update delivery contract").valid, true);
+  assert.equal(validateCommitMessage("feat[35.1]: add provider profile").valid, true);
+  assert.equal(validateCommitMessage("feat[1.2.3]: invalid multiple dots").reason, "INVALID_US_ID");
   assert.equal(validateCommitMessage("feat(ui): update delivery contract").reason, "PAREN_SCOPE_FORBIDDEN");
   assert.equal(validateCommitMessage("feat(agent): update delivery contract").reason, "AGENT_SCOPE_FORBIDDEN");
   assert.equal(validateCommitMessage("feat[33]: ").reason, "EMPTY_DESCRIPTION");
@@ -154,8 +156,7 @@ test("commit-msg validates a file and rejects the legacy [US-33] spelling", asyn
   const fractionalPath = path.join(root, "fractional-message.txt");
   await fs.writeFile(fractionalPath, "feat[33.1]: add provider workflow\n", "utf8");
   const fractional = await runCommitMsgHook({ repoRoot: root, messageFilePath: fractionalPath });
-  assert.equal(fractional.passed, false);
-  assert.equal(fractional.reason, "INVALID_US_ID");
+  assert.equal(fractional.passed, true);
 
   const staleSnapshot = await captureGitSnapshot({ cwd: root });
   await saveDeliveryContext({ repoRoot: root, snapshot: staleSnapshot, intent: "close_us", usId: "99" });

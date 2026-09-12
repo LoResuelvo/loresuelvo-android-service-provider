@@ -15,7 +15,7 @@ import { createDeliveryJob, spawnJobWorker, findActiveDeliveryJob } from "./jobs
 function normalizeUsId(usId) {
   if (!usId || typeof usId !== "string") return null;
   const normalized = usId.trim();
-  if (!/^[0-9]+$/.test(normalized)) {
+  if (!/^[0-9]+(?:\.[0-9]+)?$/.test(normalized)) {
     throw new Error("User Story identifier must contain digits only");
   }
   return normalized;

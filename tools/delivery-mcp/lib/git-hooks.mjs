@@ -65,12 +65,12 @@ export function validateCommitMessage(rawMessage) {
     };
   }
 
-  // 2. Format: <type>[33]: <description> or <type>: <description>.
+  // 2. Format: <type>[33]: <description> or <type>[35.1]: <description> or <type>: <description>.
   // The migration contract uses a numeric User Story id; [US-33] must not
   // silently become an unassociated commit.
-  const match = subject.match(/^([a-zA-Z]+)(?:\[([0-9]+)\])?:\s+(.+)$/);
+  const match = subject.match(/^([a-zA-Z]+)(?:\[([0-9]+(?:\.[0-9]+)?)\])?:\s+(.+)$/);
   if (!match) {
-    if (/^[a-zA-Z]+\[[0-9]+\]:\s*$/.test(subject)) {
+    if (/^[a-zA-Z]+\[[0-9]+(?:\.[0-9]+)?\]:\s*$/.test(subject)) {
       return {
         valid: false,
         reason: "EMPTY_DESCRIPTION",
@@ -81,7 +81,7 @@ export function validateCommitMessage(rawMessage) {
       return {
         valid: false,
         reason: "INVALID_US_ID",
-        message: "User Story identifiers must be numeric, for example '<type>[33]: description'; '[US-33]' is not valid.",
+        message: "User Story identifiers must be numeric, for example '<type>[33]: description' or '<type>[35.1]: description'; '[US-33]' is not valid.",
       };
     }
     return {
