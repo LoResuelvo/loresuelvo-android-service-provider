@@ -305,8 +305,8 @@ export async function verifyHeadDelivery({
     snapshot,
     policy,
     repoRoot: root,
-    executeCheck,
     force,
+    ...(executeCheck ? { executeCheck } : {}),
   });
 
   if (outcome.status !== "passed") {

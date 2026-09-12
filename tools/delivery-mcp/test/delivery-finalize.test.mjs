@@ -48,6 +48,18 @@ async function commitFeature(repoRoot, relativePath, content, message) {
   return headSha(repoRoot);
 }
 
+async function commitPolicyWithGateDChecks(repoRoot, checkIds) {
+  const policyPath = path.join(repoRoot, ".delivery", "policy.v1.json");
+  const policy = JSON.parse(await fs.readFile(policyPath, "utf8"));
+  policy.gates.D.checkIds = checkIds;
+  await fs.writeFile(policyPath, `${JSON.stringify(policy, null, 2)}\n`, "utf8");
+  execFileSync("git", ["add", ".delivery/policy.v1.json"], { cwd: repoRoot });
+  execFileSync("git", ["commit", "-m", "chore: configure Gate D fixture"], {
+    cwd: repoRoot,
+    stdio: "ignore",
+  });
+}
+
 const passingCheck = async ({ check, logPath }) => ({
   id: check.id,
   status: "passed",
@@ -119,6 +131,30 @@ test("verifyHeadDelivery records Gate D without creating a commit, then finaliza
   assert.equal(finalized.headSha, sha);
   assert.deepEqual(finalized.shas, [sha]);
   assert.deepEqual(finalized.ci.map((ci) => ci.status), ["passed"]);
+});
+
+test("verifyHeadDelivery uses the default executor when none is injected", async (t) => {
+  const repoRoot = await createTempRepo(t);
+  await commitPolicyWithGateDChecks(repoRoot, ["no_wip_in_scope"]);
+  const feature = "app/src/test/resources/features/provider.feature";
+  const sha = await commitFeature(
+    repoRoot,
+    feature,
+    "Feature: Provider\n  Scenario: provider is ready\n    Given the service provider is authenticated\n",
+    "test[33]: complete provider scenario",
+  );
+
+  const verified = await verifyHeadDelivery({
+    repoRoot,
+    intent: "close_us",
+    usId: "33",
+    scopeFiles: [feature],
+  });
+
+  assert.equal(verified.verified, true);
+  assert.equal(verified.status, "passed");
+  assert.equal(verified.headSha, sha);
+  assert.deepEqual(verified.checks.map((check) => check.id), ["no_wip_in_scope"]);
 });
 
 test("verifyHeadDelivery blocks dirty worktrees and missing feature scope", async (t) => {
