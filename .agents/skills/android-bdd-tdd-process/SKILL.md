@@ -5,7 +5,8 @@ description: Apply when adding observable behavior, changing a provider journey,
 # android-bdd-tdd-process
 
 Load this skill when adding behavior, changing a provider journey, or adding
-a BDD scenario and its tests.
+a BDD scenario and its tests. The canonical maintainability and test
+architecture convention is in [AGENTS.md](../../../AGENTS.md).
 
 ## Do not load
 
@@ -50,8 +51,11 @@ boundary, make the complete scenario GREEN, remove `@wip`, stage that exact
 change, and call `delivery_prepare` with `close_scenario`.
 
 Each scenario has a stable ID such as `01-PWB`, one action per step, and one
-`When`. Keep scenario state in a world/context, never in mutable globals. Use
-deterministic fakes for use cases and ViewModels; use mocks only for
+`When`. Keep scenario state in a world/context, never in mutable globals.
+Steps over 20 lines and worlds over 250 lines need a cohesion review. `Given`
+arranges one meaningful prerequisite, `When` invokes the real owned use case
+or ViewModel, and `Then` observes that same production instance or its
+observable effect. Fake external ports; use mocks only for meaningful
 interaction assertions. Never use `Thread.sleep`; use coroutine schedulers or
 Compose idling.
 
@@ -103,4 +107,6 @@ Delivery MCP result is insufficient; they are not the ordinary TDD loop.
 - Asserting localized strings in JVM BDD tests.
 - Sharing mutable state between scenarios.
 - Adding a scenario without a deterministic fake or test backend.
+- Empty prerequisites, disconnected assertion-only mocks, or assertions that
+  merely repeat fixture constants.
 - Silently replacing a blocked instrumented run with a JVM run.

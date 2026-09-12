@@ -6,6 +6,8 @@ description: Apply when designing tests, changing DI or state boundaries, or rev
 
 Load this skill when adding behavior, changing ViewModel state, changing Hilt
 bindings, adding a repository, or reviewing test coverage and determinism.
+The canonical maintainability and test-architecture convention is in
+[AGENTS.md](../../../AGENTS.md).
 
 ## Do not load
 
@@ -32,13 +34,19 @@ permission, lifecycle, or real Android service boundary.
 - Never use a real backend, Auth0, WebSocket, clock, random source, or file
   system in a unit or Cucumber test unless that dependency is the subject of
   the test.
-- Use fakes for stateful behavior and mocks only for interaction assertions.
+- Exercise real owned use cases and ViewModels; use fakes for external ports
+  and mocks only for meaningful interaction assertions. Do not let a mock
+  manufacture the assertion without production behavior connecting it.
 - Control coroutine execution with `runTest`, a test dispatcher, and virtual
-  time. Do not use `Thread.sleep` or arbitrary polling.
+  time. Give each test explicit ownership of its coroutine scope, dispatcher,
+  persistent state, and teardown. Do not use `Thread.sleep` or arbitrary
+  polling.
 - Test success, loading, empty, network, server, unauthorized, cancellation,
   retry, and duplicate-submit branches where they are observable.
 - Close MockWebServer, WebSockets, players, recorders, and other resources in
   teardown.
+- Do not use empty prerequisites, fixture-constant assertions, or disconnected
+  assertion-only mocks as behavioral proof.
 
 ## Hilt and session tests
 
@@ -65,4 +73,3 @@ For a new behavior, document which layer proves the contract, which fake owns
 the external dependency, and which failure branches remain uncovered. The
 provider's final commands and receipts remain governed by Delivery MCP and
 `.delivery/policy.v1.json`.
-

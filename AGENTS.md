@@ -90,6 +90,40 @@ Examples in the provider application are:
 - UI exposes immutable `StateFlow` state and handles events in ViewModels.
 - Do not add mutable global `object`s. Use Hilt injection instead.
 
+### Maintainability and test architecture
+
+These are manual review conventions for new or touched code. They are not
+automated enforcement and do not require repository-wide cleanup. See
+[android-maintainability-governance](.agents/skills/android-maintainability-governance/SKILL.md)
+for the review procedure and
+[android-testability-governance](.agents/skills/android-testability-governance/SKILL.md)
+for test-layer guidance.
+
+- Ordinary functions should normally take 0–3 inputs; review a signature with
+  more than 4 and record an explicit cohesion exception above 6. Review a
+  class or ViewModel with more than 5 injected dependencies.
+- Review functions over 60 lines, classes or ViewModels over 250 lines, and
+  files over 300 lines. Prefer a cohesive seam or document why the code stays
+  together; do not split mechanically by line count.
+- Compose parameters and transport DTO fields are context-specific exceptions:
+  preserve a real visual state/event shape and required wire fields. Do not
+  evade a review trigger with a parameter bag, service locator, or untyped map.
+- BDD step bodies over 20 lines and scenario worlds over 250 lines need the
+  same review. A `Given` arranges one meaningful prerequisite, a `When`
+  invokes production behavior, and a `Then` observes the same production
+  instance or its observable effect. For example: Given configures a fake
+  repository response; When calls the real `GetCategoriesUseCase`; Then
+  observes its typed result.
+- Use real owned use cases and ViewModels; fake external ports. Reject empty
+  prerequisites, assertion-only disconnected mocks, sleeps, and assertions of
+  fixture constants. Make coroutine ownership, persistence ownership, and
+  test-world setup/teardown explicit; worlds own and close their test scopes,
+  dispatchers, and resources.
+
+When a review trigger is crossed, record the retained responsibility or the
+extraction seam and the focused proof. A disabled or absent analyzer is not a
+pass and does not turn these documented reviews into automated enforcement.
+
 Validate domain purity and UI boundaries with these checks (zero matches are
 expected):
 
