@@ -10,6 +10,7 @@ import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLaunche
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
@@ -21,10 +22,6 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * Deterministic route/platform replacement for the provider signup test. It
- * returns a pure result without starting a browser or contacting a tenant.
- */
 class ProviderSignupBrowserAuthenticationLauncher : BrowserAuthenticationLauncher {
 
     var nextOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
@@ -41,7 +38,6 @@ class ProviderSignupBrowserAuthenticationLauncher : BrowserAuthenticationLaunche
     }
 }
 
-/** In-memory store that mirrors the production singleton session contract. */
 class ProviderSignupSessionStore : AuthSessionStore {
 
     private val state = MutableStateFlow<AuthSession?>(null)
@@ -58,7 +54,6 @@ class ProviderSignupSessionStore : AuthSessionStore {
     }
 }
 
-/** Category repository fake for UI tests. */
 class ProviderSignupCategoryRepository : CategoryRepository {
 
     var categories: List<Category> = listOf(
@@ -70,7 +65,6 @@ class ProviderSignupCategoryRepository : CategoryRepository {
         CategoriesOutcome.Success(categories)
 }
 
-/** Provider registration repository fake for UI tests. */
 class ProviderSignupProviderRepository : ProviderRepository {
 
     var outcome: RegistrationOutcome = RegistrationOutcome.Success(providerId = 1)
@@ -84,6 +78,12 @@ class ProviderSignupProviderRepository : ProviderRepository {
         lastCommand = command
         return outcome
     }
+
+    var getProfileOutcome: GetProviderProfileOutcome =
+        GetProviderProfileOutcome.Failure.NotFound
+
+    override suspend fun getProfile(providerId: Int): GetProviderProfileOutcome =
+        getProfileOutcome
 }
 
 @Module

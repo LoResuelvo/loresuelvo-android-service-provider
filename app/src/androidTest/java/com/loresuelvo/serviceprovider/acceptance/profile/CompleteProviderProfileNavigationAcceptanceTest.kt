@@ -30,12 +30,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * End-to-end device acceptance test for the provider profile completion flow (US-35.1).
- *
- * Verifies the full user flow from Welcome signup to Profile form completion
- * and navigation to the Mercado Pago step on device/emulator.
- */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class CompleteProviderProfileNavigationAcceptanceTest {
@@ -70,7 +64,7 @@ class CompleteProviderProfileNavigationAcceptanceTest {
     }
 
     @Test
-    fun completing_profile_form_navigates_to_mercadopago_linking_step() {
+    fun submitting_profile_form_without_photo_displays_validation_error() {
         val session = AuthSession(
             user = User(
                 id = "auth0|provider-device",
@@ -112,24 +106,20 @@ class CompleteProviderProfileNavigationAcceptanceTest {
             .performClick()
         composeTestRule.waitForIdle()
 
-        // 5. Submit form
+        // 5. Submit form without photo
         composeTestRule
             .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_submit))
             .performScrollTo()
             .performClick()
         composeTestRule.waitForIdle()
 
-        // 6. Observe navigation to Mercado Pago placeholder
+        // 6. Observe photo required validation error banner
         composeTestRule
-            .onNodeWithText(composeTestRule.activity.getString(R.string.mercadopago_placeholder_title))
+            .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_photo_required_error))
             .assertIsDisplayed()
 
-        // 7. Verify backend repository was invoked with correct command
-        assertEquals(1, providerRepository.registerCalls)
-        assertEquals("device.provider@loresuelvo.test", providerRepository.lastCommand?.email)
-        assertEquals("Carlos", providerRepository.lastCommand?.name)
-        assertEquals("Gómez", providerRepository.lastCommand?.surname)
-        assertEquals(1, providerRepository.lastCommand?.categoryId)
+        // 7. Verify backend repository was not invoked without required photo
+        assertEquals(0, providerRepository.registerCalls)
     }
 }
 
