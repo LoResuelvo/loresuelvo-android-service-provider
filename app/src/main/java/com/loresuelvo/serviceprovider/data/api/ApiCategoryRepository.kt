@@ -6,15 +6,15 @@ import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 
 /**
  * Default implementation of the [CategoryRepository] port. Adapts
  * the [BackendApi] (Retrofit-typed) `GET /categories` call to the
  * domain's [CategoriesOutcome] hierarchy.
  *
- * It never throws on HTTP / network failures: every exception is
- * translated to a typed failure via [toApiError], so callers handle
- * each branch explicitly.
+ * HTTP and network failures are translated to typed failures via [toApiError],
+ * while coroutine cancellation propagates to the caller.
  */
 @Singleton
 class ApiCategoryRepository @Inject constructor(
@@ -24,6 +24,8 @@ class ApiCategoryRepository @Inject constructor(
     override suspend fun getCategories(): CategoriesOutcome =
         try {
             CategoriesOutcome.Success(backendApi.getCategories().toDomain())
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
             mapToFailure(e)
         }

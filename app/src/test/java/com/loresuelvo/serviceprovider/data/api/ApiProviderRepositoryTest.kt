@@ -6,6 +6,7 @@ import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationComman
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -15,6 +16,7 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
+import kotlin.test.assertFailsWith
 
 class ApiProviderRepositoryTest {
 
@@ -101,5 +103,12 @@ class ApiProviderRepositoryTest {
 
         assertTrue(result is RegistrationOutcome.Failure.Network)
         assertEquals(ioException, (result as RegistrationOutcome.Failure.Network).cause)
+    }
+
+    @Test
+    fun `register propagates cancellation thrown by backend request`() = runTest {
+        coEvery { backendApi.registerProvider(expectedDto) } throws CancellationException("Request cancelled")
+
+        assertFailsWith<CancellationException> { repository.register(sampleCommand) }
     }
 }

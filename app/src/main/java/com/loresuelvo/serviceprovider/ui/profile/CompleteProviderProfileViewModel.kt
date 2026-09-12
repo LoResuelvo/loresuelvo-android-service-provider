@@ -102,30 +102,33 @@ class CompleteProviderProfileViewModel @Inject constructor(
         _uiState.update { it.copy(loading = true, error = null) }
 
         viewModelScope.launch {
-            val command = ProviderRegistrationCommand(
-                email = session.user.email,
-                name = name,
-                surname = surname,
-                categoryId = category.id,
-            )
-            when (val outcome = registerProvider(command)) {
-                is RegistrationOutcome.Success -> {
-                    _uiState.update { it.copy(loading = false) }
-                    _effects.send(CompleteProviderProfileEffect.NavigateToMercadoPago)
+            try {
+                val command = ProviderRegistrationCommand(
+                    email = session.user.email,
+                    name = name,
+                    surname = surname,
+                    categoryId = category.id,
+                )
+                when (val outcome = registerProvider(command)) {
+                    is RegistrationOutcome.Success -> {
+                        _effects.send(CompleteProviderProfileEffect.NavigateToMercadoPago)
+                    }
+                    is RegistrationOutcome.Failure.AlreadyRegistered -> {
+                        _uiState.update { it.copy(error = ProfileFormError.AlreadyRegistered) }
+                    }
+                    is RegistrationOutcome.Failure.Unauthorized -> {
+                        sessionStore.clearSession()
+                        _effects.send(CompleteProviderProfileEffect.NavigateToWelcome)
+                    }
+                    is RegistrationOutcome.Failure.Network -> {
+                        _uiState.update { it.copy(error = ProfileFormError.Network(outcome.cause.message.orEmpty())) }
+                    }
+                    is RegistrationOutcome.Failure.Server -> {
+                        _uiState.update { it.copy(error = ProfileFormError.Server(outcome.code, outcome.message)) }
+                    }
                 }
-                is RegistrationOutcome.Failure.AlreadyRegistered -> {
-                    _uiState.update { it.copy(loading = false, error = ProfileFormError.AlreadyRegistered) }
-                }
-                is RegistrationOutcome.Failure.Unauthorized -> {
-                    sessionStore.clearSession()
-                    _uiState.update { it.copy(loading = false, error = ProfileFormError.Unauthorized) }
-                }
-                is RegistrationOutcome.Failure.Network -> {
-                    _uiState.update { it.copy(loading = false, error = ProfileFormError.Network(outcome.cause.message.orEmpty())) }
-                }
-                is RegistrationOutcome.Failure.Server -> {
-                    _uiState.update { it.copy(loading = false, error = ProfileFormError.Server(outcome.code, outcome.message)) }
-                }
+            } finally {
+                _uiState.update { it.copy(loading = false) }
             }
         }
     }

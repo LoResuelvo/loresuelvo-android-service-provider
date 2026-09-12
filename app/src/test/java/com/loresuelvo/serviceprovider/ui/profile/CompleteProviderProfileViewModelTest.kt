@@ -13,6 +13,7 @@ import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -316,7 +317,7 @@ class CompleteProviderProfileViewModelTest {
     }
 
     @Test
-    fun `should set Unauthorized error and clear session when backend returns 401`() = runTest(scheduler) {
+    fun `should clear the session and navigate to Welcome when first registration returns 401`() = runTest(scheduler) {
         providerRepository.outcome = RegistrationOutcome.Failure.Unauthorized
 
         viewModel = newViewModel()
@@ -326,13 +327,17 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
 
-        viewModel!!.submit()
-        advanceUntilIdle()
+        viewModel!!.effects.test {
+            viewModel!!.submit()
+            advanceUntilIdle()
 
-        val state = viewModel!!.uiState.value
-        assertEquals(false, state.loading)
-        assertEquals(ProfileFormError.Unauthorized, state.error)
+            assertEquals(CompleteProviderProfileEffect.NavigateToWelcome, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertEquals(false, viewModel!!.uiState.value.loading)
         assertNull(sessionStore.getSession())
+        assertEquals(1, sessionStore.clearSessionCalls)
     }
 
     @Test
@@ -406,6 +411,25 @@ class CompleteProviderProfileViewModelTest {
         assertEquals(false, viewModel!!.uiState.value.loading)
     }
 
+    @Test
+    fun `should release submission loading when registration is cancelled`() = runTest(scheduler) {
+        providerRepository.throwable = CancellationException("Request cancelled")
+
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.onNameChanged("Carlos")
+        viewModel!!.onSurnameChanged("Gómez")
+        viewModel!!.onCategorySelected(defaultCategories[0])
+
+        viewModel!!.submit()
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel!!.uiState.value.loading)
+        assertNull(viewModel!!.uiState.value.error)
+        assertEquals(1, providerRepository.registerCalls)
+    }
+
     private class FakeCategoryRepository : CategoryRepository {
         var outcome: CategoriesOutcome = CategoriesOutcome.Success(emptyList())
         var getCategoriesCalls: Int = 0
@@ -424,17 +448,21 @@ class CompleteProviderProfileViewModelTest {
         var lastCommand: ProviderRegistrationCommand? = null
             private set
         var registerGate: CompletableDeferred<Unit>? = null
+        var throwable: Throwable? = null
 
         override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome {
             registerCalls += 1
             lastCommand = command
             registerGate?.await()
+            throwable?.let { throw it }
             return outcome
         }
     }
 
     private class RecordingAuthSessionStore : AuthSessionStore {
         private val state = MutableStateFlow<AuthSession?>(null)
+        var clearSessionCalls: Int = 0
+            private set
         override val sessionFlow: StateFlow<AuthSession?> = state
 
         override fun getSession(): AuthSession? = state.value
@@ -444,6 +472,7 @@ class CompleteProviderProfileViewModelTest {
         }
 
         override fun clearSession() {
+            clearSessionCalls += 1
             state.value = null
         }
     }

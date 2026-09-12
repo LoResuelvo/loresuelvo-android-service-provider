@@ -7,6 +7,7 @@ import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 
 /**
  * Implementation of [ProviderRepository] port backed by [BackendApi].
@@ -28,6 +29,8 @@ class ApiProviderRepository @Inject constructor(
             )
             val response = backendApi.registerProvider(requestDto)
             RegistrationOutcome.Success(providerId = response.id)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
             mapToFailure(e)
         }
