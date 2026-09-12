@@ -1,25 +1,26 @@
 package com.loresuelvo.serviceprovider.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
+import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileScreen
+import kotlinx.coroutines.flow.collect
 
 /**
- * Composition root for the provider app. Today this is intentionally
- * minimal: Welcome is always the start destination (the smart-router
- * that picks between Welcome and Home based on
- * [com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore]
- * lands alongside the first authenticated user story).
+ * Composition root for the provider app. Welcome is the initial destination
+ * for the unauthenticated flow; successful Auth0 signup hands control to the
+ * provider profile-onboarding destination through a one-shot ViewModel
+ * effect.
  *
- * `MainActivity` calls `setContent { LoResuelvoNav() }` and owns
- * nothing else. All `LaunchedEffect`, `popUpTo(graph.id)` and
- * `navController.navigate` calls will live here once authenticated
- * routes land.
+ * `MainActivity` calls `setContent { LoResuelvoNav() }` and owns nothing else.
+ * Navigation side effects remain in this composition root.
  */
 @Composable
 fun LoResuelvoNav() {
@@ -28,7 +29,8 @@ fun LoResuelvoNav() {
     LoResuelvoNavHost(
         navController = navController,
         startDestination = Route.Welcome.path,
-        welcome = { WelcomeRoute() },
+        welcome = { WelcomeRoute(navController) },
+        professionalProfile = { CompleteProviderProfileScreen() },
         home = { HomePlaceholder() },
     )
 }
@@ -40,10 +42,23 @@ fun LoResuelvoNav() {
  * context to start its browser flow.
  */
 @Composable
-private fun WelcomeRoute() {
+private fun WelcomeRoute(navController: NavHostController) {
     val viewModel: WelcomeViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(viewModel, navController) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect.NavigateToProfessionalProfile ->
+                    navController.navigate(Route.CompleteProviderProfile.path) {
+                        popUpTo(Route.Welcome.path) { inclusive = true }
+                        launchSingleTop = true
+                    }
+            }
+        }
+    }
+
     WelcomeScreen(
         loading = state.loading,
         error = state.error,

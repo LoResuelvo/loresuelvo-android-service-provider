@@ -21,6 +21,10 @@
     <string name="welcome_auth_server_error">El servicio no está disponible (código %1$d). Intentá más tarde.</string>
     <string name="welcome_auth_unauthorized_error">Tu sesión no es válida. Volvé a iniciar sesión.</string>
 
+    <!-- Provider profile onboarding -->
+    <string name="provider_profile_title">Completá tu perfil profesional</string>
+    <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>
+
     <!-- Welcome · how it works (3 pasos del prestador) -->
     <string name="welcome_step1_title">Publicá tus servicios</string>
     <string name="welcome_step1_description">Detallá lo que ofrecés y tu zona de cobertura.</string>

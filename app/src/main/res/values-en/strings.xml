@@ -21,6 +21,10 @@
     <string name="welcome_auth_server_error">The service is unavailable (code %1$d). Try again later.</string>
     <string name="welcome_auth_unauthorized_error">Your session is invalid. Please sign in again.</string>
 
+    <!-- Provider profile onboarding -->
+    <string name="provider_profile_title">Complete your professional profile</string>
+    <string name="provider_profile_description">Add the information your customers need to get to know you and find your services.</string>
+
     <!-- Welcome · how it works -->
     <string name="welcome_step1_title">Publish your services</string>
     <string name="welcome_step1_description">Detail what you offer and your coverage area.</string>

@@ -11,7 +11,6 @@ Característica: Registro de prestadores mediante Auth0 Universal Login
     Entonces la app inicia Auth0 Universal Login en modo de registro para la conexión de correo electrónico y contraseña del prestador
     Y la app nunca solicita ni almacena una contraseña por sí misma
 
-  @wip
   Escenario: 02-PSU Completar el registro de prestador
     Dado que Auth0 devolverá credenciales válidas del prestador
     Cuando el registro del prestador finaliza correctamente

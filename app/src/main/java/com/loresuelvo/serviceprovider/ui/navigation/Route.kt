@@ -8,9 +8,9 @@ import android.net.Uri
  * a `buildPath(...)` helper so call sites never assemble the path
  * string by hand (and stay consistent with the `NavHost` arguments).
  *
- * New routes land here as their feature US ships. The Welcome route
- * is the only one wired today; home / onboarding / chat routes will
- * be added alongside their respective user stories.
+ * New routes land here as their feature US ships. The Welcome and provider
+ * onboarding routes are wired today; home / chat routes will be added
+ * alongside their respective user stories.
  */
 sealed class Route(val path: String) {
 
@@ -19,6 +19,13 @@ sealed class Route(val path: String) {
      * no local session (`AuthSessionStore.getSession() == null`).
      */
     data object Welcome : Route("welcome")
+
+    /**
+     * First authenticated destination after provider signup. The route owns
+     * the provider's profile-onboarding surface; profile persistence belongs
+     * to the later provider-profile story.
+     */
+    data object CompleteProviderProfile : Route("complete_provider_profile")
 
     /**
      * Authenticated home / inbox. The actual screen body is added

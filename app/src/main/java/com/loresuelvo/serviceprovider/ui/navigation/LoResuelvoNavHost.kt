@@ -35,6 +35,7 @@ fun LoResuelvoNavHost(
     startDestination: String,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     welcome: @Composable () -> Unit,
+    professionalProfile: @Composable () -> Unit,
     home: @Composable () -> Unit,
 ) {
     Box(modifier = Modifier.padding(contentPadding)) {
@@ -43,6 +44,7 @@ fun LoResuelvoNavHost(
             startDestination = startDestination,
         ) {
             composable(Route.Welcome.path) { welcome() }
+            composable(Route.CompleteProviderProfile.path) { professionalProfile() }
             composable(Route.Home.path) { home() }
         }
     }
