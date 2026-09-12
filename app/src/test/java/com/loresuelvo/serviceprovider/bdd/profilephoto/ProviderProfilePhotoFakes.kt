@@ -5,6 +5,14 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.file.ConfirmUploadOutcome
+import com.loresuelvo.serviceprovider.domain.file.ConfirmUploadRequest
+import com.loresuelvo.serviceprovider.domain.file.ConfirmedFile
+import com.loresuelvo.serviceprovider.domain.file.FileRepository
+import com.loresuelvo.serviceprovider.domain.file.PresignUploadOutcome
+import com.loresuelvo.serviceprovider.domain.file.PresignUploadRequest
+import com.loresuelvo.serviceprovider.domain.file.PresignUploadResult
+import com.loresuelvo.serviceprovider.domain.file.UploadBytesOutcome
 import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
 import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
@@ -71,4 +79,52 @@ class FakeProfilePhotoPreparer : ProfilePhotoPreparer {
     override suspend fun preparePhoto(source: String): PhotoValidationOutcome = outcome
 
     override suspend fun cleanPhoto(photo: SelectedProfilePhoto) {}
+}
+
+class FakeFileRepository : FileRepository {
+    var presignOutcome: PresignUploadOutcome = PresignUploadOutcome.Success(
+        PresignUploadResult(
+            fileId = "file_uploaded_123",
+            key = "profile/photo.jpg",
+            uploadUrl = "https://storage.example/upload",
+            headers = mapOf("Content-Type" to "image/jpeg"),
+        ),
+    )
+    var uploadBytesOutcome: UploadBytesOutcome = UploadBytesOutcome.Success
+    var confirmOutcome: ConfirmUploadOutcome = ConfirmUploadOutcome.Success(
+        ConfirmedFile(
+            id = "file_uploaded_123",
+            originalName = "profile.jpg",
+            mimeType = "image/jpeg",
+        ),
+    )
+
+    var presignCalls: Int = 0
+        private set
+    var uploadCalls: Int = 0
+        private set
+    var confirmCalls: Int = 0
+        private set
+
+    override suspend fun presign(request: PresignUploadRequest): PresignUploadOutcome {
+        presignCalls += 1
+        return presignOutcome
+    }
+
+    override suspend fun uploadBytes(
+        uploadUrl: String,
+        headers: Map<String, String>,
+        bytes: ByteArray,
+    ): UploadBytesOutcome {
+        uploadCalls += 1
+        return uploadBytesOutcome
+    }
+
+    override suspend fun confirm(
+        fileId: String,
+        request: ConfirmUploadRequest,
+    ): ConfirmUploadOutcome {
+        confirmCalls += 1
+        return confirmOutcome
+    }
 }

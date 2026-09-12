@@ -109,6 +109,7 @@ fun CompleteProviderProfileRoute(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
             )
         },
+        onUploadPhoto = viewModel::onUploadPhoto,
         onSubmit = viewModel::submit,
         modifier = modifier,
     )

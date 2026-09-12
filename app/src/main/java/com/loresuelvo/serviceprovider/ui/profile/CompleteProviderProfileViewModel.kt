@@ -10,6 +10,8 @@ import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoOutcome
+import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -31,6 +33,7 @@ class CompleteProviderProfileViewModel @Inject constructor(
     private val registerProvider: RegisterProviderUseCase,
     private val sessionStore: AuthSessionStore,
     private val prepareProfilePhoto: PrepareProfilePhotoUseCase,
+    private val uploadProfilePhoto: UploadProfilePhotoUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CompleteProviderProfileUiState())
@@ -134,6 +137,28 @@ class CompleteProviderProfileViewModel @Inject constructor(
 
     fun onPhotoSelectionCancelled() {
         // Preserves previous photo selection, confirmation state, and form inputs
+    }
+
+    fun onUploadPhoto() {
+        val photo = _uiState.value.selectedPhoto ?: return
+        if (_uiState.value.photoLoading) return
+
+        _uiState.update { it.copy(photoLoading = true, photoError = null) }
+        viewModelScope.launch {
+            when (val outcome = uploadProfilePhoto(photo)) {
+                is UploadProfilePhotoOutcome.Success -> {
+                    onPhotoConfirmed(outcome.confirmedFile.id)
+                }
+                is UploadProfilePhotoOutcome.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            photoLoading = false,
+                            photoError = PhotoFormError.UploadFailed,
+                        )
+                    }
+                }
+            }
+        }
     }
 
     fun onPhotoConfirmed(fileId: String) {

@@ -58,7 +58,6 @@ Característica: Registro de prestador con foto de perfil
       | Contenido seleccionado que no puede leerse            |
       | Contenido corrupto declarado como una imagen admitida |
 
-  @wip
   Escenario: 06-PPH Cargar y confirmar la foto actual
     Dado hay una foto válida seleccionada en el formulario
     Y el prestador tiene una sesión autenticada válida

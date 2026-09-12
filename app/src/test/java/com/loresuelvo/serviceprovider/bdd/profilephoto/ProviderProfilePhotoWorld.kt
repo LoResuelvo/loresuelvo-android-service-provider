@@ -6,6 +6,7 @@ import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.file.UploadBytesOutcome
 import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
 import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
@@ -14,6 +15,7 @@ import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
@@ -45,10 +47,12 @@ class ProviderProfilePhotoWorld : AutoCloseable {
     val providerRepository = FakeProviderRepository()
     val sessionStore = FakeAuthSessionStore()
     val photoPreparer = FakeProfilePhotoPreparer()
+    val fileRepository = FakeFileRepository()
 
     val getCategories = GetCategoriesUseCase(categoryRepository)
     val registerProvider = RegisterProviderUseCase(providerRepository)
     val prepareProfilePhoto = PrepareProfilePhotoUseCase(photoPreparer)
+    val uploadProfilePhoto = UploadProfilePhotoUseCase(fileRepository)
 
     lateinit var viewModel: CompleteProviderProfileViewModel
         private set
@@ -77,6 +81,7 @@ class ProviderProfilePhotoWorld : AutoCloseable {
             registerProvider = registerProvider,
             sessionStore = sessionStore,
             prepareProfilePhoto = prepareProfilePhoto,
+            uploadProfilePhoto = uploadProfilePhoto,
         )
         effectsJob?.cancel()
         effectsJob = CoroutineScope(dispatcher).launch {
@@ -98,10 +103,35 @@ class ProviderProfilePhotoWorld : AutoCloseable {
     }
 
     fun selectValidJpegPhoto() {
-        val photo = SelectedProfilePhoto("profile.jpg", "image/jpeg", 2048L, "/cache/profile.jpg")
+        val tempFile = java.io.File.createTempFile("profile", ".jpg").apply {
+            writeBytes(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte()))
+            deleteOnExit()
+        }
+        val photo = SelectedProfilePhoto("profile.jpg", "image/jpeg", 2048L, tempFile.absolutePath)
         photoPreparer.outcome = PhotoValidationOutcome.Valid(photo)
         viewModel.onPhotoSelected("content://media/profile.jpg")
         scheduler.advanceUntilIdle()
+    }
+
+    fun configurePhotoUploadSuccess() {
+        fileRepository.uploadBytesOutcome = UploadBytesOutcome.Success
+    }
+
+    fun triggerPhotoUpload() {
+        viewModel.onUploadPhoto()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertUploadProgressDisplayed() {
+        assertEquals(1, fileRepository.uploadCalls)
+    }
+
+    fun assertPhotoReadyForRegistration() {
+        val state = viewModel.uiState.value
+        assertEquals(true, state.isPhotoConfirmed)
+        assertEquals("file_uploaded_123", state.confirmedPhotoFileId)
+        assertEquals(false, state.photoLoading)
+        assertNull(state.photoError)
     }
 
     fun assertPhotoPreviewDisplayed() {

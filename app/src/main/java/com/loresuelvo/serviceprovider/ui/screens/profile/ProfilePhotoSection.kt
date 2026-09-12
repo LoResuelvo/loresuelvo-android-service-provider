@@ -81,6 +81,7 @@ fun ProfilePhotoSection(
                 is PhotoFormError.EmptyFile -> stringResource(R.string.provider_profile_photo_error_empty)
                 is PhotoFormError.Unreadable -> stringResource(R.string.provider_profile_photo_error_unreadable)
                 is PhotoFormError.CorruptContent -> stringResource(R.string.provider_profile_photo_error_corrupt)
+                is PhotoFormError.UploadFailed -> stringResource(R.string.provider_profile_photo_error_upload)
             }
             Text(
                 text = errorMessage,

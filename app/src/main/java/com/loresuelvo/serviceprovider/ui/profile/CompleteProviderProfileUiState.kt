@@ -29,6 +29,7 @@ sealed interface PhotoFormError {
     data object EmptyFile : PhotoFormError
     data object Unreadable : PhotoFormError
     data object CorruptContent : PhotoFormError
+    data object UploadFailed : PhotoFormError
 }
 
 /**

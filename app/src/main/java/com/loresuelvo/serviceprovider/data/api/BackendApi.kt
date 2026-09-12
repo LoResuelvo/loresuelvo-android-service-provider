@@ -1,11 +1,16 @@
 package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.dto.CategoryDto
+import com.loresuelvo.serviceprovider.data.api.dto.ConfirmFileRequestDto
+import com.loresuelvo.serviceprovider.data.api.dto.FileResponseDto
+import com.loresuelvo.serviceprovider.data.api.dto.PresignFileRequestDto
+import com.loresuelvo.serviceprovider.data.api.dto.PresignFileResponseDto
 import com.loresuelvo.serviceprovider.data.api.dto.ProviderSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 /**
  * Retrofit-typed contract for the backend's provider endpoints. The
@@ -35,4 +40,21 @@ interface BackendApi {
     suspend fun registerProvider(
         @Body request: RegisterProviderRequestDto,
     ): ProviderSummaryDto
+
+    /**
+     * `POST /files/presign` — requests a presigned storage upload URL.
+     */
+    @POST("files/presign")
+    suspend fun presignFile(
+        @Body request: PresignFileRequestDto,
+    ): PresignFileResponseDto
+
+    /**
+     * `POST /files/{fileID}/confirm` — confirms an uploaded file with the backend.
+     */
+    @POST("files/{fileID}/confirm")
+    suspend fun confirmFile(
+        @Path("fileID") fileId: String,
+        @Body request: ConfirmFileRequestDto,
+    ): FileResponseDto
 }

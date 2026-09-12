@@ -195,4 +195,44 @@ class ProviderProfilePhotoSteps {
     fun noIniciaAutomaticamenteCargaNiRegistro() {
         world.assertNoAutomaticUploadOrRegistration()
     }
+
+    // --- 06-PPH Steps ---
+
+    @Dado("hay una foto válida seleccionada en el formulario")
+    fun hayFotoValidaSeleccionadaEnFormulario() {
+        world.seedAuthenticatedSession()
+        world.navigateToProfileDestination()
+        world.fillValidProfileData()
+        world.selectValidJpegPhoto()
+    }
+
+    @Y("el prestador tiene una sesión autenticada válida")
+    fun prestadorTieneSesionAutenticadaValida() {
+        world.seedAuthenticatedSession()
+    }
+
+    @Y("la carga de la foto finalizará correctamente")
+    fun cargaFotoFinalizaraCorrectamente() {
+        world.configurePhotoUploadSuccess()
+    }
+
+    @Cuando("el prestador selecciona la acción para cargar la foto")
+    fun prestadorSeleccionaAccionCargarFoto() {
+        world.triggerPhotoUpload()
+    }
+
+    @Entonces("el formulario muestra el progreso de carga de forma accesible")
+    fun formularioMuestraProgresoCargaDeFormaAccesible() {
+        world.assertUploadProgressDisplayed()
+    }
+
+    @Y("la foto actual queda lista para el registro únicamente después de una confirmación exitosa")
+    fun fotoActualQuedaListaParaRegistroDespuesDeConfirmacion() {
+        world.assertPhotoReadyForRegistration()
+    }
+
+    @Y("el formulario no se envía")
+    fun formularioNoSeEnvia() {
+        world.assertRegistrationNotCompleted()
+    }
 }

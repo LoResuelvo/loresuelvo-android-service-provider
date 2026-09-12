@@ -12,9 +12,18 @@ import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
+import com.loresuelvo.serviceprovider.domain.file.ConfirmUploadOutcome
+import com.loresuelvo.serviceprovider.domain.file.ConfirmUploadRequest
+import com.loresuelvo.serviceprovider.domain.file.ConfirmedFile
+import com.loresuelvo.serviceprovider.domain.file.FileRepository
+import com.loresuelvo.serviceprovider.domain.file.PresignUploadOutcome
+import com.loresuelvo.serviceprovider.domain.file.PresignUploadRequest
+import com.loresuelvo.serviceprovider.domain.file.PresignUploadResult
+import com.loresuelvo.serviceprovider.domain.file.UploadBytesOutcome
 import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
@@ -51,6 +60,7 @@ class CompleteProviderProfileViewModelTest {
     private lateinit var providerRepository: FakeProviderRepository
     private lateinit var sessionStore: RecordingAuthSessionStore
     private lateinit var photoPreparer: FakeProfilePhotoPreparer
+    private lateinit var fileRepository: FakeFileRepository
     private var viewModel: CompleteProviderProfileViewModel? = null
 
     private val defaultCategories = listOf(
@@ -73,6 +83,7 @@ class CompleteProviderProfileViewModelTest {
         sessionStore = RecordingAuthSessionStore()
         sessionStore.saveSession(defaultSession)
         photoPreparer = FakeProfilePhotoPreparer()
+        fileRepository = FakeFileRepository()
     }
 
     private fun newViewModel(): CompleteProviderProfileViewModel =
@@ -81,6 +92,7 @@ class CompleteProviderProfileViewModelTest {
             registerProvider = RegisterProviderUseCase(providerRepository),
             sessionStore = sessionStore,
             prepareProfilePhoto = PrepareProfilePhotoUseCase(photoPreparer),
+            uploadProfilePhoto = UploadProfilePhotoUseCase(fileRepository),
         )
 
     @After
@@ -522,6 +534,62 @@ class CompleteProviderProfileViewModelTest {
         assertNull(viewModel!!.uiState.value.confirmedPhotoFileId)
     }
 
+    @Test
+    fun `onUploadPhoto with no selected photo does nothing`() = runTest(scheduler) {
+        viewModel = newViewModel()
+
+        viewModel!!.onUploadPhoto()
+        advanceUntilIdle()
+
+        assertEquals(0, fileRepository.presignCalls)
+        assertEquals(false, viewModel!!.uiState.value.photoLoading)
+    }
+
+    @Test
+    fun `onUploadPhoto with selected photo uploads and confirms photo`() = runTest(scheduler) {
+        val temp = java.io.File.createTempFile("photo", ".jpg").apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+        val photo = SelectedProfilePhoto("profile.jpg", "image/jpeg", 3L, temp.absolutePath)
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(photo)
+        viewModel = newViewModel()
+        viewModel!!.onPhotoSelected("content://photo")
+        advanceUntilIdle()
+
+        viewModel!!.onUploadPhoto()
+        advanceUntilIdle()
+
+        assertEquals(1, fileRepository.presignCalls)
+        assertEquals(1, fileRepository.uploadCalls)
+        assertEquals(1, fileRepository.confirmCalls)
+        assertEquals(true, viewModel!!.uiState.value.isPhotoConfirmed)
+        assertEquals("file-uploaded-id", viewModel!!.uiState.value.confirmedPhotoFileId)
+        assertEquals(false, viewModel!!.uiState.value.photoLoading)
+        assertNull(viewModel!!.uiState.value.photoError)
+    }
+
+    @Test
+    fun `onUploadPhoto failure sets UploadFailed error`() = runTest(scheduler) {
+        val temp = java.io.File.createTempFile("photo", ".jpg").apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+        val photo = SelectedProfilePhoto("profile.jpg", "image/jpeg", 3L, temp.absolutePath)
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(photo)
+        fileRepository.presignOutcome = PresignUploadOutcome.Failure.Server(500, "Server error")
+        viewModel = newViewModel()
+        viewModel!!.onPhotoSelected("content://photo")
+        advanceUntilIdle()
+
+        viewModel!!.onUploadPhoto()
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel!!.uiState.value.isPhotoConfirmed)
+        assertEquals(false, viewModel!!.uiState.value.photoLoading)
+        assertEquals(PhotoFormError.UploadFailed, viewModel!!.uiState.value.photoError)
+    }
+
     private class FakeCategoryRepository : CategoryRepository {
         var outcome: CategoriesOutcome = CategoriesOutcome.Success(emptyList())
         var getCategoriesCalls: Int = 0
@@ -582,5 +650,53 @@ class CompleteProviderProfileViewModelTest {
         override suspend fun preparePhoto(source: String): PhotoValidationOutcome = outcome
 
         override suspend fun cleanPhoto(photo: SelectedProfilePhoto) {}
+    }
+
+    private class FakeFileRepository : FileRepository {
+        var presignCalls = 0
+            private set
+        var uploadCalls = 0
+            private set
+        var confirmCalls = 0
+            private set
+
+        var presignOutcome: PresignUploadOutcome = PresignUploadOutcome.Success(
+            PresignUploadResult(
+                fileId = "file-uploaded-id",
+                key = "keys/profile.jpg",
+                uploadUrl = "https://storage.example/upload",
+                headers = mapOf("Content-Type" to "image/jpeg"),
+            ),
+        )
+        var uploadBytesOutcome: UploadBytesOutcome = UploadBytesOutcome.Success
+        var confirmOutcome: ConfirmUploadOutcome = ConfirmUploadOutcome.Success(
+            ConfirmedFile(
+                id = "file-uploaded-id",
+                originalName = "profile.jpg",
+                mimeType = "image/jpeg",
+            ),
+        )
+
+        override suspend fun presign(request: PresignUploadRequest): PresignUploadOutcome {
+            presignCalls += 1
+            return presignOutcome
+        }
+
+        override suspend fun uploadBytes(
+            uploadUrl: String,
+            headers: Map<String, String>,
+            bytes: ByteArray,
+        ): UploadBytesOutcome {
+            uploadCalls += 1
+            return uploadBytesOutcome
+        }
+
+        override suspend fun confirm(
+            fileId: String,
+            request: ConfirmUploadRequest,
+        ): ConfirmUploadOutcome {
+            confirmCalls += 1
+            return confirmOutcome
+        }
     }
 }
