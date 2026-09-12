@@ -2,7 +2,6 @@ package com.loresuelvo.serviceprovider.bdd.auth.signup
 
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import io.cucumber.java.After
-import io.cucumber.java.PendingException
 import io.cucumber.java.es.Cuando
 import io.cucumber.java.es.Dado
 import io.cucumber.java.es.Entonces
@@ -11,12 +10,12 @@ import io.cucumber.java.es.Y
 /**
  * Step definitions for the provider signup boundaries.
  *
- * The 01-PSU connection assertion covers the app-owned signup request shape
- * and remains pending for the tenant-selected connection because that hosted
- * check is human-owned. The 03-PSU and 04-PSU steps exercise deterministic
- * cancellation and recoverable-failure outcomes. The 02-PSU steps exercise
- * the app-owned session and onboarding hand-off once the deterministic fake
- * returns valid credentials.
+ * The 01-PSU connection assertion covers the app-owned signup request shape:
+ * Auth0 owns the email/password form and the tenant selects its database
+ * connection. The 03-PSU and 04-PSU steps exercise deterministic cancellation
+ * and recoverable-failure outcomes. The 02-PSU steps exercise the app-owned
+ * session and onboarding hand-off once the deterministic fake returns valid
+ * credentials.
  */
 class ProviderSignupSteps {
 
@@ -40,9 +39,6 @@ class ProviderSignupSteps {
     fun auth0SignupStartsForProviderConnection() {
         world.assertSignupDelegated()
         world.assertSignupConfigured()
-        throw PendingException(
-            "Auth0 tenant-selected connection and hosted signup screen require human-owned smoke verification.",
-        )
     }
 
     @Y("la app nunca solicita ni almacena una contraseña por sí misma")

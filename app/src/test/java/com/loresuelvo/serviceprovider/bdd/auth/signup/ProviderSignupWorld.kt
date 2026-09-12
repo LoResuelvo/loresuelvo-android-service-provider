@@ -43,11 +43,12 @@ import org.junit.Assert.assertTrue
  *
  * This world exercises the app-owned boundary: selecting signup calls
  * [WelcomeViewModel.signup], which delegates to [AuthProvider.signup], and
- * the production signup adapter adds the configured signup hint and account
- * parameters to the Auth0 request. The synthetic configuration proves request
- * construction only; it does not model a real Auth0 tenant. The successful
- * signup fixture also owns a deterministic session store so the scenario can
- * prove the shared bearer-token boundary without a real Auth0 or backend.
+ * the production signup adapter adds the configured signup hint to the Auth0
+ * request. Auth0 owns the email/password form and the tenant selects its
+ * database connection; the synthetic configuration therefore proves only the
+ * app-owned request construction. The successful signup fixture also owns a
+ * deterministic session store so the scenario can prove the shared bearer-
+ * token boundary without a real Auth0 or backend.
  * Failure outcomes stay typed and are asserted through the safe Welcome UI
  * state.
  */
