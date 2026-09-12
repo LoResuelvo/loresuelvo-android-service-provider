@@ -35,6 +35,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -590,6 +591,99 @@ class CompleteProviderProfileViewModelTest {
         assertEquals(PhotoFormError.UploadFailed, viewModel!!.uiState.value.photoError)
     }
 
+    @Test
+    fun `onUploadPhoto ignores duplicate call when upload is in flight`() = runTest(scheduler) {
+        val temp = java.io.File.createTempFile("photo", ".jpg").apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+        val photo = SelectedProfilePhoto("profile.jpg", "image/jpeg", 3L, temp.absolutePath)
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(photo)
+        val gate = CompletableDeferred<Unit>()
+        fileRepository.presignGate = gate
+        viewModel = newViewModel()
+        viewModel!!.onPhotoSelected("content://photo")
+        advanceUntilIdle()
+
+        viewModel!!.onUploadPhoto()
+        runCurrent()
+        assertEquals(true, viewModel!!.uiState.value.photoLoading)
+        assertEquals(1, fileRepository.presignCalls)
+
+        viewModel!!.onUploadPhoto()
+        runCurrent()
+        assertEquals(1, fileRepository.presignCalls)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(false, viewModel!!.uiState.value.photoLoading)
+        assertEquals(true, viewModel!!.uiState.value.isPhotoConfirmed)
+    }
+
+    @Test
+    fun `onPhotoSelected and submit are ignored when photo upload is in flight`() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("user-1", "user@test.com"), "token"))
+        val temp = java.io.File.createTempFile("photo", ".jpg").apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+        val photo = SelectedProfilePhoto("profile.jpg", "image/jpeg", 3L, temp.absolutePath)
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(photo)
+        val gate = CompletableDeferred<Unit>()
+        fileRepository.presignGate = gate
+        viewModel = newViewModel()
+        viewModel!!.onNameChanged("Carlos")
+        viewModel!!.onSurnameChanged("Gómez")
+        viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoSelected("content://photo")
+        advanceUntilIdle()
+
+        viewModel!!.onUploadPhoto()
+        runCurrent()
+        assertEquals(true, viewModel!!.uiState.value.photoLoading)
+
+        val anotherPhoto = SelectedProfilePhoto("another.jpg", "image/jpeg", 5L, "/cache/another.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(anotherPhoto)
+        viewModel!!.onPhotoSelected("content://another")
+        runCurrent()
+        assertEquals("profile.jpg", viewModel!!.uiState.value.selectedPhoto?.originalName)
+
+        viewModel!!.submit()
+        runCurrent()
+        assertEquals(0, providerRepository.registerCalls)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(true, viewModel!!.uiState.value.isPhotoConfirmed)
+    }
+
+    @Test
+    fun `onUploadPhoto retry succeeds after previous failure`() = runTest(scheduler) {
+        val temp = java.io.File.createTempFile("photo", ".jpg").apply {
+            writeBytes(byteArrayOf(1, 2, 3))
+            deleteOnExit()
+        }
+        val photo = SelectedProfilePhoto("profile.jpg", "image/jpeg", 3L, temp.absolutePath)
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(photo)
+        fileRepository.uploadBytesOutcome = UploadBytesOutcome.Failure.Server(500, "Server down")
+        viewModel = newViewModel()
+        viewModel!!.onPhotoSelected("content://photo")
+        advanceUntilIdle()
+
+        viewModel!!.onUploadPhoto()
+        advanceUntilIdle()
+        assertEquals(PhotoFormError.UploadFailed, viewModel!!.uiState.value.photoError)
+        assertEquals(false, viewModel!!.uiState.value.isPhotoConfirmed)
+
+        fileRepository.uploadBytesOutcome = UploadBytesOutcome.Success
+        viewModel!!.onUploadPhoto()
+        advanceUntilIdle()
+
+        assertEquals(true, viewModel!!.uiState.value.isPhotoConfirmed)
+        assertEquals(false, viewModel!!.uiState.value.photoLoading)
+        assertNull(viewModel!!.uiState.value.photoError)
+    }
+
     private class FakeCategoryRepository : CategoryRepository {
         var outcome: CategoriesOutcome = CategoriesOutcome.Success(emptyList())
         var getCategoriesCalls: Int = 0
@@ -660,6 +754,10 @@ class CompleteProviderProfileViewModelTest {
         var confirmCalls = 0
             private set
 
+        var presignGate: CompletableDeferred<Unit>? = null
+        var uploadGate: CompletableDeferred<Unit>? = null
+        var confirmGate: CompletableDeferred<Unit>? = null
+
         var presignOutcome: PresignUploadOutcome = PresignUploadOutcome.Success(
             PresignUploadResult(
                 fileId = "file-uploaded-id",
@@ -679,6 +777,7 @@ class CompleteProviderProfileViewModelTest {
 
         override suspend fun presign(request: PresignUploadRequest): PresignUploadOutcome {
             presignCalls += 1
+            presignGate?.await()
             return presignOutcome
         }
 
@@ -688,6 +787,7 @@ class CompleteProviderProfileViewModelTest {
             bytes: ByteArray,
         ): UploadBytesOutcome {
             uploadCalls += 1
+            uploadGate?.await()
             return uploadBytesOutcome
         }
 
@@ -696,6 +796,7 @@ class CompleteProviderProfileViewModelTest {
             request: ConfirmUploadRequest,
         ): ConfirmUploadOutcome {
             confirmCalls += 1
+            confirmGate?.await()
             return confirmOutcome
         }
     }

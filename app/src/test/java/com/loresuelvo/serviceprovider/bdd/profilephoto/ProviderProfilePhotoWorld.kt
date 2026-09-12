@@ -6,6 +6,8 @@ import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.file.ConfirmUploadOutcome
+import com.loresuelvo.serviceprovider.domain.file.PresignUploadOutcome
 import com.loresuelvo.serviceprovider.domain.file.UploadBytesOutcome
 import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
@@ -20,6 +22,8 @@ import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUs
 import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
+import com.loresuelvo.serviceprovider.ui.profile.PhotoFormError
+import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -300,8 +304,126 @@ class ProviderProfilePhotoWorld : AutoCloseable {
         assertEquals(0, providerRepository.registerCalls)
     }
 
+    fun arrangeOperationInProgress(operation: String) {
+        seedAuthenticatedSession()
+        navigateToProfileDestination()
+        fillValidProfileData()
+        selectValidJpegPhoto()
+
+        when (operation) {
+            "Solicitud de URL firmada" -> {
+                val gate = CompletableDeferred<Unit>()
+                fileRepository.presignGate = gate
+                viewModel.onUploadPhoto()
+                dispatcher.scheduler.runCurrent()
+            }
+            "Solicitud PUT firmada" -> {
+                val gate = CompletableDeferred<Unit>()
+                fileRepository.uploadGate = gate
+                viewModel.onUploadPhoto()
+                dispatcher.scheduler.runCurrent()
+            }
+            "Confirmación de la foto" -> {
+                val gate = CompletableDeferred<Unit>()
+                fileRepository.confirmGate = gate
+                viewModel.onUploadPhoto()
+                dispatcher.scheduler.runCurrent()
+            }
+            "Registro del prestador" -> {
+                viewModel.onPhotoConfirmed("file_123")
+                val gate = CompletableDeferred<Unit>()
+                providerRepository.registerGate = gate
+                viewModel.submit()
+                dispatcher.scheduler.runCurrent()
+            }
+        }
+    }
+
+    fun repeatUploadOrRegistrationAction() {
+        viewModel.onUploadPhoto()
+        viewModel.submit()
+        viewModel.onPhotoSelected("content://media/another.jpg")
+        dispatcher.scheduler.runCurrent()
+    }
+
+    fun assertNoDuplicateOperation() {
+        if (providerRepository.registerGate != null) {
+            assertEquals(1, providerRepository.registerCalls)
+            assertEquals(0, fileRepository.uploadCalls)
+        } else {
+            assertEquals(1, fileRepository.presignCalls)
+            assertEquals(0, providerRepository.registerCalls)
+        }
+    }
+
+    fun assertControlsRemainDisabled() {
+        val state = viewModel.uiState.value
+        assertEquals(true, state.loading || state.photoLoading)
+    }
+
+    fun assertOperationProgressContinues() {
+        val state = viewModel.uiState.value
+        assertEquals(true, state.loading || state.photoLoading)
+    }
+
+    fun arrangeRecoverableFailure(stage: String, failureDescription: String) {
+        when (stage) {
+            "Solicitud de URL firmada" -> {
+                fileRepository.presignOutcome = PresignUploadOutcome.Failure.Network(
+                    IOException("Network failure"),
+                )
+            }
+            "Solicitud PUT firmada" -> {
+                fileRepository.uploadBytesOutcome = UploadBytesOutcome.Failure.Network(
+                    IOException("Network failure"),
+                )
+            }
+            "Confirmación" -> {
+                fileRepository.confirmOutcome = ConfirmUploadOutcome.Failure.Network(
+                    IOException("Network failure"),
+                )
+            }
+        }
+    }
+
+    fun assertRemainsOnFormWithFriendlyPhotoError() {
+        val state = viewModel.uiState.value
+        assertEquals(PhotoFormError.UploadFailed, state.photoError)
+        assertNull(latestEffect)
+    }
+
+    fun assertPhotoRetainedForRetryOrReplace() {
+        val state = viewModel.uiState.value
+        assertNotNull(state.selectedPhoto)
+        assertEquals(false, state.isPhotoConfirmed)
+        assertEquals(false, state.photoLoading)
+    }
+
+    fun arrangeRecoverablePhotoFailure() {
+        seedAuthenticatedSession()
+        navigateToProfileDestination()
+        fillValidProfileData()
+        selectValidJpegPhoto()
+        fileRepository.uploadBytesOutcome = UploadBytesOutcome.Failure.Network(
+            IOException("Network failure"),
+        )
+        triggerPhotoUpload()
+        assertEquals(PhotoFormError.UploadFailed, viewModel.uiState.value.photoError)
+    }
+
+    fun configureRetrySuccess() {
+        fileRepository.resetDefaults()
+    }
+
+    fun assertUploadProgressResumed() {
+        assertEquals(2, fileRepository.presignCalls)
+    }
+
     override fun close() {
         effectsJob?.cancel()
+        fileRepository.presignGate?.complete(Unit)
+        fileRepository.uploadGate?.complete(Unit)
+        fileRepository.confirmGate?.complete(Unit)
         providerRepository.registerGate?.complete(Unit)
         scheduler.advanceUntilIdle()
         Dispatchers.resetMain()

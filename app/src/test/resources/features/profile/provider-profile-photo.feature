@@ -67,7 +67,6 @@ Característica: Registro de prestador con foto de perfil
     Y la foto actual queda lista para el registro únicamente después de una confirmación exitosa
     Y el formulario no se envía
 
-  @wip
   Esquema del escenario: 07-PPH Evitar operaciones duplicadas mientras hay una operación en curso
     Dado la operación "<Operación en curso>" está en curso
     Cuando el prestador repite una acción de carga o registro
@@ -82,7 +81,6 @@ Característica: Registro de prestador con foto de perfil
       | Confirmación de la foto  |
       | Registro del prestador   |
 
-  @wip
   Esquema del escenario: 08-PPH Conservar el formulario ante una falla recuperable de carga
     Dado que el prestador completó nombre, apellido y seleccionó un rubro
     Y la carga de una foto válida está en curso
@@ -98,7 +96,6 @@ Característica: Registro de prestador con foto de perfil
       | Solicitud PUT firmada    | Falla de red o falla temporal del almacenamiento |
       | Confirmación             | Falla de red o falla temporal del servidor       |
 
-  @wip
   Escenario: 09-PPH Reintentar una carga de foto fallida
     Dado el formulario muestra una falla recuperable de carga de foto
     Y el reintento será exitoso

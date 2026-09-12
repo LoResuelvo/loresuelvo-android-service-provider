@@ -235,4 +235,90 @@ class ProviderProfilePhotoSteps {
     fun formularioNoSeEnvia() {
         world.assertRegistrationNotCompleted()
     }
+
+    // --- 07-PPH Steps ---
+
+    @Dado("la operación {string} está en curso")
+    fun operacionEstaEnCurso(operacion: String) {
+        world.arrangeOperationInProgress(operacion)
+    }
+
+    @Cuando("el prestador repite una acción de carga o registro")
+    fun prestadorRepiteAccionCargaORegistro() {
+        world.repeatUploadOrRegistrationAction()
+    }
+
+    @Entonces("no se inicia una operación duplicada")
+    fun noSeIniciaOperacionDuplicada() {
+        world.assertNoDuplicateOperation()
+    }
+
+    @Y("los controles de carga, reemplazo y registro que interfieren con la operación permanecen deshabilitados")
+    fun controlesInterfierenPermanecenDeshabilitados() {
+        world.assertControlsRemainDisabled()
+    }
+
+    @Y("el formulario continúa mostrando el progreso de la operación")
+    fun formularioContinuaMostrandoProgreso() {
+        world.assertOperationProgressContinues()
+    }
+
+    // --- 08-PPH Steps ---
+
+    @Y("la carga de una foto válida está en curso")
+    fun cargaFotoValidaEnCurso() {
+        world.selectValidJpegPhoto()
+    }
+
+    @Y("la etapa {string} devuelve la falla recuperable {string}")
+    fun etapaDevuelveFallaRecuperable(etapa: String, falla: String) {
+        world.arrangeRecoverableFailure(etapa, falla)
+    }
+
+    @Cuando("el intento de carga finaliza con esa falla")
+    fun intentoCargaFinalizaConEsaFalla() {
+        world.triggerPhotoUpload()
+    }
+
+    @Entonces("el prestador permanece en el mismo formulario con un mensaje amigable de error de foto")
+    fun permaneceEnMismoFormularioConMensajeAmigableErrorFoto() {
+        world.assertRemainsOnFormWithFriendlyPhotoError()
+    }
+
+    @Y("se preservan el nombre, apellido y la selección de rubro")
+    fun sePreservanNombreApellidoYRubro() {
+        world.assertProfileDataPreserved()
+    }
+
+    @Y("se conserva la foto seleccionada para reintentar o reemplazarla")
+    fun conservaFotoSeleccionadaParaReintentarOReemplazar() {
+        world.assertPhotoRetainedForRetryOrReplace()
+    }
+
+    // --- 09-PPH Steps ---
+
+    @Dado("el formulario muestra una falla recuperable de carga de foto")
+    fun formularioMuestraFallaRecuperableCargaFoto() {
+        world.arrangeRecoverablePhotoFailure()
+    }
+
+    @Y("el reintento será exitoso")
+    fun reintentoSeraExitoso() {
+        world.configureRetrySuccess()
+    }
+
+    @Cuando("el prestador selecciona la acción para reintentar la carga de la foto")
+    fun prestadorSeleccionaAccionReintentarCargaFoto() {
+        world.triggerPhotoUpload()
+    }
+
+    @Entonces("se reanuda el progreso de carga de la imagen seleccionada actualmente")
+    fun reanudaProgresoCargaImagenActual() {
+        world.assertUploadProgressResumed()
+    }
+
+    @Y("una confirmación exitosa deja esa imagen lista para el registro")
+    fun confirmacionExitosaDejaImagenListaParaRegistro() {
+        world.assertPhotoReadyForRegistration()
+    }
 }

@@ -106,8 +106,13 @@ class FakeFileRepository : FileRepository {
     var confirmCalls: Int = 0
         private set
 
+    var presignGate: CompletableDeferred<Unit>? = null
+    var uploadGate: CompletableDeferred<Unit>? = null
+    var confirmGate: CompletableDeferred<Unit>? = null
+
     override suspend fun presign(request: PresignUploadRequest): PresignUploadOutcome {
         presignCalls += 1
+        presignGate?.await()
         return presignOutcome
     }
 
@@ -117,6 +122,7 @@ class FakeFileRepository : FileRepository {
         bytes: ByteArray,
     ): UploadBytesOutcome {
         uploadCalls += 1
+        uploadGate?.await()
         return uploadBytesOutcome
     }
 
@@ -125,6 +131,29 @@ class FakeFileRepository : FileRepository {
         request: ConfirmUploadRequest,
     ): ConfirmUploadOutcome {
         confirmCalls += 1
+        confirmGate?.await()
         return confirmOutcome
+    }
+
+    fun resetDefaults() {
+        presignOutcome = PresignUploadOutcome.Success(
+            PresignUploadResult(
+                fileId = "file_uploaded_123",
+                key = "profile/photo.jpg",
+                uploadUrl = "https://storage.example/upload",
+                headers = mapOf("Content-Type" to "image/jpeg"),
+            ),
+        )
+        uploadBytesOutcome = UploadBytesOutcome.Success
+        confirmOutcome = ConfirmUploadOutcome.Success(
+            ConfirmedFile(
+                id = "file_uploaded_123",
+                originalName = "profile.jpg",
+                mimeType = "image/jpeg",
+            ),
+        )
+        presignGate = null
+        uploadGate = null
+        confirmGate = null
     }
 }

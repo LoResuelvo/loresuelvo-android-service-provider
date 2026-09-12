@@ -77,6 +77,8 @@ class CompleteProviderProfileViewModel @Inject constructor(
     }
 
     fun onPhotoSelected(source: String) {
+        if (_uiState.value.photoLoading || _uiState.value.loading) return
+
         _uiState.update { it.copy(photoLoading = true) }
         viewModelScope.launch {
             when (val outcome = prepareProfilePhoto(source)) {
@@ -141,7 +143,7 @@ class CompleteProviderProfileViewModel @Inject constructor(
 
     fun onUploadPhoto() {
         val photo = _uiState.value.selectedPhoto ?: return
-        if (_uiState.value.photoLoading) return
+        if (_uiState.value.photoLoading || _uiState.value.loading) return
 
         _uiState.update { it.copy(photoLoading = true, photoError = null) }
         viewModelScope.launch {
@@ -173,7 +175,7 @@ class CompleteProviderProfileViewModel @Inject constructor(
     }
 
     fun submit() {
-        if (_uiState.value.loading) return
+        if (_uiState.value.loading || _uiState.value.photoLoading) return
 
         val state = _uiState.value
         val name = state.name.trim()

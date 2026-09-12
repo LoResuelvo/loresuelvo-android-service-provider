@@ -188,6 +188,8 @@ fun CompleteProviderProfileScreen(
                 else -> Unit
             }
 
+            val isBusy = uiState.loading || uiState.photoLoading
+
             Spacer(modifier = Modifier.height(4.dp))
 
             // Name Field
@@ -198,7 +200,7 @@ fun CompleteProviderProfileScreen(
                 placeholder = stringResource(R.string.provider_profile_name_placeholder),
                 isError = uiState.error is ProfileFormError.MissingName,
                 errorMessage = stringResource(R.string.provider_profile_name_error),
-                enabled = !uiState.loading,
+                enabled = !isBusy,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words,
                     imeAction = ImeAction.Next,
@@ -213,7 +215,7 @@ fun CompleteProviderProfileScreen(
                 placeholder = stringResource(R.string.provider_profile_surname_placeholder),
                 isError = uiState.error is ProfileFormError.MissingSurname,
                 errorMessage = stringResource(R.string.provider_profile_surname_error),
-                enabled = !uiState.loading,
+                enabled = !isBusy,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words,
                     imeAction = ImeAction.Done,
@@ -268,7 +270,7 @@ fun CompleteProviderProfileScreen(
                         onCategorySelected = onCategorySelected,
                         isError = uiState.error is ProfileFormError.MissingCategory,
                         errorMessage = stringResource(R.string.provider_profile_category_error),
-                        enabled = !uiState.loading,
+                        enabled = !isBusy,
                     )
                 }
             }
@@ -281,6 +283,7 @@ fun CompleteProviderProfileScreen(
                 photoError = uiState.photoError,
                 onSelectPhoto = onSelectPhoto,
                 onUploadPhoto = onUploadPhoto,
+                formLoading = uiState.loading,
             )
 
             // Disclaimer / Information
@@ -300,7 +303,7 @@ fun CompleteProviderProfileScreen(
                     stringResource(R.string.provider_profile_submit)
                 },
                 onClick = onSubmit,
-                enabled = !uiState.loading,
+                enabled = !isBusy,
             )
         }
     }

@@ -45,7 +45,10 @@ fun ProfilePhotoSection(
     onSelectPhoto: () -> Unit,
     onUploadPhoto: () -> Unit,
     modifier: Modifier = Modifier,
+    formLoading: Boolean = false,
 ) {
+    val controlsEnabled = !photoLoading && !formLoading
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -60,6 +63,8 @@ fun ProfilePhotoSection(
                 photo = selectedPhoto,
                 isConfirmed = isPhotoConfirmed,
                 isLoading = photoLoading,
+                controlsEnabled = controlsEnabled,
+                hasError = photoError != null,
                 onChangePhoto = onSelectPhoto,
                 onUploadPhoto = onUploadPhoto,
             )
@@ -68,7 +73,7 @@ fun ProfilePhotoSection(
                 onClick = onSelectPhoto,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                enabled = !photoLoading,
+                enabled = controlsEnabled,
             ) {
                 Text(text = stringResource(R.string.provider_profile_photo_select))
             }
@@ -97,6 +102,8 @@ private fun PhotoPreviewCard(
     photo: SelectedProfilePhoto,
     isConfirmed: Boolean,
     isLoading: Boolean,
+    controlsEnabled: Boolean,
+    hasError: Boolean,
     onChangePhoto: () -> Unit,
     onUploadPhoto: () -> Unit,
     modifier: Modifier = Modifier,
@@ -164,15 +171,20 @@ private fun PhotoPreviewCard(
                     )
                 } else {
                     PrimaryButton(
-                        text = stringResource(R.string.provider_profile_photo_upload),
+                        text = if (hasError) {
+                            stringResource(R.string.provider_profile_retry)
+                        } else {
+                            stringResource(R.string.provider_profile_photo_upload)
+                        },
                         onClick = onUploadPhoto,
+                        enabled = controlsEnabled,
                     )
                 }
 
                 OutlinedButton(
                     onClick = onChangePhoto,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading,
+                    enabled = controlsEnabled,
                     shape = RoundedCornerShape(8.dp),
                 ) {
                     Text(text = stringResource(R.string.provider_profile_photo_change))
