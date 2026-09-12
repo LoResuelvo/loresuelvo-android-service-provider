@@ -76,6 +76,10 @@ class CompleteProviderProfileViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCategory = category, error = null) }
     }
 
+    fun onCoverageZonesSelected(zoneIds: List<Int>) {
+        _uiState.update { it.copy(selectedCoverageZoneIds = zoneIds, error = null) }
+    }
+
     fun onPhotoSelected(source: String) {
         if (_uiState.value.photoLoading || _uiState.value.loading) return
 
@@ -93,45 +97,15 @@ class CompleteProviderProfileViewModel @Inject constructor(
                         )
                     }
                 }
-                is PhotoValidationOutcome.Invalid.UnsupportedFormat -> {
-                    _uiState.update {
-                        it.copy(
-                            photoLoading = false,
-                            photoError = PhotoFormError.UnsupportedFormat,
-                        )
+                is PhotoValidationOutcome.Invalid -> {
+                    val error = when (outcome) {
+                        is PhotoValidationOutcome.Invalid.UnsupportedFormat -> PhotoFormError.UnsupportedFormat
+                        is PhotoValidationOutcome.Invalid.ExceedsMaxSize -> PhotoFormError.ExceedsMaxSize
+                        is PhotoValidationOutcome.Invalid.EmptyFile -> PhotoFormError.EmptyFile
+                        is PhotoValidationOutcome.Invalid.Unreadable -> PhotoFormError.Unreadable
+                        is PhotoValidationOutcome.Invalid.CorruptContent -> PhotoFormError.CorruptContent
                     }
-                }
-                is PhotoValidationOutcome.Invalid.ExceedsMaxSize -> {
-                    _uiState.update {
-                        it.copy(
-                            photoLoading = false,
-                            photoError = PhotoFormError.ExceedsMaxSize,
-                        )
-                    }
-                }
-                is PhotoValidationOutcome.Invalid.EmptyFile -> {
-                    _uiState.update {
-                        it.copy(
-                            photoLoading = false,
-                            photoError = PhotoFormError.EmptyFile,
-                        )
-                    }
-                }
-                is PhotoValidationOutcome.Invalid.Unreadable -> {
-                    _uiState.update {
-                        it.copy(
-                            photoLoading = false,
-                            photoError = PhotoFormError.Unreadable,
-                        )
-                    }
-                }
-                is PhotoValidationOutcome.Invalid.CorruptContent -> {
-                    _uiState.update {
-                        it.copy(
-                            photoLoading = false,
-                            photoError = PhotoFormError.CorruptContent,
-                        )
-                    }
+                    _uiState.update { it.copy(photoLoading = false, photoError = error) }
                 }
             }
         }
@@ -194,6 +168,14 @@ class CompleteProviderProfileViewModel @Inject constructor(
             _uiState.update { it.copy(error = ProfileFormError.MissingCategory) }
             return
         }
+        if (!state.isPhotoConfirmed || state.confirmedPhotoFileId.isNullOrBlank()) {
+            _uiState.update { it.copy(error = ProfileFormError.MissingPhoto) }
+            return
+        }
+        if (state.selectedCoverageZoneIds.isEmpty()) {
+            _uiState.update { it.copy(error = ProfileFormError.MissingCoverageZones) }
+            return
+        }
 
         val session = sessionStore.getSession()
         if (session == null) {
@@ -212,6 +194,8 @@ class CompleteProviderProfileViewModel @Inject constructor(
                     name = name,
                     surname = surname,
                     categoryId = category.id,
+                    coverageZoneIds = state.selectedCoverageZoneIds,
+                    profilePhotoFileId = state.confirmedPhotoFileId,
                 )
                 when (val outcome = registerProvider(command)) {
                     is RegistrationOutcome.Success -> {

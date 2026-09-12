@@ -16,6 +16,7 @@ data class CompleteProviderProfileUiState(
     val confirmedPhotoFileId: String? = null,
     val photoLoading: Boolean = false,
     val photoError: PhotoFormError? = null,
+    val selectedCoverageZoneIds: List<Int> = emptyList(),
     val loading: Boolean = false,
     val error: ProfileFormError? = null,
 )
@@ -48,6 +49,8 @@ sealed interface ProfileFormError {
     data object MissingName : ProfileFormError
     data object MissingSurname : ProfileFormError
     data object MissingCategory : ProfileFormError
+    data object MissingPhoto : ProfileFormError
+    data object MissingCoverageZones : ProfileFormError
     data class Network(val message: String) : ProfileFormError
     data class Server(val code: Int, val message: String) : ProfileFormError
     data object Unauthorized : ProfileFormError

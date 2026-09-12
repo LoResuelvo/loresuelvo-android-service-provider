@@ -321,4 +321,33 @@ class ProviderProfilePhotoSteps {
     fun confirmacionExitosaDejaImagenListaParaRegistro() {
         world.assertPhotoReadyForRegistration()
     }
+
+    // --- 10-PPH Steps ---
+
+    @Dado("que el prestador ingresó nombre, apellido válidos y seleccionó un rubro")
+    fun prestadorIngresoNombreApellidoValidosYRubro() {
+        world.seedAuthenticatedSession()
+        world.navigateToProfileDestination()
+        world.fillValidProfileData()
+    }
+
+    @Y("se cumple la condición de dependencia {string}")
+    fun cumpleCondicionDependencia(condicion: String) {
+        world.arrangeDependencyCondition(condicion)
+    }
+
+    @Cuando("el prestador solicita el registro")
+    fun prestadorSolicitaRegistro() {
+        world.requestRegistration()
+    }
+
+    @Y("el formulario identifica el requisito de foto o cobertura incompleto mediante un mensaje amigable")
+    fun formularioIdentificaRequisitoIncompleto() {
+        world.assertIncompleteRequirementIdentified()
+    }
+
+    @Y("se conservan los datos actuales del formulario")
+    fun conservanDatosActualesFormulario() {
+        world.assertProfileDataPreserved()
+    }
 }

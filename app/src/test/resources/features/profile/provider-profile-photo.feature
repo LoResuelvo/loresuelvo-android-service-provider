@@ -104,7 +104,6 @@ Característica: Registro de prestador con foto de perfil
     Y una confirmación exitosa deja esa imagen lista para el registro
     Y el formulario no se envía
 
-  @wip
   Esquema del escenario: 10-PPH Impedir el registro hasta completar la foto y las zonas requeridas
     Dado que el prestador ingresó nombre, apellido válidos y seleccionó un rubro
     Y se cumple la condición de dependencia "<Condición de dependencia>"

@@ -23,6 +23,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
 import com.loresuelvo.serviceprovider.ui.profile.PhotoFormError
+import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
 import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +41,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderProfilePhotoWorld : AutoCloseable {
@@ -331,6 +333,7 @@ class ProviderProfilePhotoWorld : AutoCloseable {
             }
             "Registro del prestador" -> {
                 viewModel.onPhotoConfirmed("file_123")
+                viewModel.onCoverageZonesSelected(listOf(1))
                 val gate = CompletableDeferred<Unit>()
                 providerRepository.registerGate = gate
                 viewModel.submit()
@@ -417,6 +420,52 @@ class ProviderProfilePhotoWorld : AutoCloseable {
 
     fun assertUploadProgressResumed() {
         assertEquals(2, fileRepository.presignCalls)
+    }
+
+    fun arrangeDependencyCondition(condition: String) {
+        when (condition) {
+            "No hay una foto válida seleccionada" -> {
+                viewModel.onCoverageZonesSelected(listOf(1))
+            }
+            "La foto seleccionada todavía no se cargó" -> {
+                selectValidJpegPhoto()
+                viewModel.onCoverageZonesSelected(listOf(1))
+            }
+            "La carga o confirmación de la foto falló" -> {
+                selectValidJpegPhoto()
+                fileRepository.uploadBytesOutcome = UploadBytesOutcome.Failure.Network(
+                    IOException("Network failure"),
+                )
+                triggerPhotoUpload()
+                viewModel.onCoverageZonesSelected(listOf(1))
+            }
+            "La foto de reemplazo todavía no se confirmó" -> {
+                selectValidJpegPhoto()
+                viewModel.onPhotoConfirmed("file_old_123")
+                replaceWithAnotherValidPhoto()
+                viewModel.onCoverageZonesSelected(listOf(1))
+            }
+            "La foto está confirmada pero no se seleccionó ninguna zona de cobertura real" -> {
+                selectValidJpegPhoto()
+                viewModel.onPhotoConfirmed("file_confirmed_123")
+                viewModel.onCoverageZonesSelected(emptyList())
+            }
+        }
+    }
+
+    fun requestRegistration() {
+        viewModel.submit()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertIncompleteRequirementIdentified() {
+        val state = viewModel.uiState.value
+        val isRequirementIdentified = state.error is ProfileFormError.MissingPhoto ||
+            state.error is ProfileFormError.MissingCoverageZones
+        assertTrue(
+            "Expected form error to identify incomplete photo or zones, but was ${state.error}",
+            isRequirementIdentified,
+        )
     }
 
     override fun close() {

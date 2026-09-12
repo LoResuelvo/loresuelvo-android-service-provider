@@ -132,6 +132,40 @@ class CompleteProviderProfileScreenTest {
     }
 
     @Test
+    fun renders_missing_photo_error_banner() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        error = ProfileFormError.MissingPhoto,
+                    ),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_photo_required_error))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun renders_missing_coverage_zones_error_banner() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        error = ProfileFormError.MissingCoverageZones,
+                    ),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_zones_required_error))
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun renders_loading_indicator_and_disables_button_when_submitting() {
         composeTestRule.setContent {
             LoresuelvoTheme {

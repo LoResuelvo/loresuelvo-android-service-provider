@@ -234,6 +234,8 @@ class CompleteProviderProfileWorld : AutoCloseable {
         viewModel.onSurnameChanged("Gómez")
         val ready = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
         viewModel.onCategorySelected(ready.categories.first())
+        viewModel.onPhotoConfirmed("file_valid_123")
+        viewModel.onCoverageZonesSelected(listOf(1))
     }
 
     fun configureRegistrationRecoverableError() {
@@ -296,6 +298,8 @@ class CompleteProviderProfileWorld : AutoCloseable {
         viewModel.onSurnameChanged("Gómez")
         val ready = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
         viewModel.onCategorySelected(ready.categories.first())
+        viewModel.onPhotoConfirmed("file_valid_123")
+        viewModel.onCoverageZonesSelected(listOf(1))
     }
 
     fun holdRegistrationInFlight() {
@@ -328,7 +332,9 @@ class CompleteProviderProfileWorld : AutoCloseable {
     // --- 10-CPP ---
 
     fun ensurePrerequisitesAvailable() {
-        // Prerequisites (photos & coverage zones) will be integrated in upcoming stories
+        check(::viewModel.isInitialized)
+        viewModel.onPhotoConfirmed("file_valid_123")
+        viewModel.onCoverageZonesSelected(listOf(1))
     }
 
     fun completeRegistrationSuccessfully() {

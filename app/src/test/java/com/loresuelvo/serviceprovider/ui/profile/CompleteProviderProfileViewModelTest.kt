@@ -276,6 +276,8 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onNameChanged("Carlos")
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1))
 
         viewModel!!.effects.test {
             viewModel!!.submit()
@@ -297,6 +299,8 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onNameChanged("Carlos")
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1))
 
         viewModel!!.effects.test {
             viewModel!!.submit()
@@ -314,6 +318,8 @@ class CompleteProviderProfileViewModelTest {
         assertEquals("Carlos", providerRepository.lastCommand?.name)
         assertEquals("Gómez", providerRepository.lastCommand?.surname)
         assertEquals(1, providerRepository.lastCommand?.categoryId)
+        assertEquals("file_123", providerRepository.lastCommand?.profilePhotoFileId)
+        assertEquals(listOf(1), providerRepository.lastCommand?.coverageZoneIds)
     }
 
     @Test
@@ -326,6 +332,8 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onNameChanged("Carlos")
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1))
 
         viewModel!!.submit()
         advanceUntilIdle()
@@ -346,6 +354,8 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onNameChanged("Carlos")
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1))
 
         viewModel!!.effects.test {
             viewModel!!.submit()
@@ -370,6 +380,8 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onNameChanged("Carlos")
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1))
 
         viewModel!!.submit()
         advanceUntilIdle()
@@ -389,6 +401,8 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onNameChanged("Carlos")
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1))
 
         viewModel!!.submit()
         advanceUntilIdle()
@@ -412,6 +426,8 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onNameChanged("Carlos")
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1))
 
         viewModel!!.submit()
         advanceUntilIdle()
@@ -441,6 +457,8 @@ class CompleteProviderProfileViewModelTest {
         viewModel!!.onNameChanged("Carlos")
         viewModel!!.onSurnameChanged("Gómez")
         viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1))
 
         viewModel!!.submit()
         advanceUntilIdle()
@@ -448,6 +466,62 @@ class CompleteProviderProfileViewModelTest {
         assertEquals(false, viewModel!!.uiState.value.loading)
         assertNull(viewModel!!.uiState.value.error)
         assertEquals(1, providerRepository.registerCalls)
+    }
+
+    @Test
+    fun `submit fails with MissingPhoto when no photo selected`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.onNameChanged("Carlos")
+        viewModel!!.onSurnameChanged("Gómez")
+        viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onCoverageZonesSelected(listOf(1))
+
+        viewModel!!.submit()
+        advanceUntilIdle()
+
+        assertEquals(ProfileFormError.MissingPhoto, viewModel!!.uiState.value.error)
+        assertEquals(0, providerRepository.registerCalls)
+    }
+
+    @Test
+    fun `submit fails with MissingPhoto when photo is selected but not confirmed`() = runTest(scheduler) {
+        val photo = SelectedProfilePhoto("photo.jpg", "image/jpeg", 100L, "/cache/photo.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(photo)
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.onNameChanged("Carlos")
+        viewModel!!.onSurnameChanged("Gómez")
+        viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoSelected("content://photo")
+        advanceUntilIdle()
+        viewModel!!.onCoverageZonesSelected(listOf(1))
+
+        viewModel!!.submit()
+        advanceUntilIdle()
+
+        assertEquals(ProfileFormError.MissingPhoto, viewModel!!.uiState.value.error)
+        assertEquals(0, providerRepository.registerCalls)
+    }
+
+    @Test
+    fun `submit fails with MissingCoverageZones when photo is confirmed but coverage zones empty`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.onNameChanged("Carlos")
+        viewModel!!.onSurnameChanged("Gómez")
+        viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(emptyList())
+
+        viewModel!!.submit()
+        advanceUntilIdle()
+
+        assertEquals(ProfileFormError.MissingCoverageZones, viewModel!!.uiState.value.error)
+        assertEquals(0, providerRepository.registerCalls)
     }
 
     @Test
