@@ -468,6 +468,50 @@ class ProviderProfilePhotoWorld : AutoCloseable {
         )
     }
 
+    fun selectRealCoverageZones(zoneIds: List<Int> = listOf(1, 2)) {
+        viewModel.onCoverageZonesSelected(zoneIds)
+    }
+
+    fun confirmCurrentPhoto() {
+        selectValidJpegPhoto()
+        configurePhotoUploadSuccess()
+        triggerPhotoUpload()
+    }
+
+    fun configureRegistrationSuccess() {
+        providerRepository.outcome = RegistrationOutcome.Success(providerId = 1)
+    }
+
+    fun assertRegisteredWithConfirmedPhoto() {
+        assertEquals(1, providerRepository.registerCalls)
+        assertEquals("file_uploaded_123", providerRepository.lastCommand?.profilePhotoFileId)
+        assertEquals(listOf(1, 2), providerRepository.lastCommand?.coverageZoneIds)
+    }
+
+    fun assertNavigatedToMercadoPago() {
+        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+    }
+
+    fun assertProfileFormPoppedFromBackstack() {
+        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+    }
+
+    fun arrangeRegistrationRecoverableFailure() {
+        providerRepository.outcome = RegistrationOutcome.Failure.Network(IOException("Network timeout"))
+        viewModel.submit()
+        scheduler.advanceUntilIdle()
+        assertEquals(1, providerRepository.registerCalls)
+        assertTrue(viewModel.uiState.value.error is ProfileFormError.Network)
+        assertEquals(true, viewModel.uiState.value.isPhotoConfirmed)
+        assertEquals("file_uploaded_123", viewModel.uiState.value.confirmedPhotoFileId)
+    }
+
+    fun assertRegistrationReusedConfirmedPhotoWithoutReupload() {
+        assertEquals(2, providerRepository.registerCalls)
+        assertEquals("file_uploaded_123", providerRepository.lastCommand?.profilePhotoFileId)
+        assertEquals(1, fileRepository.uploadCalls)
+    }
+
     override fun close() {
         effectsJob?.cancel()
         fileRepository.presignGate?.complete(Unit)

@@ -350,4 +350,69 @@ class ProviderProfilePhotoSteps {
     fun conservanDatosActualesFormulario() {
         world.assertProfileDataPreserved()
     }
+
+    // --- 11-PPH Steps ---
+
+    @Y("hay zonas de cobertura reales seleccionadas provenientes de US-35.5")
+    fun hayZonasDeCoberturaRealesSeleccionadas() {
+        world.selectRealCoverageZones()
+    }
+
+    @Y("la foto seleccionada actualmente se confirmó correctamente")
+    fun fotoSeleccionadaActualmenteSeConfirmoCorrectamente() {
+        world.confirmCurrentPhoto()
+    }
+
+    @Y("la API de registro responderá exitosamente")
+    fun apiRegistroResponderaExitosamente() {
+        world.configureRegistrationSuccess()
+    }
+
+    @Cuando("se intenta el registro")
+    fun seIntentaElRegistro() {
+        world.requestRegistration()
+    }
+
+    @Entonces("el perfil se registra con la foto confirmada actualmente")
+    fun perfilSeRegistraConFotoConfirmadaActualmente() {
+        world.assertRegisteredWithConfirmedPhoto()
+    }
+
+    @Y("el prestador navega al paso de vinculación de Mercado Pago")
+    fun prestadorNavegaPasoMercadoPago() {
+        world.assertNavigatedToMercadoPago()
+    }
+
+    @Y("el formulario ya no es accesible mediante navegación hacia atrás")
+    fun formularioYaNoEsAccesibleAtras() {
+        world.assertProfileFormPoppedFromBackstack()
+    }
+
+    // --- 14-PPH Steps ---
+
+    @Y("la foto actual está confirmada y las zonas de cobertura requeridas están seleccionadas")
+    fun fotoActualConfirmadaYZonasSeleccionadas() {
+        world.confirmCurrentPhoto()
+        world.selectRealCoverageZones()
+    }
+
+    @Y("el registro devolvió una falla recuperable confirmada sin crear al prestador")
+    fun registroDevolvioFallaRecuperableConfirmada() {
+        world.arrangeRegistrationRecoverableFailure()
+    }
+
+    @Y("el siguiente intento de registro será exitoso")
+    fun siguienteIntentoRegistroSeraExitoso() {
+        world.configureRegistrationSuccess()
+    }
+
+    @Cuando("el prestador reintenta el registro")
+    fun prestadorReintentaRegistro() {
+        world.requestRegistration()
+    }
+
+    @Entonces("el registro reutiliza la foto confirmada sin volver a cargarla")
+    fun registroReutilizaFotoConfirmadaSinVolverACargarla() {
+        world.assertRegistrationReusedConfirmedPhotoWithoutReupload()
+    }
 }

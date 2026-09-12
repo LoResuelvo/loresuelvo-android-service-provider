@@ -120,7 +120,6 @@ Característica: Registro de prestador con foto de perfil
       | La foto de reemplazo todavía no se confirmó                                  |
       | La foto está confirmada pero no se seleccionó ninguna zona de cobertura real |
 
-  @wip
   Escenario: 11-PPH Registrar el perfil con la foto confirmada y navegar tras el éxito
     Dado que el prestador ingresó nombre, apellido válidos y seleccionó un rubro
     Y hay zonas de cobertura reales seleccionadas provenientes de US-35.5
@@ -153,7 +152,6 @@ Característica: Registro de prestador con foto de perfil
       | Seleccionada pero no cargada | Seleccionada y disponible para cargar                   |
       | Confirmada                   | Confirmada con el mismo identificador de archivo actual |
 
-  @wip
   Escenario: 14-PPH Reintentar el registro sin volver a cargar la foto confirmada
     Dado que el prestador completó nombre, apellido y seleccionó un rubro
     Y la foto actual está confirmada y las zonas de cobertura requeridas están seleccionadas

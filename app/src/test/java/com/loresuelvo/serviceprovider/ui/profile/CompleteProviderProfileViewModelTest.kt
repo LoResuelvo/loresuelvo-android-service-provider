@@ -323,6 +323,51 @@ class CompleteProviderProfileViewModelTest {
     }
 
     @Test
+    fun `should retry registration successfully after recoverable failure without re-uploading confirmed photo and preserve form inputs`() = runTest(scheduler) {
+        providerRepository.outcome = RegistrationOutcome.Failure.Network(java.io.IOException("Network failure"))
+
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.onNameChanged("Carlos")
+        viewModel!!.onSurnameChanged("Gómez")
+        viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+        viewModel!!.onCoverageZonesSelected(listOf(1, 2))
+
+        viewModel!!.submit()
+        advanceUntilIdle()
+
+        val stateAfterFailure = viewModel!!.uiState.value
+        assertEquals(false, stateAfterFailure.loading)
+        assertTrue(stateAfterFailure.error is ProfileFormError.Network)
+        assertEquals("Carlos", stateAfterFailure.name)
+        assertEquals("Gómez", stateAfterFailure.surname)
+        assertEquals(defaultCategories[0], stateAfterFailure.selectedCategory)
+        assertEquals(true, stateAfterFailure.isPhotoConfirmed)
+        assertEquals("file_123", stateAfterFailure.confirmedPhotoFileId)
+        assertEquals(listOf(1, 2), stateAfterFailure.selectedCoverageZoneIds)
+        assertEquals(1, providerRepository.registerCalls)
+
+        providerRepository.outcome = RegistrationOutcome.Success(providerId = 42)
+
+        viewModel!!.effects.test {
+            viewModel!!.submit()
+            advanceUntilIdle()
+
+            assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        val stateAfterSuccess = viewModel!!.uiState.value
+        assertEquals(false, stateAfterSuccess.loading)
+        assertNull(stateAfterSuccess.error)
+        assertEquals(2, providerRepository.registerCalls)
+        assertEquals("file_123", providerRepository.lastCommand?.profilePhotoFileId)
+        assertEquals(listOf(1, 2), providerRepository.lastCommand?.coverageZoneIds)
+    }
+
+    @Test
     fun `should set AlreadyRegistered error when backend reports 409 conflict`() = runTest(scheduler) {
         providerRepository.outcome = RegistrationOutcome.Failure.AlreadyRegistered
 
