@@ -9,11 +9,12 @@ import io.cucumber.java.es.Entonces
 import io.cucumber.java.es.Y
 
 /**
- * Step definitions for the 01-PSU provider signup boundary.
+ * Step definitions for the provider signup boundaries.
  *
- * The first assertions cover app-owned delegation and the adapter's signup
- * request shape. The step remains pending for the tenant-selected connection
- * because that hosted check is human-owned.
+ * The 01-PSU connection assertion covers the app-owned signup request shape
+ * and remains pending for the tenant-selected connection because that hosted
+ * check is human-owned. The 03-PSU and 04-PSU steps exercise deterministic
+ * cancellation and recoverable-failure outcomes.
  */
 class ProviderSignupSteps {
 
@@ -66,5 +67,30 @@ class ProviderSignupSteps {
     @Y("no se persiste ninguna sesión")
     fun noSessionIsPersisted() {
         world.assertNoSessionPersisted()
+    }
+
+    @Dado("que el registro en Auth0 fallará con un error recuperable del prestador")
+    fun registroFallaConErrorRecuperable() {
+        world.seedNoLocalSession()
+        world.configureSignupOutcome(
+            AuthenticationOutcome.Failure.Provider(
+                IllegalStateException("synthetic provider failure"),
+            ),
+        )
+    }
+
+    @Cuando("finaliza el intento de registro")
+    fun finalizaIntentoRegistro() {
+        world.finishSignupAttempt()
+    }
+
+    @Entonces("la pantalla de bienvenida muestra un error localizado y amigable")
+    fun welcomeShowsFriendlyLocalizedError() {
+        world.assertFriendlyAuthenticationError()
+    }
+
+    @Y("los controles de autenticación quedan disponibles para reintentar")
+    fun authenticationControlsAvailableForRetry() {
+        world.assertAuthenticationControlsAvailableForRetry()
     }
 }

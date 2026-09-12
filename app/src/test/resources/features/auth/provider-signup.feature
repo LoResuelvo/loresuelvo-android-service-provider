@@ -25,7 +25,6 @@ Característica: Registro de prestadores mediante Auth0 Universal Login
     Entonces la pantalla de bienvenida permanece visible
     Y no se persiste ninguna sesión
 
-  @wip
   Escenario: 04-PSU Reintentar después de un error en el registro
     Dado que el registro en Auth0 fallará con un error recuperable del prestador
     Cuando finaliza el intento de registro

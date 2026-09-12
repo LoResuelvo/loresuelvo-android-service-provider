@@ -5,9 +5,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Focused JVM check for the deterministic 01-PSU world. It proves the
- * app-owned signup delegation, signup request hint, and password-free port
- * with synthetic configuration, without contacting Auth0.
+ * Focused JVM checks for the deterministic provider-signup world. They prove
+ * the app-owned signup delegation, signup request hint, password-free port,
+ * cancellation, and safe recoverable failure without contacting Auth0.
  */
 class ProviderSignupWorldTest {
 
@@ -37,6 +37,26 @@ class ProviderSignupWorldTest {
 
             world.assertWelcomeRemainsVisible()
             world.assertNoSessionPersisted()
+            assertEquals(1, world.signupCalls())
+        } finally {
+            world.close()
+        }
+    }
+
+    @Test
+    fun recoverable_signup_failure_exposes_safe_error_and_retry_state() {
+        val world = ProviderSignupWorld()
+        try {
+            world.seedNoLocalSession()
+            world.configureSignupOutcome(
+                AuthenticationOutcome.Failure.Provider(
+                    IllegalStateException("synthetic provider failure"),
+                ),
+            )
+            world.finishSignupAttempt()
+
+            world.assertFriendlyAuthenticationError()
+            world.assertAuthenticationControlsAvailableForRetry()
             assertEquals(1, world.signupCalls())
         } finally {
             world.close()

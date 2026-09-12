@@ -11,6 +11,7 @@ import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
+import com.loresuelvo.serviceprovider.ui.auth.WelcomeError
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verifyOrder
@@ -31,7 +32,8 @@ import org.junit.Assert.assertFalse
  * [WelcomeViewModel.signup], which delegates to [AuthProvider.signup], and
  * the production signup adapter adds the configured signup hint and account
  * parameters to the Auth0 request. The synthetic configuration proves request
- * construction only; it does not model a real Auth0 tenant.
+ * construction only; it does not model a real Auth0 tenant. Failure outcomes
+ * stay typed and are asserted through the safe Welcome UI state.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderSignupWorld : AutoCloseable {
@@ -73,6 +75,12 @@ class ProviderSignupWorld : AutoCloseable {
         scheduler.advanceUntilIdle()
     }
 
+    fun finishSignupAttempt() {
+        check(::viewModel.isInitialized) { "Failure scenario must seed its local session first" }
+        viewModel.signup(context)
+        scheduler.advanceUntilIdle()
+    }
+
     fun assertWelcomeRemainsVisible() {
         assertFalse(viewModel.uiState.value.loading)
         assertEquals(null, viewModel.uiState.value.error)
@@ -87,6 +95,19 @@ class ProviderSignupWorld : AutoCloseable {
     fun assertNoSessionPersisted() {
         assertEquals(null, viewModel.uiState.value.error)
         assertEquals(AuthenticationOutcome.Cancelled, authProvider.lastOutcome)
+    }
+
+    fun assertFriendlyAuthenticationError() {
+        assertEquals(WelcomeError.Authentication, viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.loading)
+    }
+
+    fun assertAuthenticationControlsAvailableForRetry() {
+        assertFalse(
+            "Authentication controls must be available after a failed attempt",
+            viewModel.uiState.value.loading,
+        )
+        assertEquals(WelcomeError.Authentication, viewModel.uiState.value.error)
     }
 
     fun assertSignupDelegated() {
