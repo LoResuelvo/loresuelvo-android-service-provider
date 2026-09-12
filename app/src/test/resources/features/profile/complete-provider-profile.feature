@@ -4,7 +4,6 @@ Característica: Completar perfil profesional del prestador
   Quiero completar mi perfil profesional con nombre, apellido y rubro
   Para poder ofrecer mis servicios en la plataforma
 
-  @wip
   Escenario: 01-CPP Mostrar el formulario de perfil profesional luego de la autenticación
     Dado que el prestador acaba de completar el registro en Auth0
     Cuando la app navega al destino de perfil profesional
@@ -39,7 +38,6 @@ Característica: Completar perfil profesional del prestador
     Entonces aparece un mensaje de validación para el campo de rubro
     Y el formulario no se envía
 
-  @wip
   Escenario: 06-CPP Reintentar tras falla en la carga de rubros
     Dado que la llamada a la API de rubros falla
     Cuando se muestra el formulario de perfil

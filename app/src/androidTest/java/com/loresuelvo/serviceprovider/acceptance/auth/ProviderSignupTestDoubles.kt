@@ -10,6 +10,9 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
+import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
+import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
@@ -66,6 +69,12 @@ class ProviderSignupCategoryRepository : CategoryRepository {
         CategoriesOutcome.Success(emptyList())
 }
 
+class ProviderSignupProviderRepository : ProviderRepository {
+
+    override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome =
+        RegistrationOutcome.Success(providerId = 1)
+}
+
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
@@ -104,4 +113,8 @@ object ProviderSignupRepositoryTestModule {
     @Provides
     @Singleton
     fun provideCategoryRepository(): CategoryRepository = ProviderSignupCategoryRepository()
+
+    @Provides
+    @Singleton
+    fun provideProviderRepository(): ProviderRepository = ProviderSignupProviderRepository()
 }

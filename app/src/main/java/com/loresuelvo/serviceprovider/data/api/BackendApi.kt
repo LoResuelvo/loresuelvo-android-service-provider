@@ -1,7 +1,11 @@
 package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.dto.CategoryDto
+import com.loresuelvo.serviceprovider.data.api.dto.ProviderSummaryDto
+import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 
 /**
  * Retrofit-typed contract for the backend's provider endpoints. The
@@ -22,4 +26,13 @@ interface BackendApi {
      */
     @GET("categories")
     suspend fun getCategories(): List<CategoryDto>
+
+    /**
+     * `POST /providers` — creates the provider record on the platform.
+     * Authenticated endpoint requiring session bearer token.
+     */
+    @POST("providers")
+    suspend fun registerProvider(
+        @Body request: RegisterProviderRequestDto,
+    ): ProviderSummaryDto
 }

@@ -1,9 +1,11 @@
 package com.loresuelvo.serviceprovider.di
 
 import com.loresuelvo.serviceprovider.data.api.ApiCategoryRepository
+import com.loresuelvo.serviceprovider.data.api.ApiProviderRepository
 import com.loresuelvo.serviceprovider.data.auth.EncryptedAuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -30,6 +32,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCategoryRepository(impl: ApiCategoryRepository): CategoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindProviderRepository(impl: ApiProviderRepository): ProviderRepository
 
     @Binds
     @Singleton
