@@ -236,6 +236,51 @@ class WelcomeViewModelTest {
     }
 
     @Test
+    fun should_emit_professional_profile_effect_after_successful_signup() = runTest(scheduler) {
+        authProvider.nextOutcome = AuthenticationOutcome.Success(
+            AuthSession(
+                user = User(
+                    id = "auth0|provider",
+                    email = "provider@example.com",
+                ),
+                accessToken = "synthetic-provider-access-token",
+            ),
+        )
+
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.effects.test {
+            viewModel!!.signup(context)
+            advanceUntilIdle()
+
+            assertEquals(
+                WelcomeEffect.NavigateToProfessionalProfile,
+                awaitItem(),
+            )
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun should_not_emit_professional_profile_effect_when_signup_is_cancelled() =
+        runTest(scheduler) {
+            authProvider.nextOutcome = AuthenticationOutcome.Cancelled
+
+            viewModel = newViewModel()
+            advanceUntilIdle()
+
+            viewModel!!.effects.test {
+                viewModel!!.signup(context)
+                advanceUntilIdle()
+
+                expectNoEvents()
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun should_serialize_all_authentication_actions_while_signup_is_in_flight() =
         runTest(scheduler) {
             val authenticationGate = CompletableDeferred<Unit>()

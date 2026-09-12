@@ -11,9 +11,13 @@ import com.loresuelvo.serviceprovider.domain.usecase.auth.EstablishAuthSessionUs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -35,6 +39,12 @@ class WelcomeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(WelcomeUiState())
     val uiState: StateFlow<WelcomeUiState> = _uiState.asStateFlow()
+
+    private val _effects = Channel<WelcomeEffect>(
+        capacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val effects: Flow<WelcomeEffect> = _effects.receiveAsFlow()
 
     private val authenticationInFlight = AtomicBoolean(false)
 
@@ -98,6 +108,7 @@ class WelcomeViewModel @Inject constructor(
                     is AuthenticationOutcome.Success -> {
                         establishAuthSession(outcome.session)
                         _uiState.update { it.copy(error = null) }
+                        _effects.trySend(WelcomeEffect.NavigateToProfessionalProfile)
                     }
                 }
             } finally {

@@ -28,7 +28,7 @@ class ProviderSignupWorldTest {
     }
 
     @Test
-    fun successful_signup_persists_session_for_authenticated_calls() {
+    fun successful_signup_persists_session_and_requests_profile_navigation() {
         val world = ProviderSignupWorld()
         try {
             world.seedNoLocalSession()
@@ -37,6 +37,7 @@ class ProviderSignupWorldTest {
 
             world.assertSessionPersisted()
             world.assertAccessTokenAvailable()
+            world.assertProfessionalProfileNavigationRequested()
         } finally {
             world.close()
         }

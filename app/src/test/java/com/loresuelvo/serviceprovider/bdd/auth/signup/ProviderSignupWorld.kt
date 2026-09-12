@@ -16,12 +16,17 @@ import com.loresuelvo.serviceprovider.domain.usecase.auth.EstablishAuthSessionUs
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeError
+import com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verifyOrder
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -51,6 +56,7 @@ class ProviderSignupWorld : AutoCloseable {
 
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
+    private val effectScope = CoroutineScope(dispatcher)
     private val context = mockk<Context>(relaxed = true)
     private val authProvider = RecordingAuthProvider()
     private val sessionStore = RecordingSessionStore()
@@ -62,6 +68,7 @@ class ProviderSignupWorld : AutoCloseable {
     )
 
     private lateinit var viewModel: WelcomeViewModel
+    private var profileNavigationRequested = false
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -73,6 +80,13 @@ class ProviderSignupWorld : AutoCloseable {
             getCategories = getCategories,
             establishAuthSession = EstablishAuthSessionUseCase(sessionStore),
         )
+        effectScope.launch {
+            viewModel.effects.collect { effect ->
+                if (effect == WelcomeEffect.NavigateToProfessionalProfile) {
+                    profileNavigationRequested = true
+                }
+            }
+        }
     }
 
     fun selectSignup() {
@@ -195,7 +209,10 @@ class ProviderSignupWorld : AutoCloseable {
     }
 
     fun assertProfessionalProfileNavigationRequested() {
-        throw AssertionError("Professional-profile navigation is not wired yet")
+        assertTrue(
+            "Successful authentication must request professional-profile navigation",
+            profileNavigationRequested,
+        )
     }
 
     /**
@@ -223,6 +240,7 @@ class ProviderSignupWorld : AutoCloseable {
     override fun close() {
         authProvider.releasePendingAuthentication()
         scheduler.advanceUntilIdle()
+        effectScope.cancel()
         Dispatchers.resetMain()
     }
 
