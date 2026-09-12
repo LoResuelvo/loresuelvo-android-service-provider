@@ -11,7 +11,6 @@ Característica: Registro de prestador con foto de perfil
     Y los datos existentes del formulario permanecen sin cambios
     Y el prestador puede cargar o reemplazar la foto sin abandonar la página
 
-  @wip
   Escenario: 02-PPH Reemplazar la foto antes del registro
     Dado el prestador tiene una foto seleccionada, confirmada o con una carga fallida en el formulario
     Y el prestador todavía no completó el registro
@@ -43,7 +42,6 @@ Característica: Registro de prestador con foto de perfil
       | PNG          | 5242880         |
       | WebP         | 5242880         |
 
-  @wip
   Esquema del escenario: 05-PPH Rechazar un archivo inválido sin intentar cargarlo
     Dado el prestador tiene una foto válida seleccionada en el formulario
     Y un nuevo archivo presenta la condición inválida "<Condición inválida>"
@@ -147,7 +145,6 @@ Característica: Registro de prestador con foto de perfil
     Entonces se muestra la foto asociada al prestador desde la dirección proporcionada por el servidor
     Y su visualización no depende de la selección local anterior
 
-  @wip
   Esquema del escenario: 13-PPH Conservar el estado de la foto al recrear la pantalla
     Dado el prestador ingresó sus datos personales y seleccionó un rubro
     Y hay una foto legible seleccionada en el estado "<Estado previo de la foto>"

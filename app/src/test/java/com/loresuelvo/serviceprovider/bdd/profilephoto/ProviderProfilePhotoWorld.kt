@@ -35,9 +35,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 
-/**
- * Deterministic test world for US-35.4 provider profile photo BDD scenarios.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderProfilePhotoWorld : AutoCloseable {
 
@@ -172,68 +169,111 @@ class ProviderProfilePhotoWorld : AutoCloseable {
         assertEquals(false, state.photoLoading)
     }
 
+    fun arrangePhotoSelectedOrConfirmed() {
+        seedAuthenticatedSession()
+        navigateToProfileDestination()
+        fillValidProfileData()
+        val initialPhoto = SelectedProfilePhoto("initial_photo.jpg", "image/jpeg", 1024L, "/cache/initial.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(initialPhoto)
+        viewModel.onPhotoSelected("content://media/initial_photo.jpg")
+        viewModel.onPhotoConfirmed("file_initial_123")
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertRegistrationNotCompleted() {
+        assertEquals(0, providerRepository.registerCalls)
+    }
+
+    fun replaceWithAnotherValidPhoto() {
+        val replacement = SelectedProfilePhoto("new_photo.jpg", "image/jpeg", 2048L, "/cache/new.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(replacement)
+        viewModel.onPhotoSelected("content://media/new_photo.jpg")
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertNewPhotoPreviewDisplayed() {
+        assertEquals("new_photo.jpg", viewModel.uiState.value.selectedPhoto?.originalName)
+    }
+
+    fun assertPhotoMustBeUploadedAndConfirmed() {
+        val state = viewModel.uiState.value
+        assertEquals(false, state.isPhotoConfirmed)
+        assertNull(state.confirmedPhotoFileId)
+        assertEquals(false, state.photoLoading)
+    }
+
+    private var arrangedInvalidCondition: String = ""
+
+    fun arrangeInvalidCondition(condition: String) {
+        arrangedInvalidCondition = condition
+    }
+
+    fun selectArrangedInvalidFile() {
+        val outcome = when {
+            arrangedInvalidCondition.contains("GIF") -> PhotoValidationOutcome.Invalid.UnsupportedFormat
+            arrangedInvalidCondition.contains("5242881") -> PhotoValidationOutcome.Invalid.ExceedsMaxSize
+            arrangedInvalidCondition.contains("cero bytes") -> PhotoValidationOutcome.Invalid.EmptyFile
+            arrangedInvalidCondition.contains("no puede leerse") -> PhotoValidationOutcome.Invalid.Unreadable
+            else -> PhotoValidationOutcome.Invalid.CorruptContent
+        }
+        photoPreparer.outcome = outcome
+        viewModel.onPhotoSelected("content://media/invalid_file")
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertPhotoErrorMessageDisplayed() {
+        assertNotNull("Photo validation error must be displayed", viewModel.uiState.value.photoError)
+    }
+
+    fun assertNoUploadAttempted() {
+        assertEquals(false, viewModel.uiState.value.photoLoading)
+    }
+
+    fun assertOriginalPhotoStillSelected() {
+        assertEquals("profile.jpg", viewModel.uiState.value.selectedPhoto?.originalName)
+    }
+
+    fun arrangePhotoState(state: String) {
+        selectValidJpegPhoto()
+        if (state.contains("Confirmada")) {
+            viewModel.onPhotoConfirmed("file_confirmed_999")
+            scheduler.advanceUntilIdle()
+        }
+    }
+
+    fun recreateScreenPreservingViewModel() {
+        effectsJob?.cancel()
+        effectsJob = CoroutineScope(dispatcher).launch {
+            viewModel.effects.collect { latestEffect = it }
+        }
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertProfileDataAndPhotoPreviewPreserved() {
+        assertProfileDataPreserved()
+        assertPhotoPreviewDisplayed()
+    }
+
+    fun assertPhotoConfirmationStatePreserved(expectedRestored: String) {
+        val state = viewModel.uiState.value
+        if (expectedRestored.contains("Confirmada")) {
+            assertEquals(true, state.isPhotoConfirmed)
+            assertEquals("file_confirmed_999", state.confirmedPhotoFileId)
+        } else {
+            assertEquals(false, state.isPhotoConfirmed)
+            assertNull(state.confirmedPhotoFileId)
+        }
+    }
+
+    fun assertNoAutomaticUploadOrRegistration() {
+        assertEquals(false, viewModel.uiState.value.photoLoading)
+        assertEquals(0, providerRepository.registerCalls)
+    }
+
     override fun close() {
         effectsJob?.cancel()
         providerRepository.registerGate?.complete(Unit)
         scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
-    }
-
-    class FakeCategoryRepository : CategoryRepository {
-        var outcome: CategoriesOutcome = CategoriesOutcome.Success(
-            listOf(
-                Category(1, "Plomería"),
-                Category(2, "Electricidad"),
-                Category(3, "Pintura"),
-            ),
-        )
-
-        override suspend fun getCategories(): CategoriesOutcome = outcome
-    }
-
-    class FakeProviderRepository : ProviderRepository {
-        var outcome: RegistrationOutcome = RegistrationOutcome.Success(providerId = 1)
-        var registerCalls: Int = 0
-            private set
-        var lastCommand: ProviderRegistrationCommand? = null
-            private set
-        var registerGate: CompletableDeferred<Unit>? = null
-
-        override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome {
-            registerCalls += 1
-            lastCommand = command
-            registerGate?.await()
-            return outcome
-        }
-    }
-
-    class FakeAuthSessionStore : AuthSessionStore {
-        private val _session = MutableStateFlow<AuthSession?>(null)
-        override val sessionFlow: StateFlow<AuthSession?> = _session
-
-        override fun getSession(): AuthSession? = _session.value
-
-        override fun saveSession(session: AuthSession) {
-            _session.value = session
-        }
-
-        override fun clearSession() {
-            _session.value = null
-        }
-    }
-
-    class FakeProfilePhotoPreparer : ProfilePhotoPreparer {
-        var outcome: PhotoValidationOutcome = PhotoValidationOutcome.Valid(
-            SelectedProfilePhoto(
-                originalName = "valid_profile.jpg",
-                mimeType = "image/jpeg",
-                sizeBytes = 1024L,
-                localPath = "/cache/valid_profile.jpg",
-            ),
-        )
-
-        override suspend fun preparePhoto(source: String): PhotoValidationOutcome = outcome
-
-        override suspend fun cleanPhoto(photo: SelectedProfilePhoto) {}
     }
 }

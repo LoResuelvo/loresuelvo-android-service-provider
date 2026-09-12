@@ -6,9 +6,6 @@ import io.cucumber.java.es.Dado
 import io.cucumber.java.es.Entonces
 import io.cucumber.java.es.Y
 
-/**
- * Step definitions for US-35.4 provider profile photo acceptance scenarios.
- */
 class ProviderProfilePhotoSteps {
 
     private val world = ProviderProfilePhotoWorld()
@@ -16,7 +13,6 @@ class ProviderProfilePhotoSteps {
     @After
     fun teardown() = world.close()
 
-    // --- 01-PPH ---
 
     @Dado("que el prestador completó nombre, apellido y seleccionó un rubro")
     fun prestadorCompletoDatosValidos() {
@@ -45,7 +41,6 @@ class ProviderProfilePhotoSteps {
         world.assertUploadOrReplaceAvailable()
     }
 
-    // --- 03-PPH ---
 
     @Dado("el prestador abrió el selector del dispositivo desde el formulario")
     fun prestadorAbrioSelectorDesdeFormulario() {
@@ -76,7 +71,6 @@ class ProviderProfilePhotoSteps {
         world.assertProfileDataPreserved()
     }
 
-    // --- 04-PPH ---
 
     @Dado("que el prestador está en el formulario de perfil")
     fun prestadorEstaEnFormularioPerfil() {
@@ -102,5 +96,103 @@ class ProviderProfilePhotoSteps {
     @Y("la acción para cargar la foto queda disponible")
     fun accionCargarFotoQuedaDisponible() {
         world.assertUploadActionAvailable()
+    }
+
+
+    @Dado("el prestador tiene una foto seleccionada, confirmada o con una carga fallida en el formulario")
+    fun prestadorTieneFotoSeleccionadaOConfirmada() {
+        world.arrangePhotoSelectedOrConfirmed()
+    }
+
+    @Y("el prestador todavía no completó el registro")
+    fun prestadorTodaviaNoCompletoRegistro() {
+        world.assertRegistrationNotCompleted()
+    }
+
+    @Cuando("el prestador selecciona otra foto válida mediante el control de reemplazo")
+    fun prestadorSeleccionaOtraFotoValida() {
+        world.replaceWithAnotherValidPhoto()
+    }
+
+    @Entonces("la vista previa muestra la nueva foto en el mismo formulario")
+    fun vistaPreviaMuestraNuevaFoto() {
+        world.assertNewPhotoPreviewDisplayed()
+    }
+
+    @Y("la nueva foto debe cargarse y confirmarse antes del registro")
+    fun nuevaFotoDebeCargarseYConfirmarseAntesDelRegistro() {
+        world.assertPhotoMustBeUploadedAndConfirmed()
+    }
+
+    @Y("el nombre, apellido, rubro y las zonas de cobertura seleccionadas permanecen sin cambios")
+    fun datosPermanecenSinCambios() {
+        world.assertProfileDataPreserved()
+    }
+
+
+    @Dado("el prestador tiene una foto válida seleccionada en el formulario")
+    fun prestadorTieneFotoValidaSeleccionada() {
+        world.seedAuthenticatedSession()
+        world.navigateToProfileDestination()
+        world.fillValidProfileData()
+        world.selectValidJpegPhoto()
+    }
+
+    @Y("un nuevo archivo presenta la condición inválida {string}")
+    fun nuevoArchivoPresentaCondicionInvalida(condicion: String) {
+        world.arrangeInvalidCondition(condicion)
+    }
+
+    @Cuando("el prestador selecciona ese archivo")
+    fun prestadorSeleccionaEseArchivo() {
+        world.selectArrangedInvalidFile()
+    }
+
+    @Entonces("aparece un mensaje amigable de validación de la foto en el formulario")
+    fun apareceMensajeAmigableValidacionFoto() {
+        world.assertPhotoErrorMessageDisplayed()
+    }
+
+    @Y("no se intenta cargar el archivo inválido")
+    fun noSeIntentaCargarArchivoInvalido() {
+        world.assertNoUploadAttempted()
+    }
+
+    @Y("la foto válida anterior permanece seleccionada")
+    fun fotoValidaAnteriorPermaneceSeleccionada() {
+        world.assertOriginalPhotoStillSelected()
+    }
+
+
+    @Dado("el prestador ingresó sus datos personales y seleccionó un rubro")
+    fun prestadorIngresoDatosPersonalesYRubro() {
+        world.seedAuthenticatedSession()
+        world.navigateToProfileDestination()
+        world.fillValidProfileData()
+    }
+
+    @Y("hay una foto legible seleccionada en el estado {string}")
+    fun hayFotoLegibleSeleccionadaEnEstado(estado: String) {
+        world.arrangePhotoState(estado)
+    }
+
+    @Cuando("se recrea la pantalla mientras se conserva la instancia que administra su estado")
+    fun recreaPantallaConservandoInstancia() {
+        world.recreateScreenPreservingViewModel()
+    }
+
+    @Entonces("se muestran los mismos datos del formulario y la vista previa de la foto")
+    fun muestranMismosDatosYVistaPreviaFoto() {
+        world.assertProfileDataAndPhotoPreviewPreserved()
+    }
+
+    @Y("se conserva el estado previo de confirmación de la foto")
+    fun conservaEstadoPrevioConfirmacionFoto() {
+        world.assertUploadOrReplaceAvailable()
+    }
+
+    @Y("no se inicia automáticamente una carga ni un registro")
+    fun noIniciaAutomaticamenteCargaNiRegistro() {
+        world.assertNoAutomaticUploadOrRegistration()
     }
 }

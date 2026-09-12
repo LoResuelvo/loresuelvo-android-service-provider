@@ -136,6 +136,17 @@ class CompleteProviderProfileViewModel @Inject constructor(
         // Preserves previous photo selection, confirmation state, and form inputs
     }
 
+    fun onPhotoConfirmed(fileId: String) {
+        _uiState.update {
+            it.copy(
+                isPhotoConfirmed = true,
+                confirmedPhotoFileId = fileId,
+                photoLoading = false,
+                photoError = null,
+            )
+        }
+    }
+
     fun submit() {
         if (_uiState.value.loading) return
 

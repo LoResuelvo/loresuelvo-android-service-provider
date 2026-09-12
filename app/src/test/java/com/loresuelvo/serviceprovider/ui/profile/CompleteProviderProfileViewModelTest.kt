@@ -488,6 +488,40 @@ class CompleteProviderProfileViewModelTest {
         assertEquals(PhotoFormError.ExceedsMaxSize, viewModel!!.uiState.value.photoError)
     }
 
+    @Test
+    fun `onPhotoConfirmed sets isPhotoConfirmed and confirmedPhotoFileId`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel!!.onPhotoConfirmed("file-12345")
+        advanceUntilIdle()
+
+        assertEquals(true, viewModel!!.uiState.value.isPhotoConfirmed)
+        assertEquals("file-12345", viewModel!!.uiState.value.confirmedPhotoFileId)
+        assertNull(viewModel!!.uiState.value.photoError)
+    }
+
+    @Test
+    fun `replacing confirmed photo with new valid photo resets confirmed state`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+
+        val initialPhoto = SelectedProfilePhoto("initial.jpg", "image/jpeg", 1024L, "/path/initial.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(initialPhoto)
+        viewModel!!.onPhotoSelected("content://media/initial")
+        viewModel!!.onPhotoConfirmed("file-initial-1")
+        advanceUntilIdle()
+
+        val replacementPhoto = SelectedProfilePhoto("new.jpg", "image/jpeg", 2048L, "/path/new.jpg")
+        photoPreparer.outcome = PhotoValidationOutcome.Valid(replacementPhoto)
+        viewModel!!.onPhotoSelected("content://media/replacement")
+        advanceUntilIdle()
+
+        assertEquals(replacementPhoto, viewModel!!.uiState.value.selectedPhoto)
+        assertEquals(false, viewModel!!.uiState.value.isPhotoConfirmed)
+        assertNull(viewModel!!.uiState.value.confirmedPhotoFileId)
+    }
+
     private class FakeCategoryRepository : CategoryRepository {
         var outcome: CategoriesOutcome = CategoriesOutcome.Success(emptyList())
         var getCategoriesCalls: Int = 0
