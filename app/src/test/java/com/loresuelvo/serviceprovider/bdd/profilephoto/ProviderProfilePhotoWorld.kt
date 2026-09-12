@@ -59,6 +59,11 @@ class ProviderProfilePhotoWorld : AutoCloseable {
     val registerProvider = RegisterProviderUseCase(providerRepository)
     val prepareProfilePhoto = PrepareProfilePhotoUseCase(photoPreparer)
     val uploadProfilePhoto = UploadProfilePhotoUseCase(fileRepository)
+    val getProviderProfile = com.loresuelvo.serviceprovider.domain.usecase.provider.GetProviderProfileUseCase(providerRepository)
+
+    val summaryViewModel by lazy {
+        com.loresuelvo.serviceprovider.ui.profile.retrieved.ProviderProfileSummaryViewModel(getProviderProfile)
+    }
 
     lateinit var viewModel: CompleteProviderProfileViewModel
         private set
@@ -510,6 +515,55 @@ class ProviderProfilePhotoWorld : AutoCloseable {
         assertEquals(2, providerRepository.registerCalls)
         assertEquals("file_uploaded_123", providerRepository.lastCommand?.profilePhotoFileId)
         assertEquals(1, fileRepository.uploadCalls)
+    }
+
+    // --- 12-PPH Helpers ---
+
+    private var registeredProviderId: Int = 42
+
+    fun arrangeRegistrationFinishedWithConfirmedPhotoAndProviderId() {
+        seedAuthenticatedSession()
+        navigateToProfileDestination()
+        fillValidProfileData()
+        confirmCurrentPhoto()
+        selectRealCoverageZones()
+        registeredProviderId = 42
+        providerRepository.outcome = RegistrationOutcome.Success(providerId = registeredProviderId)
+        viewModel.submit()
+        scheduler.advanceUntilIdle()
+        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+    }
+
+    fun clearLocalDeviceSelection() {
+        // Local device photo selection is no longer available
+    }
+
+    fun configureRetrievalReturnsAssociatedPhoto() {
+        providerRepository.profileOutcome = com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome.Success(
+            com.loresuelvo.serviceprovider.domain.provider.ProviderProfile(
+                id = registeredProviderId,
+                name = "Carlos",
+                surname = "Gómez",
+                profilePhotoUrl = "https://cdn.loresuelvo.test/profile/carlos.jpg",
+            ),
+        )
+    }
+
+    fun reloadProviderDataForDisplay() {
+        summaryViewModel.loadProfile(registeredProviderId)
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertPhotoDisplayedFromServer() {
+        val state = summaryViewModel.uiState.value
+        assertEquals("https://cdn.loresuelvo.test/profile/carlos.jpg", state.profilePhotoUrl)
+        assertEquals(false, state.isLoading)
+        assertNull(state.error)
+    }
+
+    fun assertDisplayIndependentFromPreviousLocalSelection() {
+        val state = summaryViewModel.uiState.value
+        assertEquals("https://cdn.loresuelvo.test/profile/carlos.jpg", state.profilePhotoUrl)
     }
 
     override fun close() {

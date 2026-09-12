@@ -2,6 +2,8 @@ package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
 import com.loresuelvo.serviceprovider.domain.api.ApiError
+import com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome
+import com.loresuelvo.serviceprovider.domain.provider.ProviderProfile
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
@@ -35,6 +37,23 @@ class ApiProviderRepository @Inject constructor(
             mapToFailure(e)
         }
 
+    override suspend fun getProfile(providerId: Int): GetProviderProfileOutcome =
+        try {
+            val response = backendApi.getProviderProfile(providerId)
+            GetProviderProfileOutcome.Success(
+                profile = ProviderProfile(
+                    id = response.id,
+                    name = response.name,
+                    surname = response.surname,
+                    profilePhotoUrl = response.profilePhoto?.url,
+                ),
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            mapToGetProfileFailure(e)
+        }
+
     private fun mapToFailure(e: Throwable): RegistrationOutcome.Failure =
         when (val error = e.toApiError()) {
             is ApiError.Network ->
@@ -49,5 +68,21 @@ class ApiProviderRepository @Inject constructor(
                 }
             is ApiError.Unknown ->
                 RegistrationOutcome.Failure.Server(0, error.message ?: "Unknown error")
+        }
+
+    private fun mapToGetProfileFailure(e: Throwable): GetProviderProfileOutcome.Failure =
+        when (val error = e.toApiError()) {
+            is ApiError.Network ->
+                GetProviderProfileOutcome.Failure.Network(error.networkCause)
+            is ApiError.Unauthorized ->
+                GetProviderProfileOutcome.Failure.Unauthorized
+            is ApiError.Server ->
+                if (error.code == 404) {
+                    GetProviderProfileOutcome.Failure.NotFound
+                } else {
+                    GetProviderProfileOutcome.Failure.Server(error.code, error.errorMessage)
+                }
+            is ApiError.Unknown ->
+                GetProviderProfileOutcome.Failure.Server(0, error.message ?: "Unknown error")
         }
 }

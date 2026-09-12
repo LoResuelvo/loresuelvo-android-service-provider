@@ -163,7 +163,6 @@ class ProviderProfilePhotoSteps {
         world.assertOriginalPhotoStillSelected()
     }
 
-
     @Dado("el prestador ingresó sus datos personales y seleccionó un rubro")
     fun prestadorIngresoDatosPersonalesYRubro() {
         world.seedAuthenticatedSession()
@@ -195,8 +194,6 @@ class ProviderProfilePhotoSteps {
     fun noIniciaAutomaticamenteCargaNiRegistro() {
         world.assertNoAutomaticUploadOrRegistration()
     }
-
-    // --- 06-PPH Steps ---
 
     @Dado("hay una foto válida seleccionada en el formulario")
     fun hayFotoValidaSeleccionadaEnFormulario() {
@@ -236,8 +233,6 @@ class ProviderProfilePhotoSteps {
         world.assertRegistrationNotCompleted()
     }
 
-    // --- 07-PPH Steps ---
-
     @Dado("la operación {string} está en curso")
     fun operacionEstaEnCurso(operacion: String) {
         world.arrangeOperationInProgress(operacion)
@@ -262,8 +257,6 @@ class ProviderProfilePhotoSteps {
     fun formularioContinuaMostrandoProgreso() {
         world.assertOperationProgressContinues()
     }
-
-    // --- 08-PPH Steps ---
 
     @Y("la carga de una foto válida está en curso")
     fun cargaFotoValidaEnCurso() {
@@ -295,8 +288,6 @@ class ProviderProfilePhotoSteps {
         world.assertPhotoRetainedForRetryOrReplace()
     }
 
-    // --- 09-PPH Steps ---
-
     @Dado("el formulario muestra una falla recuperable de carga de foto")
     fun formularioMuestraFallaRecuperableCargaFoto() {
         world.arrangeRecoverablePhotoFailure()
@@ -321,8 +312,6 @@ class ProviderProfilePhotoSteps {
     fun confirmacionExitosaDejaImagenListaParaRegistro() {
         world.assertPhotoReadyForRegistration()
     }
-
-    // --- 10-PPH Steps ---
 
     @Dado("que el prestador ingresó nombre, apellido válidos y seleccionó un rubro")
     fun prestadorIngresoNombreApellidoValidosYRubro() {
@@ -350,8 +339,6 @@ class ProviderProfilePhotoSteps {
     fun conservanDatosActualesFormulario() {
         world.assertProfileDataPreserved()
     }
-
-    // --- 11-PPH Steps ---
 
     @Y("hay zonas de cobertura reales seleccionadas provenientes de US-35.5")
     fun hayZonasDeCoberturaRealesSeleccionadas() {
@@ -388,7 +375,6 @@ class ProviderProfilePhotoSteps {
         world.assertProfileFormPoppedFromBackstack()
     }
 
-    // --- 14-PPH Steps ---
 
     @Y("la foto actual está confirmada y las zonas de cobertura requeridas están seleccionadas")
     fun fotoActualConfirmadaYZonasSeleccionadas() {
@@ -414,5 +400,36 @@ class ProviderProfilePhotoSteps {
     @Entonces("el registro reutiliza la foto confirmada sin volver a cargarla")
     fun registroReutilizaFotoConfirmadaSinVolverACargarla() {
         world.assertRegistrationReusedConfirmedPhotoWithoutReupload()
+    }
+
+
+    @Dado("el registro finalizó correctamente con una foto confirmada y devolvió el identificador del prestador")
+    fun registroFinalizoCorrectamenteConFotoConfirmadaEId() {
+        world.arrangeRegistrationFinishedWithConfirmedPhotoAndProviderId()
+    }
+
+    @Y("la selección local del dispositivo ya no está disponible")
+    fun seleccionLocalYaNoEstaDisponible() {
+        world.clearLocalDeviceSelection()
+    }
+
+    @Y("la recuperación de sus datos devolverá la foto asociada")
+    fun recuperacionDatosDevolveraFotoAsociada() {
+        world.configureRetrievalReturnsAssociatedPhoto()
+    }
+
+    @Cuando("la app vuelve a cargar los datos de ese prestador para mostrarlos")
+    fun appVuelveACargarDatosPrestadorParaMostrarlos() {
+        world.reloadProviderDataForDisplay()
+    }
+
+    @Entonces("se muestra la foto asociada al prestador desde la dirección proporcionada por el servidor")
+    fun muestraFotoAsociadaDesdeDireccionServidor() {
+        world.assertPhotoDisplayedFromServer()
+    }
+
+    @Y("su visualización no depende de la selección local anterior")
+    fun visualizacionNoDependeDeSeleccionLocalAnterior() {
+        world.assertDisplayIndependentFromPreviousLocalSelection()
     }
 }

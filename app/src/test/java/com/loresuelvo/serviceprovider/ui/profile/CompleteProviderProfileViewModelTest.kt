@@ -830,6 +830,17 @@ class CompleteProviderProfileViewModelTest {
             throwable?.let { throw it }
             return outcome
         }
+
+        override suspend fun getProfile(providerId: Int): com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome {
+            return com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome.Success(
+                com.loresuelvo.serviceprovider.domain.provider.ProviderProfile(
+                    id = providerId,
+                    name = "Carlos",
+                    surname = "Gómez",
+                    profilePhotoUrl = "https://cdn.example/photo.jpg",
+                ),
+            )
+        }
     }
 
     private class RecordingAuthSessionStore : AuthSessionStore {

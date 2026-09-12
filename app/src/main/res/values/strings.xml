@@ -58,6 +58,8 @@
     <string name="provider_profile_photo_error_upload">No se pudo cargar la foto. Revisá tu conexión e intentá de nuevo.</string>
     <string name="provider_profile_photo_required_error">Debés seleccionar y cargar una foto de perfil antes de continuar.</string>
     <string name="provider_profile_zones_required_error">Debés seleccionar al menos una zona de cobertura.</string>
+    <string name="provider_retrieved_photo_label">Foto de perfil cargada</string>
+    <string name="provider_no_photo_label">Sin foto de perfil</string>
 
     <!-- Welcome · how it works (3 pasos del prestador) -->
     <string name="welcome_step1_title">Publicá tus servicios</string>

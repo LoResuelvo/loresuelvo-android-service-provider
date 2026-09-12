@@ -130,7 +130,6 @@ Característica: Registro de prestador con foto de perfil
     Y el prestador navega al paso de vinculación de Mercado Pago
     Y el formulario ya no es accesible mediante navegación hacia atrás
 
-  @wip
   Escenario: 12-PPH Mostrar la foto asociada al recuperar los datos del prestador
     Dado el registro finalizó correctamente con una foto confirmada y devolvió el identificador del prestador
     Y la selección local del dispositivo ya no está disponible

@@ -16,6 +16,8 @@ import com.loresuelvo.serviceprovider.domain.file.UploadBytesOutcome
 import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
 import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
+import com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome
+import com.loresuelvo.serviceprovider.domain.provider.ProviderProfile
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
@@ -43,11 +45,27 @@ class FakeProviderRepository : ProviderRepository {
         private set
     var registerGate: CompletableDeferred<Unit>? = null
 
+    var profileOutcome: GetProviderProfileOutcome = GetProviderProfileOutcome.Success(
+        ProviderProfile(
+            id = 1,
+            name = "Carlos",
+            surname = "Gómez",
+            profilePhotoUrl = "https://cdn.example/profile/photo.jpg",
+        ),
+    )
+    var getProfileCalls: Int = 0
+        private set
+
     override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome {
         registerCalls += 1
         lastCommand = command
         registerGate?.await()
         return outcome
+    }
+
+    override suspend fun getProfile(providerId: Int): GetProviderProfileOutcome {
+        getProfileCalls += 1
+        return profileOutcome
     }
 }
 

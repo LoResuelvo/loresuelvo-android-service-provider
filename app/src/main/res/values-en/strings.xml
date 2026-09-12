@@ -58,6 +58,8 @@
     <string name="provider_profile_photo_error_upload">Could not upload photo. Check your connection and try again.</string>
     <string name="provider_profile_photo_required_error">You must select and upload a profile photo before continuing.</string>
     <string name="provider_profile_zones_required_error">You must select at least one service area.</string>
+    <string name="provider_retrieved_photo_label">Profile photo loaded</string>
+    <string name="provider_no_photo_label">No profile photo</string>
 
     <!-- Welcome · how it works -->
     <string name="welcome_step1_title">Publish your services</string>

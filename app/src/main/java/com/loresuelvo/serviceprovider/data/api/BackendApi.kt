@@ -7,6 +7,7 @@ import com.loresuelvo.serviceprovider.data.api.dto.PresignFileRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.PresignFileResponseDto
 import com.loresuelvo.serviceprovider.data.api.dto.ProviderSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
+import com.loresuelvo.serviceprovider.data.api.dto.ProviderProfileDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -40,6 +41,14 @@ interface BackendApi {
     suspend fun registerProvider(
         @Body request: RegisterProviderRequestDto,
     ): ProviderSummaryDto
+
+    /**
+     * `GET /providers/{providerID}` — retrieves public provider profile.
+     */
+    @GET("providers/{providerID}")
+    suspend fun getProviderProfile(
+        @Path("providerID") providerId: Int,
+    ): ProviderProfileDto
 
     /**
      * `POST /files/presign` — requests a presigned storage upload URL.

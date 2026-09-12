@@ -111,4 +111,71 @@ class ApiProviderRepositoryTest {
 
         assertFailsWith<CancellationException> { repository.register(sampleCommand) }
     }
+
+    @Test
+    fun `getProfile returns Success when backend returns 200 ProviderProfileDto`() = runTest {
+        val dto = com.loresuelvo.serviceprovider.data.api.dto.ProviderProfileDto(
+            id = 42,
+            name = "Carlos",
+            surname = "Gómez",
+            profilePhoto = com.loresuelvo.serviceprovider.data.api.dto.ProviderProfilePhotoDto(
+                originalName = "carlos.jpg",
+                url = "https://cdn.example/carlos.jpg",
+            ),
+        )
+        coEvery { backendApi.getProviderProfile(42) } returns dto
+
+        val result = repository.getProfile(42)
+
+        assertTrue(result is com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome.Success)
+        val success = result as com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome.Success
+        assertEquals(42, success.profile.id)
+        assertEquals("Carlos", success.profile.name)
+        assertEquals("Gómez", success.profile.surname)
+        assertEquals("https://cdn.example/carlos.jpg", success.profile.profilePhotoUrl)
+    }
+
+    @Test
+    fun `getProfile returns NotFound when backend throws 404 HttpException`() = runTest {
+        val response = Response.error<com.loresuelvo.serviceprovider.data.api.dto.ProviderProfileDto>(
+            404,
+            "{\"error\":\"not_found\",\"message\":\"Provider not found\"}".toResponseBody("application/json".toMediaType()),
+        )
+        coEvery { backendApi.getProviderProfile(42) } throws HttpException(response)
+
+        val result = repository.getProfile(42)
+
+        assertEquals(com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome.Failure.NotFound, result)
+    }
+
+    @Test
+    fun `getProfile returns Unauthorized when backend throws 401 HttpException`() = runTest {
+        val response = Response.error<com.loresuelvo.serviceprovider.data.api.dto.ProviderProfileDto>(
+            401,
+            "{\"error\":\"unauthorized\",\"message\":\"Token expired\"}".toResponseBody("application/json".toMediaType()),
+        )
+        coEvery { backendApi.getProviderProfile(42) } throws HttpException(response)
+
+        val result = repository.getProfile(42)
+
+        assertEquals(com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome.Failure.Unauthorized, result)
+    }
+
+    @Test
+    fun `getProfile returns Network when backend throws IOException`() = runTest {
+        val ioException = IOException("Network unreachable")
+        coEvery { backendApi.getProviderProfile(42) } throws ioException
+
+        val result = repository.getProfile(42)
+
+        assertTrue(result is com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome.Failure.Network)
+        assertEquals(ioException, (result as com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome.Failure.Network).cause)
+    }
+
+    @Test
+    fun `getProfile propagates cancellation thrown by backend request`() = runTest {
+        coEvery { backendApi.getProviderProfile(42) } throws CancellationException("Request cancelled")
+
+        assertFailsWith<CancellationException> { repository.getProfile(42) }
+    }
 }
