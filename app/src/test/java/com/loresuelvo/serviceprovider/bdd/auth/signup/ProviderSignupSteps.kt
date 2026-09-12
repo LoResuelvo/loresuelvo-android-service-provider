@@ -93,4 +93,24 @@ class ProviderSignupSteps {
     fun authenticationControlsAvailableForRetry() {
         world.assertAuthenticationControlsAvailableForRetry()
     }
+
+    @Dado("que un intento de registro del prestador sigue activo")
+    fun registroDelPrestadorSigueActivo() {
+        world.startActiveSignup()
+    }
+
+    @Cuando("el prestador selecciona nuevamente una acción de autenticación")
+    fun prestadorSeleccionaNuevamenteUnaAccionDeAutenticacion() {
+        world.selectAuthenticationAgain()
+    }
+
+    @Entonces("no se inicia un segundo flujo de Auth0")
+    fun noSeIniciaUnSegundoFlujoDeAuth0() {
+        world.assertNoSecondAuthenticationFlow()
+    }
+
+    @Y("la pantalla de bienvenida muestra un estado de carga accesible")
+    fun welcomeShowsAccessibleLoadingState() {
+        world.assertAccessibleLoadingState()
+    }
 }

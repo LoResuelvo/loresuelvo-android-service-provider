@@ -4,6 +4,7 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
 import android.content.Context
+import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Test double for [AuthProvider]. Default behaviour: every auth
@@ -16,6 +17,8 @@ class FakeAuthProvider(
     var nextLogoutOutcome: LogoutOutcome = LogoutOutcome.Failure.Provider(null),
 ) : AuthProvider {
 
+    var authenticationGate: CompletableDeferred<Unit>? = null
+
     var loginCalls: Int = 0
         private set
     var signupCalls: Int = 0
@@ -27,16 +30,19 @@ class FakeAuthProvider(
 
     override suspend fun login(context: Context): AuthenticationOutcome {
         loginCalls++
+        authenticationGate?.await()
         return nextOutcome
     }
 
     override suspend fun signup(context: Context): AuthenticationOutcome {
         signupCalls++
+        authenticationGate?.await()
         return nextOutcome
     }
 
     override suspend fun loginWithGoogle(context: Context): AuthenticationOutcome {
         googleCalls++
+        authenticationGate?.await()
         return nextOutcome
     }
 

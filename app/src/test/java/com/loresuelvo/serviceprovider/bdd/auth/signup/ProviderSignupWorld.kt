@@ -15,6 +15,7 @@ import com.loresuelvo.serviceprovider.ui.auth.WelcomeError
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verifyOrder
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -24,6 +25,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 
 /**
  * Deterministic world for the provider signup scenarios.
@@ -79,6 +81,32 @@ class ProviderSignupWorld : AutoCloseable {
         check(::viewModel.isInitialized) { "Failure scenario must seed its local session first" }
         viewModel.signup(context)
         scheduler.advanceUntilIdle()
+    }
+
+    fun startActiveSignup() {
+        seedNoLocalSession()
+        authProvider.holdNextAuthentication()
+        viewModel.signup(context)
+        scheduler.runCurrent()
+    }
+
+    fun selectAuthenticationAgain() {
+        check(::viewModel.isInitialized) { "Duplicate-auth scenario must seed its local session first" }
+        viewModel.login(context)
+        scheduler.runCurrent()
+    }
+
+    fun assertNoSecondAuthenticationFlow() {
+        assertEquals(1, authProvider.signupCalls)
+        assertEquals(0, authProvider.loginCalls)
+        assertEquals(0, authProvider.googleCalls)
+    }
+
+    fun assertAccessibleLoadingState() {
+        assertTrue(
+            "The Welcome state must expose an active authentication loading state",
+            viewModel.uiState.value.loading,
+        )
     }
 
     fun assertWelcomeRemainsVisible() {
@@ -156,6 +184,8 @@ class ProviderSignupWorld : AutoCloseable {
     fun signupCalls(): Int = authProvider.signupCalls
 
     override fun close() {
+        authProvider.releasePendingAuthentication()
+        scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
 
@@ -175,23 +205,56 @@ class ProviderSignupWorld : AutoCloseable {
 
         var nextOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
         var lastOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
+        private var pendingAuthentication: CompletableDeferred<AuthenticationOutcome>? = null
 
         var signupCalls: Int = 0
             private set
+        var loginCalls: Int = 0
+            private set
+        var googleCalls: Int = 0
+            private set
 
         override suspend fun login(context: Context): AuthenticationOutcome =
-            AuthenticationOutcome.Cancelled
+            awaitAuthentication(AuthenticationOutcome.Cancelled) {
+                loginCalls += 1
+            }
 
         override suspend fun signup(context: Context): AuthenticationOutcome {
             signupCalls += 1
-            lastOutcome = nextOutcome
-            return nextOutcome
+            return awaitNextOutcome()
         }
 
         override suspend fun loginWithGoogle(context: Context): AuthenticationOutcome =
-            AuthenticationOutcome.Cancelled
+            awaitAuthentication(AuthenticationOutcome.Cancelled) {
+                googleCalls += 1
+            }
 
         override suspend fun logout(context: Context): LogoutOutcome =
             LogoutOutcome.Cancelled
+
+        fun holdNextAuthentication() {
+            pendingAuthentication = CompletableDeferred()
+        }
+
+        fun releasePendingAuthentication() {
+            pendingAuthentication?.complete(nextOutcome)
+            pendingAuthentication = null
+        }
+
+        private suspend fun awaitNextOutcome(): AuthenticationOutcome {
+            val pending = pendingAuthentication
+            val outcome = pending?.await() ?: nextOutcome
+            lastOutcome = outcome
+            return outcome
+        }
+
+        private suspend fun awaitAuthentication(
+            defaultOutcome: AuthenticationOutcome,
+            recordCall: () -> Unit,
+        ): AuthenticationOutcome {
+            recordCall()
+            val pending = pendingAuthentication
+            return pending?.await() ?: defaultOutcome
+        }
     }
 }

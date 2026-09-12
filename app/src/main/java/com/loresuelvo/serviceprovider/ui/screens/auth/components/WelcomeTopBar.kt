@@ -27,6 +27,7 @@ import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 fun WelcomeTopBar(
     onLoginClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -41,7 +42,10 @@ fun WelcomeTopBar(
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.weight(1f))
-        TextButton(onClick = onLoginClick) {
+        TextButton(
+            onClick = onLoginClick,
+            enabled = enabled,
+        ) {
             Text(
                 text = stringResource(R.string.welcome_login),
                 color = MaterialTheme.colorScheme.primary,

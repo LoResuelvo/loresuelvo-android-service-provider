@@ -8,6 +8,7 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +33,8 @@ class WelcomeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(WelcomeUiState())
     val uiState: StateFlow<WelcomeUiState> = _uiState.asStateFlow()
+
+    private val authenticationInFlight = AtomicBoolean(false)
 
     init {
         loadCategories()
@@ -75,21 +78,31 @@ class WelcomeViewModel @Inject constructor(
         activityContext: Context,
         launch: suspend (Context) -> AuthenticationOutcome,
     ) {
+        if (!authenticationInFlight.compareAndSet(false, true)) return
+
+        // Publish the busy state before launching the suspend operation. This
+        // closes the gap where two UI actions could be queued before the first
+        // coroutine had a chance to update StateFlow.
+        _uiState.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
-            when (val outcome = launch(activityContext)) {
-                AuthenticationOutcome.Cancelled -> {
-                    _uiState.update { it.copy(loading = false, error = null) }
+            try {
+                when (val outcome = launch(activityContext)) {
+                    AuthenticationOutcome.Cancelled -> {
+                        _uiState.update { it.copy(error = null) }
+                    }
+                    is AuthenticationOutcome.Failure -> {
+                        _uiState.update { it.copy(error = WelcomeError.Authentication) }
+                    }
+                    is AuthenticationOutcome.Success -> {
+                        // Sync against GET /me will land alongside the provider
+                        // onboarding feature; for now we just clear the
+                        // spinner.
+                        _uiState.update { it.copy(error = null) }
+                    }
                 }
-                is AuthenticationOutcome.Failure -> {
-                    _uiState.update { it.copy(loading = false, error = WelcomeError.Authentication) }
-                }
-                is AuthenticationOutcome.Success -> {
-                    // Sync against GET /me will land alongside the provider
-                    // onboarding feature; for now we just clear the
-                    // spinner.
-                    _uiState.update { it.copy(loading = false, error = null) }
-                }
+            } finally {
+                authenticationInFlight.set(false)
+                _uiState.update { it.copy(loading = false) }
             }
         }
     }

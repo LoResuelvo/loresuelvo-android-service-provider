@@ -62,4 +62,18 @@ class ProviderSignupWorldTest {
             world.close()
         }
     }
+
+    @Test
+    fun selecting_another_authentication_action_while_signup_is_active_does_not_start_a_second_flow() {
+        val world = ProviderSignupWorld()
+        try {
+            world.startActiveSignup()
+            world.selectAuthenticationAgain()
+
+            world.assertNoSecondAuthenticationFlow()
+            world.assertAccessibleLoadingState()
+        } finally {
+            world.close()
+        }
+    }
 }

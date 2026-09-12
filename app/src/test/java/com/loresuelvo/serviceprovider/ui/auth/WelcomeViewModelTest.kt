@@ -8,6 +8,7 @@ import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -203,4 +204,34 @@ class WelcomeViewModelTest {
         assertEquals(false, viewModel!!.uiState.value.loading)
         assertEquals(null, viewModel!!.uiState.value.error)
     }
+
+    @Test
+    fun should_serialize_all_authentication_actions_while_signup_is_in_flight() =
+        runTest(scheduler) {
+            val authenticationGate = CompletableDeferred<Unit>()
+            authProvider.authenticationGate = authenticationGate
+            authProvider.nextOutcome = AuthenticationOutcome.Cancelled
+
+            viewModel = newViewModel()
+            advanceUntilIdle()
+
+            viewModel!!.signup(context)
+            advanceUntilIdle()
+            assertTrue(viewModel!!.uiState.value.loading)
+
+            viewModel!!.login(context)
+            viewModel!!.loginWithGoogle(context)
+            advanceUntilIdle()
+
+            assertEquals(1, authProvider.signupCalls)
+            assertEquals(0, authProvider.loginCalls)
+            assertEquals(0, authProvider.googleCalls)
+            assertTrue(viewModel!!.uiState.value.loading)
+
+            authenticationGate.complete(Unit)
+            advanceUntilIdle()
+
+            assertEquals(false, viewModel!!.uiState.value.loading)
+            assertEquals(null, viewModel!!.uiState.value.error)
+        }
 }

@@ -10,6 +10,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -41,6 +45,7 @@ import com.loresuelvo.serviceprovider.ui.theme.SubtitleGray
  */
 @Composable
 fun WelcomeScreen(
+    loading: Boolean = false,
     error: WelcomeError? = null,
     categories: WelcomeCategoriesUiState = WelcomeCategoriesUiState.Loading,
     onRegisterClick: () -> Unit = {},
@@ -49,7 +54,10 @@ fun WelcomeScreen(
 ) {
     val errorMessage = error?.let { welcomeErrorMessage(it) }
     WelcomeScaffold {
-        WelcomeTopBar(onLoginClick = onLoginClick)
+        WelcomeTopBar(
+            onLoginClick = onLoginClick,
+            enabled = !loading,
+        )
 
         Spacer(Modifier.height(24.dp))
 
@@ -92,9 +100,30 @@ fun WelcomeScreen(
             Spacer(Modifier.height(16.dp))
         }
 
+        if (loading) {
+            val loadingDescription = stringResource(R.string.welcome_auth_loading)
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .size(32.dp)
+                    .semantics {
+                        contentDescription = loadingDescription
+                        liveRegion = LiveRegionMode.Polite
+                    },
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = loadingDescription,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(16.dp))
+        }
+
         PrimaryButton(
             text = stringResource(R.string.welcome_register),
             onClick = onRegisterClick,
+            enabled = !loading,
         )
 
         Spacer(Modifier.height(14.dp))
@@ -102,6 +131,7 @@ fun WelcomeScreen(
         GoogleButton(
             text = stringResource(R.string.welcome_google),
             onClick = onGoogleClick,
+            enabled = !loading,
         )
 
         Spacer(Modifier.height(16.dp))

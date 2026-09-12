@@ -20,9 +20,11 @@ import com.loresuelvo.serviceprovider.ui.theme.TextWhite
 fun GoogleButton(
     text: String,
     onClick: () -> Unit,
+    enabled: Boolean = true,
 ) {
     OutlinedButton(
         onClick = onClick,
+        enabled = enabled,
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.outlinedButtonColors(
             containerColor = TextWhite,

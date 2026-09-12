@@ -1,9 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
@@ -42,9 +42,10 @@ fun LoResuelvoNav() {
 @Composable
 private fun WelcomeRoute() {
     val viewModel: WelcomeViewModel = hiltViewModel()
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     WelcomeScreen(
+        loading = state.loading,
         error = state.error,
         categories = state.categories,
         onRegisterClick = { viewModel.signup(context) },

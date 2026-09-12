@@ -31,7 +31,6 @@ Característica: Registro de prestadores mediante Auth0 Universal Login
     Entonces la pantalla de bienvenida muestra un error localizado y amigable
     Y los controles de autenticación quedan disponibles para reintentar
 
-  @wip
   Escenario: 05-PSU Evitar lanzamientos duplicados de autenticación
     Dado que un intento de registro del prestador sigue activo
     Cuando el prestador selecciona nuevamente una acción de autenticación

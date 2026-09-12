@@ -13,6 +13,7 @@
     <string name="welcome_subtitle">Connect with customers who need what you know how to do.</string>
     <string name="welcome_register">Sign up</string>
     <string name="welcome_google">Continue with Google</string>
+    <string name="welcome_auth_loading">Authenticating…</string>
     <string name="welcome_legal">By continuing you accept our Terms of Service and Privacy Policy.</string>
     <string name="welcome_categories_error">We couldn\'t load the categories. Please try again later.</string>
     <string name="welcome_auth_error">We couldn\'t sign you in. Please try again.</string>
