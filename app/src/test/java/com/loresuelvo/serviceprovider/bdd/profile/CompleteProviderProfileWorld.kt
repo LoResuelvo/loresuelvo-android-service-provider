@@ -13,6 +13,8 @@ import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCa
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
 import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
+import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -121,7 +123,113 @@ class CompleteProviderProfileWorld : AutoCloseable {
         )
     }
 
+    // --- 02-CPP ---
+
+    fun ensureCategoriesLoaded() {
+        check(::viewModel.isInitialized)
+        assertTrue(viewModel.uiState.value.categoriesState is CategoriesLoadState.Ready)
+    }
+
+    fun selectFirstCategory() {
+        check(::viewModel.isInitialized)
+        val ready = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
+        viewModel.onCategorySelected(ready.categories.first())
+    }
+
+    fun assertFirstCategorySelected() {
+        check(::viewModel.isInitialized)
+        val ready = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
+        assertEquals(ready.categories.first(), viewModel.uiState.value.selectedCategory)
+    }
+
+    fun changeCategorySelection() {
+        check(::viewModel.isInitialized)
+        val ready = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
+        viewModel.onCategorySelected(ready.categories[1])
+    }
+
+    fun assertChangedCategorySelected() {
+        check(::viewModel.isInitialized)
+        val ready = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
+        assertEquals(ready.categories[1], viewModel.uiState.value.selectedCategory)
+    }
+
+    // --- 03-CPP, 04-CPP, 05-CPP ---
+
+    fun enterName(name: String) {
+        check(::viewModel.isInitialized)
+        viewModel.onNameChanged(name)
+    }
+
+    fun enterSurname(surname: String) {
+        check(::viewModel.isInitialized)
+        viewModel.onSurnameChanged(surname)
+    }
+
+    fun attemptSubmit() {
+        check(::viewModel.isInitialized)
+        viewModel.submit()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertMissingNameError() {
+        check(::viewModel.isInitialized)
+        assertEquals(ProfileFormError.MissingName, viewModel.uiState.value.error)
+    }
+
+    fun assertMissingSurnameError() {
+        check(::viewModel.isInitialized)
+        assertEquals(ProfileFormError.MissingSurname, viewModel.uiState.value.error)
+    }
+
+    fun assertMissingCategoryError() {
+        check(::viewModel.isInitialized)
+        assertEquals(ProfileFormError.MissingCategory, viewModel.uiState.value.error)
+    }
+
+    fun assertFormNotSubmitted() {
+        assertEquals(0, providerRepository.registerCalls)
+    }
+
+    // --- 09-CPP ---
+
+    fun prepareValidProfile() {
+        check(::viewModel.isInitialized)
+        viewModel.onNameChanged("Carlos")
+        viewModel.onSurnameChanged("Gómez")
+        val ready = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
+        viewModel.onCategorySelected(ready.categories.first())
+    }
+
+    fun holdRegistrationInFlight() {
+        providerRepository.registerGate = CompletableDeferred()
+    }
+
+    fun submitForm() {
+        check(::viewModel.isInitialized)
+        viewModel.submit()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun pressSubmitButtonAgain() {
+        check(::viewModel.isInitialized)
+        viewModel.submit()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertSingleRegistrationCall() {
+        assertEquals(1, providerRepository.registerCalls)
+    }
+
+    fun assertSubmitDisabledWithLoading() {
+        check(::viewModel.isInitialized)
+        assertTrue(viewModel.uiState.value.loading)
+        providerRepository.registerGate?.complete(Unit)
+        scheduler.advanceUntilIdle()
+    }
+
     override fun close() {
+        providerRepository.registerGate?.complete(Unit)
         scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
@@ -140,8 +248,15 @@ class CompleteProviderProfileWorld : AutoCloseable {
 
     private class FakeProviderRepository : ProviderRepository {
         var outcome: RegistrationOutcome = RegistrationOutcome.Success(providerId = 1)
+        var registerCalls: Int = 0
+            private set
+        var registerGate: CompletableDeferred<Unit>? = null
 
-        override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome = outcome
+        override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome {
+            registerCalls += 1
+            registerGate?.await()
+            return outcome
+        }
     }
 
     private class FakeAuthSessionStore : AuthSessionStore {

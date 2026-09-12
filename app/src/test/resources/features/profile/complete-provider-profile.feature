@@ -10,28 +10,24 @@ Característica: Completar perfil profesional del prestador
     Entonces el prestador ve un formulario que solicita nombre, apellido y rubro
     Y la lista de rubros se carga desde la API
 
-  @wip
   Escenario: 02-CPP Seleccionar un rubro de la lista de la API
     Dado que los rubros se cargaron correctamente
     Cuando el prestador selecciona un rubro del menú desplegable
     Entonces el rubro seleccionado se muestra como la opción actual
     Y el prestador puede cambiar la selección antes de enviar
 
-  @wip
   Escenario: 03-CPP Validar campo obligatorio de nombre antes del envío
     Dado que el prestador está en el formulario de perfil
     Cuando el prestador intenta continuar con el nombre vacío
     Entonces aparece un mensaje de validación junto al campo de nombre
     Y el formulario no se envía
 
-  @wip
   Escenario: 04-CPP Validar campo obligatorio de apellido antes del envío
     Dado que el prestador ingresó un nombre válido
     Cuando el prestador intenta continuar con el apellido vacío
     Entonces aparece un mensaje de validación junto al campo de apellido
     Y el formulario no se envía
 
-  @wip
   Escenario: 05-CPP Validar selección obligatoria de rubro antes del envío
     Dado que el prestador ingresó un nombre y apellido válidos
     Cuando el prestador intenta continuar sin seleccionar un rubro
@@ -59,7 +55,6 @@ Característica: Completar perfil profesional del prestador
     Entonces la app muestra un mensaje amigable indicando que la cuenta ya existe
     Y el prestador permanece en el formulario
 
-  @wip
   Escenario: 09-CPP Evitar envíos duplicados durante la carga
     Dado que el prestador envió el formulario
     Y el envío está en curso
