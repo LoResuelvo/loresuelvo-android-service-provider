@@ -10,6 +10,10 @@ import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -34,9 +38,8 @@ class CucumberWorld : AutoCloseable {
 
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
-    private val context = mockk<android.content.Context>(relaxed = true)
-
-    val authProvider = FakeAuthProvider()
+    private val effectScope = CoroutineScope(dispatcher)
+    val authenticationLauncher = FakeAuthenticationLauncher()
     val categoryRepository = FakeCategoryRepository()
     private val sessionStore = mockk<AuthSessionStore>(relaxed = true)
     private val getCategories = com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase(
@@ -51,7 +54,6 @@ class CucumberWorld : AutoCloseable {
 
     fun buildViewModel() {
         viewModel = WelcomeViewModel(
-            authProvider = authProvider,
             getCategories = getCategories,
             establishAuthSession = EstablishAuthSessionUseCase(sessionStore),
         )
@@ -59,6 +61,15 @@ class CucumberWorld : AutoCloseable {
 
     fun seedNoSession() {
         buildViewModel()
+        // This collector is the test equivalent of WelcomeRoute: it owns the
+        // route/platform seam and passes only pure outcomes back to the VM.
+        effectScope.launch {
+            viewModel.effects.collect { effect ->
+                if (effect is com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect.LaunchAuthentication) {
+                    viewModel.onAuthenticationResult(authenticationLauncher.launch(effect.action))
+                }
+            }
+        }
     }
 
     fun configureBackendCategories(outcome: com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome) {
@@ -78,17 +89,17 @@ class CucumberWorld : AutoCloseable {
     fun state(): WelcomeUiState = viewModel.uiState.value
 
     fun triggerSignup() {
-        viewModel.signup(context)
+        viewModel.signup()
         scheduler.advanceUntilIdle()
     }
 
     fun triggerLogin() {
-        viewModel.login(context)
+        viewModel.login()
         scheduler.advanceUntilIdle()
     }
 
     fun triggerGoogle() {
-        viewModel.loginWithGoogle(context)
+        viewModel.loginWithGoogle()
         scheduler.advanceUntilIdle()
     }
 
@@ -96,10 +107,11 @@ class CucumberWorld : AutoCloseable {
         // The Fake returns `nextOutcome`; we only assert what the VM
         // delegated (calls counter) — this helper exists for future
         // steps that want to peek at the next scripted outcome.
-        return authProvider.nextOutcome
+        return authenticationLauncher.nextOutcome
     }
 
     override fun close() {
+        effectScope.cancel()
         Dispatchers.resetMain()
     }
 

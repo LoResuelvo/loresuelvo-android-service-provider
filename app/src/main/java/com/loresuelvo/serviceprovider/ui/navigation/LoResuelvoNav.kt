@@ -8,6 +8,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
 import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
@@ -22,33 +23,43 @@ import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfile
  * Navigation side effects remain in this composition root.
  */
 @Composable
-fun LoResuelvoNav() {
+fun LoResuelvoNav(
+    browserAuthenticationLauncher: BrowserAuthenticationLauncher,
+) {
     val navController = rememberNavController()
 
     LoResuelvoNavHost(
         navController = navController,
         startDestination = Route.Welcome.path,
-        welcome = { WelcomeRoute(navController) },
+        welcome = { WelcomeRoute(navController, browserAuthenticationLauncher) },
         professionalProfile = { CompleteProviderProfileRoute(navController) },
         home = { HomePlaceholder() },
     )
 }
 
 /**
- * Welcome screen with its Hilt-provided ViewModel. The Composable
- * bridge passes the activity `Context` (`LocalContext.current`) to
- * the selected ViewModel action: Auth0 requires an Activity-bound
- * context to start its browser flow.
+ * Welcome route owns the Activity context and sends it only to the outer
+ * platform bridge. The bridge returns [AuthenticationOutcome] to the
+ * ViewModel, so Android never crosses the UI/domain orchestration boundary.
  */
 @Composable
-private fun WelcomeRoute(navController: NavHostController) {
+private fun WelcomeRoute(
+    navController: NavHostController,
+    browserAuthenticationLauncher: BrowserAuthenticationLauncher,
+) {
     val viewModel: WelcomeViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    LaunchedEffect(viewModel, navController) {
+    LaunchedEffect(viewModel, navController, browserAuthenticationLauncher) {
         viewModel.effects.collect { effect ->
             when (effect) {
+                is com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect.LaunchAuthentication ->
+                    browserAuthenticationLauncher.launch(
+                        activityContext = context,
+                        action = effect.action,
+                        onResult = viewModel::onAuthenticationResult,
+                    )
                 com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect.NavigateToProfessionalProfile ->
                     navController.navigate(Route.CompleteProviderProfile.path) {
                         popUpTo(Route.Welcome.path) { inclusive = true }
@@ -62,8 +73,8 @@ private fun WelcomeRoute(navController: NavHostController) {
         loading = state.loading,
         error = state.error,
         categories = state.categories,
-        onRegisterClick = { viewModel.signup(context) },
-        onLoginClick = { viewModel.login(context) },
-        onGoogleClick = { viewModel.loginWithGoogle(context) },
+        onRegisterClick = viewModel::signup,
+        onLoginClick = viewModel::login,
+        onGoogleClick = viewModel::loginWithGoogle,
     )
 }

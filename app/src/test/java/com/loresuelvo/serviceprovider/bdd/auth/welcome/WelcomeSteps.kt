@@ -119,19 +119,19 @@ class WelcomeSteps {
     @Entonces("se delega el signup al AuthProvider")
     @Y("se delega el signup al AuthProvider")
     fun delegaSignup() {
-        assertEquals(1, world.authProvider.signupCalls)
+        assertEquals(1, world.authenticationLauncher.signupCalls)
     }
 
     @Entonces("se delega el login al AuthProvider")
     @Y("se delega el login al AuthProvider")
     fun delegaLogin() {
-        assertEquals(1, world.authProvider.loginCalls)
+        assertEquals(1, world.authenticationLauncher.loginCalls)
     }
 
     @Entonces("se delega el login con Google al AuthProvider")
     @Y("se delega el login con Google al AuthProvider")
     fun delegaGoogle() {
-        assertEquals(1, world.authProvider.googleCalls)
+        assertEquals(1, world.authenticationLauncher.googleCalls)
     }
 
     // Sanity helper for tests that need a world reference.

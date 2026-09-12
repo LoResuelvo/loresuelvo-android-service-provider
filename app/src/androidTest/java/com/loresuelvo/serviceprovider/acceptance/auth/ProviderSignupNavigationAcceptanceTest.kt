@@ -9,7 +9,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.loresuelvo.serviceprovider.MainActivity
 import com.loresuelvo.serviceprovider.R
-import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -41,7 +40,7 @@ class ProviderSignupNavigationAcceptanceTest {
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
-    private lateinit var authProvider: ProviderSignupAuthProvider
+    private lateinit var authenticationLauncher: ProviderSignupBrowserAuthenticationLauncher
     private lateinit var sessionStore: ProviderSignupSessionStore
 
     @Before
@@ -51,7 +50,7 @@ class ProviderSignupNavigationAcceptanceTest {
             ApplicationProvider.getApplicationContext(),
             ProviderSignupTestEntryPoint::class.java,
         )
-        authProvider = entryPoint.authProvider() as ProviderSignupAuthProvider
+        authenticationLauncher = entryPoint.authenticationLauncher()
         sessionStore = entryPoint.sessionStore()
     }
 
@@ -64,7 +63,7 @@ class ProviderSignupNavigationAcceptanceTest {
             ),
             accessToken = "synthetic-provider-access-token",
         )
-        authProvider.nextOutcome = AuthenticationOutcome.Success(session)
+        authenticationLauncher.nextOutcome = AuthenticationOutcome.Success(session)
 
         composeTestRule
             .onNodeWithText(composeTestRule.activity.getString(R.string.welcome_register))
@@ -76,7 +75,7 @@ class ProviderSignupNavigationAcceptanceTest {
             .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_title))
             .assertIsDisplayed()
         assertEquals(session, sessionStore.getSession())
-        assertEquals(1, authProvider.signupCalls)
+        assertEquals(1, authenticationLauncher.signupCalls)
     }
 }
 
@@ -84,7 +83,7 @@ class ProviderSignupNavigationAcceptanceTest {
 @InstallIn(SingletonComponent::class)
 interface ProviderSignupTestEntryPoint {
 
-    fun authProvider(): AuthProvider
+    fun authenticationLauncher(): ProviderSignupBrowserAuthenticationLauncher
 
     fun sessionStore(): ProviderSignupSessionStore
 }

@@ -5,7 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.loresuelvo.serviceprovider.ui.navigation.LoResuelvoNav
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Single-Activity host. `@AndroidEntryPoint` is required so Hilt
@@ -21,11 +23,13 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var browserAuthenticationLauncher: BrowserAuthenticationLauncher
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LoresuelvoTheme {
-                LoResuelvoNav()
+                LoResuelvoNav(browserAuthenticationLauncher)
             }
         }
     }

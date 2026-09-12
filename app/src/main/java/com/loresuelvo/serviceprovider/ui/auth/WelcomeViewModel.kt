@@ -1,9 +1,8 @@
 package com.loresuelvo.serviceprovider.ui.auth
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
+import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
@@ -23,16 +22,14 @@ import kotlinx.coroutines.launch
 
 /**
  * UDF ViewModel for the `Welcome` screen. Drives the IdP signup flow
- * via [AuthProvider] and fetches the public service categories
+ * via a route-owned browser launcher and fetches the public service categories
  * through [GetCategoriesUseCase] to populate the illustrative chips.
  *
- * The Activity [Context] is supplied per-call by the Composable
- * (via `LocalContext.current`) rather than captured at construction
- * time, so the VM is `@HiltViewModel`-clean.
+ * The route owns browser launching and returns a pure authentication outcome;
+ * this ViewModel never receives an Android type.
  */
 @HiltViewModel
 class WelcomeViewModel @Inject constructor(
-    private val authProvider: AuthProvider,
     private val getCategories: GetCategoriesUseCase,
     private val establishAuthSession: EstablishAuthSessionUseCase,
 ) : ViewModel() {
@@ -74,47 +71,43 @@ class WelcomeViewModel @Inject constructor(
         }
     }
 
-    fun signup(activityContext: Context) {
-        authenticate(activityContext, authProvider::signup)
+    fun signup() {
+        requestAuthentication(AuthenticationAction.Signup)
     }
 
-    fun login(activityContext: Context) {
-        authenticate(activityContext, authProvider::login)
+    fun login() {
+        requestAuthentication(AuthenticationAction.Login)
     }
 
-    fun loginWithGoogle(activityContext: Context) {
-        authenticate(activityContext, authProvider::loginWithGoogle)
+    fun loginWithGoogle() {
+        requestAuthentication(AuthenticationAction.GoogleLogin)
     }
 
-    private fun authenticate(
-        activityContext: Context,
-        launch: suspend (Context) -> AuthenticationOutcome,
-    ) {
+    private fun requestAuthentication(action: AuthenticationAction) {
         if (!authenticationInFlight.compareAndSet(false, true)) return
 
         // Publish the busy state before launching the suspend operation. This
         // closes the gap where two UI actions could be queued before the first
         // coroutine had a chance to update StateFlow.
         _uiState.update { it.copy(loading = true, error = null) }
-        viewModelScope.launch {
-            try {
-                when (val outcome = launch(activityContext)) {
-                    AuthenticationOutcome.Cancelled -> {
-                        _uiState.update { it.copy(error = null) }
-                    }
-                    is AuthenticationOutcome.Failure -> {
-                        _uiState.update { it.copy(error = WelcomeError.Authentication) }
-                    }
-                    is AuthenticationOutcome.Success -> {
-                        establishAuthSession(outcome.session)
-                        _uiState.update { it.copy(error = null) }
-                        _effects.trySend(WelcomeEffect.NavigateToProfessionalProfile)
-                    }
-                }
-            } finally {
-                authenticationInFlight.set(false)
-                _uiState.update { it.copy(loading = false) }
+        _effects.trySend(WelcomeEffect.LaunchAuthentication(action))
+    }
+
+    /** Receives the pure outcome returned by the route/platform bridge. */
+    fun onAuthenticationResult(outcome: AuthenticationOutcome) {
+        if (!authenticationInFlight.compareAndSet(true, false)) return
+
+        when (outcome) {
+            AuthenticationOutcome.Cancelled -> _uiState.update { it.copy(error = null) }
+            is AuthenticationOutcome.Failure -> {
+                _uiState.update { it.copy(error = WelcomeError.Authentication) }
+            }
+            is AuthenticationOutcome.Success -> {
+                establishAuthSession(outcome.session)
+                _uiState.update { it.copy(error = null) }
+                _effects.trySend(WelcomeEffect.NavigateToProfessionalProfile)
             }
         }
+        _uiState.update { it.copy(loading = false) }
     }
 }

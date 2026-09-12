@@ -24,9 +24,9 @@ data class Auth0Config(
 
 /**
  * Port for launching Auth0 authentication and SSO logout. A fake
- * implementation lives in `Auth0AuthProviderTest`; the production
- * implementation [Auth0SdkWebAuthLauncher] is the only consumer in
- * app code.
+ * implementation lives in platform adapter tests; the production
+ * implementation [Auth0SdkWebAuthLauncher] is consumed only by the outer
+ * authentication bridge.
  */
 interface Auth0WebAuthLauncher {
     fun startLogin(

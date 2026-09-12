@@ -1,13 +1,12 @@
 package com.loresuelvo.serviceprovider.acceptance.auth
 
-import android.content.Context
 import com.loresuelvo.serviceprovider.di.AuthModule
 import com.loresuelvo.serviceprovider.di.RepositoryModule
-import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
+import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
-import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
+import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
@@ -23,27 +22,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Deterministic Auth0 replacement for the provider signup navigation test.
- * The fake is provided as the production [AuthProvider] binding, allowing the
- * test to trigger the real Welcome/ViewModel/navigation graph without a
- * browser or a tenant.
+ * Deterministic route/platform replacement for the provider signup test. It
+ * returns a pure result without starting a browser or contacting a tenant.
  */
-class ProviderSignupAuthProvider : AuthProvider {
+class ProviderSignupBrowserAuthenticationLauncher : BrowserAuthenticationLauncher {
 
     var nextOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
     var signupCalls: Int = 0
         private set
 
-    override suspend fun login(context: Context): AuthenticationOutcome = nextOutcome
-
-    override suspend fun signup(context: Context): AuthenticationOutcome {
-        signupCalls += 1
-        return nextOutcome
+    override fun launch(
+        activityContext: android.content.Context,
+        action: AuthenticationAction,
+        onResult: (AuthenticationOutcome) -> Unit,
+    ) {
+        if (action == AuthenticationAction.Signup) signupCalls += 1
+        onResult(nextOutcome)
     }
-
-    override suspend fun loginWithGoogle(context: Context): AuthenticationOutcome = nextOutcome
-
-    override suspend fun logout(context: Context): LogoutOutcome = LogoutOutcome.Cancelled
 }
 
 /** In-memory store that mirrors the production singleton session contract. */
@@ -100,13 +95,14 @@ object ProviderSignupAuthTestModule {
 
     @Provides
     @Singleton
-    fun provideProviderSignupAuthProvider(): ProviderSignupAuthProvider = ProviderSignupAuthProvider()
+    fun provideProviderSignupBrowserAuthenticationLauncher(): ProviderSignupBrowserAuthenticationLauncher =
+        ProviderSignupBrowserAuthenticationLauncher()
 
     @Provides
     @Singleton
-    fun provideAuthProvider(
-        implementation: ProviderSignupAuthProvider,
-    ): AuthProvider = implementation
+    fun provideBrowserAuthenticationLauncher(
+        implementation: ProviderSignupBrowserAuthenticationLauncher,
+    ): BrowserAuthenticationLauncher = implementation
 }
 
 @Module

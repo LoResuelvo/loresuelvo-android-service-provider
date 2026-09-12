@@ -10,11 +10,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.loresuelvo.serviceprovider.MainActivity
 import com.loresuelvo.serviceprovider.R
-import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupAuthProvider
+import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupBrowserAuthenticationLauncher
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupCategoryRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupProviderRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupSessionStore
-import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -47,7 +46,7 @@ class CompleteProviderProfileNavigationAcceptanceTest {
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
-    private lateinit var authProvider: ProviderSignupAuthProvider
+    private lateinit var authenticationLauncher: ProviderSignupBrowserAuthenticationLauncher
     private lateinit var sessionStore: ProviderSignupSessionStore
     private lateinit var categoryRepository: ProviderSignupCategoryRepository
     private lateinit var providerRepository: ProviderSignupProviderRepository
@@ -59,10 +58,10 @@ class CompleteProviderProfileNavigationAcceptanceTest {
             ApplicationProvider.getApplicationContext(),
             CompleteProviderProfileTestEntryPoint::class.java,
         )
-        authProvider = entryPoint.authProvider() as ProviderSignupAuthProvider
+        authenticationLauncher = entryPoint.authenticationLauncher()
         sessionStore = entryPoint.sessionStore()
-        categoryRepository = entryPoint.categoryRepository() as ProviderSignupCategoryRepository
-        providerRepository = entryPoint.providerRepository() as ProviderSignupProviderRepository
+        categoryRepository = entryPoint.categoryRepository()
+        providerRepository = entryPoint.providerRepository()
 
         categoryRepository.categories = listOf(
             Category(id = 1, name = "Plomería"),
@@ -79,7 +78,7 @@ class CompleteProviderProfileNavigationAcceptanceTest {
             ),
             accessToken = "device-access-token",
         )
-        authProvider.nextOutcome = AuthenticationOutcome.Success(session)
+        authenticationLauncher.nextOutcome = AuthenticationOutcome.Success(session)
 
         // 1. Start from Welcome and trigger signup
         composeTestRule
@@ -138,7 +137,7 @@ class CompleteProviderProfileNavigationAcceptanceTest {
 @InstallIn(SingletonComponent::class)
 interface CompleteProviderProfileTestEntryPoint {
 
-    fun authProvider(): AuthProvider
+    fun authenticationLauncher(): ProviderSignupBrowserAuthenticationLauncher
 
     fun sessionStore(): ProviderSignupSessionStore
 

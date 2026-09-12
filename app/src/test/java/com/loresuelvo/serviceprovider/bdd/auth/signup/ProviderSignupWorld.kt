@@ -1,14 +1,12 @@
 package com.loresuelvo.serviceprovider.bdd.auth.signup
 
-import android.content.Context
 import com.auth0.android.provider.WebAuthProvider
 import com.loresuelvo.serviceprovider.data.auth.Auth0Config
 import com.loresuelvo.serviceprovider.data.auth.configureSignup
-import com.loresuelvo.serviceprovider.domain.auth.AuthProvider
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
-import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
+import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
@@ -42,7 +40,7 @@ import org.junit.Assert.assertTrue
  * Deterministic world for the provider signup scenarios.
  *
  * This world exercises the app-owned boundary: selecting signup calls
- * [WelcomeViewModel.signup], which delegates to [AuthProvider.signup], and
+ * [WelcomeViewModel.signup], which requests a pure signup action, and
  * the production signup adapter adds the configured signup hint to the Auth0
  * request. Auth0 owns the email/password form and the tenant selects its
  * database connection; the synthetic configuration therefore proves only the
@@ -58,8 +56,7 @@ class ProviderSignupWorld : AutoCloseable {
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
     private val effectScope = CoroutineScope(dispatcher)
-    private val context = mockk<Context>(relaxed = true)
-    private val authProvider = RecordingAuthProvider()
+    private val authenticationLauncher = RecordingAuthenticationLauncher()
     private val sessionStore = RecordingSessionStore()
     private val getCategories = GetCategoriesUseCase(
         object : CategoryRepository {
@@ -77,14 +74,18 @@ class ProviderSignupWorld : AutoCloseable {
 
     fun seedNoLocalSession() {
         viewModel = WelcomeViewModel(
-            authProvider = authProvider,
             getCategories = getCategories,
             establishAuthSession = EstablishAuthSessionUseCase(sessionStore),
         )
         effectScope.launch {
             viewModel.effects.collect { effect ->
-                if (effect == WelcomeEffect.NavigateToProfessionalProfile) {
-                    profileNavigationRequested = true
+                when (effect) {
+                    is WelcomeEffect.LaunchAuthentication -> {
+                        viewModel.onAuthenticationResult(authenticationLauncher.launch(effect.action))
+                    }
+                    WelcomeEffect.NavigateToProfessionalProfile -> {
+                        profileNavigationRequested = true
+                    }
                 }
             }
         }
@@ -92,53 +93,53 @@ class ProviderSignupWorld : AutoCloseable {
 
     fun selectSignup() {
         check(::viewModel.isInitialized) { "Signup scenario must seed its local session first" }
-        viewModel.signup(context)
+        viewModel.signup()
         scheduler.advanceUntilIdle()
     }
 
     fun configureSignupOutcome(outcome: AuthenticationOutcome) {
-        authProvider.nextOutcome = outcome
+        authenticationLauncher.nextOutcome = outcome
     }
 
     fun configureSuccessfulSignup() {
-        authProvider.nextOutcome = VALID_SESSION_OUTCOME
+        authenticationLauncher.nextOutcome = VALID_SESSION_OUTCOME
     }
 
     fun cancelSignup() {
         check(::viewModel.isInitialized) { "Cancellation scenario must seed its local session first" }
-        viewModel.signup(context)
+        viewModel.signup()
         scheduler.advanceUntilIdle()
     }
 
     fun finishSignupAttempt() {
         check(::viewModel.isInitialized) { "Failure scenario must seed its local session first" }
-        viewModel.signup(context)
+        viewModel.signup()
         scheduler.advanceUntilIdle()
     }
 
     fun finishSuccessfulSignup() {
         check(::viewModel.isInitialized) { "Success scenario must seed its local session first" }
-        viewModel.signup(context)
+        viewModel.signup()
         scheduler.advanceUntilIdle()
     }
 
     fun startActiveSignup() {
         seedNoLocalSession()
-        authProvider.holdNextAuthentication()
-        viewModel.signup(context)
+        authenticationLauncher.holdNextAuthentication()
+        viewModel.signup()
         scheduler.runCurrent()
     }
 
     fun selectAuthenticationAgain() {
         check(::viewModel.isInitialized) { "Duplicate-auth scenario must seed its local session first" }
-        viewModel.login(context)
+        viewModel.login()
         scheduler.runCurrent()
     }
 
     fun assertNoSecondAuthenticationFlow() {
-        assertEquals(1, authProvider.signupCalls)
-        assertEquals(0, authProvider.loginCalls)
-        assertEquals(0, authProvider.googleCalls)
+        assertEquals(1, authenticationLauncher.signupCalls)
+        assertEquals(0, authenticationLauncher.loginCalls)
+        assertEquals(0, authenticationLauncher.googleCalls)
     }
 
     fun assertAccessibleLoadingState() {
@@ -161,7 +162,7 @@ class ProviderSignupWorld : AutoCloseable {
      */
     fun assertNoSessionPersisted() {
         assertEquals(null, viewModel.uiState.value.error)
-        assertEquals(AuthenticationOutcome.Cancelled, authProvider.lastOutcome)
+        assertEquals(AuthenticationOutcome.Cancelled, authenticationLauncher.lastOutcome)
     }
 
     fun assertFriendlyAuthenticationError() {
@@ -178,7 +179,7 @@ class ProviderSignupWorld : AutoCloseable {
     }
 
     fun assertSignupDelegated() {
-        assertEquals(1, authProvider.signupCalls)
+        assertEquals(1, authenticationLauncher.signupCalls)
     }
 
     fun assertSignupConfigured() {
@@ -217,18 +218,13 @@ class ProviderSignupWorld : AutoCloseable {
     }
 
     /**
-     * The provider port accepts only an Activity context. There is no
-     * password argument or password storage in the app-owned signup boundary;
+     * The pure action/result contract carries no password or Android state;
      * tenant-side credential collection is outside this deterministic fake.
      */
     fun assertNoPasswordHandledByApp() {
-        val signupMethods = AuthProvider::class.java.methods.filter { it.name == "signup" }
-        assertEquals(1, signupMethods.size)
-        val signupParameterTypes = signupMethods.single().parameterTypes
-        assertEquals(Context::class.java, signupParameterTypes.first())
         assertFalse(
-            "The provider port must not receive a password argument",
-            signupParameterTypes.any { it.name.contains("password", ignoreCase = true) },
+            "The authentication action must not expose a password",
+            AuthenticationAction::class.java.declaredFields.any { it.name.contains("password", ignoreCase = true) },
         )
         assertFalse(
             "The authentication outcome must not expose a password",
@@ -236,10 +232,10 @@ class ProviderSignupWorld : AutoCloseable {
         )
     }
 
-    fun signupCalls(): Int = authProvider.signupCalls
+    fun signupCalls(): Int = authenticationLauncher.signupCalls
 
     override fun close() {
-        authProvider.releasePendingAuthentication()
+        authenticationLauncher.releasePendingAuthentication()
         scheduler.advanceUntilIdle()
         effectScope.cancel()
         Dispatchers.resetMain()
@@ -286,7 +282,7 @@ class ProviderSignupWorld : AutoCloseable {
         }
     }
 
-    private class RecordingAuthProvider : AuthProvider {
+    private class RecordingAuthenticationLauncher {
 
         var nextOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
         var lastOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
@@ -299,23 +295,14 @@ class ProviderSignupWorld : AutoCloseable {
         var googleCalls: Int = 0
             private set
 
-        override suspend fun login(context: Context): AuthenticationOutcome =
-            awaitAuthentication(AuthenticationOutcome.Cancelled) {
-                loginCalls += 1
+        suspend fun launch(action: AuthenticationAction): AuthenticationOutcome = when (action) {
+            AuthenticationAction.Login -> awaitAuthentication(AuthenticationOutcome.Cancelled) { loginCalls += 1 }
+            AuthenticationAction.Signup -> {
+                signupCalls += 1
+                awaitNextOutcome()
             }
-
-        override suspend fun signup(context: Context): AuthenticationOutcome {
-            signupCalls += 1
-            return awaitNextOutcome()
+            AuthenticationAction.GoogleLogin -> awaitAuthentication(AuthenticationOutcome.Cancelled) { googleCalls += 1 }
         }
-
-        override suspend fun loginWithGoogle(context: Context): AuthenticationOutcome =
-            awaitAuthentication(AuthenticationOutcome.Cancelled) {
-                googleCalls += 1
-            }
-
-        override suspend fun logout(context: Context): LogoutOutcome =
-            LogoutOutcome.Cancelled
 
         fun holdNextAuthentication() {
             pendingAuthentication = CompletableDeferred()

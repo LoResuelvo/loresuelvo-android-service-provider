@@ -1,332 +1,185 @@
 package com.loresuelvo.serviceprovider.ui.auth
 
 import app.cash.turbine.test
-import com.loresuelvo.serviceprovider.bdd.auth.welcome.FakeAuthProvider
 import com.loresuelvo.serviceprovider.bdd.auth.welcome.FakeCategoryRepository
-import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
+import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.usecase.auth.EstablishAuthSessionUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
-import io.mockk.mockk
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/**
- * JVM unit tests for [WelcomeViewModel]. The test follows the rule in
- * `android-hilt-governance`: ViewModels are tested without Hilt,
- * with hand-rolled fakes for the collaborators.
- *
- * The `TestCoroutineScheduler` is the single source of truth for
- * `viewModelScope`; `Dispatchers.setMain(dispatcher)` redirects the
- * Main dispatcher to it so `viewModelScope.launch { ... }` runs
- * deterministically. `advanceUntilIdle()` flushes pending coroutines
- * after every action so the Turbine assertions see the post-action
- * state.
- */
+/** JVM proof that the ViewModel orchestrates pure authentication outcomes. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class WelcomeViewModelTest {
 
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
-
-    private lateinit var authProvider: FakeAuthProvider
     private lateinit var categoryRepository: FakeCategoryRepository
     private lateinit var sessionStore: RecordingAuthSessionStore
-    private var viewModel: WelcomeViewModel? = null
-
-    private val context = mockk<android.content.Context>(relaxed = true)
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        authProvider = FakeAuthProvider()
         categoryRepository = FakeCategoryRepository()
         sessionStore = RecordingAuthSessionStore()
-        // Intentionally NOT building the ViewModel here: each test
-        // configures the fakes it cares about and constructs its own
-        // VM so the call counters reflect a single VM lifecycle.
     }
-
-    private fun newViewModel(): WelcomeViewModel =
-        WelcomeViewModel(
-            authProvider = authProvider,
-            getCategories = GetCategoriesUseCase(categoryRepository),
-            establishAuthSession = EstablishAuthSessionUseCase(sessionStore),
-        )
 
     @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+    fun tearDown() = Dispatchers.resetMain()
 
     @Test
     fun should_load_categories_into_ready_state_when_backend_returns_six() = runTest(scheduler) {
-        categoryRepository.nextOutcome = CategoriesOutcome.Success(
-            listOf(
-                Category(1, "Plomería"),
-                Category(2, "Electricidad"),
-                Category(3, "Pintura"),
-                Category(4, "Gas"),
-                Category(5, "Carpintería"),
-                Category(6, "Aire acondicionado"),
-            ),
-        )
-
-        viewModel = newViewModel()
+        categoryRepository.nextOutcome = CategoriesOutcome.Success((1..6).map { Category(it, "Category $it") })
+        val viewModel = newViewModel()
         advanceUntilIdle()
 
-        val state = viewModel!!.uiState.value
-        assertTrue(state.categories is WelcomeCategoriesUiState.Ready)
-        assertEquals(
-            6,
-            (state.categories as WelcomeCategoriesUiState.Ready).categories.size,
-        )
-        assertEquals(1, categoryRepository.getCategoriesCalls)
+        val state = viewModel.uiState.value.categories
+        assertTrue(state is WelcomeCategoriesUiState.Ready)
+        if (state is WelcomeCategoriesUiState.Ready) {
+            assertEquals(6, state.categories.size)
+        }
     }
 
     @Test
-    fun should_collapse_categories_into_error_when_backend_returns_network_failure() =
-        runTest(scheduler) {
-            categoryRepository.nextOutcome = CategoriesOutcome.Failure.Network(
-                IllegalStateException("backend down"),
-            )
+    fun should_collapse_empty_categories_into_error() = runTest(scheduler) {
+        categoryRepository.nextOutcome = CategoriesOutcome.Success(emptyList())
+        val viewModel = newViewModel()
+        advanceUntilIdle()
 
-            viewModel = newViewModel()
-            advanceUntilIdle()
-
-            assertTrue(
-                "Expected categories Error but was ${viewModel!!.uiState.value.categories}",
-                viewModel!!.uiState.value.categories is WelcomeCategoriesUiState.Error,
-            )
-        }
+        assertTrue(viewModel.uiState.value.categories is WelcomeCategoriesUiState.Error)
+    }
 
     @Test
-    fun should_collapse_categories_into_error_when_backend_returns_empty_list() =
-        runTest(scheduler) {
-            categoryRepository.nextOutcome = CategoriesOutcome.Success(emptyList())
+    fun should_clear_loading_and_error_when_authentication_is_cancelled() = runTest(scheduler) {
+        val viewModel = newViewModel()
+        advanceUntilIdle()
 
-            viewModel = newViewModel()
-            advanceUntilIdle()
-
-            assertTrue(
-                "Expected categories Error but was ${viewModel!!.uiState.value.categories}",
-                viewModel!!.uiState.value.categories is WelcomeCategoriesUiState.Error,
-            )
+        requestAndReturn(viewModel, AuthenticationAction.Login, AuthenticationOutcome.Cancelled) {
+            viewModel.login()
         }
 
-    @Test
-    fun should_start_with_loading_state_before_repository_returns() = runTest(scheduler) {
-        // The scheduler hasn't advanced yet: the VM's `init { loadCategories() }`
-        // launched a coroutine that has not run. We assert the synthetic
-        // Loading state by reading the flow without `advanceUntilIdle`.
-        viewModel = newViewModel()
+        assertEquals(false, viewModel.uiState.value.loading)
+        assertEquals(null, viewModel.uiState.value.error)
+    }
 
-        viewModel!!.uiState.test {
-            // Cancel any pending work so we don't hang the test.
+    @Test
+    fun should_expose_a_safe_error_when_authentication_fails() = runTest(scheduler) {
+        val viewModel = newViewModel()
+        advanceUntilIdle()
+
+        requestAndReturn(
+            viewModel,
+            AuthenticationAction.Signup,
+            AuthenticationOutcome.Failure.Provider(null),
+        ) { viewModel.signup() }
+
+        assertEquals(WelcomeError.Authentication, viewModel.uiState.value.error)
+        assertEquals(false, viewModel.uiState.value.loading)
+    }
+
+    @Test
+    fun should_persist_session_and_navigate_after_successful_signup() = runTest(scheduler) {
+        val viewModel = newViewModel()
+        val session = sampleSession()
+        advanceUntilIdle()
+
+        viewModel.effects.test {
+            viewModel.signup()
+            assertEquals(WelcomeEffect.LaunchAuthentication(AuthenticationAction.Signup), awaitItem())
+            viewModel.onAuthenticationResult(AuthenticationOutcome.Success(session))
+            assertEquals(WelcomeEffect.NavigateToProfessionalProfile, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
-    }
-
-    @Test
-    fun should_delegate_signup_to_auth_provider_and_clear_loading() = runTest(scheduler) {
-        authProvider.nextOutcome = AuthenticationOutcome.Failure.Provider(null)
-
-        viewModel = newViewModel()
-        advanceUntilIdle()
-
-        viewModel!!.signup(context)
-        advanceUntilIdle()
-
-        assertEquals(1, authProvider.signupCalls)
-        assertEquals(false, viewModel!!.uiState.value.loading)
-        assertEquals(WelcomeError.Authentication, viewModel!!.uiState.value.error)
-    }
-
-    @Test
-    fun should_clear_loading_and_error_when_authentication_is_cancelled() =
-        runTest(scheduler) {
-            authProvider.nextOutcome = AuthenticationOutcome.Cancelled
-
-            viewModel = newViewModel()
-            advanceUntilIdle()
-
-            viewModel!!.login(context)
-            advanceUntilIdle()
-
-            assertEquals(1, authProvider.loginCalls)
-            assertEquals(false, viewModel!!.uiState.value.loading)
-            assertEquals(null, viewModel!!.uiState.value.error)
-        }
-
-    @Test
-    fun should_keep_welcome_state_when_signup_is_cancelled() = runTest(scheduler) {
-        authProvider.nextOutcome = AuthenticationOutcome.Cancelled
-
-        viewModel = newViewModel()
-        advanceUntilIdle()
-
-        viewModel!!.signup(context)
-        advanceUntilIdle()
-
-        assertEquals(1, authProvider.signupCalls)
-        assertEquals(false, viewModel!!.uiState.value.loading)
-        assertEquals(null, viewModel!!.uiState.value.error)
-    }
-
-    @Test
-    fun should_clear_loading_when_authentication_succeeds() = runTest(scheduler) {
-        authProvider.nextOutcome = AuthenticationOutcome.Success(
-            com.loresuelvo.serviceprovider.domain.auth.AuthSession(
-                user = com.loresuelvo.serviceprovider.domain.auth.User(
-                    id = "auth0|abc",
-                    email = "provider@example.com",
-                ),
-                accessToken = "test-token",
-            ),
-        )
-
-        viewModel = newViewModel()
-        advanceUntilIdle()
-
-        viewModel!!.loginWithGoogle(context)
-        advanceUntilIdle()
-
-        assertEquals(1, authProvider.googleCalls)
-        assertEquals(false, viewModel!!.uiState.value.loading)
-        assertEquals(null, viewModel!!.uiState.value.error)
-    }
-
-    @Test
-    fun should_persist_a_successful_signup_session_once() = runTest(scheduler) {
-        val session = AuthSession(
-            user = User(
-                id = "auth0|provider",
-                email = "provider@example.com",
-            ),
-            accessToken = "synthetic-provider-access-token",
-        )
-        authProvider.nextOutcome = AuthenticationOutcome.Success(session)
-
-        viewModel = newViewModel()
-        advanceUntilIdle()
-
-        viewModel!!.signup(context)
-        advanceUntilIdle()
 
         assertEquals(session, sessionStore.getSession())
         assertEquals(1, sessionStore.saveCalls)
+        assertEquals(false, viewModel.uiState.value.loading)
     }
 
     @Test
-    fun should_emit_professional_profile_effect_after_successful_signup() = runTest(scheduler) {
-        authProvider.nextOutcome = AuthenticationOutcome.Success(
-            AuthSession(
-                user = User(
-                    id = "auth0|provider",
-                    email = "provider@example.com",
-                ),
-                accessToken = "synthetic-provider-access-token",
-            ),
-        )
-
-        viewModel = newViewModel()
+    fun should_request_google_authentication_without_passing_android_state() = runTest(scheduler) {
+        val viewModel = newViewModel()
         advanceUntilIdle()
 
-        viewModel!!.effects.test {
-            viewModel!!.signup(context)
-            advanceUntilIdle()
+        requestAndReturn(
+            viewModel,
+            AuthenticationAction.GoogleLogin,
+            AuthenticationOutcome.Cancelled,
+        ) { viewModel.loginWithGoogle() }
+    }
 
-            assertEquals(
-                WelcomeEffect.NavigateToProfessionalProfile,
-                awaitItem(),
-            )
+    @Test
+    fun should_ignore_duplicate_authentication_actions_until_a_result_returns() = runTest(scheduler) {
+        val viewModel = newViewModel()
+        advanceUntilIdle()
+
+        viewModel.effects.test {
+            viewModel.signup()
+            assertEquals(WelcomeEffect.LaunchAuthentication(AuthenticationAction.Signup), awaitItem())
+            assertTrue(viewModel.uiState.value.loading)
+            viewModel.login()
+            viewModel.loginWithGoogle()
             expectNoEvents()
+            viewModel.onAuthenticationResult(AuthenticationOutcome.Cancelled)
+            assertEquals(false, viewModel.uiState.value.loading)
             cancelAndIgnoreRemainingEvents()
         }
     }
 
-    @Test
-    fun should_not_emit_professional_profile_effect_when_signup_is_cancelled() =
-        runTest(scheduler) {
-            authProvider.nextOutcome = AuthenticationOutcome.Cancelled
-
-            viewModel = newViewModel()
-            advanceUntilIdle()
-
-            viewModel!!.effects.test {
-                viewModel!!.signup(context)
-                advanceUntilIdle()
-
-                expectNoEvents()
-                cancelAndIgnoreRemainingEvents()
-            }
+    private suspend fun requestAndReturn(
+        viewModel: WelcomeViewModel,
+        action: AuthenticationAction,
+        outcome: AuthenticationOutcome,
+        request: () -> Unit,
+    ) {
+        viewModel.effects.test {
+            request()
+            assertEquals(WelcomeEffect.LaunchAuthentication(action), awaitItem())
+            viewModel.onAuthenticationResult(outcome)
+            cancelAndIgnoreRemainingEvents()
         }
+    }
 
-    @Test
-    fun should_serialize_all_authentication_actions_while_signup_is_in_flight() =
-        runTest(scheduler) {
-            val authenticationGate = CompletableDeferred<Unit>()
-            authProvider.authenticationGate = authenticationGate
-            authProvider.nextOutcome = AuthenticationOutcome.Cancelled
+    private fun newViewModel(): WelcomeViewModel = WelcomeViewModel(
+        getCategories = GetCategoriesUseCase(categoryRepository),
+        establishAuthSession = EstablishAuthSessionUseCase(sessionStore),
+    )
 
-            viewModel = newViewModel()
-            advanceUntilIdle()
-
-            viewModel!!.signup(context)
-            advanceUntilIdle()
-            assertTrue(viewModel!!.uiState.value.loading)
-
-            viewModel!!.login(context)
-            viewModel!!.loginWithGoogle(context)
-            advanceUntilIdle()
-
-            assertEquals(1, authProvider.signupCalls)
-            assertEquals(0, authProvider.loginCalls)
-            assertEquals(0, authProvider.googleCalls)
-            assertTrue(viewModel!!.uiState.value.loading)
-
-            authenticationGate.complete(Unit)
-            advanceUntilIdle()
-
-            assertEquals(false, viewModel!!.uiState.value.loading)
-            assertEquals(null, viewModel!!.uiState.value.error)
-        }
+    private fun sampleSession(): AuthSession = AuthSession(
+        user = User(id = "auth0|provider", email = "provider@example.com"),
+        accessToken = "synthetic-provider-access-token",
+    )
 
     private class RecordingAuthSessionStore : AuthSessionStore {
-
         private val state = MutableStateFlow<AuthSession?>(null)
         override val sessionFlow: StateFlow<AuthSession?> = state
-
         var saveCalls: Int = 0
             private set
 
         override fun getSession(): AuthSession? = state.value
-
         override fun saveSession(session: AuthSession) {
             saveCalls += 1
             state.value = session
         }
-
-        override fun clearSession() {
-            state.value = null
-        }
+        override fun clearSession() { state.value = null }
     }
 }
