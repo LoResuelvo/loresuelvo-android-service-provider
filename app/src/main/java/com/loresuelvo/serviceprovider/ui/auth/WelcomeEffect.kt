@@ -9,5 +9,4 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
  */
 sealed interface WelcomeEffect {
     data class LaunchAuthentication(val action: AuthenticationAction) : WelcomeEffect
-    data object NavigateToProfessionalProfile : WelcomeEffect
 }

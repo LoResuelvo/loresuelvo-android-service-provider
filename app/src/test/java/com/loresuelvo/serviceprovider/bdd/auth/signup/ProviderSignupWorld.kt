@@ -8,13 +8,16 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
 import com.loresuelvo.serviceprovider.domain.auth.User
+import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
+import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.usecase.auth.EstablishAuthSessionUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.account.ResolveProviderEntryUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeError
-import com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verifyOrder
@@ -66,7 +69,14 @@ class ProviderSignupWorld : AutoCloseable {
     )
 
     private lateinit var viewModel: WelcomeViewModel
-    private var profileNavigationRequested = false
+    private var providerEntryOutcome: com.loresuelvo.serviceprovider.domain.account.ProviderEntryOutcome? = null
+    private val resolveProviderEntry = ResolveProviderEntryUseCase(
+        sessionStore = sessionStore,
+        currentAccountRepository = object : CurrentAccountRepository {
+            override suspend fun getCurrentAccount(): CurrentAccountOutcome =
+                CurrentAccountOutcome.Failure.NotFound
+        },
+    )
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -82,9 +92,6 @@ class ProviderSignupWorld : AutoCloseable {
                 when (effect) {
                     is WelcomeEffect.LaunchAuthentication -> {
                         viewModel.onAuthenticationResult(authenticationLauncher.launch(effect.action))
-                    }
-                    WelcomeEffect.NavigateToProfessionalProfile -> {
-                        profileNavigationRequested = true
                     }
                 }
             }
@@ -120,6 +127,10 @@ class ProviderSignupWorld : AutoCloseable {
     fun finishSuccessfulSignup() {
         check(::viewModel.isInitialized) { "Success scenario must seed its local session first" }
         viewModel.signup()
+        scheduler.advanceUntilIdle()
+        effectScope.launch {
+            providerEntryOutcome = resolveProviderEntry()
+        }
         scheduler.advanceUntilIdle()
     }
 
@@ -212,8 +223,8 @@ class ProviderSignupWorld : AutoCloseable {
 
     fun assertProfessionalProfileNavigationRequested() {
         assertTrue(
-            "Successful authentication must request professional-profile navigation",
-            profileNavigationRequested,
+            "A new authenticated identity must resolve to professional profile",
+            providerEntryOutcome is com.loresuelvo.serviceprovider.domain.account.ProviderEntryOutcome.IncompleteProfile,
         )
     }
 

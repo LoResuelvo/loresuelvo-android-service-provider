@@ -198,6 +198,8 @@ dependencies {
     implementation(libs.androidx.junit.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     // Hilt (added in Fase 1)
     implementation(libs.hilt.android)

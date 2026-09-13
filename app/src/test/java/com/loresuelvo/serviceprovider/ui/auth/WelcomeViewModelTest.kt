@@ -97,7 +97,7 @@ class WelcomeViewModelTest {
     }
 
     @Test
-    fun should_persist_session_and_navigate_after_successful_signup() = runTest(scheduler) {
+    fun should_persist_session_after_successful_signup() = runTest(scheduler) {
         val viewModel = newViewModel()
         val session = sampleSession()
         advanceUntilIdle()
@@ -106,7 +106,7 @@ class WelcomeViewModelTest {
             viewModel.signup()
             assertEquals(WelcomeEffect.LaunchAuthentication(AuthenticationAction.Signup), awaitItem())
             viewModel.onAuthenticationResult(AuthenticationOutcome.Success(session))
-            assertEquals(WelcomeEffect.NavigateToProfessionalProfile, awaitItem())
+            expectNoEvents()
             cancelAndIgnoreRemainingEvents()
         }
 

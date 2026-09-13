@@ -3,15 +3,12 @@ package com.loresuelvo.serviceprovider.ui.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.loresuelvo.serviceprovider.R
 
 /**
  * Pure graph layer. The host
@@ -51,23 +48,9 @@ fun LoResuelvoNavHost(
 }
 
 /**
- * Placeholder Home body. Wired into the navigation graph so the
- * Route.Home declaration compiles today; the real home / inbox
- * screen lands in a follow-up US (provider inbox).
- */
-@Composable
-fun HomePlaceholder() {
-    Box(modifier = Modifier.padding(24.dp)) {
-        Text(text = stringResource(R.string.home_placeholder_title))
-    }
-}
-
-/**
  * Placeholder Mercado Pago linking body reached after profile completion.
  */
 @Composable
 fun MercadoPagoPlaceholder() {
-    Box(modifier = Modifier.padding(24.dp)) {
-        Text(text = stringResource(R.string.mercadopago_placeholder_title))
-    }
+    Box(modifier = Modifier.padding(24.dp))
 }

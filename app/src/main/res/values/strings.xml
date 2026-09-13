@@ -21,6 +21,34 @@
     <string name="welcome_auth_server_error">El servicio no está disponible (código %1$d). Intentá más tarde.</string>
     <string name="welcome_auth_unauthorized_error">Tu sesión no es válida. Volvé a iniciar sesión.</string>
 
+    <!-- Provider entry -->
+    <string name="provider_entry_loading">Estamos preparando tu cuenta…</string>
+    <string name="provider_entry_error_title">No pudimos cargar tu cuenta</string>
+    <string name="provider_entry_error_description">Revisá tu conexión e intentá de nuevo. Tu sesión sigue activa.</string>
+    <string name="provider_entry_retry">Reintentar</string>
+    <string name="provider_entry_account_mismatch_title">Esta cuenta no es de prestador</string>
+    <string name="provider_entry_account_mismatch_description">Para usar la aplicación de prestadores necesitás una cuenta registrada para ofrecer servicios.</string>
+    <string name="provider_entry_account_mismatch_action">Volver a bienvenida</string>
+
+    <!-- Provider Home -->
+    <string name="provider_home_title">Inicio</string>
+    <string name="provider_home_greeting">Hola, %1$s</string>
+    <string name="provider_home_photo_description">Foto de perfil de %1$s</string>
+    <string name="provider_home_requests_count_label">Solicitudes pendientes</string>
+    <string name="provider_home_scheduled_count_label">Trabajos agendados</string>
+    <string name="provider_home_actions_title">Acciones</string>
+    <string name="provider_home_requests_action">Solicitudes</string>
+    <string name="provider_home_scheduled_action">Trabajos agendados</string>
+    <string name="provider_home_mercadopago_action">Mercado Pago</string>
+    <string name="provider_home_detail_unavailable">Las vistas detalladas estarán disponibles próximamente.</string>
+    <string name="provider_home_requests_title">Solicitudes pendientes</string>
+    <string name="provider_home_requests_empty">No tenés solicitudes pendientes.</string>
+    <string name="provider_home_scheduled_title">Trabajos agendados</string>
+    <string name="provider_home_scheduled_empty">No tenés trabajos agendados.</string>
+    <string name="provider_home_section_error">No pudimos cargar esta sección.</string>
+    <string name="provider_home_retry">Reintentar</string>
+    <string name="provider_home_scheduled_on">Programado para %1$s</string>
+
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>
     <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>

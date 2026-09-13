@@ -10,6 +10,13 @@ import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLaunche
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
+import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
+import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
+import com.loresuelvo.serviceprovider.domain.activity.JobRequest
+import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
@@ -91,6 +98,21 @@ class ProviderSignupProviderRepository : ProviderRepository {
         getProfileOutcome
 }
 
+class ProviderSignupCurrentAccountRepository : CurrentAccountRepository {
+    override suspend fun getCurrentAccount(): CurrentAccountOutcome =
+        CurrentAccountOutcome.Failure.NotFound
+}
+
+class ProviderSignupJobRequestRepository : JobRequestRepository {
+    override suspend fun getPendingJobRequests(): ActivityLoadOutcome<JobRequest> =
+        ActivityLoadOutcome.Success(emptyList())
+}
+
+class ProviderSignupWorkOrderRepository : WorkOrderRepository {
+    override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> =
+        ActivityLoadOutcome.Success(emptyList())
+}
+
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
@@ -146,6 +168,39 @@ object ProviderSignupRepositoryTestModule {
     fun provideProviderRepositoryBinding(
         implementation: ProviderSignupProviderRepository,
     ): ProviderRepository = implementation
+
+    @Provides
+    @Singleton
+    fun provideCurrentAccountRepository(): ProviderSignupCurrentAccountRepository =
+        ProviderSignupCurrentAccountRepository()
+
+    @Provides
+    @Singleton
+    fun provideCurrentAccountRepositoryBinding(
+        implementation: ProviderSignupCurrentAccountRepository,
+    ): CurrentAccountRepository = implementation
+
+    @Provides
+    @Singleton
+    fun provideJobRequestRepository(): ProviderSignupJobRequestRepository =
+        ProviderSignupJobRequestRepository()
+
+    @Provides
+    @Singleton
+    fun provideJobRequestRepositoryBinding(
+        implementation: ProviderSignupJobRequestRepository,
+    ): JobRequestRepository = implementation
+
+    @Provides
+    @Singleton
+    fun provideWorkOrderRepository(): ProviderSignupWorkOrderRepository =
+        ProviderSignupWorkOrderRepository()
+
+    @Provides
+    @Singleton
+    fun provideWorkOrderRepositoryBinding(
+        implementation: ProviderSignupWorkOrderRepository,
+    ): WorkOrderRepository = implementation
 
     @Provides
     @Singleton

@@ -3,14 +3,20 @@ package com.loresuelvo.serviceprovider.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
+import com.loresuelvo.serviceprovider.ui.entry.ProviderEntryUiState
+import com.loresuelvo.serviceprovider.ui.entry.ProviderEntryViewModel
+import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderAccountMismatchScreen
+import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderEntryErrorScreen
+import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderEntryLoadingScreen
 import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
+import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
 import com.loresuelvo.serviceprovider.ui.screens.paymentaccount.MercadoPagoConnectRoute
 import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
 
@@ -27,16 +33,43 @@ import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfile
 fun LoResuelvoNav(
     browserAuthenticationLauncher: BrowserAuthenticationLauncher,
 ) {
-    val navController = rememberNavController()
+    val entryViewModel: ProviderEntryViewModel = hiltViewModel()
+    val entryState by entryViewModel.uiState.collectAsStateWithLifecycle()
 
-    LoResuelvoNavHost(
-        navController = navController,
-        startDestination = Route.Welcome.path,
-        welcome = { WelcomeRoute(navController, browserAuthenticationLauncher) },
-        professionalProfile = { CompleteProviderProfileRoute(navController) },
-        home = { HomePlaceholder() },
-        mercadoPago = { MercadoPagoConnectRoute(navController) },
-    )
+    when (val state = entryState) {
+        ProviderEntryUiState.Loading -> ProviderEntryLoadingScreen()
+        ProviderEntryUiState.AccountMismatch -> ProviderAccountMismatchScreen(entryViewModel::continueToWelcome)
+        ProviderEntryUiState.RetryableError -> ProviderEntryErrorScreen(entryViewModel::retry)
+        else -> {
+            val startDestination = when (state) {
+                ProviderEntryUiState.Welcome -> Route.Welcome.path
+                ProviderEntryUiState.CompleteProviderProfile -> Route.CompleteProviderProfile.path
+                is ProviderEntryUiState.Home -> Route.Home.path
+                else -> error("Unsupported provider entry state")
+            }
+            val provider = (state as? ProviderEntryUiState.Home)?.account
+
+            key(startDestination) {
+                val navController = rememberNavController()
+                LoResuelvoNavHost(
+                    navController = navController,
+                    startDestination = startDestination,
+                    welcome = { WelcomeRoute(browserAuthenticationLauncher) },
+                    professionalProfile = { CompleteProviderProfileRoute(navController) },
+                    home = {
+                        provider?.let { ProviderHomeRoute(navController, it) }
+                    },
+                    mercadoPago = {
+                        MercadoPagoConnectRoute(
+                            navController = navController,
+                            onHomeRequested = entryViewModel::refresh,
+                            onWelcomeRequested = entryViewModel::refresh,
+                        )
+                    },
+                )
+            }
+        }
+    }
 }
 
 /**
@@ -46,14 +79,13 @@ fun LoResuelvoNav(
  */
 @Composable
 private fun WelcomeRoute(
-    navController: NavHostController,
     browserAuthenticationLauncher: BrowserAuthenticationLauncher,
 ) {
     val viewModel: WelcomeViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    LaunchedEffect(viewModel, navController, browserAuthenticationLauncher) {
+    LaunchedEffect(viewModel, browserAuthenticationLauncher) {
         viewModel.effects.collect { effect ->
             when (effect) {
                 is com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect.LaunchAuthentication ->
@@ -62,11 +94,6 @@ private fun WelcomeRoute(
                         action = effect.action,
                         onResult = viewModel::onAuthenticationResult,
                     )
-                com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect.NavigateToProfessionalProfile ->
-                    navController.navigate(Route.CompleteProviderProfile.path) {
-                        popUpTo(Route.Welcome.path) { inclusive = true }
-                        launchSingleTop = true
-                    }
             }
         }
     }

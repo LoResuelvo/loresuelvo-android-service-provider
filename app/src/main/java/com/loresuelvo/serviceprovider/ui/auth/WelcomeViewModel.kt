@@ -105,7 +105,6 @@ class WelcomeViewModel @Inject constructor(
             is AuthenticationOutcome.Success -> {
                 establishAuthSession(outcome.session)
                 _uiState.update { it.copy(error = null) }
-                _effects.trySend(WelcomeEffect.NavigateToProfessionalProfile)
             }
         }
         _uiState.update { it.copy(loading = false) }

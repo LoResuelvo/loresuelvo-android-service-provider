@@ -21,6 +21,34 @@
     <string name="welcome_auth_server_error">The service is unavailable (code %1$d). Try again later.</string>
     <string name="welcome_auth_unauthorized_error">Your session is invalid. Please sign in again.</string>
 
+    <!-- Provider entry -->
+    <string name="provider_entry_loading">Preparing your account…</string>
+    <string name="provider_entry_error_title">We couldn\'t load your account</string>
+    <string name="provider_entry_error_description">Check your connection and try again. Your session is still active.</string>
+    <string name="provider_entry_retry">Retry</string>
+    <string name="provider_entry_account_mismatch_title">This account is not a provider account</string>
+    <string name="provider_entry_account_mismatch_description">To use the provider app, you need an account registered to offer services.</string>
+    <string name="provider_entry_account_mismatch_action">Back to welcome</string>
+
+    <!-- Provider Home -->
+    <string name="provider_home_title">Home</string>
+    <string name="provider_home_greeting">Hello, %1$s</string>
+    <string name="provider_home_photo_description">Profile photo of %1$s</string>
+    <string name="provider_home_requests_count_label">Pending requests</string>
+    <string name="provider_home_scheduled_count_label">Scheduled jobs</string>
+    <string name="provider_home_actions_title">Actions</string>
+    <string name="provider_home_requests_action">Requests</string>
+    <string name="provider_home_scheduled_action">Scheduled jobs</string>
+    <string name="provider_home_mercadopago_action">Mercado Pago</string>
+    <string name="provider_home_detail_unavailable">Detailed views will be available soon.</string>
+    <string name="provider_home_requests_title">Pending requests</string>
+    <string name="provider_home_requests_empty">You have no pending requests.</string>
+    <string name="provider_home_scheduled_title">Scheduled jobs</string>
+    <string name="provider_home_scheduled_empty">You have no scheduled jobs.</string>
+    <string name="provider_home_section_error">We couldn\'t load this section.</string>
+    <string name="provider_home_retry">Retry</string>
+    <string name="provider_home_scheduled_on">Scheduled for %1$s</string>
+
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Complete your professional profile</string>
     <string name="provider_profile_description">Add the information your customers need to get to know you and find your services.</string>

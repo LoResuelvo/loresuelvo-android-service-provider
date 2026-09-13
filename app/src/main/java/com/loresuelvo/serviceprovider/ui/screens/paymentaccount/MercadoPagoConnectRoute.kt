@@ -11,7 +11,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.loresuelvo.serviceprovider.platform.paymentaccount.ExternalPaymentAccountBrowserLauncher
 import com.loresuelvo.serviceprovider.platform.paymentaccount.PaymentAccountBrowserLauncher
-import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.paymentaccount.MercadoPagoConnectEffect
 import com.loresuelvo.serviceprovider.ui.paymentaccount.MercadoPagoConnectViewModel
 
@@ -21,6 +20,8 @@ fun MercadoPagoConnectRoute(
     modifier: Modifier = Modifier,
     browserLauncher: PaymentAccountBrowserLauncher = remember { ExternalPaymentAccountBrowserLauncher() },
     viewModel: MercadoPagoConnectViewModel = hiltViewModel(),
+    onHomeRequested: () -> Unit = {},
+    onWelcomeRequested: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -29,16 +30,10 @@ fun MercadoPagoConnectRoute(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is MercadoPagoConnectEffect.NavigateToWelcome -> {
-                    navController.navigate(Route.Welcome.path) {
-                        popUpTo(0) { inclusive = true }
-                        launchSingleTop = true
-                    }
+                    onWelcomeRequested()
                 }
                 is MercadoPagoConnectEffect.NavigateToHome -> {
-                    navController.navigate(Route.Home.path) {
-                        popUpTo(Route.MercadoPagoConnect.path) { inclusive = true }
-                        launchSingleTop = true
-                    }
+                    onHomeRequested()
                 }
                 is MercadoPagoConnectEffect.LaunchBrowser -> {
                     val success = browserLauncher.launch(context, effect.url)
