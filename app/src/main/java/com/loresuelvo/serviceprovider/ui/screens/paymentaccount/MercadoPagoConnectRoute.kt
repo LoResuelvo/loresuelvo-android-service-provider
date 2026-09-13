@@ -41,7 +41,10 @@ fun MercadoPagoConnectRoute(
                     }
                 }
                 is MercadoPagoConnectEffect.LaunchBrowser -> {
-                    browserLauncher.launch(context, effect.url)
+                    val success = browserLauncher.launch(context, effect.url)
+                    if (!success) {
+                        viewModel.onBrowserLaunchFailed()
+                    }
                 }
             }
         }

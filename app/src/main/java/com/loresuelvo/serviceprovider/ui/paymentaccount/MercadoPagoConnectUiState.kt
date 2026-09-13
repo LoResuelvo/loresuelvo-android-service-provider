@@ -7,6 +7,7 @@ sealed interface MercadoPagoConnectError {
     data class Network(val message: String) : MercadoPagoConnectError
     data class Server(val code: Int, val message: String?) : MercadoPagoConnectError
     data object Unauthorized : MercadoPagoConnectError
+    data object BrowserLaunchFailed : MercadoPagoConnectError
 }
 
 data class MercadoPagoConnectUiState(
@@ -23,7 +24,7 @@ data class MercadoPagoConnectUiState(
         get() = !loading && !isConnecting && !isIneligible && !isUnauthenticated && accountStatus?.status == ConnectionStatus.PENDING
 
     val offersRetry: Boolean
-        get() = offersConnection
+        get() = error != null || offersConnection
 
     val offersContinueWithoutConnecting: Boolean
         get() = !loading && !isIneligible && !isUnauthenticated && accountStatus?.status == ConnectionStatus.PENDING

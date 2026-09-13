@@ -254,4 +254,70 @@ class ConnectMercadoPagoSteps {
     fun noMuestraLaCuentaComoConectada() {
         world.assertAccountNotShownAsConnected()
     }
+
+    @Given("que la API rechaza la sesión vencida del prestador")
+    fun apiRechazaSesionVencida() {
+        world.arrangeExpiredSessionRejectedByApi()
+    }
+
+    @When("^la app intenta (.+)$")
+    fun appIntentaAccion(accion: String) {
+        world.attemptAction(accion)
+    }
+
+    @Then("muestra un mensaje amigable y solicita iniciar sesión nuevamente")
+    fun muestraMensajeAmigableYSolicitaIniciarSesionNuevamente() {
+        world.assertFriendlyMessageAndLoginRequested()
+    }
+
+    @And("no confirma la conexión ni abre el navegador")
+    fun noConfirmaConexionNiAbreNavegador() {
+        world.assertConnectionNotConfirmedAndBrowserNotOpened()
+    }
+
+    @Given("^que ocurre (.+)$")
+    fun ocurreFallo(fallo: String) {
+        world.arrangeFailure(fallo)
+    }
+
+    @When("^el prestador intenta (.+)$")
+    fun prestadorIntentaAccion(accion: String) {
+        world.attemptUserAction(accion)
+    }
+
+    @Then("la app muestra un mensaje amigable sin confirmar una nueva conexión")
+    fun appMuestraMensajeAmigableSinConfirmarNuevaConexion() {
+        world.assertFriendlyErrorWithoutConfirmingConnection()
+    }
+
+    @And("^ofrece (reintentar .+)$")
+    fun ofreceRecuperacion(recuperacion: String) {
+        world.assertOffersRecovery(recuperacion)
+    }
+
+    @Given("que la consulta de estado falló al regresar del navegador")
+    fun consultaDeEstadoFalloAlRegresarDelNavegador() {
+        world.arrangeStatusQueryFailedOnReturnFromBrowser()
+    }
+
+    @And("la siguiente consulta a la API confirma connected")
+    fun siguienteConsultaALaApiConfirmaConnected() {
+        world.arrangeNextStatusQueryConfirmsConnected()
+    }
+
+    @When("el prestador selecciona Reintentar verificación")
+    fun prestadorSeleccionaReintentarVerificacion() {
+        world.selectRetryVerification()
+    }
+
+    @Then("la app vuelve a consultar el estado y muestra la cuenta conectada")
+    fun appVuelveAConsultarEstadoYMuestraCuentaConectada() {
+        world.assertStatusQueriedAgainAndAccountConnectedDisplayed()
+    }
+
+    @And("no solicita ni abre otra autorización")
+    fun noSolicitaNiAbreOtraAutorizacion() {
+        world.assertNoOtherAuthorizationRequestedOrOpened()
+    }
 }
+

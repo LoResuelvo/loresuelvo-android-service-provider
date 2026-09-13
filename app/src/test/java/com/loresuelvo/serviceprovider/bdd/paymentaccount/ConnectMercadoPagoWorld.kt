@@ -50,6 +50,8 @@ class ConnectMercadoPagoWorld : AutoCloseable {
 
     private var latestEffect: MercadoPagoConnectEffect? = null
     private var effectsJob: Job? = null
+    private var browserLaunchFails = false
+    private var browserLaunchCalls = 0
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -115,6 +117,12 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         effectsJob = testScope.launch {
             viewModel.effects.collect { effect ->
                 latestEffect = effect
+                if (effect is MercadoPagoConnectEffect.LaunchBrowser) {
+                    browserLaunchCalls++
+                    if (browserLaunchFails) {
+                        viewModel.onBrowserLaunchFailed()
+                    }
+                }
             }
         }
         scheduler.advanceUntilIdle()
@@ -310,6 +318,132 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         val state = viewModel.uiState.value
         assertFalse(state.canReceivePayments)
         assertTrue(state.accountStatus?.status != ConnectionStatus.CONNECTED)
+    }
+
+    fun arrangeExpiredSessionRejectedByApi() {
+        sessionStore.saveSession(
+            AuthSession(
+                user = User(id = "user-123", email = "provider@example.com"),
+                accessToken = "expired-token",
+            )
+        )
+        repository.outcome = PaymentAccountStatusOutcome.Failure.Unauthorized
+        repository.authorizationOutcome = PaymentAccountAuthorizationOutcome.Failure.Unauthorized
+    }
+
+    fun attemptAction(accion: String) {
+        when (accion) {
+            "consultar el estado de la cuenta" -> {
+                openMercadoPagoScreen()
+            }
+            "solicitar la autorización de conexión" -> {
+                repository.outcome = PaymentAccountStatusOutcome.Success(
+                    PaymentAccountStatus(status = ConnectionStatus.PENDING)
+                )
+                openMercadoPagoScreen()
+                repository.authorizationOutcome = PaymentAccountAuthorizationOutcome.Failure.Unauthorized
+                viewModel.onConnectClick()
+                scheduler.advanceUntilIdle()
+            }
+        }
+    }
+
+    fun assertFriendlyMessageAndLoginRequested() {
+        assertEquals(MercadoPagoConnectEffect.NavigateToWelcome, latestEffect)
+        assertTrue(viewModel.uiState.value.isUnauthenticated)
+    }
+
+    fun assertConnectionNotConfirmedAndBrowserNotOpened() {
+        assertFalse(viewModel.uiState.value.canReceivePayments)
+        assertEquals(0, browserLaunchCalls)
+    }
+
+    fun arrangeFailure(fallo: String) {
+        arrangeAuthenticatedProviderWithCompleteProfile()
+        when (fallo) {
+            "un error de red al consultar el estado" -> {
+                repository.outcome = PaymentAccountStatusOutcome.Failure.Network(java.io.IOException("Network error"))
+            }
+            "un error del servidor al consultar" -> {
+                repository.outcome = PaymentAccountStatusOutcome.Failure.Server(500, "Server error")
+            }
+            "un error temporal al solicitar autorización" -> {
+                arrangeAccountStatusPending()
+                repository.authorizationOutcome = PaymentAccountAuthorizationOutcome.Failure.Network(java.io.IOException("timeout"))
+            }
+            "la imposibilidad de abrir el navegador" -> {
+                arrangeAccountStatusPending()
+                arrangeValidAuthorizationUrl()
+                browserLaunchFails = true
+            }
+        }
+    }
+
+    fun attemptUserAction(accion: String) {
+        when (accion) {
+            "consultar el estado" -> {
+                openMercadoPagoScreen()
+            }
+            "conectar la cuenta" -> {
+                if (!this::viewModel.isInitialized) {
+                    openMercadoPagoScreen()
+                }
+                viewModel.onConnectClick()
+                scheduler.advanceUntilIdle()
+            }
+        }
+    }
+
+    fun assertFriendlyErrorWithoutConfirmingConnection() {
+        val state = viewModel.uiState.value
+        org.junit.Assert.assertNotNull(state.error)
+        assertFalse(state.canReceivePayments)
+        assertFalse(state.isConnecting)
+    }
+
+    fun assertOffersRecovery(recuperacion: String) {
+        val state = viewModel.uiState.value
+        when (recuperacion) {
+            "reintentar la consulta del estado" -> {
+                assertTrue(state.offersRecheckStatus || state.offersRetry)
+            }
+            "reintentar la conexión tras verificar el estado" -> {
+                assertTrue(state.offersConnection || state.offersRetry)
+                assertFalse(state.isConnecting)
+            }
+            "reintentar la apertura tras verificar el estado" -> {
+                assertTrue(state.offersConnection || state.offersRetry)
+                assertFalse(state.isConnecting)
+            }
+        }
+    }
+
+    fun arrangeStatusQueryFailedOnReturnFromBrowser() {
+        arrangeProviderAuthorizedAccess()
+        repository.outcome = PaymentAccountStatusOutcome.Failure.Network(java.io.IOException("timeout"))
+        viewModel.onReturnViaSuccessLink()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun arrangeNextStatusQueryConfirmsConnected() {
+        arrangeAccountStatusConnected()
+    }
+
+    fun selectRetryVerification() {
+        viewModel.onRetryVerification()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertStatusQueriedAgainAndAccountConnectedDisplayed() {
+        assertTrue(repository.getStatusCalls >= 2)
+        val state = viewModel.uiState.value
+        assertEquals(ConnectionStatus.CONNECTED, state.accountStatus?.status)
+        assertTrue(state.canReceivePayments)
+    }
+
+    fun assertNoOtherAuthorizationRequestedOrOpened() {
+        assertEquals(1, repository.requestAuthorizationCalls)
+        assertEquals(1, browserLaunchCalls)
     }
 
     override fun close() {

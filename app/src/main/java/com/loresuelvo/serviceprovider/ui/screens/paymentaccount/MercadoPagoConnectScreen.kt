@@ -138,6 +138,26 @@ fun MercadoPagoConnectScreen(
                         Text(text = stringResource(R.string.mercadopago_retry))
                     }
                 }
+                is MercadoPagoConnectError.BrowserLaunchFailed -> {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.mercadopago_error_browser_unavailable),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = onRetry,
+                        shape = RoundedCornerShape(10.dp),
+                    ) {
+                        Text(text = stringResource(R.string.mercadopago_retry))
+                    }
+                }
                 else -> Unit
             }
 

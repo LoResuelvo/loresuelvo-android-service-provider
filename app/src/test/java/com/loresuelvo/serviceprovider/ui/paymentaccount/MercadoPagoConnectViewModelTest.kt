@@ -460,6 +460,59 @@ class MercadoPagoConnectViewModelTest {
         assertTrue(state.canReceivePayments)
     }
 
+    @Test
+    fun should_handle_browser_launch_failure_and_set_error() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onBrowserLaunchFailed()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.error is MercadoPagoConnectError.BrowserLaunchFailed)
+        assertFalse(state.isConnecting)
+        assertTrue(state.offersConnection)
+    }
+
+    @Test
+    fun should_retry_verification_without_requesting_new_authorization() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onConnectClick()
+        advanceUntilIdle()
+        assertEquals(1, repository.requestAuthorizationCalls)
+
+        repository.outcome = PaymentAccountStatusOutcome.Failure.Network(IOException("timeout"))
+        viewModel.onReturnViaSuccessLink()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.error is MercadoPagoConnectError.Network)
+
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(
+                status = ConnectionStatus.CONNECTED,
+                accountId = "mp-acc-123",
+                canReceivePayments = true,
+                canSendServiceProposals = true,
+            ),
+        )
+        viewModel.onRetryVerification()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, repository.requestAuthorizationCalls)
+        assertEquals(ConnectionStatus.CONNECTED, state.accountStatus?.status)
+        assertTrue(state.canReceivePayments)
+    }
+
     private class FakePaymentAccountEligibilityChecker : PaymentAccountEligibilityChecker {
         var eligibility: PaymentAccountEligibility = PaymentAccountEligibility.Eligible
 

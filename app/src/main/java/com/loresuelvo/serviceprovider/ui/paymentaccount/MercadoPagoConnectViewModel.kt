@@ -75,6 +75,19 @@ class MercadoPagoConnectViewModel @Inject constructor(
         checkSessionAndLoadStatus()
     }
 
+    fun onRetryVerification() {
+        checkSessionAndLoadStatus()
+    }
+
+    fun onBrowserLaunchFailed() {
+        _uiState.update {
+            it.copy(
+                isConnecting = false,
+                error = MercadoPagoConnectError.BrowserLaunchFailed,
+            )
+        }
+    }
+
     fun onConnectClick() {
         if (_uiState.value.isConnecting || _uiState.value.loading || _uiState.value.isIneligible || _uiState.value.isUnauthenticated) return
         _uiState.update { it.copy(isConnecting = true, connectionIncomplete = false, error = null) }

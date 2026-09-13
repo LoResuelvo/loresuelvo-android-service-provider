@@ -87,4 +87,6 @@
     <string name="mercadopago_retry">Reintentar</string>
     <string name="mercadopago_connection_incomplete_title">Conexión no completada</string>
     <string name="mercadopago_connection_incomplete_description">La autorización no se completó. Podés reintentar la conexión o continuar sin conectar.</string>
+    <string name="mercadopago_error_browser_unavailable">No se pudo abrir el navegador para completar la conexión.</string>
+    <string name="mercadopago_retry_verification">Reintentar verificación</string>
 </resources>

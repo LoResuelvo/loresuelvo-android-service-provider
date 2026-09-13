@@ -83,7 +83,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     And no ofrece iniciar otra autorización
     And ofrece continuar a Home
 
-  @wip
   Scenario Outline: 12-MPC Solicitar una nueva sesión cuando la API rechaza la autenticación
     Given que la API rechaza la sesión vencida del prestador
     When la app intenta <accion>
@@ -95,7 +94,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
       | consultar el estado de la cuenta     |
       | solicitar la autorización de conexión|
 
-  @wip
   Scenario Outline: 13-MPC Informar un error temporal sin perder la recuperación
     Given que ocurre <fallo>
     When el prestador intenta <accion>
@@ -109,7 +107,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
       | un error temporal al solicitar autorización| conectar la cuenta        | reintentar la conexión tras verificar el estado   |
       | la imposibilidad de abrir el navegador     | conectar la cuenta        | reintentar la apertura tras verificar el estado   |
 
-  @wip
   Scenario: 14-MPC Reintentar la verificación sin repetir la autorización
     Given que la consulta de estado falló al regresar del navegador
     And la siguiente consulta a la API confirma connected
@@ -137,3 +134,4 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
       | una rotación del dispositivo                |
       | el paso de la app a segundo plano            |
       | la recreación del proceso de la aplicación   |
+
