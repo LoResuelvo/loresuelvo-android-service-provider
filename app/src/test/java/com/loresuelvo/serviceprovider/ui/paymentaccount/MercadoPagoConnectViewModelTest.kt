@@ -387,6 +387,79 @@ class MercadoPagoConnectViewModelTest {
         assertEquals(2, repository.callCount)
     }
 
+    @Test
+    fun should_handle_cancellation_link_and_mark_connection_incomplete() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onReturnViaCancellationLink()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, repository.callCount)
+        assertTrue(state.connectionIncomplete)
+        assertTrue(state.offersRetry)
+        assertTrue(state.offersContinueWithoutConnecting)
+        assertFalse(state.isConnecting)
+    }
+
+    @Test
+    fun should_reset_is_connecting_and_query_status_on_resume_from_browser() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onConnectClick()
+        assertTrue(viewModel.uiState.value.isConnecting)
+
+        viewModel.onResumeFromBrowser()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, repository.callCount)
+        assertFalse(state.isConnecting)
+        assertEquals(ConnectionStatus.PENDING, state.accountStatus?.status)
+        assertTrue(state.offersRetry)
+        assertTrue(state.offersContinueWithoutConnecting)
+    }
+
+    @Test
+    fun should_reset_connection_incomplete_when_status_becomes_connected() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onReturnViaCancellationLink()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.connectionIncomplete)
+
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(
+                status = ConnectionStatus.CONNECTED,
+                accountId = "mp-acc-123",
+                canReceivePayments = true,
+                canSendServiceProposals = true,
+            ),
+        )
+        viewModel.checkSessionAndLoadStatus()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.connectionIncomplete)
+        assertEquals(ConnectionStatus.CONNECTED, state.accountStatus?.status)
+        assertTrue(state.canReceivePayments)
+    }
+
     private class FakePaymentAccountEligibilityChecker : PaymentAccountEligibilityChecker {
         var eligibility: PaymentAccountEligibility = PaymentAccountEligibility.Eligible
 

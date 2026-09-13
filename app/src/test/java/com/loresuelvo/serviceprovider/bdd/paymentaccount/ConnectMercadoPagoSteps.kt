@@ -194,4 +194,64 @@ class ConnectMercadoPagoSteps {
     fun permiteVolverAConsultarEstadoOContinuarSinConectar() {
         world.assertAllowsRecheckingOrContinuingWithoutConnecting()
     }
+
+    @Given("que el prestador canceló la autorización en Mercado Pago")
+    fun prestadorCanceloAutorizacionEnMercadoPago() {
+        world.arrangeProviderCancelledAuthorization()
+    }
+
+    @When("el prestador regresa a la app mediante el enlace de cancelación")
+    fun prestadorRegresaALaAppMedianteEnlaceDeCancelacion() {
+        world.returnViaCancellationLink()
+    }
+
+    @Then("la app muestra que la conexión no se completó")
+    fun appMuestraQueLaConexionNoSeCompleto() {
+        world.assertConnectionNotCompletedDisplayed()
+    }
+
+    @And("permite reintentar o continuar sin conectar la cuenta")
+    fun permiteReintentarOContinuarSinConectarLaCuenta() {
+        world.assertAllowsRetryOrContinueWithoutConnecting()
+    }
+
+    @Given("que el prestador cerró el navegador sin completar la autorización")
+    fun prestadorCerroElNavegadorSinCompletarAutorizacion() {
+        world.arrangeProviderClosedBrowserWithoutAuthorizing()
+    }
+
+    @When("el prestador vuelve a la app")
+    fun prestadorVuelveALaApp() {
+        world.returnToApp()
+    }
+
+    @Then("la app consulta el estado y conserva la cuenta pendiente de conexión")
+    fun appConsultaElEstadoYConservaLaCuentaPendienteDeConexion() {
+        world.assertStatusQueriedAndAccountRetainedPending()
+    }
+
+    @Given("que el prestador completó su perfil profesional")
+    fun prestadorCompletoSuPerfilProfesional() {
+        world.arrangeAuthenticatedProviderWithCompleteProfile()
+    }
+
+    @And("su cuenta de Mercado Pago está pendiente de conexión")
+    fun suCuentaDeMercadoPagoEstaPendienteDeConexion() {
+        world.arrangePendingAccountAndOpenScreen()
+    }
+
+    @When("el prestador selecciona Continuar sin conectar")
+    fun prestadorSeleccionaContinuarSinConectar() {
+        world.selectContinueWithoutConnecting()
+    }
+
+    @Then("la app permite acceder a Home")
+    fun appPermiteAccederAHome() {
+        world.assertAccessToHomePermitted()
+    }
+
+    @And("no muestra la cuenta como conectada")
+    fun noMuestraLaCuentaComoConectada() {
+        world.assertAccountNotShownAsConnected()
+    }
 }

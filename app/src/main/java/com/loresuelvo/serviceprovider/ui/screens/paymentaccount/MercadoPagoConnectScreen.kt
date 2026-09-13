@@ -173,26 +173,56 @@ fun MercadoPagoConnectScreen(
                     if (!uiState.isIneligible) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            color = if (uiState.connectionIncomplete) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = stringResource(R.string.mercadopago_pending_title),
+                                    text = stringResource(
+                                        if (uiState.connectionIncomplete) {
+                                            R.string.mercadopago_connection_incomplete_title
+                                        } else {
+                                            R.string.mercadopago_pending_title
+                                        }
+                                    ),
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (uiState.connectionIncomplete) {
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = stringResource(R.string.mercadopago_pending_description),
+                                    text = stringResource(
+                                        if (uiState.connectionIncomplete) {
+                                            R.string.mercadopago_connection_incomplete_description
+                                        } else {
+                                            R.string.mercadopago_pending_description
+                                        }
+                                    ),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (uiState.connectionIncomplete) {
+                                        MaterialTheme.colorScheme.onErrorContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
                                 )
                             }
                         }
                         Spacer(modifier = Modifier.weight(1f, fill = false))
                         PrimaryButton(
-                            text = stringResource(R.string.mercadopago_connect_button),
+                            text = stringResource(
+                                if (uiState.connectionIncomplete) {
+                                    R.string.mercadopago_retry
+                                } else {
+                                    R.string.mercadopago_connect_button
+                                }
+                            ),
                             onClick = onConnectClick,
                             enabled = !uiState.loading && !uiState.isConnecting,
                         )

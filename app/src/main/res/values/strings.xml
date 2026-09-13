@@ -85,4 +85,6 @@
     <string name="mercadopago_continue_home">Continuar a Inicio</string>
     <string name="mercadopago_checking_status">Verificando estado de la cuenta…</string>
     <string name="mercadopago_retry">Reintentar</string>
+    <string name="mercadopago_connection_incomplete_title">Conexión no completada</string>
+    <string name="mercadopago_connection_incomplete_description">La autorización no se completó. Podés reintentar la conexión o continuar sin conectar.</string>
 </resources>

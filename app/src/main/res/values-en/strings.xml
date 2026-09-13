@@ -85,4 +85,6 @@
     <string name="mercadopago_continue_home">Continue to Home</string>
     <string name="mercadopago_checking_status">Checking account status…</string>
     <string name="mercadopago_retry">Retry</string>
+    <string name="mercadopago_connection_incomplete_title">Connection not completed</string>
+    <string name="mercadopago_connection_incomplete_description">The authorization was not completed. You can retry connecting or continue without connecting.</string>
 </resources>

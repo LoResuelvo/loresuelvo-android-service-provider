@@ -16,10 +16,14 @@ data class MercadoPagoConnectUiState(
     val isIneligible: Boolean = false,
     val ineligibleOrientation: String? = null,
     val accountStatus: PaymentAccountStatus? = null,
+    val connectionIncomplete: Boolean = false,
     val error: MercadoPagoConnectError? = null,
 ) {
     val offersConnection: Boolean
         get() = !loading && !isConnecting && !isIneligible && !isUnauthenticated && accountStatus?.status == ConnectionStatus.PENDING
+
+    val offersRetry: Boolean
+        get() = offersConnection
 
     val offersContinueWithoutConnecting: Boolean
         get() = !loading && !isIneligible && !isUnauthenticated && accountStatus?.status == ConnectionStatus.PENDING

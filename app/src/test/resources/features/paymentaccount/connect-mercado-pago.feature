@@ -54,7 +54,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then no muestra la conexión como exitosa
     And permite volver a consultar el estado o continuar sin conectar
 
-  @wip
   Scenario: 08-MPC Recuperarse de una autorización cancelada
     Given que el prestador canceló la autorización en Mercado Pago
     And la API informa que la cuenta sigue pendiente de conexión
@@ -62,7 +61,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app muestra que la conexión no se completó
     And permite reintentar o continuar sin conectar la cuenta
 
-  @wip
   Scenario: 09-MPC Recuperarse del cierre del navegador
     Given que el prestador cerró el navegador sin completar la autorización
     And la API informa que la cuenta sigue pendiente de conexión
@@ -70,7 +68,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app consulta el estado y conserva la cuenta pendiente de conexión
     And permite reintentar o continuar sin conectar la cuenta
 
-  @wip
   Scenario: 10-MPC Continuar a Home sin conectar Mercado Pago
     Given que el prestador completó su perfil profesional
     And su cuenta de Mercado Pago está pendiente de conexión

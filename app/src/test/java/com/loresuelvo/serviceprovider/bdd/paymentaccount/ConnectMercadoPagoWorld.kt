@@ -255,6 +255,63 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         assertTrue(state.offersContinueWithoutConnecting)
     }
 
+    fun arrangeProviderCancelledAuthorization() {
+        arrangeProviderAuthorizedAccess()
+    }
+
+    fun returnViaCancellationLink() {
+        viewModel.onReturnViaCancellationLink()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertConnectionNotCompletedDisplayed() {
+        val state = viewModel.uiState.value
+        assertTrue(state.connectionIncomplete)
+        assertFalse(state.canReceivePayments)
+    }
+
+    fun assertAllowsRetryOrContinueWithoutConnecting() {
+        val state = viewModel.uiState.value
+        assertTrue(state.offersRetry)
+        assertTrue(state.offersContinueWithoutConnecting)
+    }
+
+    fun arrangeProviderClosedBrowserWithoutAuthorizing() {
+        arrangeProviderAuthorizedAccess()
+    }
+
+    fun returnToApp() {
+        viewModel.onResumeFromBrowser()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertStatusQueriedAndAccountRetainedPending() {
+        val state = viewModel.uiState.value
+        assertTrue(repository.getStatusCalls >= 2)
+        assertEquals(ConnectionStatus.PENDING, state.accountStatus?.status)
+        assertFalse(state.canReceivePayments)
+    }
+
+    fun arrangePendingAccountAndOpenScreen() {
+        arrangeAccountStatusPending()
+        openMercadoPagoScreen()
+    }
+
+    fun selectContinueWithoutConnecting() {
+        viewModel.onContinueWithoutConnecting()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertAccessToHomePermitted() {
+        assertEquals(MercadoPagoConnectEffect.NavigateToHome, latestEffect)
+    }
+
+    fun assertAccountNotShownAsConnected() {
+        val state = viewModel.uiState.value
+        assertFalse(state.canReceivePayments)
+        assertTrue(state.accountStatus?.status != ConnectionStatus.CONNECTED)
+    }
+
     override fun close() {
         effectsJob?.cancel()
         scheduler.advanceUntilIdle()

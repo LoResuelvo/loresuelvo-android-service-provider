@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.ui.paymentaccount
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
@@ -54,8 +55,20 @@ class MercadoPagoConnectViewModel @Inject constructor(
     }
 
     fun onReturnViaSuccessLink() {
-        _uiState.update { it.copy(isConnecting = false) }
+        _uiState.update { it.copy(isConnecting = false, connectionIncomplete = false) }
         checkSessionAndLoadStatus()
+    }
+
+    fun onReturnViaCancellationLink() {
+        _uiState.update { it.copy(isConnecting = false, connectionIncomplete = true) }
+        checkSessionAndLoadStatus()
+    }
+
+    fun onResumeFromBrowser() {
+        if (_uiState.value.isConnecting) {
+            _uiState.update { it.copy(isConnecting = false) }
+            checkSessionAndLoadStatus()
+        }
     }
 
     fun verifyAccountStatus() {
@@ -64,7 +77,7 @@ class MercadoPagoConnectViewModel @Inject constructor(
 
     fun onConnectClick() {
         if (_uiState.value.isConnecting || _uiState.value.loading || _uiState.value.isIneligible || _uiState.value.isUnauthenticated) return
-        _uiState.update { it.copy(isConnecting = true, error = null) }
+        _uiState.update { it.copy(isConnecting = true, connectionIncomplete = false, error = null) }
         viewModelScope.launch {
             when (val outcome = requestPaymentAccountAuthorization()) {
                 is PaymentAccountAuthorizationOutcome.Success -> {
@@ -157,6 +170,7 @@ class MercadoPagoConnectViewModel @Inject constructor(
                     it.copy(
                         loading = false,
                         accountStatus = outcome.status,
+                        connectionIncomplete = if (outcome.status.status == ConnectionStatus.CONNECTED) false else it.connectionIncomplete,
                         error = null,
                     )
                 }
