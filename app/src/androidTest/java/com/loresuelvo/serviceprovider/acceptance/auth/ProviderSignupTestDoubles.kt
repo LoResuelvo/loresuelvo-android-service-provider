@@ -10,6 +10,8 @@ import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLaunche
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
@@ -141,4 +143,20 @@ object ProviderSignupRepositoryTestModule {
     fun provideProviderRepositoryBinding(
         implementation: ProviderSignupProviderRepository,
     ): ProviderRepository = implementation
+
+    @Provides
+    @Singleton
+    fun providePaymentAccountRepository(): ProviderSignupPaymentAccountRepository = ProviderSignupPaymentAccountRepository()
+
+    @Provides
+    @Singleton
+    fun providePaymentAccountRepositoryBinding(
+        implementation: ProviderSignupPaymentAccountRepository,
+    ): PaymentAccountRepository = implementation
+}
+
+class ProviderSignupPaymentAccountRepository : PaymentAccountRepository {
+    var outcome: PaymentAccountStatusOutcome = PaymentAccountStatusOutcome.Failure.Unauthorized
+
+    override suspend fun getStatus(): PaymentAccountStatusOutcome = outcome
 }

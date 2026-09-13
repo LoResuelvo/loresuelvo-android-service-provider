@@ -40,4 +40,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAuthSessionStore(impl: EncryptedAuthSessionStore): AuthSessionStore
+
+    @Binds
+    @Singleton
+    abstract fun bindPaymentAccountRepository(
+        impl: com.loresuelvo.serviceprovider.data.api.ApiPaymentAccountRepository,
+    ): com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
 }

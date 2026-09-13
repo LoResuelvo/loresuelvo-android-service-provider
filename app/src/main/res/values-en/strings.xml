@@ -71,5 +71,18 @@
 
     <!-- Navigation placeholders -->
     <string name="home_placeholder_title">Home (coming soon)</string>
-    <string name="mercadopago_placeholder_title">Mercado Pago linking (coming soon)</string>
+    <string name="mercadopago_placeholder_title">Mercado Pago connection (coming soon)</string>
+
+    <!-- Mercado Pago Connection -->
+    <string name="mercadopago_connect_title">Connect Mercado Pago account</string>
+    <string name="mercadopago_connect_description">Connect your Mercado Pago account to collect deposits and balances for your services.</string>
+    <string name="mercadopago_connect_button">Connect with Mercado Pago</string>
+    <string name="mercadopago_continue_without_connecting">Continue without connecting</string>
+    <string name="mercadopago_connected_title">Account connected</string>
+    <string name="mercadopago_connected_description">Your Mercado Pago account is connected and can receive payments.</string>
+    <string name="mercadopago_pending_title">Account pending connection</string>
+    <string name="mercadopago_pending_description">Your account is pending connection with Mercado Pago.</string>
+    <string name="mercadopago_continue_home">Continue to Home</string>
+    <string name="mercadopago_checking_status">Checking account status…</string>
+    <string name="mercadopago_retry">Retry</string>
 </resources>

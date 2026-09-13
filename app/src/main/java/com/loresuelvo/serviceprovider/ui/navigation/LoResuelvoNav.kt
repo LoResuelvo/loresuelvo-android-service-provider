@@ -11,6 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
+import com.loresuelvo.serviceprovider.ui.screens.paymentaccount.MercadoPagoConnectRoute
 import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
 
 /**
@@ -34,6 +35,7 @@ fun LoResuelvoNav(
         welcome = { WelcomeRoute(navController, browserAuthenticationLauncher) },
         professionalProfile = { CompleteProviderProfileRoute(navController) },
         home = { HomePlaceholder() },
+        mercadoPago = { MercadoPagoConnectRoute(navController) },
     )
 }
 

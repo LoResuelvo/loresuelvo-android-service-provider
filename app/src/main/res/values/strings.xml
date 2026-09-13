@@ -72,4 +72,17 @@
     <!-- Navigation placeholders -->
     <string name="home_placeholder_title">Inicio (próximamente)</string>
     <string name="mercadopago_placeholder_title">Vinculación con Mercado Pago (próximamente)</string>
+
+    <!-- Mercado Pago Connection -->
+    <string name="mercadopago_connect_title">Conectar cuenta de Mercado Pago</string>
+    <string name="mercadopago_connect_description">Conectá tu cuenta de Mercado Pago para poder cobrar señas y saldos de tus servicios.</string>
+    <string name="mercadopago_connect_button">Conectar con Mercado Pago</string>
+    <string name="mercadopago_continue_without_connecting">Continuar sin conectar</string>
+    <string name="mercadopago_connected_title">Cuenta conectada</string>
+    <string name="mercadopago_connected_description">Tu cuenta de Mercado Pago está conectada y puede recibir pagos.</string>
+    <string name="mercadopago_pending_title">Cuenta pendiente de conexión</string>
+    <string name="mercadopago_pending_description">Tu cuenta está pendiente de vinculación con Mercado Pago.</string>
+    <string name="mercadopago_continue_home">Continuar a Inicio</string>
+    <string name="mercadopago_checking_status">Verificando estado de la cuenta…</string>
+    <string name="mercadopago_retry">Reintentar</string>
 </resources>

@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.data.api
 import com.loresuelvo.serviceprovider.data.api.dto.CategoryDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConfirmFileRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.FileResponseDto
+import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountStatusDto
 import com.loresuelvo.serviceprovider.data.api.dto.PresignFileRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.PresignFileResponseDto
 import com.loresuelvo.serviceprovider.data.api.dto.ProviderSummaryDto
@@ -66,4 +67,7 @@ interface BackendApi {
         @Path("fileID") fileId: String,
         @Body request: ConfirmFileRequestDto,
     ): FileResponseDto
+
+    @GET("providers/me/payment-accounts")
+    suspend fun getPaymentAccountStatus(): PaymentAccountStatusDto
 }

@@ -1,0 +1,37 @@
+package com.loresuelvo.serviceprovider.bdd.paymentaccount
+
+import io.cucumber.java.After
+import io.cucumber.java.en.And
+import io.cucumber.java.en.Given
+import io.cucumber.java.en.Then
+import io.cucumber.java.en.When
+
+class ConnectMercadoPagoSteps {
+
+    private val world = ConnectMercadoPagoWorld()
+
+    @After
+    fun tearDown() {
+        world.close()
+    }
+
+    @Given("que no hay una sesión autenticada")
+    fun noHaySesionAutenticada() {
+        world.arrangeNoAuthenticatedSession()
+    }
+
+    @When("se intenta abrir la pantalla de Mercado Pago")
+    fun intentaAbrirPantallaMercadoPago() {
+        world.openMercadoPagoScreen()
+    }
+
+    @Then("la app solicita iniciar sesión")
+    fun appSolicitaIniciarSesion() {
+        world.assertLoginPrompted()
+    }
+
+    @And("no inicia una autorización de Mercado Pago")
+    fun noIniciaAutorizacionMercadoPago() {
+        world.assertNoAuthorizationInitiated()
+    }
+}
