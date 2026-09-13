@@ -11,6 +11,7 @@ sealed interface MercadoPagoConnectError {
 
 data class MercadoPagoConnectUiState(
     val loading: Boolean = false,
+    val isConnecting: Boolean = false,
     val isUnauthenticated: Boolean = false,
     val isIneligible: Boolean = false,
     val ineligibleOrientation: String? = null,
@@ -18,7 +19,7 @@ data class MercadoPagoConnectUiState(
     val error: MercadoPagoConnectError? = null,
 ) {
     val offersConnection: Boolean
-        get() = !loading && !isIneligible && !isUnauthenticated && accountStatus?.status == ConnectionStatus.PENDING
+        get() = !loading && !isConnecting && !isIneligible && !isUnauthenticated && accountStatus?.status == ConnectionStatus.PENDING
 
     val offersContinueWithoutConnecting: Boolean
         get() = !loading && !isIneligible && !isUnauthenticated && accountStatus?.status == ConnectionStatus.PENDING

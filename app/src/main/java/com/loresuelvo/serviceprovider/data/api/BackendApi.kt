@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.data.api
 import com.loresuelvo.serviceprovider.data.api.dto.CategoryDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConfirmFileRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.FileResponseDto
+import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountAuthorizationDto
 import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountStatusDto
 import com.loresuelvo.serviceprovider.data.api.dto.PresignFileRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.PresignFileResponseDto
@@ -70,4 +71,7 @@ interface BackendApi {
 
     @GET("providers/me/payment-accounts")
     suspend fun getPaymentAccountStatus(): PaymentAccountStatusDto
+
+    @POST("providers/me/payment-accounts/authorization")
+    suspend fun requestPaymentAccountAuthorization(): PaymentAccountAuthorizationDto
 }

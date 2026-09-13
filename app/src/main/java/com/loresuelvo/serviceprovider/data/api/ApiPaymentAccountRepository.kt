@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.mapper.toDomain
 import com.loresuelvo.serviceprovider.domain.api.ApiError
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import kotlinx.coroutines.CancellationException
@@ -34,6 +35,30 @@ class ApiPaymentAccountRepository @Inject constructor(
                     else PaymentAccountStatusOutcome.Failure.Server(error.code, error.errorMessage)
                 }
                 is ApiError.Unknown -> PaymentAccountStatusOutcome.Failure.Unknown(e)
+            }
+        }
+
+    override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome =
+        try {
+            val response = backendApi.requestPaymentAccountAuthorization()
+            PaymentAccountAuthorizationOutcome.Success(response.authorizationUrl)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: HttpException) {
+            when (e.code()) {
+                401 -> PaymentAccountAuthorizationOutcome.Failure.Unauthorized
+                403 -> PaymentAccountAuthorizationOutcome.Failure.Forbidden
+                else -> PaymentAccountAuthorizationOutcome.Failure.Server(e.code(), e.message())
+            }
+        } catch (e: Throwable) {
+            when (val error = e.toApiError()) {
+                is ApiError.Network -> PaymentAccountAuthorizationOutcome.Failure.Network(error.networkCause)
+                is ApiError.Unauthorized -> PaymentAccountAuthorizationOutcome.Failure.Unauthorized
+                is ApiError.Server -> {
+                    if (error.code == 403) PaymentAccountAuthorizationOutcome.Failure.Forbidden
+                    else PaymentAccountAuthorizationOutcome.Failure.Server(error.code, error.errorMessage)
+                }
+                is ApiError.Unknown -> PaymentAccountAuthorizationOutcome.Failure.Unknown(e)
             }
         }
 }

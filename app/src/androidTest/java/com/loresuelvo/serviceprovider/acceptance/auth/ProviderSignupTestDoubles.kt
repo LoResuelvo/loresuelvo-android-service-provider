@@ -10,6 +10,7 @@ import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLaunche
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
@@ -169,8 +170,11 @@ object ProviderSignupRepositoryTestModule {
 
 class ProviderSignupPaymentAccountRepository : PaymentAccountRepository {
     var outcome: PaymentAccountStatusOutcome = PaymentAccountStatusOutcome.Failure.Unauthorized
+    var authorizationOutcome: PaymentAccountAuthorizationOutcome =
+        PaymentAccountAuthorizationOutcome.Success("https://auth.mercadopago.com/authorization?client_id=123")
 
     override suspend fun getStatus(): PaymentAccountStatusOutcome = outcome
+    override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome = authorizationOutcome
 }
 
 class ProviderSignupPaymentAccountEligibilityChecker : PaymentAccountEligibilityChecker {

@@ -194,7 +194,7 @@ fun MercadoPagoConnectScreen(
                         PrimaryButton(
                             text = stringResource(R.string.mercadopago_connect_button),
                             onClick = onConnectClick,
-                            enabled = !uiState.loading,
+                            enabled = !uiState.loading && !uiState.isConnecting,
                         )
                         OutlinedButton(
                             onClick = onContinueWithoutConnecting,

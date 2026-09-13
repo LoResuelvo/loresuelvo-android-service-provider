@@ -1,7 +1,9 @@
 package com.loresuelvo.serviceprovider.data.api
 
+import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountAuthorizationDto
 import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountStatusDto
 import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -97,6 +99,79 @@ class ApiPaymentAccountRepositoryTest {
 
         assertFailsWith<CancellationException> {
             repository.getStatus()
+        }
+    }
+
+    @Test
+    fun requestAuthorization_returns_success_when_backend_returns_dto() = runTest {
+        val dto = PaymentAccountAuthorizationDto(
+            authorizationUrl = "https://auth.mercadopago.com/authorization?client_id=123",
+            state = "opaque-state",
+        )
+        coEvery { backendApi.requestPaymentAccountAuthorization() } returns dto
+
+        val result = repository.requestAuthorization()
+
+        assertTrue(result is PaymentAccountAuthorizationOutcome.Success)
+        val success = result as PaymentAccountAuthorizationOutcome.Success
+        assertEquals("https://auth.mercadopago.com/authorization?client_id=123", success.authorizationUrl)
+    }
+
+    @Test
+    fun requestAuthorization_returns_unauthorized_when_backend_throws_401() = runTest {
+        val response = Response.error<PaymentAccountAuthorizationDto>(
+            401,
+            "{\"error\":\"unauthorized\"}".toResponseBody("application/json".toMediaType()),
+        )
+        coEvery { backendApi.requestPaymentAccountAuthorization() } throws HttpException(response)
+
+        val result = repository.requestAuthorization()
+
+        assertEquals(PaymentAccountAuthorizationOutcome.Failure.Unauthorized, result)
+    }
+
+    @Test
+    fun requestAuthorization_returns_forbidden_when_backend_throws_403() = runTest {
+        val response = Response.error<PaymentAccountAuthorizationDto>(
+            403,
+            "{\"error\":\"forbidden\"}".toResponseBody("application/json".toMediaType()),
+        )
+        coEvery { backendApi.requestPaymentAccountAuthorization() } throws HttpException(response)
+
+        val result = repository.requestAuthorization()
+
+        assertEquals(PaymentAccountAuthorizationOutcome.Failure.Forbidden, result)
+    }
+
+    @Test
+    fun requestAuthorization_returns_server_error_when_backend_throws_500() = runTest {
+        val response = Response.error<PaymentAccountAuthorizationDto>(
+            500,
+            "{\"error\":\"server_error\"}".toResponseBody("application/json".toMediaType()),
+        )
+        coEvery { backendApi.requestPaymentAccountAuthorization() } throws HttpException(response)
+
+        val result = repository.requestAuthorization()
+
+        assertTrue(result is PaymentAccountAuthorizationOutcome.Failure.Server)
+        assertEquals(500, (result as PaymentAccountAuthorizationOutcome.Failure.Server).code)
+    }
+
+    @Test
+    fun requestAuthorization_returns_network_failure_when_ioexception_thrown() = runTest {
+        coEvery { backendApi.requestPaymentAccountAuthorization() } throws IOException("Connection reset")
+
+        val result = repository.requestAuthorization()
+
+        assertTrue(result is PaymentAccountAuthorizationOutcome.Failure.Network)
+    }
+
+    @Test
+    fun requestAuthorization_propagates_cancellation() = runTest {
+        coEvery { backendApi.requestPaymentAccountAuthorization() } throws CancellationException("Cancelled")
+
+        assertFailsWith<CancellationException> {
+            repository.requestAuthorization()
         }
     }
 }

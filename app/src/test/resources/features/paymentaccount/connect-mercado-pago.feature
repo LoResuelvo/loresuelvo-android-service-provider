@@ -27,7 +27,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app solicita iniciar sesión
     And no inicia una autorización de Mercado Pago
 
-  @wip
   Scenario: 04-MPC Abrir la autorización oficial en el navegador
     Given que el prestador puede conectar su cuenta de Mercado Pago
     And la API devuelve una URL de autorización válida
@@ -35,7 +34,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app abre la URL de autorización en el navegador
     And no solicita credenciales de Mercado Pago dentro de LoResuelvo
 
-  @wip
   Scenario: 05-MPC Evitar solicitudes de conexión duplicadas
     Given que una solicitud de conexión está en curso
     When el prestador vuelve a seleccionar Conectar con Mercado Pago

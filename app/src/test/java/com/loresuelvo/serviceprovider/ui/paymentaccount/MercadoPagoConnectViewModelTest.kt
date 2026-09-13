@@ -5,6 +5,7 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
@@ -12,6 +13,7 @@ import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.CheckPaymentAccountEligibilityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.GetPaymentAccountStatusUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.RequestPaymentAccountAuthorizationUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +43,7 @@ class MercadoPagoConnectViewModelTest {
     private lateinit var getStatusUseCase: GetPaymentAccountStatusUseCase
     private lateinit var eligibilityChecker: FakePaymentAccountEligibilityChecker
     private lateinit var checkEligibilityUseCase: CheckPaymentAccountEligibilityUseCase
+    private lateinit var requestAuthorizationUseCase: RequestPaymentAccountAuthorizationUseCase
 
     @Before
     fun setUp() {
@@ -50,14 +53,23 @@ class MercadoPagoConnectViewModelTest {
         getStatusUseCase = GetPaymentAccountStatusUseCase(repository)
         eligibilityChecker = FakePaymentAccountEligibilityChecker()
         checkEligibilityUseCase = CheckPaymentAccountEligibilityUseCase(eligibilityChecker)
+        requestAuthorizationUseCase = RequestPaymentAccountAuthorizationUseCase(repository)
     }
+
+    private fun createViewModel(): MercadoPagoConnectViewModel =
+        MercadoPagoConnectViewModel(
+            sessionStore = sessionStore,
+            getPaymentAccountStatus = getStatusUseCase,
+            checkPaymentAccountEligibility = checkEligibilityUseCase,
+            requestPaymentAccountAuthorization = requestAuthorizationUseCase,
+        )
 
     @After
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
     fun should_emit_navigate_to_welcome_when_no_session_present() = runTest(scheduler) {
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
 
         viewModel.effects.test {
             assertEquals(MercadoPagoConnectEffect.NavigateToWelcome, awaitItem())
@@ -73,7 +85,7 @@ class MercadoPagoConnectViewModelTest {
             PaymentAccountStatus(status = ConnectionStatus.PENDING),
         )
 
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -91,7 +103,7 @@ class MercadoPagoConnectViewModelTest {
         repository.outcome = PaymentAccountStatusOutcome.Success(
             PaymentAccountStatus(status = ConnectionStatus.PENDING),
         )
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
 
         viewModel.effects.test {
             viewModel.onContinueWithoutConnecting()
@@ -111,7 +123,7 @@ class MercadoPagoConnectViewModelTest {
             ),
         )
 
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -133,7 +145,7 @@ class MercadoPagoConnectViewModelTest {
                 canSendServiceProposals = true,
             ),
         )
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
 
         viewModel.effects.test {
             viewModel.onContinueHome()
@@ -146,7 +158,7 @@ class MercadoPagoConnectViewModelTest {
         sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
         eligibilityChecker.eligibility = PaymentAccountEligibility.Ineligible.IncompleteProfile
 
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -160,7 +172,7 @@ class MercadoPagoConnectViewModelTest {
         sessionStore.saveSession(AuthSession(User("1", "user@example.com"), "token"))
         eligibilityChecker.eligibility = PaymentAccountEligibility.Ineligible.NotAProvider
 
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -174,7 +186,7 @@ class MercadoPagoConnectViewModelTest {
         sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
         repository.outcome = PaymentAccountStatusOutcome.Failure.Unauthorized
 
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
 
         viewModel.effects.test {
             assertEquals(MercadoPagoConnectEffect.NavigateToWelcome, awaitItem())
@@ -190,7 +202,7 @@ class MercadoPagoConnectViewModelTest {
         sessionStore.saveSession(AuthSession(User("1", "user@example.com"), "token"))
         repository.outcome = PaymentAccountStatusOutcome.Failure.Forbidden
 
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -203,7 +215,7 @@ class MercadoPagoConnectViewModelTest {
         sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
         repository.outcome = PaymentAccountStatusOutcome.Failure.Network(IOException("timeout"))
 
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -215,12 +227,101 @@ class MercadoPagoConnectViewModelTest {
         sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
         repository.outcome = PaymentAccountStatusOutcome.Failure.Server(500, "Internal Server Error")
 
-        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertTrue(state.error is MercadoPagoConnectError.Server)
         assertEquals(500, (state.error as MercadoPagoConnectError.Server).code)
+    }
+
+    @Test
+    fun should_emit_launch_browser_when_request_authorization_succeeds() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.effects.test {
+            viewModel.onConnectClick()
+            val effect = awaitItem()
+            assertTrue(effect is MercadoPagoConnectEffect.LaunchBrowser)
+            assertEquals(
+                "https://auth.mercadopago.com/authorization?client_id=123",
+                (effect as MercadoPagoConnectEffect.LaunchBrowser).url,
+            )
+        }
+        assertEquals(1, repository.requestAuthorizationCalls)
+    }
+
+    @Test
+    fun should_not_request_authorization_again_when_already_connecting() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onConnectClick()
+        viewModel.onConnectClick()
+        advanceUntilIdle()
+
+        assertEquals(1, repository.requestAuthorizationCalls)
+    }
+
+    @Test
+    fun should_emit_welcome_and_clear_session_when_authorization_fails_unauthorized() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        repository.authorizationOutcome = PaymentAccountAuthorizationOutcome.Failure.Unauthorized
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.effects.test {
+            viewModel.onConnectClick()
+            assertEquals(MercadoPagoConnectEffect.NavigateToWelcome, awaitItem())
+        }
+        assertNull(sessionStore.getSession())
+        assertTrue(viewModel.uiState.value.isUnauthenticated)
+    }
+
+    @Test
+    fun should_set_network_error_when_authorization_fails_network() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        repository.authorizationOutcome = PaymentAccountAuthorizationOutcome.Failure.Network(IOException("timeout"))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onConnectClick()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.error is MercadoPagoConnectError.Network)
+    }
+
+    @Test
+    fun should_set_server_error_when_authorization_fails_server() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        repository.authorizationOutcome = PaymentAccountAuthorizationOutcome.Failure.Server(500, "Error")
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onConnectClick()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.error is MercadoPagoConnectError.Server)
     }
 
     private class FakePaymentAccountEligibilityChecker : PaymentAccountEligibilityChecker {
@@ -233,10 +334,19 @@ class MercadoPagoConnectViewModelTest {
         var outcome: PaymentAccountStatusOutcome = PaymentAccountStatusOutcome.Failure.Unauthorized
         var callCount = 0
             private set
+        var authorizationOutcome: PaymentAccountAuthorizationOutcome =
+            PaymentAccountAuthorizationOutcome.Success("https://auth.mercadopago.com/authorization?client_id=123")
+        var requestAuthorizationCalls = 0
+            private set
 
         override suspend fun getStatus(): PaymentAccountStatusOutcome {
             callCount++
             return outcome
+        }
+
+        override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome {
+            requestAuthorizationCalls++
+            return authorizationOutcome
         }
     }
 

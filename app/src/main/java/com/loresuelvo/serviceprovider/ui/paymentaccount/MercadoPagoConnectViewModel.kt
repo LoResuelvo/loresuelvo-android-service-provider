@@ -3,10 +3,12 @@ package com.loresuelvo.serviceprovider.ui.paymentaccount
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.CheckPaymentAccountEligibilityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.GetPaymentAccountStatusUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.RequestPaymentAccountAuthorizationUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +24,7 @@ class MercadoPagoConnectViewModel @Inject constructor(
     private val sessionStore: AuthSessionStore,
     private val getPaymentAccountStatus: GetPaymentAccountStatusUseCase,
     private val checkPaymentAccountEligibility: CheckPaymentAccountEligibilityUseCase,
+    private val requestPaymentAccountAuthorization: RequestPaymentAccountAuthorizationUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MercadoPagoConnectUiState())
@@ -47,6 +50,56 @@ class MercadoPagoConnectViewModel @Inject constructor(
     fun onContinueHome() {
         viewModelScope.launch {
             _effects.send(MercadoPagoConnectEffect.NavigateToHome)
+        }
+    }
+
+    fun onConnectClick() {
+        if (_uiState.value.isConnecting || _uiState.value.loading || _uiState.value.isIneligible || _uiState.value.isUnauthenticated) return
+        _uiState.update { it.copy(isConnecting = true, error = null) }
+        viewModelScope.launch {
+            when (val outcome = requestPaymentAccountAuthorization()) {
+                is PaymentAccountAuthorizationOutcome.Success -> {
+                    _effects.send(MercadoPagoConnectEffect.LaunchBrowser(outcome.authorizationUrl))
+                }
+                is PaymentAccountAuthorizationOutcome.Failure.Unauthorized -> {
+                    sessionStore.clearSession()
+                    _uiState.update { it.copy(isConnecting = false, isUnauthenticated = true) }
+                    _effects.send(MercadoPagoConnectEffect.NavigateToWelcome)
+                }
+                is PaymentAccountAuthorizationOutcome.Failure.Forbidden -> {
+                    _uiState.update {
+                        it.copy(
+                            isConnecting = false,
+                            isIneligible = true,
+                            ineligibleOrientation = "utilizar una cuenta de prestador",
+                        )
+                    }
+                }
+                is PaymentAccountAuthorizationOutcome.Failure.Network -> {
+                    _uiState.update {
+                        it.copy(
+                            isConnecting = false,
+                            error = MercadoPagoConnectError.Network(outcome.cause.message ?: "Network error"),
+                        )
+                    }
+                }
+                is PaymentAccountAuthorizationOutcome.Failure.Server -> {
+                    _uiState.update {
+                        it.copy(
+                            isConnecting = false,
+                            error = MercadoPagoConnectError.Server(outcome.code, outcome.message),
+                        )
+                    }
+                }
+                is PaymentAccountAuthorizationOutcome.Failure.Unknown -> {
+                    _uiState.update {
+                        it.copy(
+                            isConnecting = false,
+                            error = MercadoPagoConnectError.Server(500, outcome.cause.message),
+                        )
+                    }
+                }
+            }
         }
     }
 

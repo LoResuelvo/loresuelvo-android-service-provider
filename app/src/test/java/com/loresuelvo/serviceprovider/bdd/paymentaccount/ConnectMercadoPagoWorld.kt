@@ -7,10 +7,12 @@ import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.CheckPaymentAccountEligibilityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.GetPaymentAccountStatusUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.RequestPaymentAccountAuthorizationUseCase
 import com.loresuelvo.serviceprovider.ui.paymentaccount.MercadoPagoConnectEffect
 import com.loresuelvo.serviceprovider.ui.paymentaccount.MercadoPagoConnectViewModel
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +43,7 @@ class ConnectMercadoPagoWorld : AutoCloseable {
     private val getPaymentAccountStatus = GetPaymentAccountStatusUseCase(repository)
     private val eligibilityChecker = FakePaymentAccountEligibilityChecker()
     private val checkPaymentAccountEligibility = CheckPaymentAccountEligibilityUseCase(eligibilityChecker)
+    private val requestPaymentAccountAuthorization = RequestPaymentAccountAuthorizationUseCase(repository)
 
     lateinit var viewModel: MercadoPagoConnectViewModel
         private set
@@ -107,6 +110,7 @@ class ConnectMercadoPagoWorld : AutoCloseable {
             sessionStore = sessionStore,
             getPaymentAccountStatus = getPaymentAccountStatus,
             checkPaymentAccountEligibility = checkPaymentAccountEligibility,
+            requestPaymentAccountAuthorization = requestPaymentAccountAuthorization,
         )
         effectsJob = testScope.launch {
             viewModel.effects.collect { effect ->
@@ -169,6 +173,49 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         assertEquals(0, repository.getStatusCalls)
     }
 
+    fun arrangeProviderCanConnect() {
+        arrangeAuthenticatedProviderWithCompleteProfile()
+        arrangeAccountStatusPending()
+        openMercadoPagoScreen()
+    }
+
+    fun arrangeValidAuthorizationUrl() {
+        repository.authorizationOutcome = PaymentAccountAuthorizationOutcome.Success(
+            "https://auth.mercadopago.com/authorization?client_id=123"
+        )
+    }
+
+    fun selectConnectMercadoPago() {
+        viewModel.onConnectClick()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertAuthorizationUrlOpenedInBrowser() {
+        assertTrue(latestEffect is MercadoPagoConnectEffect.LaunchBrowser)
+        assertEquals(
+            "https://auth.mercadopago.com/authorization?client_id=123",
+            (latestEffect as MercadoPagoConnectEffect.LaunchBrowser).url
+        )
+    }
+
+    fun assertNoCredentialsRequestedWithinApp() {
+        assertFalse(viewModel.uiState.value.isIneligible)
+    }
+
+    fun arrangeConnectionRequestInProgress() {
+        arrangeProviderCanConnect()
+        arrangeValidAuthorizationUrl()
+        viewModel.onConnectClick()
+    }
+
+    fun assertNoOtherAuthorizationRequestedFromApi() {
+        assertEquals(1, repository.requestAuthorizationCalls)
+    }
+
+    fun assertNoOtherFlowOpenedInBrowser() {
+        assertEquals(1, repository.requestAuthorizationCalls)
+    }
+
     override fun close() {
         effectsJob?.cancel()
         scheduler.advanceUntilIdle()
@@ -179,10 +226,19 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         var outcome: PaymentAccountStatusOutcome = PaymentAccountStatusOutcome.Failure.Unauthorized
         var getStatusCalls = 0
             private set
+        var authorizationOutcome: PaymentAccountAuthorizationOutcome =
+            PaymentAccountAuthorizationOutcome.Success("https://auth.mercadopago.com/authorization?client_id=123")
+        var requestAuthorizationCalls = 0
+            private set
 
         override suspend fun getStatus(): PaymentAccountStatusOutcome {
             getStatusCalls++
             return outcome
+        }
+
+        override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome {
+            requestAuthorizationCalls++
+            return authorizationOutcome
         }
     }
 

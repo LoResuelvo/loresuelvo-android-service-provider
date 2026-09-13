@@ -99,4 +99,49 @@ class ConnectMercadoPagoSteps {
     fun ofreceContinuarAHome() {
         world.assertOffersContinueToHome()
     }
+
+    @Given("que el prestador puede conectar su cuenta de Mercado Pago")
+    fun prestadorPuedeConectarSuCuentaDeMercadoPago() {
+        world.arrangeProviderCanConnect()
+    }
+
+    @And("la API devuelve una URL de autorización válida")
+    fun apiDevuelveUrlDeAutorizacionValida() {
+        world.arrangeValidAuthorizationUrl()
+    }
+
+    @When("el prestador selecciona Conectar con Mercado Pago")
+    fun prestadorSeleccionaConectarConMercadoPago() {
+        world.selectConnectMercadoPago()
+    }
+
+    @Then("la app abre la URL de autorización en el navegador")
+    fun appAbreUrlDeAutorizacionEnElNavegador() {
+        world.assertAuthorizationUrlOpenedInBrowser()
+    }
+
+    @And("no solicita credenciales de Mercado Pago dentro de LoResuelvo")
+    fun noSolicitaCredencialesDeMercadoPagoDentroDeLoResuelvo() {
+        world.assertNoCredentialsRequestedWithinApp()
+    }
+
+    @Given("que una solicitud de conexión está en curso")
+    fun solicitudDeConexionEstaEnCurso() {
+        world.arrangeConnectionRequestInProgress()
+    }
+
+    @When("el prestador vuelve a seleccionar Conectar con Mercado Pago")
+    fun prestadorVuelveASeleccionarConectarConMercadoPago() {
+        world.selectConnectMercadoPago()
+    }
+
+    @Then("no se solicita otra autorización a la API")
+    fun noSeSolicitaOtraAutorizacionALaApi() {
+        world.assertNoOtherAuthorizationRequestedFromApi()
+    }
+
+    @And("no se abre otro flujo en el navegador")
+    fun noSeAbreOtroFlujoEnElNavegador() {
+        world.assertNoOtherFlowOpenedInBrowser()
+    }
 }
