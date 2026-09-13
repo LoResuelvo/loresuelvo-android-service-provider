@@ -216,6 +216,45 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         assertEquals(1, repository.requestAuthorizationCalls)
     }
 
+    fun arrangeProviderAuthorizedAccess() {
+        arrangeProviderCanConnect()
+        arrangeValidAuthorizationUrl()
+        viewModel.onConnectClick()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun returnViaSuccessLink() {
+        viewModel.onReturnViaSuccessLink()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertStatusQueriedFromApi() {
+        assertTrue(repository.getStatusCalls >= 2)
+    }
+
+    fun arrangeReturnViaSuccessLink() {
+        arrangeProviderAuthorizedAccess()
+        viewModel.onReturnViaSuccessLink()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun verifyAccountStatus() {
+        viewModel.verifyAccountStatus()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertConnectionNotSuccessful() {
+        val state = viewModel.uiState.value
+        assertFalse(state.canReceivePayments)
+        assertTrue(state.accountStatus?.status != ConnectionStatus.CONNECTED)
+    }
+
+    fun assertAllowsRecheckingOrContinuingWithoutConnecting() {
+        val state = viewModel.uiState.value
+        assertTrue(state.offersRecheckStatus)
+        assertTrue(state.offersContinueWithoutConnecting)
+    }
+
     override fun close() {
         effectsJob?.cancel()
         scheduler.advanceUntilIdle()

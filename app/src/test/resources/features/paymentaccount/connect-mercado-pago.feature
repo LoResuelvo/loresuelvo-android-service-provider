@@ -40,7 +40,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then no se solicita otra autorización a la API
     And no se abre otro flujo en el navegador
 
-  @wip
   Scenario: 06-MPC Confirmar la conexión al regresar de la autorización
     Given que el prestador autorizó el acceso en Mercado Pago
     And la API confirma el estado connected
@@ -48,7 +47,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app consulta el estado actualizado con la API
     And muestra que la cuenta está conectada y puede recibir pagos
 
-  @wip
   Scenario: 07-MPC No confirmar una conexión que la API aún no reconoce
     Given que el prestador regresa mediante el enlace de éxito
     And la API informa que la cuenta sigue pendiente de conexión

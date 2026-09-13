@@ -29,4 +29,7 @@ data class MercadoPagoConnectUiState(
 
     val canReceivePayments: Boolean
         get() = accountStatus?.status == ConnectionStatus.CONNECTED && (accountStatus?.canReceivePayments ?: false)
+
+    val offersRecheckStatus: Boolean
+        get() = !loading && !isIneligible && !isUnauthenticated && accountStatus?.status == ConnectionStatus.PENDING
 }

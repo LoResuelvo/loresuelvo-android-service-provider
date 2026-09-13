@@ -144,4 +144,54 @@ class ConnectMercadoPagoSteps {
     fun noSeAbreOtroFlujoEnElNavegador() {
         world.assertNoOtherFlowOpenedInBrowser()
     }
+
+    @Given("que el prestador autorizó el acceso en Mercado Pago")
+    fun prestadorAutorizoAccesoEnMercadoPago() {
+        world.arrangeProviderAuthorizedAccess()
+    }
+
+    @And("la API confirma el estado connected")
+    fun apiConfirmaElEstadoConnected() {
+        world.arrangeAccountStatusConnected()
+    }
+
+    @When("el prestador regresa a la app mediante el enlace de éxito")
+    fun prestadorRegresaALaAppMedianteEnlaceDeExito() {
+        world.returnViaSuccessLink()
+    }
+
+    @Then("la app consulta el estado actualizado con la API")
+    fun appConsultaEstadoActualizadoConLaApi() {
+        world.assertStatusQueriedFromApi()
+    }
+
+    @And("muestra que la cuenta está conectada y puede recibir pagos")
+    fun muestraCuentaConectadaYPuedeRecibirPagos() {
+        world.assertAccountCanReceivePaymentsDisplayed()
+    }
+
+    @Given("que el prestador regresa mediante el enlace de éxito")
+    fun prestadorRegresaMedianteEnlaceDeExito() {
+        world.arrangeReturnViaSuccessLink()
+    }
+
+    @And("la API informa que la cuenta sigue pendiente de conexión")
+    fun apiInformaCuentaSiguePendienteDeConexion() {
+        world.arrangeAccountStatusPending()
+    }
+
+    @When("la app verifica el estado de la cuenta")
+    fun appVerificaEstadoDeLaCuenta() {
+        world.verifyAccountStatus()
+    }
+
+    @Then("no muestra la conexión como exitosa")
+    fun noMuestraConexionComoExitosa() {
+        world.assertConnectionNotSuccessful()
+    }
+
+    @And("permite volver a consultar el estado o continuar sin conectar")
+    fun permiteVolverAConsultarEstadoOContinuarSinConectar() {
+        world.assertAllowsRecheckingOrContinuingWithoutConnecting()
+    }
 }

@@ -324,6 +324,69 @@ class MercadoPagoConnectViewModelTest {
         assertTrue(state.error is MercadoPagoConnectError.Server)
     }
 
+    @Test
+    fun should_reconcile_status_and_update_to_connected_on_return_via_success_link() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(
+                status = ConnectionStatus.CONNECTED,
+                accountId = "mp-acc-123",
+                canReceivePayments = true,
+                canSendServiceProposals = true,
+            ),
+        )
+        viewModel.onReturnViaSuccessLink()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, repository.callCount)
+        assertEquals(ConnectionStatus.CONNECTED, state.accountStatus?.status)
+        assertTrue(state.canReceivePayments)
+        assertFalse(state.isConnecting)
+    }
+
+    @Test
+    fun should_keep_status_pending_and_allow_recheck_when_api_still_returns_pending_on_return_via_success_link() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onReturnViaSuccessLink()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, repository.callCount)
+        assertEquals(ConnectionStatus.PENDING, state.accountStatus?.status)
+        assertFalse(state.canReceivePayments)
+        assertTrue(state.offersRecheckStatus)
+        assertTrue(state.offersContinueWithoutConnecting)
+        assertFalse(state.isConnecting)
+    }
+
+    @Test
+    fun should_recheck_status_when_verify_account_status_called() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.verifyAccountStatus()
+        advanceUntilIdle()
+
+        assertEquals(2, repository.callCount)
+    }
+
     private class FakePaymentAccountEligibilityChecker : PaymentAccountEligibilityChecker {
         var eligibility: PaymentAccountEligibility = PaymentAccountEligibility.Eligible
 
