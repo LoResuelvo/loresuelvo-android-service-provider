@@ -2,14 +2,17 @@ package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.dto.CategoryDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConfirmFileRequestDto
+import com.loresuelvo.serviceprovider.data.api.dto.CurrentAccountDto
 import com.loresuelvo.serviceprovider.data.api.dto.FileResponseDto
+import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountAuthorizationDto
 import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountStatusDto
 import com.loresuelvo.serviceprovider.data.api.dto.PresignFileRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.PresignFileResponseDto
 import com.loresuelvo.serviceprovider.data.api.dto.ProviderSummaryDto
-import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.ProviderProfileDto
+import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
+import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderSummaryDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -24,6 +27,15 @@ import retrofit2.http.Path
  * Wire paths mirror `loresuelvo-api/internal/adapters/http/router.go`.
  */
 interface BackendApi {
+
+    @GET("me")
+    suspend fun getCurrentAccount(): CurrentAccountDto
+
+    @GET("job-requests")
+    suspend fun getJobRequests(): List<JobRequestSummaryDto>
+
+    @GET("work-orders")
+    suspend fun getWorkOrders(): List<WorkOrderSummaryDto>
 
     /**
      * `GET /categories` — the platform's service categories. Public

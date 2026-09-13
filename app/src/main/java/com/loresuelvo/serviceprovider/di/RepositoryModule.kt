@@ -1,10 +1,16 @@
 package com.loresuelvo.serviceprovider.di
 
 import com.loresuelvo.serviceprovider.data.api.ApiCategoryRepository
+import com.loresuelvo.serviceprovider.data.api.ApiCurrentAccountRepository
+import com.loresuelvo.serviceprovider.data.api.ApiJobRequestRepository
 import com.loresuelvo.serviceprovider.data.api.ApiProviderRepository
+import com.loresuelvo.serviceprovider.data.api.ApiWorkOrderRepository
 import com.loresuelvo.serviceprovider.data.auth.EncryptedAuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
+import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import dagger.Binds
 import dagger.Module
@@ -32,6 +38,18 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCategoryRepository(impl: ApiCategoryRepository): CategoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCurrentAccountRepository(impl: ApiCurrentAccountRepository): CurrentAccountRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindJobRequestRepository(impl: ApiJobRequestRepository): JobRequestRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWorkOrderRepository(impl: ApiWorkOrderRepository): WorkOrderRepository
 
     @Binds
     @Singleton
