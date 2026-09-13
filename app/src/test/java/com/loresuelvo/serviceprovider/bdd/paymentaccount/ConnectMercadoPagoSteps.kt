@@ -79,4 +79,24 @@ class ConnectMercadoPagoSteps {
     fun ofreceConectarOContinuarSinConectar() {
         world.assertOffersConnectOrContinueWithoutConnecting()
     }
+
+    @And("la API confirma que su cuenta ya está connected")
+    fun apiConfirmaCuentaYaEstaConnected() {
+        world.arrangeAccountStatusConnected()
+    }
+
+    @Then("la app muestra que la cuenta puede recibir pagos")
+    fun appMuestraCuentaPuedeRecibirPagos() {
+        world.assertAccountCanReceivePaymentsDisplayed()
+    }
+
+    @And("no ofrece iniciar otra autorización")
+    fun noOfreceIniciarOtraAutorizacion() {
+        world.assertNoOtherAuthorizationOffered()
+    }
+
+    @And("ofrece continuar a Home")
+    fun ofreceContinuarAHome() {
+        world.assertOffersContinueToHome()
+    }
 }

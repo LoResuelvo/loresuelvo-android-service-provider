@@ -24,6 +24,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -94,6 +95,48 @@ class MercadoPagoConnectViewModelTest {
 
         viewModel.effects.test {
             viewModel.onContinueWithoutConnecting()
+            assertEquals(MercadoPagoConnectEffect.NavigateToHome, awaitItem())
+        }
+    }
+
+    @Test
+    fun should_display_connected_status_and_offer_continue_to_home() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(
+                status = ConnectionStatus.CONNECTED,
+                accountId = "mp-acc-123",
+                canReceivePayments = true,
+                canSendServiceProposals = true,
+            ),
+        )
+
+        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.loading)
+        assertEquals(ConnectionStatus.CONNECTED, state.accountStatus?.status)
+        assertTrue(state.canReceivePayments)
+        assertFalse(state.offersConnection)
+        assertTrue(state.offersContinueToHome)
+    }
+
+    @Test
+    fun should_emit_navigate_to_home_on_continue_home() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(
+                status = ConnectionStatus.CONNECTED,
+                accountId = "mp-acc-123",
+                canReceivePayments = true,
+                canSendServiceProposals = true,
+            ),
+        )
+        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+
+        viewModel.effects.test {
+            viewModel.onContinueHome()
             assertEquals(MercadoPagoConnectEffect.NavigateToHome, awaitItem())
         }
     }

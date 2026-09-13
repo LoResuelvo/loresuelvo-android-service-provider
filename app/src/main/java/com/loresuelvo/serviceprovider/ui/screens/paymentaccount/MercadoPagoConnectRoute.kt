@@ -41,18 +41,8 @@ fun MercadoPagoConnectRoute(
     MercadoPagoConnectScreen(
         uiState = uiState,
         onConnectClick = {},
-        onContinueWithoutConnecting = {
-            navController.navigate(Route.Home.path) {
-                popUpTo(Route.MercadoPagoConnect.path) { inclusive = true }
-                launchSingleTop = true
-            }
-        },
-        onContinueHome = {
-            navController.navigate(Route.Home.path) {
-                popUpTo(Route.MercadoPagoConnect.path) { inclusive = true }
-                launchSingleTop = true
-            }
-        },
+        onContinueWithoutConnecting = viewModel::onContinueWithoutConnecting,
+        onContinueHome = viewModel::onContinueHome,
         onRetry = viewModel::checkSessionAndLoadStatus,
         modifier = modifier,
     )

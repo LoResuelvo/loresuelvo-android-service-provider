@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -90,6 +91,17 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         )
     }
 
+    fun arrangeAccountStatusConnected() {
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(
+                status = ConnectionStatus.CONNECTED,
+                accountId = "mp-acc-123",
+                canReceivePayments = true,
+                canSendServiceProposals = true,
+            )
+        )
+    }
+
     fun openMercadoPagoScreen() {
         viewModel = MercadoPagoConnectViewModel(
             sessionStore = sessionStore,
@@ -128,6 +140,24 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         val state = viewModel.uiState.value
         assertTrue(state.offersConnection)
         assertTrue(state.offersContinueWithoutConnecting)
+    }
+
+    fun assertAccountCanReceivePaymentsDisplayed() {
+        val state = viewModel.uiState.value
+        assertEquals(ConnectionStatus.CONNECTED, state.accountStatus?.status)
+        assertTrue(state.canReceivePayments)
+        assertFalse(state.loading)
+        assertFalse(state.isIneligible)
+    }
+
+    fun assertNoOtherAuthorizationOffered() {
+        val state = viewModel.uiState.value
+        assertFalse(state.offersConnection)
+    }
+
+    fun assertOffersContinueToHome() {
+        val state = viewModel.uiState.value
+        assertTrue(state.offersContinueToHome)
     }
 
     fun assertLoginPrompted() {

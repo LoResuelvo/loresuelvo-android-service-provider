@@ -44,6 +44,12 @@ class MercadoPagoConnectViewModel @Inject constructor(
         }
     }
 
+    fun onContinueHome() {
+        viewModelScope.launch {
+            _effects.send(MercadoPagoConnectEffect.NavigateToHome)
+        }
+    }
+
     fun checkSessionAndLoadStatus() {
         val session = sessionStore.getSession()
         if (session == null) {

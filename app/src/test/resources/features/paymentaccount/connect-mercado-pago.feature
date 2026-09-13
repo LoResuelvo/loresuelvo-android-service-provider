@@ -82,7 +82,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app permite acceder a Home
     And no muestra la cuenta como conectada
 
-  @wip
   Scenario: 11-MPC Mostrar una cuenta que ya está conectada
     Given que el prestador está autenticado y completó su perfil profesional
     And la API confirma que su cuenta ya está connected
