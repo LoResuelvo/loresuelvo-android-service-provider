@@ -38,6 +38,12 @@ class MercadoPagoConnectViewModel @Inject constructor(
         checkSessionAndLoadStatus()
     }
 
+    fun onContinueWithoutConnecting() {
+        viewModelScope.launch {
+            _effects.send(MercadoPagoConnectEffect.NavigateToHome)
+        }
+    }
+
     fun checkSessionAndLoadStatus() {
         val session = sessionStore.getSession()
         if (session == null) {

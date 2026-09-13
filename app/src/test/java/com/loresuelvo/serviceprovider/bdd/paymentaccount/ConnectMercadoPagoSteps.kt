@@ -54,4 +54,29 @@ class ConnectMercadoPagoSteps {
     fun muestraIndicacionDe(orientacion: String) {
         world.assertOrientationIndicated(orientacion)
     }
+
+    @Given("que el prestador está autenticado y completó su perfil profesional")
+    fun prestadorAutenticadoYCompletoPerfilProfesional() {
+        world.arrangeAuthenticatedProviderWithCompleteProfile()
+    }
+
+    @And("la API informa que la cuenta está pendiente de conexión")
+    fun apiInformaCuentaPendienteDeConexion() {
+        world.arrangeAccountStatusPending()
+    }
+
+    @When("el prestador abre la pantalla de Mercado Pago")
+    fun prestadorAbrePantallaMercadoPago() {
+        world.openMercadoPagoScreen()
+    }
+
+    @Then("la app muestra que la cuenta está pendiente de conexión")
+    fun appMuestraCuentaPendienteDeConexion() {
+        world.assertAccountStatusPendingDisplayed()
+    }
+
+    @And("ofrece conectar la cuenta o continuar sin conectarla")
+    fun ofreceConectarOContinuarSinConectar() {
+        world.assertOffersConnectOrContinueWithoutConnecting()
+    }
 }

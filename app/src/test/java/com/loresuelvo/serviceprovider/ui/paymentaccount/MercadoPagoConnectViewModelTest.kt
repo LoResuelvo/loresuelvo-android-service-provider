@@ -78,8 +78,24 @@ class MercadoPagoConnectViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(false, state.loading)
         assertEquals(ConnectionStatus.PENDING, state.accountStatus?.status)
+        assertTrue(state.offersConnection)
+        assertTrue(state.offersContinueWithoutConnecting)
         assertNull(state.error)
         assertEquals(1, repository.callCount)
+    }
+
+    @Test
+    fun should_emit_navigate_to_home_on_continue_without_connecting() = runTest(scheduler) {
+        sessionStore.saveSession(AuthSession(User("1", "provider@example.com"), "token"))
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(status = ConnectionStatus.PENDING),
+        )
+        val viewModel = MercadoPagoConnectViewModel(sessionStore, getStatusUseCase, checkEligibilityUseCase)
+
+        viewModel.effects.test {
+            viewModel.onContinueWithoutConnecting()
+            assertEquals(MercadoPagoConnectEffect.NavigateToHome, awaitItem())
+        }
     }
 
     @Test

@@ -3,7 +3,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
   Quiero conectar mi cuenta de Mercado Pago
   Para poder cobrar señas y saldos de mis servicios
 
-  @wip
   Scenario: 01-MPC Mostrar la cuenta pendiente de conexión
     Given que el prestador está autenticado y completó su perfil profesional
     And la API informa que la cuenta está pendiente de conexión

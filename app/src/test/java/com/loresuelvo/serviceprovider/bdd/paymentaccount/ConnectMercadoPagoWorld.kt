@@ -3,9 +3,11 @@ package com.loresuelvo.serviceprovider.bdd.paymentaccount
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
+import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.CheckPaymentAccountEligibilityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.GetPaymentAccountStatusUseCase
@@ -73,6 +75,21 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         }
     }
 
+    fun arrangeAuthenticatedProviderWithCompleteProfile() {
+        arrangeAuthenticatedAccount("un prestador con perfil completo")
+    }
+
+    fun arrangeAccountStatusPending() {
+        repository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(
+                status = ConnectionStatus.PENDING,
+                accountId = null,
+                canReceivePayments = false,
+                canSendServiceProposals = false,
+            )
+        )
+    }
+
     fun openMercadoPagoScreen() {
         viewModel = MercadoPagoConnectViewModel(
             sessionStore = sessionStore,
@@ -98,6 +115,19 @@ class ConnectMercadoPagoWorld : AutoCloseable {
 
     fun assertOrientationIndicated(orientacion: String) {
         assertEquals(orientacion, viewModel.uiState.value.ineligibleOrientation)
+    }
+
+    fun assertAccountStatusPendingDisplayed() {
+        val state = viewModel.uiState.value
+        assertEquals(ConnectionStatus.PENDING, state.accountStatus?.status)
+        assertEquals(false, state.loading)
+        assertEquals(false, state.isIneligible)
+    }
+
+    fun assertOffersConnectOrContinueWithoutConnecting() {
+        val state = viewModel.uiState.value
+        assertTrue(state.offersConnection)
+        assertTrue(state.offersContinueWithoutConnecting)
     }
 
     fun assertLoginPrompted() {
