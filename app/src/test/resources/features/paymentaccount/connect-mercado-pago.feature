@@ -114,7 +114,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app vuelve a consultar el estado y muestra la cuenta conectada
     And no solicita ni abre otra autorización
 
-  @wip
   Scenario: 15-MPC Consultar nuevamente el estado al volver a abrir la app
     Given que el prestador conserva una sesión autenticada y un perfil completo
     And la API informa un estado distinto al observado en la sesión anterior
@@ -122,7 +121,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app consulta nuevamente el estado de Mercado Pago
     And actualiza el estado de conexión con la respuesta recibida
 
-  @wip
   Scenario Outline: 16-MPC Recuperar el flujo tras un cambio del ciclo de vida
     Given que el prestador inició una autorización de Mercado Pago
     When ocurre <evento> y el prestador vuelve al flujo

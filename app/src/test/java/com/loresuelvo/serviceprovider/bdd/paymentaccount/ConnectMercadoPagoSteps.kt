@@ -319,5 +319,50 @@ class ConnectMercadoPagoSteps {
     fun noSolicitaNiAbreOtraAutorizacion() {
         world.assertNoOtherAuthorizationRequestedOrOpened()
     }
+
+    @Given("que el prestador conserva una sesión autenticada y un perfil completo")
+    fun prestadorConservaUnaSesionAutenticadaYUnPerfilCompleto() {
+        world.arrangeProviderPreservesSessionAndProfile()
+    }
+
+    @And("la API informa un estado distinto al observado en la sesión anterior")
+    fun apiInformaUnEstadoDistintoAlObservadoEnLaSesionAnterior() {
+        world.arrangeApiInformsDifferentStateThanPreviousSession()
+    }
+
+    @When("el prestador vuelve a abrir la aplicación")
+    fun prestadorVuelveAAbrirLaAplicacion() {
+        world.reopenApp()
+    }
+
+    @Then("la app consulta nuevamente el estado de Mercado Pago")
+    fun appConsultaNuevamenteElEstadoDeMercadoPago() {
+        world.assertAppQueriesStatusAgain()
+    }
+
+    @And("actualiza el estado de conexión con la respuesta recibida")
+    fun actualizaElEstadoDeConexionConLaRespuestaRecibida() {
+        world.assertUpdatesConnectionStatusWithReceivedResponse()
+    }
+
+    @Given("que el prestador inició una autorización de Mercado Pago")
+    fun prestadorInicioUnaAutorizacionDeMercadoPago() {
+        world.arrangeProviderInitiatedAuthorization()
+    }
+
+    @When("^ocurre (.+) y el prestador vuelve al flujo$")
+    fun ocurreEventoYElPrestadorVuelveAlFlujo(evento: String) {
+        world.handleLifecycleEventAndReturn(evento)
+    }
+
+    @Then("la app verifica el estado con la API antes de confirmar la conexión")
+    fun appVerificaElEstadoConLaApiAntesDeConfirmarLaConexion() {
+        world.assertAppVerifiesStatusWithApiBeforeConfirming()
+    }
+
+    @And("permite continuar o reintentar sin abrir automáticamente otra autorización")
+    fun permiteContinuarOReintentarSinAbrirAutomaticamenteOtraAutorizacion() {
+        world.assertAllowsContinueOrRetryWithoutOpeningOtherAuthorization()
+    }
 }
 

@@ -108,6 +108,7 @@ class ConnectMercadoPagoWorld : AutoCloseable {
     }
 
     fun openMercadoPagoScreen() {
+        effectsJob?.cancel()
         viewModel = MercadoPagoConnectViewModel(
             sessionStore = sessionStore,
             getPaymentAccountStatus = getPaymentAccountStatus,
@@ -442,6 +443,61 @@ class ConnectMercadoPagoWorld : AutoCloseable {
     }
 
     fun assertNoOtherAuthorizationRequestedOrOpened() {
+        assertEquals(1, repository.requestAuthorizationCalls)
+        assertEquals(1, browserLaunchCalls)
+    }
+
+    fun arrangeProviderPreservesSessionAndProfile() {
+        arrangeAuthenticatedProviderWithCompleteProfile()
+        arrangeAccountStatusPending()
+        openMercadoPagoScreen()
+    }
+
+    fun arrangeApiInformsDifferentStateThanPreviousSession() {
+        arrangeAccountStatusConnected()
+    }
+
+    fun reopenApp() {
+        openMercadoPagoScreen()
+    }
+
+    fun assertAppQueriesStatusAgain() {
+        assertTrue(repository.getStatusCalls >= 2)
+    }
+
+    fun assertUpdatesConnectionStatusWithReceivedResponse() {
+        val state = viewModel.uiState.value
+        assertEquals(ConnectionStatus.CONNECTED, state.accountStatus?.status)
+        assertTrue(state.canReceivePayments)
+    }
+
+    fun arrangeProviderInitiatedAuthorization() {
+        arrangeProviderAuthorizedAccess()
+    }
+
+    fun handleLifecycleEventAndReturn(evento: String) {
+        when (evento) {
+            "una rotación del dispositivo" -> {
+                viewModel.onResumeFromBrowser()
+                scheduler.advanceUntilIdle()
+            }
+            "el paso de la app a segundo plano" -> {
+                viewModel.onResumeFromBrowser()
+                scheduler.advanceUntilIdle()
+            }
+            "la recreación del proceso de la aplicación" -> {
+                openMercadoPagoScreen()
+            }
+        }
+    }
+
+    fun assertAppVerifiesStatusWithApiBeforeConfirming() {
+        assertTrue(repository.getStatusCalls >= 2)
+    }
+
+    fun assertAllowsContinueOrRetryWithoutOpeningOtherAuthorization() {
+        val state = viewModel.uiState.value
+        assertTrue(state.offersRetry || state.offersContinueWithoutConnecting)
         assertEquals(1, repository.requestAuthorizationCalls)
         assertEquals(1, browserLaunchCalls)
     }
