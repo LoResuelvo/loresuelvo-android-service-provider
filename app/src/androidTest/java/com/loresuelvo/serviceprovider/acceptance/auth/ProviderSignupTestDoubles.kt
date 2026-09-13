@@ -10,6 +10,8 @@ import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLaunche
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome
@@ -153,10 +155,26 @@ object ProviderSignupRepositoryTestModule {
     fun providePaymentAccountRepositoryBinding(
         implementation: ProviderSignupPaymentAccountRepository,
     ): PaymentAccountRepository = implementation
+
+    @Provides
+    @Singleton
+    fun providePaymentAccountEligibilityChecker(): ProviderSignupPaymentAccountEligibilityChecker = ProviderSignupPaymentAccountEligibilityChecker()
+
+    @Provides
+    @Singleton
+    fun providePaymentAccountEligibilityCheckerBinding(
+        implementation: ProviderSignupPaymentAccountEligibilityChecker,
+    ): PaymentAccountEligibilityChecker = implementation
 }
 
 class ProviderSignupPaymentAccountRepository : PaymentAccountRepository {
     var outcome: PaymentAccountStatusOutcome = PaymentAccountStatusOutcome.Failure.Unauthorized
 
     override suspend fun getStatus(): PaymentAccountStatusOutcome = outcome
+}
+
+class ProviderSignupPaymentAccountEligibilityChecker : PaymentAccountEligibilityChecker {
+    var eligibility: PaymentAccountEligibility = PaymentAccountEligibility.Eligible
+
+    override suspend fun checkEligibility(): PaymentAccountEligibility = eligibility
 }

@@ -34,4 +34,24 @@ class ConnectMercadoPagoSteps {
     fun noIniciaAutorizacionMercadoPago() {
         world.assertNoAuthorizationInitiated()
     }
+
+    @Given("^que la cuenta autenticada corresponde a (.+)$")
+    fun cuentaAutenticadaCorrespondeA(situacion: String) {
+        world.arrangeAuthenticatedAccount(situacion)
+    }
+
+    @When("la app evalúa la disponibilidad de la conexión de Mercado Pago")
+    fun appEvaluaDisponibilidadDeLaConexion() {
+        world.evaluateAvailability()
+    }
+
+    @Then("no ofrece iniciar la autorización")
+    fun noOfreceIniciarAutorizacion() {
+        world.assertNoAuthorizationOffered()
+    }
+
+    @And("^muestra una indicación de (.+)$")
+    fun muestraIndicacionDe(orientacion: String) {
+        world.assertOrientationIndicated(orientacion)
+    }
 }

@@ -2,8 +2,12 @@ package com.loresuelvo.serviceprovider.bdd.paymentaccount
 
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.User
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
+import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.CheckPaymentAccountEligibilityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.GetPaymentAccountStatusUseCase
 import com.loresuelvo.serviceprovider.ui.paymentaccount.MercadoPagoConnectEffect
 import com.loresuelvo.serviceprovider.ui.paymentaccount.MercadoPagoConnectViewModel
@@ -32,6 +36,8 @@ class ConnectMercadoPagoWorld : AutoCloseable {
     private val sessionStore = FakeAuthSessionStore()
     private val repository = FakePaymentAccountRepository()
     private val getPaymentAccountStatus = GetPaymentAccountStatusUseCase(repository)
+    private val eligibilityChecker = FakePaymentAccountEligibilityChecker()
+    private val checkPaymentAccountEligibility = CheckPaymentAccountEligibilityUseCase(eligibilityChecker)
 
     lateinit var viewModel: MercadoPagoConnectViewModel
         private set
@@ -47,10 +53,31 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         sessionStore.clearSession()
     }
 
+    fun arrangeAuthenticatedAccount(situacion: String) {
+        sessionStore.saveSession(
+            AuthSession(
+                user = User(id = "user-123", email = "provider@example.com"),
+                accessToken = "test-token",
+            )
+        )
+        when (situacion) {
+            "un prestador con perfil incompleto" -> {
+                eligibilityChecker.eligibility = PaymentAccountEligibility.Ineligible.IncompleteProfile
+            }
+            "una cuenta que no es de prestador" -> {
+                eligibilityChecker.eligibility = PaymentAccountEligibility.Ineligible.NotAProvider
+            }
+            else -> {
+                eligibilityChecker.eligibility = PaymentAccountEligibility.Eligible
+            }
+        }
+    }
+
     fun openMercadoPagoScreen() {
         viewModel = MercadoPagoConnectViewModel(
             sessionStore = sessionStore,
             getPaymentAccountStatus = getPaymentAccountStatus,
+            checkPaymentAccountEligibility = checkPaymentAccountEligibility,
         )
         effectsJob = testScope.launch {
             viewModel.effects.collect { effect ->
@@ -58,6 +85,19 @@ class ConnectMercadoPagoWorld : AutoCloseable {
             }
         }
         scheduler.advanceUntilIdle()
+    }
+
+    fun evaluateAvailability() {
+        openMercadoPagoScreen()
+    }
+
+    fun assertNoAuthorizationOffered() {
+        assertTrue(viewModel.uiState.value.isIneligible)
+        assertEquals(0, repository.getStatusCalls)
+    }
+
+    fun assertOrientationIndicated(orientacion: String) {
+        assertEquals(orientacion, viewModel.uiState.value.ineligibleOrientation)
     }
 
     fun assertLoginPrompted() {
@@ -99,5 +139,11 @@ class ConnectMercadoPagoWorld : AutoCloseable {
         override fun clearSession() {
             _session.value = null
         }
+    }
+
+    private class FakePaymentAccountEligibilityChecker : PaymentAccountEligibilityChecker {
+        var eligibility: PaymentAccountEligibility = PaymentAccountEligibility.Eligible
+
+        override suspend fun checkEligibility(): PaymentAccountEligibility = eligibility
     }
 }

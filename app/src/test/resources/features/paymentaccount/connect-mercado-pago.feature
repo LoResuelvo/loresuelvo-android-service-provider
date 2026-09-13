@@ -11,7 +11,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
     Then la app muestra que la cuenta está pendiente de conexión
     And ofrece conectar la cuenta o continuar sin conectarla
 
-  @wip
   Scenario Outline: 02-MPC Restringir la conexión a prestadores con perfil completo
     Given que la cuenta autenticada corresponde a <situacion>
     When la app evalúa la disponibilidad de la conexión de Mercado Pago
@@ -23,7 +22,6 @@ Feature: Conectar la cuenta de Mercado Pago del prestador
       | un prestador con perfil incompleto | completar el perfil profesional     |
       | una cuenta que no es de prestador  | utilizar una cuenta de prestador    |
 
-  @wip
   Scenario: 03-MPC Solicitar autenticación cuando no hay sesión
     Given que no hay una sesión autenticada
     When se intenta abrir la pantalla de Mercado Pago

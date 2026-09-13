@@ -46,4 +46,10 @@ abstract class RepositoryModule {
     abstract fun bindPaymentAccountRepository(
         impl: com.loresuelvo.serviceprovider.data.api.ApiPaymentAccountRepository,
     ): com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPaymentAccountEligibilityChecker(
+        impl: com.loresuelvo.serviceprovider.data.api.DefaultPaymentAccountEligibilityChecker,
+    ): com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
 }
