@@ -229,3 +229,7 @@ and call the result CI parity.
 Run `scripts/with-node-24.sh node --version`, then `make delivery-install`.
 Read [`AGENTS.md`](AGENTS.md) and [`.delivery/README.md`](.delivery/README.md)
 for policy, evidence, job recovery, and repair details.
+
+### How to local setup
+
+Run `./gradlew installDevDebug` to install the application in your phone.
