@@ -22,10 +22,13 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import javax.inject.Named
 
 /**
  * ViewModel managing the provider profile completion form, categories loading,
  * input validation, and submission flow.
+ * The sixth dependency supplies temporary Dev form defaults; remove it when
+ * coverage-zone selection is implemented in US-35.5.
  */
 @HiltViewModel
 class CompleteProviderProfileViewModel @Inject constructor(
@@ -34,9 +37,12 @@ class CompleteProviderProfileViewModel @Inject constructor(
     private val sessionStore: AuthSessionStore,
     private val prepareProfilePhoto: PrepareProfilePhotoUseCase,
     private val uploadProfilePhoto: UploadProfilePhotoUseCase,
+    @Named("initialProviderCoverageZoneIds") initialCoverageZoneIds: List<Int> = emptyList(),
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CompleteProviderProfileUiState())
+    private val _uiState = MutableStateFlow(
+        CompleteProviderProfileUiState(selectedCoverageZoneIds = initialCoverageZoneIds.toList()),
+    )
     val uiState: StateFlow<CompleteProviderProfileUiState> = _uiState.asStateFlow()
 
     private val _effects = Channel<CompleteProviderProfileEffect>(Channel.BUFFERED)

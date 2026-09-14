@@ -87,18 +87,38 @@ class CompleteProviderProfileViewModelTest {
         fileRepository = FakeFileRepository()
     }
 
-    private fun newViewModel(): CompleteProviderProfileViewModel =
+    private fun newViewModel(initialCoverageZoneIds: List<Int> = emptyList()): CompleteProviderProfileViewModel =
         CompleteProviderProfileViewModel(
             getCategories = GetCategoriesUseCase(categoryRepository),
             registerProvider = RegisterProviderUseCase(providerRepository),
             sessionStore = sessionStore,
             prepareProfilePhoto = PrepareProfilePhotoUseCase(photoPreparer),
             uploadProfilePhoto = UploadProfilePhotoUseCase(fileRepository),
+            initialCoverageZoneIds = initialCoverageZoneIds,
         )
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `should register with initial coverage zones without a coverage selector`() = runTest(scheduler) {
+        providerRepository.outcome = RegistrationOutcome.Success(providerId = 42)
+        viewModel = newViewModel(listOf(1))
+        advanceUntilIdle()
+        viewModel!!.onNameChanged("Carlos")
+        viewModel!!.onSurnameChanged("Gómez")
+        viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.onPhotoConfirmed("file_123")
+
+        viewModel!!.effects.test {
+            viewModel!!.submit()
+            advanceUntilIdle()
+            assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, awaitItem())
+        }
+        assertEquals(listOf(1), providerRepository.lastCommand?.coverageZoneIds)
+        assertNull(viewModel!!.uiState.value.error)
     }
 
     @Test
