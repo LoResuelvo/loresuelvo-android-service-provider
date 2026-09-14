@@ -73,6 +73,7 @@ major versions with an actionable diagnostic.
    device, `API_URL` must be reachable from that device; with a local server,
    `scripts/with-android-env.sh adb reverse tcp:8080 tcp:8080` and
    `API_URL=http://127.0.0.1:8080` are convenient Dev settings.
+
 3. Install the isolated delivery tooling:
 
    ```bash
@@ -100,32 +101,32 @@ snapshot. Run the manual
 
 All Android targets accept `FLAVOR=Dev|Staging|Prod`; Dev is the default.
 
-| Command | Purpose |
-| --- | --- |
-| `make help` | List available targets. |
-| `make build` | Assemble the selected debug APK through the Android environment wrapper. |
-| `make lint` | Run Android Lint through the Android environment wrapper. |
-| `make test` | Run JVM unit tests and Cucumber JVM through the Android environment wrapper. |
-| `make e2e` | Run instrumented UI tests through the wrapper; requires a device/emulator. |
-| `make test-all-once` | Run JVM and instrumented tests. |
-| `make ci` | Run build, lint, JVM, and instrumented checks. |
-| `make clean` | Remove Gradle build outputs through the Android environment wrapper. |
-| `make devices` | List ADB devices through the Android environment wrapper. |
-| `make delivery-install` | Install the isolated Node delivery package. |
-| `make delivery-mcp` | Start the Delivery MCP server. |
-| `make delivery-test ARGS="..."` | Run focused delivery TDD checks through the CLI. |
-| `make delivery-smoke` | Verify MCP startup and tool discovery. |
-| `make delivery-inspect ARGS="--intent prepare_commit"` | Inspect the staged snapshot and selected gate. |
-| `make delivery-prepare ARGS="--intent prepare_commit"` | Run the policy-selected pre-commit gate. |
-| `make delivery-context ARGS="--inspect"` | Inspect validated delivery context. |
-| `make delivery-context ARGS="--intent repair_ci --repairs-sha <sha>"` | Bind an exact human CI-repair context after staging. |
-| `make delivery-ci ARGS="--sha <commit-sha>"` | Inspect CI for a commit SHA. |
-| `make delivery-verify-head ARGS="--intent close_us --scope <feature>"` | Record Gate D evidence for the current HEAD. |
-| `make delivery-finalize ARGS="--intent close_us --scope <feature>"` | Finalize a batch or User Story. |
-| `make delivery-job-wait ARGS="--job-id <job-id>"` | Await a recoverable delivery job for a bounded interval. |
-| `make delivery-job-cancel ARGS="--job-id <job-id>"` | Cooperatively cancel a recoverable delivery job. |
-| `make delivery-hooks-install` | Install the repository Git hooks locally. |
-| `make delivery-hooks-status` | Report hook and enforcement state. |
+| Command                                                                | Purpose                                                                      |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `make help`                                                            | List available targets.                                                      |
+| `make build`                                                           | Assemble the selected debug APK through the Android environment wrapper.     |
+| `make lint`                                                            | Run Android Lint through the Android environment wrapper.                    |
+| `make test`                                                            | Run JVM unit tests and Cucumber JVM through the Android environment wrapper. |
+| `make e2e`                                                             | Run instrumented UI tests through the wrapper; requires a device/emulator.   |
+| `make test-all-once`                                                   | Run JVM and instrumented tests.                                              |
+| `make ci`                                                              | Run build, lint, JVM, and instrumented checks.                               |
+| `make clean`                                                           | Remove Gradle build outputs through the Android environment wrapper.         |
+| `make devices`                                                         | List ADB devices through the Android environment wrapper.                    |
+| `make delivery-install`                                                | Install the isolated Node delivery package.                                  |
+| `make delivery-mcp`                                                    | Start the Delivery MCP server.                                               |
+| `make delivery-test ARGS="..."`                                        | Run focused delivery TDD checks through the CLI.                             |
+| `make delivery-smoke`                                                  | Verify MCP startup and tool discovery.                                       |
+| `make delivery-inspect ARGS="--intent prepare_commit"`                 | Inspect the staged snapshot and selected gate.                               |
+| `make delivery-prepare ARGS="--intent prepare_commit"`                 | Run the policy-selected pre-commit gate.                                     |
+| `make delivery-context ARGS="--inspect"`                               | Inspect validated delivery context.                                          |
+| `make delivery-context ARGS="--intent repair_ci --repairs-sha <sha>"`  | Bind an exact human CI-repair context after staging.                         |
+| `make delivery-ci ARGS="--sha <commit-sha>"`                           | Inspect CI for a commit SHA.                                                 |
+| `make delivery-verify-head ARGS="--intent close_us --scope <feature>"` | Record Gate D evidence for the current HEAD.                                 |
+| `make delivery-finalize ARGS="--intent close_us --scope <feature>"`    | Finalize a batch or User Story.                                              |
+| `make delivery-job-wait ARGS="--job-id <job-id>"`                      | Await a recoverable delivery job for a bounded interval.                     |
+| `make delivery-job-cancel ARGS="--job-id <job-id>"`                    | Cooperatively cancel a recoverable delivery job.                             |
+| `make delivery-hooks-install`                                          | Install the repository Git hooks locally.                                    |
+| `make delivery-hooks-status`                                           | Report hook and enforcement state.                                           |
 
 For a focused JVM test during local iteration:
 
@@ -233,3 +234,10 @@ for policy, evidence, job recovery, and repair details.
 ### How to local setup
 
 Run `./gradlew installDevDebug` to install the application in your phone.
+
+Run `adb pair ip:port` to pair the phone
+if the device doesn't appear in `adb devices` then run `adb connect ip:port`
+
+Run `./scripts/with-android-env.sh ./gradlew installDevDebug` to install the application in your phone using the Android environment wrapper.
+
+Run `scripts/with-android-env.sh ./gradlew signingReport` to obtain the SHA-256 hash (This is for auth0)
