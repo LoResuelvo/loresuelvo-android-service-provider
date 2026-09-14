@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="welcome_categories">
-        <item>Plumbing</item>
-        <item>Electrical</item>
-        <item>Painting</item>
+        <item>Plomería</item>
+        <item>Electricidad</item>
+        <item>Pintura</item>
         <item>Gas</item>
-        <item>Carpentry</item>
-        <item>HVAC</item>
+        <item>Carpintería</item>
+        <item>Aire acondicionado</item>
     </string-array>
 </resources>

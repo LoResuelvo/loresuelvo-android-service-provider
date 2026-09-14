@@ -75,7 +75,7 @@ class ProviderProfileSummaryViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(false, state.isLoading)
-        assertEquals("Failed to load provider profile", state.error)
+        assertEquals("No se pudo cargar el perfil del prestador", state.error)
         assertNull(state.profilePhotoUrl)
     }
 

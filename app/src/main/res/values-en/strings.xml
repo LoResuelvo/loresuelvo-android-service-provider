@@ -1,154 +1,154 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">LoResuelvo Provider</string>
+    <string name="app_name">LoResuelvo Prestador</string>
 
     <!-- Branding -->
-    <string name="app_logo_content_description">LoResuelvo logo</string>
+    <string name="app_logo_content_description">Logo de LoResuelvo</string>
     <string name="brand_name">LoResuelvo</string>
 
     <!-- Welcome screen -->
-    <string name="welcome_login">Log in</string>
-    <string name="welcome_badge_verified">Certified professionals</string>
-    <string name="welcome_title">Offer your professional services</string>
-    <string name="welcome_subtitle">Connect with customers who need what you know how to do.</string>
-    <string name="welcome_register">Sign up</string>
-    <string name="welcome_google">Continue with Google</string>
-    <string name="welcome_auth_loading">Authenticating…</string>
-    <string name="welcome_legal">By continuing you accept our Terms of Service and Privacy Policy.</string>
-    <string name="welcome_categories_error">We couldn\'t load the categories. Please try again later.</string>
-    <string name="welcome_auth_error">We couldn\'t sign you in. Please try again.</string>
-    <string name="welcome_auth_network_error">We couldn\'t connect. Check your connection and try again.</string>
-    <string name="welcome_auth_server_error">The service is unavailable (code %1$d). Try again later.</string>
-    <string name="welcome_auth_unauthorized_error">Your session is invalid. Please sign in again.</string>
+    <string name="welcome_login">Iniciar sesión</string>
+    <string name="welcome_badge_verified">Profesionales certificados</string>
+    <string name="welcome_title">Ofrecé tus servicios profesionales</string>
+    <string name="welcome_subtitle">Conectá con clientes que necesitan lo que sabés hacer.</string>
+    <string name="welcome_register">Registrarme</string>
+    <string name="welcome_google">Continuar con Google</string>
+    <string name="welcome_auth_loading">Autenticando…</string>
+    <string name="welcome_legal">Al continuar aceptás nuestros Términos de Servicio y Política de Privacidad.</string>
+    <string name="welcome_categories_error">No pudimos cargar las categorías. Intentá de nuevo más tarde.</string>
+    <string name="welcome_auth_error">No pudimos iniciar sesión. Intentá de nuevo.</string>
+    <string name="welcome_auth_network_error">No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.</string>
+    <string name="welcome_auth_server_error">El servicio no está disponible (código %1$d). Intentá más tarde.</string>
+    <string name="welcome_auth_unauthorized_error">Tu sesión no es válida. Volvé a iniciar sesión.</string>
 
     <!-- Provider entry -->
-    <string name="provider_entry_loading">Preparing your account…</string>
-    <string name="provider_entry_error_title">We couldn\'t load your account</string>
-    <string name="provider_entry_error_description">Check your connection and try again. Your session is still active.</string>
-    <string name="provider_entry_retry">Retry</string>
-    <string name="provider_entry_account_mismatch_title">This account is not a provider account</string>
-    <string name="provider_entry_account_mismatch_description">To use the provider app, you need an account registered to offer services.</string>
-    <string name="provider_entry_account_mismatch_action">Back to welcome</string>
+    <string name="provider_entry_loading">Estamos preparando tu cuenta…</string>
+    <string name="provider_entry_error_title">No pudimos cargar tu cuenta</string>
+    <string name="provider_entry_error_description">Revisá tu conexión e intentá de nuevo. Tu sesión sigue activa.</string>
+    <string name="provider_entry_retry">Reintentar</string>
+    <string name="provider_entry_account_mismatch_title">Esta cuenta no es de prestador</string>
+    <string name="provider_entry_account_mismatch_description">Para usar la aplicación de prestadores necesitás una cuenta registrada para ofrecer servicios.</string>
+    <string name="provider_entry_account_mismatch_action">Volver a bienvenida</string>
 
     <!-- Provider Home -->
-    <string name="provider_home_title">Home</string>
-    <string name="provider_home_greeting">Hello, %1$s</string>
-    <string name="provider_home_photo_description">Profile photo of %1$s</string>
-    <string name="provider_home_requests_count_label">Pending requests</string>
-    <string name="provider_home_scheduled_count_label">Scheduled jobs</string>
-    <string name="provider_home_actions_title">Actions</string>
-    <string name="provider_home_requests_action">Requests</string>
-    <string name="provider_home_scheduled_action">Scheduled jobs</string>
+    <string name="provider_home_title">Inicio</string>
+    <string name="provider_home_greeting">Hola, %1$s</string>
+    <string name="provider_home_photo_description">Foto de perfil de %1$s</string>
+    <string name="provider_home_requests_count_label">Solicitudes pendientes</string>
+    <string name="provider_home_scheduled_count_label">Trabajos agendados</string>
+    <string name="provider_home_actions_title">Acciones</string>
+    <string name="provider_home_requests_action">Solicitudes</string>
+    <string name="provider_home_scheduled_action">Trabajos agendados</string>
     <string name="provider_home_mercadopago_action">Mercado Pago</string>
-    <string name="provider_home_view_request">View request</string>
-    <string name="provider_home_requests_title">Pending requests</string>
-    <string name="provider_home_requests_empty">You have no pending requests.</string>
-    <string name="provider_home_scheduled_title">Scheduled jobs</string>
-    <string name="provider_home_scheduled_empty">You have no scheduled jobs.</string>
-    <string name="provider_home_section_error">We couldn\'t load this section.</string>
-    <string name="provider_home_retry">Retry</string>
-    <string name="provider_home_scheduled_on">Scheduled for %1$s</string>
+    <string name="provider_home_view_request">Ver solicitud</string>
+    <string name="provider_home_requests_title">Solicitudes pendientes</string>
+    <string name="provider_home_requests_empty">No tenés solicitudes pendientes.</string>
+    <string name="provider_home_scheduled_title">Trabajos agendados</string>
+    <string name="provider_home_scheduled_empty">No tenés trabajos agendados.</string>
+    <string name="provider_home_section_error">No pudimos cargar esta sección.</string>
+    <string name="provider_home_retry">Reintentar</string>
+    <string name="provider_home_scheduled_on">Programado para %1$s</string>
 
     <!-- Provider messages -->
-    <string name="provider_messages_title">Messages</string>
-    <string name="provider_messages_placeholder">Your conversations will appear here.</string>
-    <string name="provider_messages_loading">Loading conversations…</string>
-    <string name="provider_messages_loading_description">Loading conversations</string>
-    <string name="provider_messages_empty">Your messages will appear here when you receive or accept requests.</string>
-    <string name="provider_messages_error">We couldn\'t load your conversations.</string>
-    <string name="provider_messages_retry">Retry</string>
-    <string name="provider_messages_pending_badge">Pending acceptance</string>
-    <string name="provider_messages_no_preview">No messages yet.</string>
+    <string name="provider_messages_title">Mensajes</string>
+    <string name="provider_messages_placeholder">Tus conversaciones aparecerán aquí.</string>
+    <string name="provider_messages_loading">Cargando conversaciones…</string>
+    <string name="provider_messages_loading_description">Cargando conversaciones</string>
+    <string name="provider_messages_empty">Tus mensajes aparecerán aquí al recibir o aceptar solicitudes.</string>
+    <string name="provider_messages_error">No pudimos cargar tus conversaciones.</string>
+    <string name="provider_messages_retry">Reintentar</string>
+    <string name="provider_messages_pending_badge">Pendiente de aceptación</string>
+    <string name="provider_messages_no_preview">Sin mensajes todavía.</string>
     <string name="provider_messages_audio_preview">Audio</string>
     <string name="provider_messages_video_preview">Video</string>
-    <string name="provider_messages_photo_description">Profile photo of %1$s</string>
-    <string name="provider_messages_conversation_description">Conversation with %1$s. %2$s. %3$s.</string>
-    <string name="provider_bottom_nav_home">Home</string>
-    <string name="provider_bottom_nav_messages">Messages</string>
+    <string name="provider_messages_photo_description">Foto de perfil de %1$s</string>
+    <string name="provider_messages_conversation_description">Conversación con %1$s. %2$s. %3$s.</string>
+    <string name="provider_bottom_nav_home">Inicio</string>
+    <string name="provider_bottom_nav_messages">Mensajes</string>
 
     <!-- Provider job request detail -->
-    <string name="provider_job_request_detail_title">Request detail</string>
-    <string name="provider_job_request_detail_close">Close detail</string>
-    <string name="provider_job_request_detail_unavailable">This request is no longer available.</string>
-    <string name="provider_job_request_detail_error">We couldn\'t load the request.</string>
-    <string name="provider_job_request_detail_retry">Retry</string>
-    <string name="provider_job_request_images_title">Context images</string>
-    <string name="provider_job_request_image_description">Context image: %1$s</string>
-    <string name="provider_job_request_image_viewer_close">Close image</string>
-    <string name="provider_job_request_accept_error">We couldn\'t accept the request.</string>
-    <string name="provider_job_request_continue_conversation">Continue conversation</string>
+    <string name="provider_job_request_detail_title">Detalle de solicitud</string>
+    <string name="provider_job_request_detail_close">Cerrar detalle</string>
+    <string name="provider_job_request_detail_unavailable">Esta solicitud ya no está disponible.</string>
+    <string name="provider_job_request_detail_error">No pudimos cargar la solicitud.</string>
+    <string name="provider_job_request_detail_retry">Reintentar</string>
+    <string name="provider_job_request_images_title">Imágenes de contexto</string>
+    <string name="provider_job_request_image_description">Imagen de contexto: %1$s</string>
+    <string name="provider_job_request_image_viewer_close">Cerrar imagen</string>
+    <string name="provider_job_request_accept_error">No pudimos aceptar la solicitud.</string>
+    <string name="provider_job_request_continue_conversation">Continuar conversación</string>
 
     <!-- Temporary provider conversation handoff -->
-    <string name="provider_conversation_title">Conversation</string>
-    <string name="provider_conversation_placeholder">The conversation will be available soon.</string>
-    <string name="provider_conversation_close">Back to requests</string>
+    <string name="provider_conversation_title">Conversación</string>
+    <string name="provider_conversation_placeholder">La conversación estará disponible próximamente.</string>
+    <string name="provider_conversation_close">Volver a solicitudes</string>
 
     <!-- Provider profile onboarding -->
-    <string name="provider_profile_title">Complete your professional profile</string>
-    <string name="provider_profile_description">Add the information your customers need to get to know you and find your services.</string>
-    <string name="provider_profile_name_label">First name</string>
-    <string name="provider_profile_name_placeholder">e.g. John</string>
-    <string name="provider_profile_name_error">First name is required</string>
-    <string name="provider_profile_surname_label">Last name</string>
-    <string name="provider_profile_surname_placeholder">e.g. Smith</string>
-    <string name="provider_profile_surname_error">Last name is required</string>
-    <string name="provider_profile_category_label">Main category</string>
-    <string name="provider_profile_category_placeholder">Select a category</string>
-    <string name="provider_profile_category_error">You must select a category</string>
-    <string name="provider_profile_category_loading">Loading categories…</string>
-    <string name="provider_profile_category_load_error">Failed to load categories.</string>
-    <string name="provider_profile_retry">Retry</string>
-    <string name="provider_profile_submit">Continue</string>
-    <string name="provider_profile_submitting">Saving…</string>
-    <string name="provider_profile_disclaimer">You will be able to configure your service areas in the next steps.</string>
-    <string name="provider_profile_already_registered_error">This account is already registered. Please sign in.</string>
-    <string name="provider_profile_generic_error">We couldn\'t save your profile. Check your connection and try again.</string>
+    <string name="provider_profile_title">Completá tu perfil profesional</string>
+    <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>
+    <string name="provider_profile_name_label">Nombre</string>
+    <string name="provider_profile_name_placeholder">Ej. Juan</string>
+    <string name="provider_profile_name_error">El nombre es obligatorio</string>
+    <string name="provider_profile_surname_label">Apellido</string>
+    <string name="provider_profile_surname_placeholder">Ej. Pérez</string>
+    <string name="provider_profile_surname_error">El apellido es obligatorio</string>
+    <string name="provider_profile_category_label">Rubro principal</string>
+    <string name="provider_profile_category_placeholder">Seleccioná un rubro</string>
+    <string name="provider_profile_category_error">Debés seleccionar un rubro</string>
+    <string name="provider_profile_category_loading">Cargando rubros…</string>
+    <string name="provider_profile_category_load_error">No se pudieron cargar los rubros.</string>
+    <string name="provider_profile_retry">Reintentar</string>
+    <string name="provider_profile_submit">Continuar</string>
+    <string name="provider_profile_submitting">Guardando…</string>
+    <string name="provider_profile_disclaimer">Podrás configurar tus zonas de atención en los próximos pasos.</string>
+    <string name="provider_profile_already_registered_error">Esta cuenta ya está registrada. Por favor, iniciá sesión.</string>
+    <string name="provider_profile_generic_error">No pudimos guardar tu perfil. Revisá tu conexión e intentá de nuevo.</string>
 
     <!-- Provider profile photo -->
-    <string name="provider_profile_photo_section_title">Profile picture</string>
-    <string name="provider_profile_photo_select">Select photo</string>
-    <string name="provider_profile_photo_change">Change photo</string>
-    <string name="provider_profile_photo_upload">Upload photo</string>
-    <string name="provider_profile_photo_preview_description">Profile photo preview</string>
-    <string name="provider_profile_photo_ready">Photo ready for registration</string>
-    <string name="provider_profile_photo_uploading">Uploading photo…</string>
-    <string name="provider_profile_photo_error_format">Image format not supported. Use JPEG, PNG, or WebP.</string>
-    <string name="provider_profile_photo_error_size">Photo cannot exceed 5 MiB.</string>
-    <string name="provider_profile_photo_error_empty">The selected file is empty.</string>
-    <string name="provider_profile_photo_error_unreadable">Could not read the selected file.</string>
-    <string name="provider_profile_photo_error_corrupt">The image file is corrupt or invalid.</string>
-    <string name="provider_profile_photo_error_upload">Could not upload photo. Check your connection and try again.</string>
-    <string name="provider_profile_photo_required_error">You must select and upload a profile photo before continuing.</string>
-    <string name="provider_profile_zones_required_error">You must select at least one service area.</string>
-    <string name="provider_retrieved_photo_label">Profile photo loaded</string>
-    <string name="provider_no_photo_label">No profile photo</string>
+    <string name="provider_profile_photo_section_title">Foto de perfil</string>
+    <string name="provider_profile_photo_select">Seleccionar foto</string>
+    <string name="provider_profile_photo_change">Cambiar foto</string>
+    <string name="provider_profile_photo_upload">Cargar foto</string>
+    <string name="provider_profile_photo_preview_description">Vista previa de la foto de perfil</string>
+    <string name="provider_profile_photo_ready">Foto lista para el registro</string>
+    <string name="provider_profile_photo_uploading">Cargando foto…</string>
+    <string name="provider_profile_photo_error_format">El formato de la imagen no está admitido. Usá JPEG, PNG o WebP.</string>
+    <string name="provider_profile_photo_error_size">La foto no puede superar los 5 MiB.</string>
+    <string name="provider_profile_photo_error_empty">El archivo seleccionado está vacío.</string>
+    <string name="provider_profile_photo_error_unreadable">No se pudo leer el archivo seleccionado.</string>
+    <string name="provider_profile_photo_error_corrupt">El archivo de imagen está dañado o no es válido.</string>
+    <string name="provider_profile_photo_error_upload">No se pudo cargar la foto. Revisá tu conexión e intentá de nuevo.</string>
+    <string name="provider_profile_photo_required_error">Debés seleccionar y cargar una foto de perfil antes de continuar.</string>
+    <string name="provider_profile_zones_required_error">Debés seleccionar al menos una zona de cobertura.</string>
+    <string name="provider_retrieved_photo_label">Foto de perfil cargada</string>
+    <string name="provider_no_photo_label">Sin foto de perfil</string>
 
-    <!-- Welcome · how it works -->
-    <string name="welcome_step1_title">Publish your services</string>
-    <string name="welcome_step1_description">Detail what you offer and your coverage area.</string>
-    <string name="welcome_step2_title">Receive requests</string>
-    <string name="welcome_step2_description">Customers reach out when they need you.</string>
-    <string name="welcome_step3_title">Get paid for your work</string>
-    <string name="welcome_step3_description">Get paid securely for the work done.</string>
+    <!-- Welcome · how it works (3 pasos del prestador) -->
+    <string name="welcome_step1_title">Publicá tus servicios</string>
+    <string name="welcome_step1_description">Detallá lo que ofrecés y tu zona de cobertura.</string>
+    <string name="welcome_step2_title">Recibí solicitudes</string>
+    <string name="welcome_step2_description">Los clientes te contactan cuando te necesitan.</string>
+    <string name="welcome_step3_title">Cobrá tu trabajo</string>
+    <string name="welcome_step3_description">Cobrá de forma segura por el trabajo hecho.</string>
 
     <!-- Navigation placeholders -->
-    <string name="home_placeholder_title">Home (coming soon)</string>
-    <string name="mercadopago_placeholder_title">Mercado Pago connection (coming soon)</string>
+    <string name="home_placeholder_title">Inicio (próximamente)</string>
+    <string name="mercadopago_placeholder_title">Vinculación con Mercado Pago (próximamente)</string>
 
     <!-- Mercado Pago Connection -->
-    <string name="mercadopago_connect_title">Connect Mercado Pago account</string>
-    <string name="mercadopago_connect_description">Connect your Mercado Pago account to collect deposits and balances for your services.</string>
-    <string name="mercadopago_connect_button">Connect with Mercado Pago</string>
-    <string name="mercadopago_continue_without_connecting">Continue without connecting</string>
-    <string name="mercadopago_connected_title">Account connected</string>
-    <string name="mercadopago_connected_description">Your Mercado Pago account is connected and can receive payments.</string>
-    <string name="mercadopago_pending_title">Account pending connection</string>
-    <string name="mercadopago_pending_description">Your account is pending connection with Mercado Pago.</string>
-    <string name="mercadopago_continue_home">Continue to Home</string>
-    <string name="mercadopago_checking_status">Checking account status…</string>
-    <string name="mercadopago_retry">Retry</string>
-    <string name="mercadopago_connection_incomplete_title">Connection not completed</string>
-    <string name="mercadopago_connection_incomplete_description">The authorization was not completed. You can retry connecting or continue without connecting.</string>
-    <string name="mercadopago_error_browser_unavailable">Could not open the browser to complete connection.</string>
-    <string name="mercadopago_retry_verification">Retry verification</string>
+    <string name="mercadopago_connect_title">Conectar cuenta de Mercado Pago</string>
+    <string name="mercadopago_connect_description">Conectá tu cuenta de Mercado Pago para poder cobrar señas y saldos de tus servicios.</string>
+    <string name="mercadopago_connect_button">Conectar con Mercado Pago</string>
+    <string name="mercadopago_continue_without_connecting">Continuar sin conectar</string>
+    <string name="mercadopago_connected_title">Cuenta conectada</string>
+    <string name="mercadopago_connected_description">Tu cuenta de Mercado Pago está conectada y puede recibir pagos.</string>
+    <string name="mercadopago_pending_title">Cuenta pendiente de conexión</string>
+    <string name="mercadopago_pending_description">Tu cuenta está pendiente de vinculación con Mercado Pago.</string>
+    <string name="mercadopago_continue_home">Continuar a Inicio</string>
+    <string name="mercadopago_checking_status">Verificando estado de la cuenta…</string>
+    <string name="mercadopago_retry">Reintentar</string>
+    <string name="mercadopago_connection_incomplete_title">Conexión no completada</string>
+    <string name="mercadopago_connection_incomplete_description">La autorización no se completó. Podés reintentar la conexión o continuar sin conectar.</string>
+    <string name="mercadopago_error_browser_unavailable">No se pudo abrir el navegador para completar la conexión.</string>
+    <string name="mercadopago_retry_verification">Reintentar verificación</string>
 </resources>

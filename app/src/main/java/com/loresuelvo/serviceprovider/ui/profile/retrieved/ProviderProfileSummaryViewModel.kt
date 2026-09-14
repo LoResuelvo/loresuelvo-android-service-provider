@@ -39,7 +39,7 @@ class ProviderProfileSummaryViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            error = "Failed to load provider profile",
+                            error = "No se pudo cargar el perfil del prestador",
                         )
                     }
                 }

@@ -114,7 +114,7 @@ class MercadoPagoConnectViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isConnecting = false,
-                            error = MercadoPagoConnectError.Network(outcome.cause.message ?: "Network error"),
+                            error = MercadoPagoConnectError.Network(outcome.cause.message ?: "Error de red"),
                         )
                     }
                 }
