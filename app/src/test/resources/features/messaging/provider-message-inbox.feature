@@ -16,21 +16,18 @@ Feature: Bandeja de mensajes del prestador
     And cada fila muestra el nombre completo del consumidor y su foto o sus iniciales como alternativa
     And cada fila muestra el extracto disponible del último mensaje y una fecha u hora relativa
 
-  @wip
   Scenario: 03-PMI Distinguir una solicitud pendiente de aceptación
     Given que la API devolverá una conversación pendiente y una conversación activa
     When la bandeja muestra ambas conversaciones
     Then la conversación pendiente exhibe un distintivo Pendiente de aceptación
     And la conversación activa no exhibe ese distintivo
 
-  @wip
   Scenario: 04-PMI Mostrar una bandeja vacía instructiva
     Given que la API no devuelve conversaciones para la cuenta del prestador
     When la bandeja termina de cargar
     Then muestra un estado vacío que explica que los mensajes aparecerán al recibir o aceptar solicitudes
     And no muestra una lista vacía ni un error
 
-  @wip
   Scenario: 05-PMI Mostrar la carga inicial de conversaciones
     Given que la consulta de conversaciones permanece en curso
     When el prestador abre la bandeja de mensajes

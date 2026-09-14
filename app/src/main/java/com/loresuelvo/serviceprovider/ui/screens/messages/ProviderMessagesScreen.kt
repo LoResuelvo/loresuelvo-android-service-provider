@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -74,11 +75,17 @@ fun ProviderMessagesScreen(
 
 @Composable
 private fun LoadingState() {
+    val loadingDescription = stringResource(R.string.provider_messages_loading_description)
     Column(
+        modifier = Modifier.testTag(PROVIDER_MESSAGES_LOADING_STATE_TAG),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        CircularProgressIndicator(modifier = Modifier.testTag(PROVIDER_MESSAGES_LOADING_TAG))
+        CircularProgressIndicator(
+            modifier = Modifier
+                .testTag(PROVIDER_MESSAGES_LOADING_TAG)
+                .semantics { contentDescription = loadingDescription },
+        )
         Text(stringResource(R.string.provider_messages_loading))
     }
 }
@@ -86,7 +93,9 @@ private fun LoadingState() {
 @Composable
 private fun EmptyState() {
     Column(
-        modifier = Modifier.padding(horizontal = 32.dp),
+        modifier = Modifier
+            .padding(horizontal = 32.dp)
+            .testTag(PROVIDER_MESSAGES_EMPTY_TAG),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -133,4 +142,6 @@ private fun ConversationsList(
 
 const val PROVIDER_MESSAGES_SCREEN_TAG = "provider-messages-screen"
 const val PROVIDER_MESSAGES_LOADING_TAG = "provider-messages-loading"
+const val PROVIDER_MESSAGES_LOADING_STATE_TAG = "provider-messages-loading-state"
+const val PROVIDER_MESSAGES_EMPTY_TAG = "provider-messages-empty"
 const val PROVIDER_MESSAGES_LIST_TAG = "provider-messages-list"

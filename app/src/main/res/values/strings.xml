@@ -53,8 +53,10 @@
     <string name="provider_messages_title">Mensajes</string>
     <string name="provider_messages_placeholder">Tus conversaciones aparecerán aquí.</string>
     <string name="provider_messages_loading">Cargando conversaciones…</string>
+    <string name="provider_messages_loading_description">Cargando conversaciones</string>
     <string name="provider_messages_empty">Tus mensajes aparecerán aquí al recibir o aceptar solicitudes.</string>
     <string name="provider_messages_error">No pudimos cargar tus conversaciones.</string>
+    <string name="provider_messages_pending_badge">Pendiente de aceptación</string>
     <string name="provider_messages_no_preview">Sin mensajes todavía.</string>
     <string name="provider_messages_audio_preview">Audio</string>
     <string name="provider_messages_video_preview">Video</string>

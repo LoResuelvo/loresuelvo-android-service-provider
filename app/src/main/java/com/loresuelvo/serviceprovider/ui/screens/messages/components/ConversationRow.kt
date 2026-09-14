@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -21,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessageKind
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 
 @Composable
@@ -38,12 +41,17 @@ fun ProviderConversationRow(
         }
     }.orEmpty().ifBlank { stringResource(R.string.provider_messages_no_preview) }
     val time = conversation.updatedOnEpochMillis.toRelativeTime()
+    val pendingLabel = if (conversation.status == ConversationStatus.Pending) {
+        stringResource(R.string.provider_messages_pending_badge)
+    } else {
+        null
+    }
     val rowDescription = stringResource(
         R.string.provider_messages_conversation_description,
         name,
         preview,
         time,
-    )
+    ).let { description -> pendingLabel?.let { "$description $it" } ?: description }
 
     Row(
         modifier = modifier
@@ -64,13 +72,31 @@ fun ProviderConversationRow(
             size = 56.dp,
         )
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = name,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = name,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (pendingLabel != null) {
+                    Surface(
+                        modifier = Modifier.testTag(PROVIDER_MESSAGES_PENDING_TAG),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.small,
+                    ) {
+                        Text(
+                            text = pendingLabel,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
             Text(
                 text = preview,
                 style = MaterialTheme.typography.bodyMedium,
@@ -86,6 +112,8 @@ fun ProviderConversationRow(
         )
     }
 }
+
+const val PROVIDER_MESSAGES_PENDING_TAG = "provider-messages-pending"
 
 private fun Long.toRelativeTime(nowMillis: Long = System.currentTimeMillis()): String =
     if (this <= 0L) "" else DateUtils.getRelativeTimeSpanString(
