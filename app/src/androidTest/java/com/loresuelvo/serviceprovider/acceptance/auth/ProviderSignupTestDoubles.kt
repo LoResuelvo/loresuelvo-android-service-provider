@@ -102,8 +102,10 @@ class ProviderSignupProviderRepository : ProviderRepository {
 }
 
 class ProviderSignupCurrentAccountRepository : CurrentAccountRepository {
+    var outcome: CurrentAccountOutcome = CurrentAccountOutcome.Failure.NotFound
+
     override suspend fun getCurrentAccount(): CurrentAccountOutcome =
-        CurrentAccountOutcome.Failure.NotFound
+        outcome
 }
 
 class ProviderSignupJobRequestRepository : JobRequestRepository {
@@ -120,8 +122,10 @@ class ProviderSignupWorkOrderRepository : WorkOrderRepository {
 }
 
 class ProviderSignupConversationRepository : ConversationRepository {
+    var outcome: ConversationsOutcome = ConversationsOutcome.Success(emptyList())
+
     override suspend fun getConversations(): ConversationsOutcome =
-        ConversationsOutcome.Success(emptyList())
+        outcome
 }
 
 @Module

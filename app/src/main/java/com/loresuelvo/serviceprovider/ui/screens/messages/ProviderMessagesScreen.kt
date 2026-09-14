@@ -34,9 +34,14 @@ import com.loresuelvo.serviceprovider.ui.screens.messages.components.ProviderCon
 @Composable
 fun ProviderMessagesRoute(
     viewModel: MessagesListViewModel = hiltViewModel(),
+    onConversationClick: (Int) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ProviderMessagesScreen(state = state, onRetryClick = viewModel::load)
+    ProviderMessagesScreen(
+        state = state,
+        onRetryClick = viewModel::load,
+        onConversationClick = onConversationClick,
+    )
 }
 
 @Composable

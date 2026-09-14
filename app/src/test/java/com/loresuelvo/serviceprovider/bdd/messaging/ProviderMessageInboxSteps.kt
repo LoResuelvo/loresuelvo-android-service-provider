@@ -24,4 +24,16 @@ internal class ProviderMessageInboxSteps {
 
     @And("la barra permanece disponible en Home y Mensajes sin mostrarse en destinos de detalle o autenticación")
     fun bottomBarVisibilityFollowsTopLevelRoutes() = world.assertBottomBarVisibility()
+
+    @Given("que la bandeja muestra una conversación con un identificador válido")
+    fun inboxShowsConversationWithValidId() = world.openMessagesWithConversation()
+
+    @When("el prestador selecciona esa conversación")
+    fun providerSelectsConversation() = world.selectConversation()
+
+    @Then("la app navega una sola vez a la ruta de conversación identificada por conversation_id")
+    fun appNavigatesToConversationRoute() = world.assertConversationRoute()
+
+    @And("al volver regresa a la bandeja de mensajes conservada")
+    fun backReturnsToRetainedInbox() = world.assertBackToInbox()
 }

@@ -10,6 +10,8 @@ internal class ProviderMessageInboxWorld {
 
     private var currentRoute: String = Route.Home.path
     private var selectedRoute: String? = null
+    private var conversationPath: String? = null
+    private var conversationNavigationCount: Int = 0
 
     fun openHome() {
         currentRoute = Route.Home.path
@@ -33,8 +35,33 @@ internal class ProviderMessageInboxWorld {
         assertFalse(ProviderBottomDestination.shouldShow(Route.Conversation.path))
     }
 
+    fun openMessagesWithConversation() {
+        currentRoute = Route.Messages.path
+        selectedRoute = Route.Messages.path
+        conversationPath = null
+        conversationNavigationCount = 0
+    }
+
+    fun selectConversation() {
+        conversationPath = Route.Conversation.buildPath(42)
+        conversationNavigationCount += 1
+    }
+
+    fun assertConversationRoute() {
+        assertEquals(Route.Conversation.buildPath(42), conversationPath)
+        assertEquals(1, conversationNavigationCount)
+    }
+
+    fun assertBackToInbox() {
+        currentRoute = Route.Messages.path
+        assertEquals(Route.Messages.path, currentRoute)
+        assertEquals(Route.Messages.path, selectedRoute)
+    }
+
     fun reset() {
         currentRoute = Route.Home.path
         selectedRoute = null
+        conversationPath = null
+        conversationNavigationCount = 0
     }
 }

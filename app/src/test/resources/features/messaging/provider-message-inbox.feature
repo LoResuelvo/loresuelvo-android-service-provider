@@ -40,7 +40,6 @@ Feature: Bandeja de mensajes del prestador
     Then la app ejecuta nuevamente la misma consulta una sola vez
     And muestra las conversaciones recuperadas sin duplicar solicitudes en curso
 
-  @wip
   Scenario: 07-PMI Abrir la ruta de una conversación seleccionada
     Given que la bandeja muestra una conversación con un identificador válido
     When el prestador selecciona esa conversación

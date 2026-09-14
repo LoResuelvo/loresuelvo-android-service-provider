@@ -57,6 +57,7 @@ fun ProviderConversationRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .testTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + conversation.id)
             .semantics { contentDescription = rowDescription }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -114,6 +115,7 @@ fun ProviderConversationRow(
 }
 
 const val PROVIDER_MESSAGES_PENDING_TAG = "provider-messages-pending"
+const val PROVIDER_MESSAGES_ROW_TAG_PREFIX = "provider-messages-row-"
 
 private fun Long.toRelativeTime(nowMillis: Long = System.currentTimeMillis()): String =
     if (this <= 0L) "" else DateUtils.getRelativeTimeSpanString(

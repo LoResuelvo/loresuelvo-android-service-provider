@@ -98,7 +98,17 @@ fun LoResuelvoNav(
                                 )
                             }
                         },
-                        messages = { ProviderMessagesRoute() },
+                        messages = {
+                            ProviderMessagesRoute(
+                                onConversationClick = { conversationId ->
+                                    navController.navigate(
+                                        Route.Conversation.buildPath(conversationId),
+                                    ) {
+                                        launchSingleTop = true
+                                    }
+                                },
+                            )
+                        },
                         jobRequestDetail = {
                             JobRequestDetailRoute(
                                 navController = navController,
