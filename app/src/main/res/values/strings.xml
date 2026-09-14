@@ -55,6 +55,9 @@
     <string name="provider_job_request_detail_unavailable">Esta solicitud ya no está disponible.</string>
     <string name="provider_job_request_detail_error">No pudimos cargar la solicitud.</string>
     <string name="provider_job_request_detail_retry">Reintentar</string>
+    <string name="provider_job_request_images_title">Imágenes de contexto</string>
+    <string name="provider_job_request_image_description">Imagen de contexto: %1$s</string>
+    <string name="provider_job_request_image_viewer_close">Cerrar imagen</string>
     <string name="provider_job_request_continue_conversation">Continuar conversación</string>
     <string name="provider_job_request_reject">Rechazar solicitud</string>
 

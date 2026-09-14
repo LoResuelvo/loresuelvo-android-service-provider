@@ -5,6 +5,7 @@ import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderCounterpartDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderSummaryDto
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
+import com.loresuelvo.serviceprovider.domain.activity.JobRequestImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import java.text.ParsePosition
@@ -16,6 +17,13 @@ internal fun JobRequestSummaryDto.toDomain(): JobRequest = JobRequest(
     consumerName = requester.fullName(),
     title = title,
     description = description,
+    images = images.map { image ->
+        JobRequestImage(
+            id = image.id,
+            url = image.url,
+            originalName = image.originalName,
+        )
+    },
 )
 
 internal fun WorkOrderSummaryDto.toDomain(): WorkOrder = WorkOrder(

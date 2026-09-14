@@ -1,12 +1,20 @@
 package com.loresuelvo.serviceprovider.ui.screens.jobrequest
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -15,18 +23,25 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil3.compose.AsyncImage
 import com.loresuelvo.serviceprovider.R
+import com.loresuelvo.serviceprovider.domain.activity.JobRequest
+import com.loresuelvo.serviceprovider.domain.activity.JobRequestImage
 import com.loresuelvo.serviceprovider.ui.jobrequest.JobRequestDetailUiState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,6 +49,9 @@ fun JobRequestDetailScreen(
     uiState: JobRequestDetailUiState,
     onClose: () -> Unit,
     onRetry: () -> Unit,
+    selectedImageIndex: Int? = null,
+    onImageSelected: (Int) -> Unit = {},
+    onImageViewerClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -72,7 +90,19 @@ fun JobRequestDetailScreen(
             )
             is JobRequestDetailUiState.Ready -> DetailContent(
                 request = uiState.request,
+                onImageSelected = onImageSelected,
                 modifier = Modifier.padding(contentPadding),
+            )
+        }
+
+        val selectedImage = (uiState as? JobRequestDetailUiState.Ready)
+            ?.request
+            ?.images
+            ?.getOrNull(selectedImageIndex ?: -1)
+        if (selectedImage != null) {
+            JobRequestImageViewer(
+                image = selectedImage,
+                onClose = onImageViewerClose,
             )
         }
     }
@@ -108,7 +138,8 @@ private fun MessageContent(
 
 @Composable
 private fun DetailContent(
-    request: com.loresuelvo.serviceprovider.domain.activity.JobRequest,
+    request: JobRequest,
+    onImageSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -129,6 +160,30 @@ private fun DetailContent(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.fillMaxWidth(),
         )
+        if (request.images.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.provider_job_request_images_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                request.images.forEachIndexed { index, image ->
+                    AsyncImage(
+                        model = image.url,
+                        contentDescription = stringResource(
+                            R.string.provider_job_request_image_description,
+                            image.originalName,
+                        ),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clickable { onImageSelected(index) },
+                    )
+                }
+            }
+        }
         OutlinedButton(
             onClick = {},
             enabled = false,
@@ -142,6 +197,46 @@ private fun DetailContent(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(R.string.provider_job_request_reject))
+        }
+    }
+}
+
+@Composable
+private fun JobRequestImageViewer(
+    image: JobRequestImage,
+    onClose: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Black,
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = image.url,
+                    contentDescription = stringResource(
+                        R.string.provider_job_request_image_description,
+                        image.originalName,
+                    ),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.align(Alignment.TopEnd),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(
+                            R.string.provider_job_request_image_viewer_close,
+                        ),
+                        tint = Color.White,
+                    )
+                }
+            }
         }
     }
 }

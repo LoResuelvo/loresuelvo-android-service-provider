@@ -11,6 +11,13 @@ Feature: Responder solicitudes de trabajo
     And ofrece Continuar conversación y Rechazar solicitud
 
   @wip
+  Scenario: 02-RST Visualizar las imágenes de contexto
+    Given que el detalle de la solicitud incluye imágenes de contexto
+    When el prestador selecciona una miniatura
+    Then la app muestra esa imagen en pantalla completa con una descripción accesible
+    And permite cerrarla para volver al mismo detalle sin responder la solicitud
+
+  @wip
   Scenario: 03-RST Mostrar una solicitud sin imágenes
     Given que el detalle de la solicitud no incluye imágenes de contexto
     When el prestador abre el detalle

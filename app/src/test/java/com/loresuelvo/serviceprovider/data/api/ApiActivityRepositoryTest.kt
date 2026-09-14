@@ -1,10 +1,12 @@
 package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestRequesterDto
+import com.loresuelvo.serviceprovider.data.api.dto.JobRequestImageDto
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderCounterpartDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderSummaryDto
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
+import com.loresuelvo.serviceprovider.domain.activity.JobRequestImage
 import io.mockk.coEvery
 import io.mockk.mockk
 import java.io.IOException
@@ -33,12 +35,18 @@ class ApiActivityRepositoryTest {
                 description = "Debajo de la pileta",
                 status = "pending",
                 requester = JobRequestRequesterDto("Ana", "Pérez"),
+                images = listOf(JobRequestImageDto("image-1", "https://cdn.example/image-1", "pileta.jpg")),
             ),
         )
 
         val result = ApiJobRequestRepository(backendApi).getPendingJobRequests()
 
-        assertEquals("Ana Pérez", (result as ActivityLoadOutcome.Success).items.single().consumerName)
+        val request = (result as ActivityLoadOutcome.Success).items.single()
+        assertEquals("Ana Pérez", request.consumerName)
+        assertEquals(
+            listOf(JobRequestImage("image-1", "https://cdn.example/image-1", "pileta.jpg")),
+            request.images,
+        )
     }
 
     @Test

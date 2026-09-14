@@ -4,10 +4,17 @@ import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
+import com.loresuelvo.serviceprovider.domain.activity.JobRequestImage
 import com.loresuelvo.serviceprovider.ui.jobrequest.JobRequestDetailUiState
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import org.junit.Rule
@@ -52,5 +59,43 @@ class JobRequestDetailScreenTest {
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_job_request_reject))
             .assertIsNotEnabled()
+    }
+
+    @Test
+    fun renders_context_image_and_opens_full_screen_viewer() {
+        val imageDescription = context.getString(
+            R.string.provider_job_request_image_description,
+            "pileta.jpg",
+        )
+        composeTestRule.setContent {
+            var selectedImageIndex by remember { mutableStateOf<Int?>(null) }
+            LoresuelvoTheme {
+                JobRequestDetailScreen(
+                    uiState = JobRequestDetailUiState.Ready(
+                        JobRequest(
+                            7,
+                            "Ana Pérez",
+                            "Reparar pérdida",
+                            "En la cocina",
+                            images = listOf(
+                                JobRequestImage("image-1", "https://cdn.example/image-1", "pileta.jpg"),
+                            ),
+                        ),
+                    ),
+                    onClose = {},
+                    onRetry = {},
+                    selectedImageIndex = selectedImageIndex,
+                    onImageSelected = { selectedImageIndex = it },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithContentDescription(imageDescription)
+            .assertIsDisplayed()
+            .performClick()
+        composeTestRule
+            .onNodeWithContentDescription(context.getString(R.string.provider_job_request_image_viewer_close))
+            .assertIsDisplayed()
     }
 }
