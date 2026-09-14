@@ -71,7 +71,15 @@ fun LoResuelvoNav(
                         }
                     },
                     jobRequestDetail = {
-                        JobRequestDetailRoute(navController)
+                        JobRequestDetailRoute(
+                            navController = navController,
+                            onAccepted = { requestId, _ ->
+                                navController.previousBackStackEntry
+                                    ?.savedStateHandle
+                                    ?.set(Route.JobRequestDetail.resolvedRequestId, requestId)
+                                navController.popBackStack()
+                            },
+                        )
                     },
                     mercadoPago = {
                         MercadoPagoConnectRoute(

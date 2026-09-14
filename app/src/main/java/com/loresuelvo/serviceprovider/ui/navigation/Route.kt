@@ -48,6 +48,7 @@ sealed class Route(val path: String) {
      */
     data object JobRequestDetail : Route("job-request/{jobRequestId}") {
         const val argument: String = "jobRequestId"
+        const val resolvedRequestId: String = "resolvedJobRequestId"
 
         fun buildPath(jobRequestId: Int): String {
             require(jobRequestId > 0) { "jobRequestId must be positive" }

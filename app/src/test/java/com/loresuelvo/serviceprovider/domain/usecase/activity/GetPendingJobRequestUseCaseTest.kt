@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.domain.usecase.activity
 
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
+import com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestDetailOutcome
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
@@ -60,5 +61,8 @@ class GetPendingJobRequestUseCaseTest {
             calls++
             return outcome
         }
+
+        override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome =
+            AcceptJobRequestOutcome.Failure.Invalid
     }
 }

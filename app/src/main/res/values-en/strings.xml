@@ -58,6 +58,7 @@
     <string name="provider_job_request_images_title">Context images</string>
     <string name="provider_job_request_image_description">Context image: %1$s</string>
     <string name="provider_job_request_image_viewer_close">Close image</string>
+    <string name="provider_job_request_accept_error">We couldn\'t accept the request.</string>
     <string name="provider_job_request_continue_conversation">Continue conversation</string>
     <string name="provider_job_request_reject">Reject request</string>
 

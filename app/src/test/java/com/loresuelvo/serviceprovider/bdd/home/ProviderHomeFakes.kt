@@ -4,6 +4,7 @@ import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
+import com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
@@ -53,6 +54,9 @@ internal class ProviderHomeJobRequestFake : JobRequestRepository {
         calls += 1
         return if (responses.isEmpty()) defaultResponse else responses.removeFirst()
     }
+
+    override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome =
+        AcceptJobRequestOutcome.Failure.Invalid
 }
 
 internal class ProviderHomeWorkOrderFake : WorkOrderRepository {

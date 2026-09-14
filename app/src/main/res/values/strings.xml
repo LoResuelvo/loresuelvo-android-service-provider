@@ -58,6 +58,7 @@
     <string name="provider_job_request_images_title">Imágenes de contexto</string>
     <string name="provider_job_request_image_description">Imagen de contexto: %1$s</string>
     <string name="provider_job_request_image_viewer_close">Cerrar imagen</string>
+    <string name="provider_job_request_accept_error">No pudimos aceptar la solicitud.</string>
     <string name="provider_job_request_continue_conversation">Continuar conversación</string>
     <string name="provider_job_request_reject">Rechazar solicitud</string>
 

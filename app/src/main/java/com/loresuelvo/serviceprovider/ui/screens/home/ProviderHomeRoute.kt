@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.home
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -19,6 +20,18 @@ fun ProviderHomeRoute(
     viewModel: ProviderHomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(navController, viewModel) {
+        val homeEntry = navController.currentBackStackEntry ?: return@LaunchedEffect
+        homeEntry.savedStateHandle
+            .getStateFlow<Int?>(Route.JobRequestDetail.resolvedRequestId, null)
+            .collect { resolvedRequestId ->
+                resolvedRequestId?.let {
+                    viewModel.removeJobRequest(it)
+                    homeEntry.savedStateHandle[Route.JobRequestDetail.resolvedRequestId] = null
+                }
+            }
+    }
 
     ProviderHomeScreen(
         provider = provider,

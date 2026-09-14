@@ -39,6 +39,21 @@ class ProviderHomeViewModel @Inject constructor(
         }
     }
 
+    fun removeJobRequest(id: Int) {
+        _uiState.update { state ->
+            val requests = state.jobRequests
+            if (requests is ActivitySectionState.Ready) {
+                state.copy(
+                    jobRequests = ActivitySectionState.Ready(
+                        requests.items.filterNot { it.id == id },
+                    ),
+                )
+            } else {
+                state
+            }
+        }
+    }
+
     private fun loadJobRequests() {
         _uiState.update { it.copy(jobRequests = ActivitySectionState.Loading) }
         viewModelScope.launch {

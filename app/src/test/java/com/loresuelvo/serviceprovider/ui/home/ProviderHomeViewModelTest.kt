@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.home
 
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
+import com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
@@ -87,6 +88,20 @@ class ProviderHomeViewModelTest {
             assertEquals(1, workOrders.calls)
         }
 
+    @Test
+    fun removes_a_resolved_request_from_the_current_pending_section() = runTest(scheduler) {
+        val first = jobRequest()
+        val second = jobRequest().copy(id = 2)
+        jobRequests.next = ActivityLoadOutcome.Success(listOf(first, second))
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.removeJobRequest(first.id)
+
+        assertEquals(listOf(second), (viewModel.uiState.value.jobRequests as ActivitySectionState.Ready).items)
+    }
+
     private fun createViewModel() = ProviderHomeViewModel(
         getPendingJobRequests = GetPendingJobRequestsUseCase(jobRequests),
         getScheduledWork = GetScheduledWorkUseCase(workOrders),
@@ -116,6 +131,9 @@ class ProviderHomeViewModelTest {
             calls++
             return if (outcomes.isEmpty()) next else outcomes.removeFirst()
         }
+
+        override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome =
+            AcceptJobRequestOutcome.Failure.Invalid
     }
 
     private class FakeWorkOrderRepository : WorkOrderRepository {

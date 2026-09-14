@@ -49,6 +49,8 @@ fun JobRequestDetailScreen(
     uiState: JobRequestDetailUiState,
     onClose: () -> Unit,
     onRetry: () -> Unit,
+    onAccept: () -> Unit = {},
+    onRetryAccept: () -> Unit = {},
     selectedImageIndex: Int? = null,
     onImageSelected: (Int) -> Unit = {},
     onImageViewerClose: () -> Unit = {},
@@ -90,6 +92,20 @@ fun JobRequestDetailScreen(
             )
             is JobRequestDetailUiState.Ready -> DetailContent(
                 request = uiState.request,
+                onAccept = onAccept,
+                onImageSelected = onImageSelected,
+                modifier = Modifier.padding(contentPadding),
+            )
+            is JobRequestDetailUiState.Accepting -> DetailContent(
+                request = uiState.request,
+                accepting = true,
+                onImageSelected = onImageSelected,
+                modifier = Modifier.padding(contentPadding),
+            )
+            is JobRequestDetailUiState.AcceptError -> DetailContent(
+                request = uiState.request,
+                acceptError = true,
+                onRetryAccept = onRetryAccept,
                 onImageSelected = onImageSelected,
                 modifier = Modifier.padding(contentPadding),
             )
@@ -139,6 +155,10 @@ private fun MessageContent(
 @Composable
 private fun DetailContent(
     request: JobRequest,
+    onAccept: () -> Unit = {},
+    onRetryAccept: () -> Unit = {},
+    accepting: Boolean = false,
+    acceptError: Boolean = false,
     onImageSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -184,12 +204,31 @@ private fun DetailContent(
                 }
             }
         }
-        OutlinedButton(
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(R.string.provider_job_request_continue_conversation))
+        if (acceptError) {
+            Text(
+                text = stringResource(R.string.provider_job_request_accept_error),
+                color = MaterialTheme.colorScheme.error,
+            )
+            Button(
+                onClick = onRetryAccept,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.provider_job_request_detail_retry))
+            }
+        } else {
+            OutlinedButton(
+                onClick = onAccept,
+                enabled = !accepting,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (accepting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                    )
+                }
+                Text(stringResource(R.string.provider_job_request_continue_conversation))
+            }
         }
         OutlinedButton(
             onClick = {},

@@ -18,6 +18,27 @@ Feature: Responder solicitudes de trabajo
     And permite cerrarla para volver al mismo detalle sin responder la solicitud
 
   @wip
+  Scenario: 04-RST Aceptar una solicitud pendiente
+    Given que el prestador está viendo una solicitud pendiente
+    When selecciona Continuar conversación
+    Then la app muestra progreso y bloquea las acciones mientras envía una única aceptación
+    And la solicitud aceptada deja de aparecer entre las pendientes de Home
+
+  @wip
+  Scenario: 06-RST Reintentar una aceptación que falló temporalmente
+    Given que la aceptación falló por red o por un error del servidor
+    When el prestador selecciona Reintentar
+    Then la app envía nuevamente una sola aceptación
+    And conserva visibles los datos de la solicitud hasta recibir confirmación
+
+  @wip
+  Scenario: 09-RST Resolver una solicitud que ya no está pendiente al aceptar
+    Given que la API rechaza la aceptación porque la solicitud ya no está pendiente
+    When el prestador selecciona Continuar conversación
+    Then la app informa que la solicitud ya no está disponible
+    And no presenta la respuesta como exitosa
+
+  @wip
   Scenario: 03-RST Mostrar una solicitud sin imágenes
     Given que el detalle de la solicitud no incluye imágenes de contexto
     When el prestador abre el detalle

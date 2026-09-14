@@ -6,6 +6,7 @@ import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderCounterpartDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderSummaryDto
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
+import com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestImage
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -83,6 +84,30 @@ class ApiActivityRepositoryTest {
     }
 
     @Test
+    fun accepts_a_pending_request_and_maps_the_confirmed_conversation() = runTest {
+        coEvery { backendApi.acceptJobRequest(7) } returns acceptedRequest()
+
+        val result = ApiJobRequestRepository(backendApi).acceptJobRequest(7)
+
+        assertEquals(AcceptJobRequestOutcome.Success(7, 11), result)
+    }
+
+    @Test
+    fun maps_an_accept_conflict_without_exposing_http_details_to_the_domain() = runTest {
+        coEvery { backendApi.acceptJobRequest(7) } throws HttpException(
+            Response.error<JobRequestSummaryDto>(
+                409,
+                "{}".toResponseBody("application/json".toMediaType()),
+            ),
+        )
+
+        assertEquals(
+            AcceptJobRequestOutcome.Failure.Conflict,
+            ApiJobRequestRepository(backendApi).acceptJobRequest(7),
+        )
+    }
+
+    @Test
     fun network_failures_are_preserved_and_cancellation_is_rethrown() = runTest {
         val network = IOException("offline")
         coEvery { backendApi.getJobRequests() } throws network
@@ -110,5 +135,14 @@ class ApiActivityRepositoryTest {
             name = "Ana",
             surname = "Pérez",
         ),
+    )
+
+    private fun acceptedRequest() = JobRequestSummaryDto(
+        id = 7,
+        conversationId = 11,
+        title = "Reparar pérdida",
+        description = "Debajo de la pileta",
+        status = "accepted",
+        requester = JobRequestRequesterDto("Ana", "Pérez"),
     )
 }

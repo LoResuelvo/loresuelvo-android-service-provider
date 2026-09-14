@@ -13,6 +13,7 @@ import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
+import com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
@@ -106,6 +107,9 @@ class ProviderSignupCurrentAccountRepository : CurrentAccountRepository {
 class ProviderSignupJobRequestRepository : JobRequestRepository {
     override suspend fun getPendingJobRequests(): ActivityLoadOutcome<JobRequest> =
         ActivityLoadOutcome.Success(emptyList())
+
+    override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome =
+        AcceptJobRequestOutcome.Failure.Invalid
 }
 
 class ProviderSignupWorkOrderRepository : WorkOrderRepository {
