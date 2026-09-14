@@ -81,6 +81,10 @@ android {
             isReturnDefaultValues = true
             all {
                 it.systemProperty("cucumber.filter.tags", "not @wip")
+                it.systemProperty(
+                    "robolectric.dependency.repo.url",
+                    "https://repo.maven.apache.org/maven2",
+                )
             }
         }
     }
