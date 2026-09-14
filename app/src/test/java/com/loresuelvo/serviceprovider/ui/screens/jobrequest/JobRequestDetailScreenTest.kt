@@ -58,9 +58,6 @@ class JobRequestDetailScreenTest {
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_job_request_continue_conversation))
             .assertIsEnabled()
-        composeTestRule
-            .onNodeWithText(context.getString(R.string.provider_job_request_reject))
-            .assertIsNotEnabled()
     }
 
     @Test
@@ -91,7 +88,7 @@ class JobRequestDetailScreenTest {
     }
 
     @Test
-    fun disables_both_response_actions_while_accepting() {
+    fun disables_acceptance_while_accepting() {
         composeTestRule.setContent {
             LoresuelvoTheme {
                 JobRequestDetailScreen(
@@ -106,9 +103,6 @@ class JobRequestDetailScreenTest {
 
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_job_request_continue_conversation))
-            .assertIsNotEnabled()
-        composeTestRule
-            .onNodeWithText(context.getString(R.string.provider_job_request_reject))
             .assertIsNotEnabled()
     }
 

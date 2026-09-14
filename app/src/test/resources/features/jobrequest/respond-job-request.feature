@@ -1,14 +1,14 @@
 Feature: Responder solicitudes de trabajo
   Como prestador
   Quiero visualizar y responder solicitudes de trabajo pendientes
-  Para aceptar o rechazar el contacto inicial con el consumidor
+  Para aceptar el contacto inicial y continuar la conversación con el consumidor
 
   @wip
   Scenario: 01-RST Abrir el detalle de una solicitud pendiente
     Given que Home muestra una solicitud de trabajo pendiente para el prestador
     When el prestador selecciona Ver solicitud
     Then la app muestra el nombre completo del consumidor, el título y la descripción completa de la solicitud
-    And ofrece Continuar conversación y Rechazar solicitud
+    And ofrece Continuar conversación
 
   @wip
   Scenario: 02-RST Visualizar las imágenes de contexto
@@ -21,7 +21,7 @@ Feature: Responder solicitudes de trabajo
   Scenario: 04-RST Aceptar una solicitud pendiente
     Given que el prestador está viendo una solicitud pendiente
     When selecciona Continuar conversación
-    Then la app muestra progreso y bloquea las acciones mientras envía una única aceptación
+    Then la app muestra progreso y bloquea la acción mientras envía una única aceptación
     And la solicitud aceptada deja de aparecer entre las pendientes de Home
 
   @wip
@@ -39,6 +39,14 @@ Feature: Responder solicitudes de trabajo
     And no presenta la respuesta como exitosa
 
   @wip
+  Scenario: 05-RST Abrir la conversación aceptada
+    Given que la API aceptó la solicitud y activó la conversación vinculada
+    When la app procesa la confirmación de aceptación
+    Then navega inmediatamente a la ruta de conversación identificada por conversation_id
+    And la ruta muestra un destino temporal hasta que la US de chat entregue la conversación real
+    And Atrás no vuelve al detalle de una solicitud ya respondida
+
+  @wip
   Scenario: 03-RST Mostrar una solicitud sin imágenes
     Given que el detalle de la solicitud no incluye imágenes de contexto
     When el prestador abre el detalle
@@ -49,7 +57,7 @@ Feature: Responder solicitudes de trabajo
   Scenario: 10-RST Cerrar el detalle sin responder
     Given que el prestador está viendo el detalle de una solicitud pendiente
     When cierra el detalle o utiliza Atrás
-    Then regresa al mismo Home sin enviar una aceptación ni un rechazo
+    Then regresa al mismo Home sin enviar una aceptación
     And la solicitud continúa visible entre las pendientes
 
   @wip
@@ -57,4 +65,4 @@ Feature: Responder solicitudes de trabajo
     Given que el prestador abrió una solicitud pendiente y todavía no la respondió
     When la actividad se recrea
     Then la app recupera el detalle usando el identificador de la solicitud
-    And no repite una aceptación, un rechazo ni una navegación anterior
+    And no repite una aceptación ni una navegación anterior

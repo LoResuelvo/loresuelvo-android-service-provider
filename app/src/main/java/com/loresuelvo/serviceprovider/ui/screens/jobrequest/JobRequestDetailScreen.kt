@@ -230,13 +230,6 @@ private fun DetailContent(
                 Text(stringResource(R.string.provider_job_request_continue_conversation))
             }
         }
-        OutlinedButton(
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(R.string.provider_job_request_reject))
-        }
     }
 }
 
