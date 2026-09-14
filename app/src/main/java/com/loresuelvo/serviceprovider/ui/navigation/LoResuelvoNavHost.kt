@@ -7,8 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 
 /**
  * Pure graph layer. The host
@@ -32,6 +34,7 @@ fun LoResuelvoNavHost(
     welcome: @Composable () -> Unit,
     professionalProfile: @Composable () -> Unit,
     home: @Composable () -> Unit,
+    jobRequestDetail: @Composable (Int) -> Unit,
     mercadoPago: @Composable () -> Unit = { MercadoPagoPlaceholder() },
 ) {
     Box(modifier = Modifier.padding(contentPadding)) {
@@ -42,6 +45,18 @@ fun LoResuelvoNavHost(
             composable(Route.Welcome.path) { welcome() }
             composable(Route.CompleteProviderProfile.path) { professionalProfile() }
             composable(Route.Home.path) { home() }
+            composable(
+                route = Route.JobRequestDetail.path,
+                arguments = listOf(
+                    navArgument(Route.JobRequestDetail.argument) {
+                        type = NavType.IntType
+                    },
+                ),
+            ) { entry ->
+                jobRequestDetail(
+                    entry.arguments?.getInt(Route.JobRequestDetail.argument) ?: -1,
+                )
+            }
             composable(Route.MercadoPagoConnect.path) { mercadoPago() }
         }
     }

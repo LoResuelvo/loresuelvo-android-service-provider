@@ -33,6 +33,7 @@ fun ProviderHomeScreen(
     uiState: ProviderHomeUiState,
     onRetryJobRequests: () -> Unit,
     onRetryScheduledWork: () -> Unit,
+    onJobRequestClick: (com.loresuelvo.serviceprovider.domain.activity.JobRequest) -> Unit,
     onMercadoPagoClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -63,6 +64,7 @@ fun ProviderHomeScreen(
             JobRequestsSection(
                 state = uiState.jobRequests,
                 onRetry = onRetryJobRequests,
+                onRequestClick = onJobRequestClick,
             )
             ScheduledWorkSection(
                 state = uiState.scheduledWork,
@@ -176,11 +178,6 @@ private fun ProviderHomeActions(onMercadoPagoClick: () -> Unit) {
         Button(onClick = onMercadoPagoClick, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.provider_home_mercadopago_action))
         }
-        Text(
-            text = stringResource(R.string.provider_home_detail_unavailable),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

@@ -40,7 +40,7 @@
     <string name="provider_home_requests_action">Solicitudes</string>
     <string name="provider_home_scheduled_action">Trabajos agendados</string>
     <string name="provider_home_mercadopago_action">Mercado Pago</string>
-    <string name="provider_home_detail_unavailable">Las vistas detalladas estarán disponibles próximamente.</string>
+    <string name="provider_home_view_request">Ver solicitud</string>
     <string name="provider_home_requests_title">Solicitudes pendientes</string>
     <string name="provider_home_requests_empty">No tenés solicitudes pendientes.</string>
     <string name="provider_home_scheduled_title">Trabajos agendados</string>
@@ -48,6 +48,15 @@
     <string name="provider_home_section_error">No pudimos cargar esta sección.</string>
     <string name="provider_home_retry">Reintentar</string>
     <string name="provider_home_scheduled_on">Programado para %1$s</string>
+
+    <!-- Provider job request detail -->
+    <string name="provider_job_request_detail_title">Detalle de solicitud</string>
+    <string name="provider_job_request_detail_close">Cerrar detalle</string>
+    <string name="provider_job_request_detail_unavailable">Esta solicitud ya no está disponible.</string>
+    <string name="provider_job_request_detail_error">No pudimos cargar la solicitud.</string>
+    <string name="provider_job_request_detail_retry">Reintentar</string>
+    <string name="provider_job_request_continue_conversation">Continuar conversación</string>
+    <string name="provider_job_request_reject">Rechazar solicitud</string>
 
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
@@ -20,6 +21,7 @@ import com.loresuelvo.serviceprovider.ui.home.ActivitySectionState
 import com.loresuelvo.serviceprovider.ui.home.ProviderHomeUiState
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import java.time.Instant
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -49,6 +51,7 @@ class ProviderHomeScreenTest {
                     ),
                     onRetryJobRequests = {},
                     onRetryScheduledWork = {},
+                    onJobRequestClick = {},
                     onMercadoPagoClick = {},
                 )
             }
@@ -76,6 +79,7 @@ class ProviderHomeScreenTest {
                     ),
                     onRetryJobRequests = {},
                     onRetryScheduledWork = {},
+                    onJobRequestClick = {},
                     onMercadoPagoClick = {},
                 )
             }
@@ -106,6 +110,7 @@ class ProviderHomeScreenTest {
                     ),
                     onRetryJobRequests = { retried = true },
                     onRetryScheduledWork = {},
+                    onJobRequestClick = {},
                     onMercadoPagoClick = {},
                 )
             }
@@ -122,6 +127,35 @@ class ProviderHomeScreenTest {
         composeTestRule.onNodeWithTag("provider-home-requests-action").assertIsNotEnabled()
         composeTestRule.onNodeWithTag("provider-home-scheduled-action").assertIsNotEnabled()
         assertTrue(!retried)
+    }
+
+    @Test
+    fun exposes_a_view_request_action_for_each_pending_request() {
+        var selected: JobRequest? = null
+        val request = jobRequest()
+
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderHomeScreen(
+                    provider = provider(),
+                    uiState = ProviderHomeUiState(
+                        jobRequests = ActivitySectionState.Ready(listOf(request)),
+                        scheduledWork = ActivitySectionState.Ready(emptyList()),
+                    ),
+                    onRetryJobRequests = {},
+                    onRetryScheduledWork = {},
+                    onJobRequestClick = { selected = it },
+                    onMercadoPagoClick = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_home_view_request))
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(request, selected)
     }
 
     private fun provider() = CurrentAccount.Provider(

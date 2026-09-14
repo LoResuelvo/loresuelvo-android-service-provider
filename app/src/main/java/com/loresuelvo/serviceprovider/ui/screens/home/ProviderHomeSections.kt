@@ -9,6 +9,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ import java.util.Date
 internal fun JobRequestsSection(
     state: ActivitySectionState<JobRequest>,
     onRetry: () -> Unit,
+    onRequestClick: (JobRequest) -> Unit,
 ) {
     ActivitySectionHeader(
         title = stringResource(R.string.provider_home_requests_title),
@@ -38,7 +40,7 @@ internal fun JobRequestsSection(
         is ActivitySectionState.Ready -> if (state.items.isEmpty()) {
             SectionEmpty(stringResource(R.string.provider_home_requests_empty))
         } else {
-            state.items.forEach { JobRequestCard(it) }
+            state.items.forEach { JobRequestCard(it, onRequestClick) }
         }
     }
 }
@@ -77,7 +79,10 @@ private fun ActivitySectionHeader(title: String, count: String) {
 }
 
 @Composable
-private fun JobRequestCard(request: JobRequest) {
+private fun JobRequestCard(
+    request: JobRequest,
+    onRequestClick: (JobRequest) -> Unit,
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -90,6 +95,12 @@ private fun JobRequestCard(request: JobRequest) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            OutlinedButton(
+                onClick = { onRequestClick(request) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.provider_home_view_request))
+            }
         }
     }
 }

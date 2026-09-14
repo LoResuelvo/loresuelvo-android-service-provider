@@ -14,6 +14,7 @@ import com.loresuelvo.serviceprovider.ui.navigation.Route
 fun ProviderHomeRoute(
     navController: NavHostController,
     provider: CurrentAccount.Provider,
+    onJobRequestClick: (com.loresuelvo.serviceprovider.domain.activity.JobRequest) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProviderHomeViewModel = hiltViewModel(),
 ) {
@@ -24,6 +25,7 @@ fun ProviderHomeRoute(
         uiState = uiState,
         onRetryJobRequests = viewModel::retryJobRequests,
         onRetryScheduledWork = viewModel::retryScheduledWork,
+        onJobRequestClick = onJobRequestClick,
         onMercadoPagoClick = {
             navController.navigate(Route.MercadoPagoConnect.path) {
                 launchSingleTop = true

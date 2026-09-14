@@ -42,6 +42,20 @@ sealed class Route(val path: String) {
     data object Home : Route("home")
 
     /**
+     * Read-only detail for one pending provider request. The id is restored by
+     * Navigation after Activity recreation; request data stays in the domain
+     * and never travels through the route string.
+     */
+    data object JobRequestDetail : Route("job-request/{jobRequestId}") {
+        const val argument: String = "jobRequestId"
+
+        fun buildPath(jobRequestId: Int): String {
+            require(jobRequestId > 0) { "jobRequestId must be positive" }
+            return "job-request/$jobRequestId"
+        }
+    }
+
+    /**
      * Provider category detail / list. Carries the backend
      * `categoryId` for the query and the display name for the
      * header. URL-encoded in the path so accents (`Plomería`)

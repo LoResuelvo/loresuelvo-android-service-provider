@@ -17,6 +17,7 @@ import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderEntryErrorScreen
 import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderEntryLoadingScreen
 import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
 import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
+import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailRoute
 import com.loresuelvo.serviceprovider.ui.screens.paymentaccount.MercadoPagoConnectRoute
 import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
 
@@ -57,7 +58,20 @@ fun LoResuelvoNav(
                     welcome = { WelcomeRoute(browserAuthenticationLauncher) },
                     professionalProfile = { CompleteProviderProfileRoute(navController) },
                     home = {
-                        provider?.let { ProviderHomeRoute(navController, it) }
+                        provider?.let {
+                            ProviderHomeRoute(
+                                navController = navController,
+                                provider = it,
+                                onJobRequestClick = { request ->
+                                    navController.navigate(
+                                        Route.JobRequestDetail.buildPath(request.id),
+                                    )
+                                },
+                            )
+                        }
+                    },
+                    jobRequestDetail = {
+                        JobRequestDetailRoute(navController)
                     },
                     mercadoPago = {
                         MercadoPagoConnectRoute(
