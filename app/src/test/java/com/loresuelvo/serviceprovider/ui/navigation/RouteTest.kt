@@ -14,4 +14,9 @@ class RouteTest {
     fun rejects_a_non_positive_conversation_id() {
         Route.Conversation.buildPath(0)
     }
+
+    @Test
+    fun exposes_the_messages_destination_path() {
+        assertEquals("messages", Route.Messages.path)
+    }
 }

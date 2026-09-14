@@ -49,6 +49,12 @@
     <string name="provider_home_retry">Reintentar</string>
     <string name="provider_home_scheduled_on">Programado para %1$s</string>
 
+    <!-- Provider messages -->
+    <string name="provider_messages_title">Mensajes</string>
+    <string name="provider_messages_placeholder">Tus conversaciones aparecerán aquí.</string>
+    <string name="provider_bottom_nav_home">Inicio</string>
+    <string name="provider_bottom_nav_messages">Mensajes</string>
+
     <!-- Provider job request detail -->
     <string name="provider_job_request_detail_title">Detalle de solicitud</string>
     <string name="provider_job_request_detail_close">Cerrar detalle</string>

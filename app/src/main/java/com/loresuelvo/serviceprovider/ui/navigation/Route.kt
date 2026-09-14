@@ -42,6 +42,13 @@ sealed class Route(val path: String) {
     data object Home : Route("home")
 
     /**
+     * Provider conversation summaries. The detail route remains a separate
+     * destination so the bottom bar can be hidden while a conversation is
+     * open.
+     */
+    data object Messages : Route("messages")
+
+    /**
      * Read-only detail for one pending provider request. The id is restored by
      * Navigation after Activity recreation; request data stays in the domain
      * and never travels through the route string.

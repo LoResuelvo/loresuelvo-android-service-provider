@@ -21,10 +21,9 @@ import androidx.navigation.navArgument
  * be unit-tested in isolation — the graph is a pure consumer of the
  * screen composables.
  *
- * `contentPadding` carries the Scaffold insets (top status bar when
- * visible). The graph wraps the [NavHost] in a [Box] with that
- * padding so the bottom bar (added in a later US) never overlaps the
- * scrollable content of any screen.
+ * `contentPadding` carries the authenticated shell insets. The graph wraps
+ * the [NavHost] in a [Box] with that padding so the bottom bar never overlaps
+ * the scrollable content of a top-level screen.
  */
 @Composable
 fun LoResuelvoNavHost(
@@ -34,6 +33,7 @@ fun LoResuelvoNavHost(
     welcome: @Composable () -> Unit,
     professionalProfile: @Composable () -> Unit,
     home: @Composable () -> Unit,
+    messages: @Composable () -> Unit,
     jobRequestDetail: @Composable (Int) -> Unit,
     conversation: @Composable (Int) -> Unit,
     mercadoPago: @Composable () -> Unit = { MercadoPagoPlaceholder() },
@@ -46,6 +46,7 @@ fun LoResuelvoNavHost(
             composable(Route.Welcome.path) { welcome() }
             composable(Route.CompleteProviderProfile.path) { professionalProfile() }
             composable(Route.Home.path) { home() }
+            composable(Route.Messages.path) { messages() }
             composable(
                 route = Route.JobRequestDetail.path,
                 arguments = listOf(

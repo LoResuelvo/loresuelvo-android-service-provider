@@ -3,7 +3,6 @@ Feature: Bandeja de mensajes del prestador
   Quiero visualizar mis conversaciones y solicitudes de contacto
   Para gestionar de manera organizada la comunicación con consumidores
 
-  @wip
   Scenario: 01-PMI Abrir Mensajes desde la navegación principal
     Given que el prestador autenticado se encuentra en Home
     When selecciona Mensajes en la barra de navegación inferior
