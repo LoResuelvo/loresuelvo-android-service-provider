@@ -34,7 +34,6 @@ Feature: Bandeja de mensajes del prestador
     Then muestra un indicador de carga accesible hasta que la consulta finaliza
     And no muestra simultáneamente contenido vacío, datos anteriores ni un error
 
-  @wip
   Scenario: 06-PMI Reintentar una consulta fallida
     Given que la consulta de conversaciones falló por red o por un error del servidor y el siguiente intento tendrá éxito
     When el prestador selecciona Reintentar

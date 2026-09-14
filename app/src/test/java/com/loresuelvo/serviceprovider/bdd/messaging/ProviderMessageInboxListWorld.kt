@@ -59,6 +59,15 @@ internal class ProviderMessageInboxListWorld : AutoCloseable {
         repository.pendingCompletion = CompletableDeferred()
     }
 
+    fun configureRetry() {
+        repository.outcomes = listOf(
+            ConversationsOutcome.Failure.Network(IllegalStateException("offline")),
+            ConversationsOutcome.Success(
+                listOf(conversation(id = 3, name = "Sofía", message = "Listo")),
+            ),
+        )
+    }
+
     fun loadInbox() {
         viewModel = MessagesListViewModel(GetConversationsUseCase(repository))
         scheduler.advanceUntilIdle()
@@ -114,6 +123,23 @@ internal class ProviderMessageInboxListWorld : AutoCloseable {
         assertEquals(MessagesListUiState.Loading, viewModel.uiState.value)
     }
 
+    fun retryInbox() {
+        viewModel = MessagesListViewModel(GetConversationsUseCase(repository))
+        scheduler.advanceUntilIdle()
+        viewModel.load()
+        viewModel.load()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertRetryCallCount() {
+        assertEquals(2, repository.calls)
+    }
+
+    fun assertRetrySuccess() {
+        val state = viewModel.uiState.value as MessagesListUiState.Ready
+        assertEquals(listOf(3), state.conversations.map { it.id })
+    }
+
     override fun close() {
         repository.pendingCompletion?.complete(Unit)
         if (::viewModel.isInitialized) scheduler.advanceUntilIdle()
@@ -144,11 +170,14 @@ internal class ProviderMessageInboxListWorld : AutoCloseable {
 
     private class FakeConversationRepository : ConversationRepository {
         var outcome: ConversationsOutcome = ConversationsOutcome.Success(emptyList())
+        var outcomes: List<ConversationsOutcome> = emptyList()
+        var calls: Int = 0
         var pendingCompletion: CompletableDeferred<Unit>? = null
 
         override suspend fun getConversations(): ConversationsOutcome {
+            calls += 1
             pendingCompletion?.await()
-            return outcome
+            return outcomes.getOrNull(calls - 1) ?: outcome
         }
     }
 }

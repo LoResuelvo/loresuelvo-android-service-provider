@@ -9,14 +9,17 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessageKind
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -127,6 +130,29 @@ class ProviderMessagesScreenTest {
             .assertIsDisplayed()
         composeTestRule.onAllNodesWithTag(PROVIDER_MESSAGES_LIST_TAG).assertCountEquals(0)
         composeTestRule.onAllNodesWithTag(PROVIDER_MESSAGES_EMPTY_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun error_state_exposes_a_retry_action() {
+        var retryClicks = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderMessagesScreen(
+                    state = MessagesListUiState.Error(
+                        ConversationsOutcome.Failure.Network(IllegalStateException("offline")),
+                    ),
+                    onRetryClick = { retryClicks += 1 },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_messages_error))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(PROVIDER_MESSAGES_RETRY_TAG)
+            .performClick()
+        assertEquals(1, retryClicks)
     }
 
     private fun conversation(

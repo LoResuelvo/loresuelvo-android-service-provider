@@ -61,9 +61,21 @@ internal class ProviderMessageInboxListSteps {
     @Given("que la consulta de conversaciones permanece en curso")
     fun conversationsRequestRemainsInFlight() = world.configurePendingRequest()
 
+    @Given("que la consulta de conversaciones falló por red o por un error del servidor y el siguiente intento tendrá éxito")
+    fun conversationsRequestFailsThenSucceeds() = world.configureRetry()
+
+    @When("el prestador selecciona Reintentar")
+    fun providerRetriesInbox() = world.retryInbox()
+
     @Then("muestra un indicador de carga accesible hasta que la consulta finaliza")
     fun inboxShowsAccessibleLoading() = world.assertLoadingState()
 
     @And("no muestra simultáneamente contenido vacío, datos anteriores ni un error")
     fun loadingStateIsExclusive() = world.assertLoadingStateIsExclusive()
+
+    @Then("la app ejecuta nuevamente la misma consulta una sola vez")
+    fun retryExecutesOneRequest() = world.assertRetryCallCount()
+
+    @And("muestra las conversaciones recuperadas sin duplicar solicitudes en curso")
+    fun retryShowsRecoveredConversations() = world.assertRetrySuccess()
 }

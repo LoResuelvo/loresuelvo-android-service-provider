@@ -19,19 +19,26 @@ class MessagesListViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<MessagesListUiState>(MessagesListUiState.Loading)
     val uiState: StateFlow<MessagesListUiState> = _uiState.asStateFlow()
+    private var requestInFlight = false
 
     init {
         load()
     }
 
     fun load() {
+        if (requestInFlight) return
+        requestInFlight = true
         viewModelScope.launch {
-            _uiState.update { MessagesListUiState.Loading }
-            _uiState.update {
-                when (val outcome = getConversations()) {
-                    is ConversationsOutcome.Success -> MessagesListUiState.Ready(outcome.conversations)
-                    is ConversationsOutcome.Failure -> MessagesListUiState.Error(outcome)
+            try {
+                _uiState.update { MessagesListUiState.Loading }
+                _uiState.update {
+                    when (val outcome = getConversations()) {
+                        is ConversationsOutcome.Success -> MessagesListUiState.Ready(outcome.conversations)
+                        is ConversationsOutcome.Failure -> MessagesListUiState.Error(outcome)
+                    }
                 }
+            } finally {
+                requestInFlight = false
             }
         }
     }

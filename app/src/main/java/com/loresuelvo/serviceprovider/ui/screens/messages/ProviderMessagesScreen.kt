@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -35,12 +36,13 @@ fun ProviderMessagesRoute(
     viewModel: MessagesListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ProviderMessagesScreen(state = state)
+    ProviderMessagesScreen(state = state, onRetryClick = viewModel::load)
 }
 
 @Composable
 fun ProviderMessagesScreen(
     state: MessagesListUiState,
+    onRetryClick: () -> Unit = {},
     onConversationClick: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -67,7 +69,7 @@ fun ProviderMessagesScreen(
                         )
                     }
                 }
-                is MessagesListUiState.Error -> ErrorState()
+                is MessagesListUiState.Error -> ErrorState(onRetryClick)
             }
         }
     }
@@ -112,12 +114,23 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun ErrorState() {
-    Text(
-        text = stringResource(R.string.provider_messages_error),
+private fun ErrorState(onRetryClick: () -> Unit) {
+    Column(
         modifier = Modifier.padding(horizontal = 32.dp),
-        textAlign = TextAlign.Center,
-    )
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.provider_messages_error),
+            textAlign = TextAlign.Center,
+        )
+        Button(
+            onClick = onRetryClick,
+            modifier = Modifier.testTag(PROVIDER_MESSAGES_RETRY_TAG),
+        ) {
+            Text(stringResource(R.string.provider_messages_retry))
+        }
+    }
 }
 
 @Composable
@@ -144,4 +157,5 @@ const val PROVIDER_MESSAGES_SCREEN_TAG = "provider-messages-screen"
 const val PROVIDER_MESSAGES_LOADING_TAG = "provider-messages-loading"
 const val PROVIDER_MESSAGES_LOADING_STATE_TAG = "provider-messages-loading-state"
 const val PROVIDER_MESSAGES_EMPTY_TAG = "provider-messages-empty"
+const val PROVIDER_MESSAGES_RETRY_TAG = "provider-messages-retry"
 const val PROVIDER_MESSAGES_LIST_TAG = "provider-messages-list"
