@@ -24,7 +24,7 @@ import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationPlaceholderRoute
 import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
 import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailRoute
-import com.loresuelvo.serviceprovider.ui.screens.messages.ProviderMessagesScreen
+import com.loresuelvo.serviceprovider.ui.screens.messages.ProviderMessagesRoute
 import com.loresuelvo.serviceprovider.ui.screens.paymentaccount.MercadoPagoConnectRoute
 import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
 
@@ -98,7 +98,7 @@ fun LoResuelvoNav(
                                 )
                             }
                         },
-                        messages = { ProviderMessagesScreen() },
+                        messages = { ProviderMessagesRoute() },
                         jobRequestDetail = {
                             JobRequestDetailRoute(
                                 navController = navController,

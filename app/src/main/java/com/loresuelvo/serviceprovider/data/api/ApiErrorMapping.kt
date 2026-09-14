@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.data.api
 import com.loresuelvo.serviceprovider.data.api.dto.ApiErrorDto
 import com.loresuelvo.serviceprovider.domain.api.ApiError
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 import java.io.IOException
 
@@ -21,6 +22,7 @@ import java.io.IOException
  * (timeouts, DNS, connection refused, TLS handshake failures, …).
  */
 internal fun Throwable.toApiError(): ApiError = when (this) {
+    is CancellationException -> throw this
     is HttpException -> toApiError()
     is IOException -> ApiError.Network(this)
     else -> ApiError.Unknown(this)

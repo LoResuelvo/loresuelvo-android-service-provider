@@ -26,6 +26,7 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.ui.home.ActivitySectionState
 import com.loresuelvo.serviceprovider.ui.home.ProviderHomeUiState
+import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 
 @Composable
 fun ProviderHomeScreen(
@@ -80,7 +81,15 @@ private fun ProviderIdentityHeader(provider: CurrentAccount.Provider) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        ProviderAvatar(provider)
+        ProviderAvatar(
+            name = provider.name,
+            surname = provider.surname,
+            profilePhotoUrl = provider.profilePhotoUrl,
+            contentDescription = stringResource(
+                R.string.provider_home_photo_description,
+                provider.name,
+            ),
+        )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(

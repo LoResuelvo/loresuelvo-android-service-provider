@@ -52,6 +52,14 @@
     <!-- Provider messages -->
     <string name="provider_messages_title">Messages</string>
     <string name="provider_messages_placeholder">Your conversations will appear here.</string>
+    <string name="provider_messages_loading">Loading conversations…</string>
+    <string name="provider_messages_empty">Your messages will appear here when you receive or accept requests.</string>
+    <string name="provider_messages_error">We couldn\'t load your conversations.</string>
+    <string name="provider_messages_no_preview">No messages yet.</string>
+    <string name="provider_messages_audio_preview">Audio</string>
+    <string name="provider_messages_video_preview">Video</string>
+    <string name="provider_messages_photo_description">Profile photo of %1$s</string>
+    <string name="provider_messages_conversation_description">Conversation with %1$s. %2$s. %3$s.</string>
     <string name="provider_bottom_nav_home">Home</string>
     <string name="provider_bottom_nav_messages">Messages</string>
 

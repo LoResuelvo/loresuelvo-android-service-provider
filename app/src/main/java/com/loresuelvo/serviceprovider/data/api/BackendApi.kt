@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.dto.CategoryDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConfirmFileRequestDto
+import com.loresuelvo.serviceprovider.data.api.dto.ConversationDto
 import com.loresuelvo.serviceprovider.data.api.dto.CurrentAccountDto
 import com.loresuelvo.serviceprovider.data.api.dto.FileResponseDto
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
@@ -41,6 +42,9 @@ interface BackendApi {
 
     @GET("work-orders")
     suspend fun getWorkOrders(): List<WorkOrderSummaryDto>
+
+    @GET("conversations")
+    suspend fun getConversations(): List<ConversationDto>
 
     /**
      * `GET /categories` — the platform's service categories. Public

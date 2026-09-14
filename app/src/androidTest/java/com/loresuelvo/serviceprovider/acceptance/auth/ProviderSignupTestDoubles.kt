@@ -18,6 +18,8 @@ import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
@@ -117,6 +119,11 @@ class ProviderSignupWorkOrderRepository : WorkOrderRepository {
         ActivityLoadOutcome.Success(emptyList())
 }
 
+class ProviderSignupConversationRepository : ConversationRepository {
+    override suspend fun getConversations(): ConversationsOutcome =
+        ConversationsOutcome.Success(emptyList())
+}
+
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
@@ -205,6 +212,17 @@ object ProviderSignupRepositoryTestModule {
     fun provideWorkOrderRepositoryBinding(
         implementation: ProviderSignupWorkOrderRepository,
     ): WorkOrderRepository = implementation
+
+    @Provides
+    @Singleton
+    fun provideConversationRepository(): ProviderSignupConversationRepository =
+        ProviderSignupConversationRepository()
+
+    @Provides
+    @Singleton
+    fun provideConversationRepositoryBinding(
+        implementation: ProviderSignupConversationRepository,
+    ): ConversationRepository = implementation
 
     @Provides
     @Singleton

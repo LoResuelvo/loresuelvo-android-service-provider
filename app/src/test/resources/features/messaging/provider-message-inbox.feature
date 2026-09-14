@@ -9,7 +9,6 @@ Feature: Bandeja de mensajes del prestador
     Then la app muestra la bandeja de mensajes y marca Mensajes como destino seleccionado
     And la barra permanece disponible en Home y Mensajes sin mostrarse en destinos de detalle o autenticación
 
-  @wip
   Scenario: 02-PMI Mostrar los resúmenes de conversación del prestador
     Given que la API devolverá conversaciones asociadas a la cuenta del prestador
     When la bandeja termina de cargar

@@ -6,6 +6,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
+import com.loresuelvo.serviceprovider.domain.conversation.Conversation
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessageKind
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import org.junit.Rule
 import org.junit.Test
@@ -24,18 +29,39 @@ class ProviderMessagesScreenTest {
         get() = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun renders_the_messages_destination_shell() {
+    fun renders_consumer_identity_and_latest_message_preview() {
         composeTestRule.setContent {
             LoresuelvoTheme {
-                ProviderMessagesScreen()
+                ProviderMessagesScreen(
+                    state = MessagesListUiState.Ready(
+                        listOf(
+                            Conversation(
+                                id = 7,
+                                status = ConversationStatus.Active,
+                                counterpart = ConversationCounterpart(
+                                    id = 8,
+                                    name = "Ana",
+                                    surname = "Pérez",
+                                    profilePhotoUrl = null,
+                                ),
+                                lastMessage = ConversationMessage(
+                                    content = "Hola, ¿podés ayudarme?",
+                                    kind = ConversationMessageKind.Text,
+                                    createdOnEpochMillis = System.currentTimeMillis(),
+                                ),
+                                updatedOnEpochMillis = System.currentTimeMillis(),
+                            ),
+                        ),
+                    ),
+                )
             }
         }
 
         composeTestRule
-            .onNodeWithText(context.getString(R.string.provider_messages_title))
+            .onNodeWithText("Ana Pérez")
             .assertIsDisplayed()
         composeTestRule
-            .onNodeWithText(context.getString(R.string.provider_messages_placeholder))
+            .onNodeWithText("Hola, ¿podés ayudarme?")
             .assertIsDisplayed()
     }
 }
