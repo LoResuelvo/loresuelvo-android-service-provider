@@ -48,6 +48,7 @@ import com.loresuelvo.serviceprovider.ui.jobrequest.JobRequestDetailUiState
 fun JobRequestDetailScreen(
     uiState: JobRequestDetailUiState,
     onClose: () -> Unit,
+    onUnavailable: () -> Unit = onClose,
     onRetry: () -> Unit,
     onAccept: () -> Unit = {},
     onRetryAccept: () -> Unit = {},
@@ -107,6 +108,12 @@ fun JobRequestDetailScreen(
                 acceptError = true,
                 onRetryAccept = onRetryAccept,
                 onImageSelected = onImageSelected,
+                modifier = Modifier.padding(contentPadding),
+            )
+            is JobRequestDetailUiState.AcceptUnavailable -> MessageContent(
+                message = stringResource(R.string.provider_job_request_detail_unavailable),
+                actionLabel = stringResource(R.string.provider_job_request_detail_close),
+                onAction = onUnavailable,
                 modifier = Modifier.padding(contentPadding),
             )
         }

@@ -107,6 +107,32 @@ class JobRequestDetailScreenTest {
     }
 
     @Test
+    fun shows_unavailable_message_after_a_stale_acceptance() {
+        var closed = false
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                JobRequestDetailScreen(
+                    uiState = JobRequestDetailUiState.AcceptUnavailable(
+                        JobRequest(7, "Ana Pérez", "Reparar pérdida", "En la cocina"),
+                    ),
+                    onClose = {},
+                    onUnavailable = { closed = true },
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_job_request_detail_unavailable))
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_job_request_detail_close))
+            .performClick()
+
+        assertTrue(closed)
+    }
+
+    @Test
     fun renders_context_image_and_opens_full_screen_viewer() {
         val imageDescription = context.getString(
             R.string.provider_job_request_image_description,

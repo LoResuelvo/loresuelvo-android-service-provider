@@ -113,6 +113,21 @@ class JobRequestDetailViewModelTest {
         assertEquals(JobRequestDetailEffect.Accepted(7, 11), effect.await())
     }
 
+    @Test
+    fun exposes_unavailable_when_acceptance_loses_the_pending_race() = runTest(scheduler) {
+        val request = JobRequest(7, "Ana Pérez", "Reparar pérdida", "En la cocina")
+        val repository = FakeRepository(ActivityLoadOutcome.Success(listOf(request)))
+        repository.acceptOutcomes += AcceptJobRequestOutcome.Failure.Conflict
+        val viewModel = createViewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.accept()
+        advanceUntilIdle()
+
+        assertEquals(JobRequestDetailUiState.AcceptUnavailable(request), viewModel.uiState.value)
+        assertEquals(1, repository.acceptCalls)
+    }
+
     private fun createViewModel(
         outcome: ActivityLoadOutcome<JobRequest>,
     ): JobRequestDetailViewModel = createViewModel(FakeRepository(outcome))

@@ -59,6 +59,9 @@ class JobRequestDetailViewModel @Inject constructor(
                         ),
                     )
                 }
+                AcceptJobRequestOutcome.Failure.Conflict,
+                AcceptJobRequestOutcome.Failure.NotFound ->
+                    _uiState.value = JobRequestDetailUiState.AcceptUnavailable(request)
                 is AcceptJobRequestOutcome.Failure -> {
                     _uiState.value = JobRequestDetailUiState.AcceptError(request)
                 }

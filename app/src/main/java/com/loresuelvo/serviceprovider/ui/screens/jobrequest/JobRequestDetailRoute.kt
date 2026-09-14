@@ -10,6 +10,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.loresuelvo.serviceprovider.ui.jobrequest.JobRequestDetailViewModel
 import com.loresuelvo.serviceprovider.ui.jobrequest.JobRequestDetailEffect
+import com.loresuelvo.serviceprovider.ui.jobrequest.JobRequestDetailUiState
+import com.loresuelvo.serviceprovider.ui.navigation.Route
 import androidx.compose.runtime.LaunchedEffect
 
 @Composable
@@ -35,6 +37,12 @@ fun JobRequestDetailRoute(
     JobRequestDetailScreen(
         uiState = uiState,
         onClose = { navController.popBackStack() },
+        onUnavailable = {
+            navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.set(Route.JobRequestDetail.resolvedRequestId, uiState.requestId())
+            navController.popBackStack()
+        },
         onRetry = viewModel::retry,
         onAccept = viewModel::accept,
         onRetryAccept = viewModel::retryAccept,
@@ -42,4 +50,9 @@ fun JobRequestDetailRoute(
         onImageSelected = { selectedImageIndex = it },
         onImageViewerClose = { selectedImageIndex = null },
     )
+}
+
+private fun JobRequestDetailUiState.requestId(): Int? = when (this) {
+    is JobRequestDetailUiState.AcceptUnavailable -> request.id
+    else -> null
 }
