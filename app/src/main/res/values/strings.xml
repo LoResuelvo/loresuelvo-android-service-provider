@@ -61,6 +61,11 @@
     <string name="provider_job_request_accept_error">No pudimos aceptar la solicitud.</string>
     <string name="provider_job_request_continue_conversation">Continuar conversación</string>
 
+    <!-- Temporary provider conversation handoff -->
+    <string name="provider_conversation_title">Conversación</string>
+    <string name="provider_conversation_placeholder">La conversación estará disponible próximamente.</string>
+    <string name="provider_conversation_close">Volver a solicitudes</string>
+
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>
     <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>

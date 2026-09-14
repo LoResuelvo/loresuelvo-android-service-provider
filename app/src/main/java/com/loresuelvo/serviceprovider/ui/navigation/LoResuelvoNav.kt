@@ -16,6 +16,7 @@ import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderAccountMismatchSc
 import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderEntryErrorScreen
 import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderEntryLoadingScreen
 import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationPlaceholderRoute
 import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
 import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailRoute
 import com.loresuelvo.serviceprovider.ui.screens.paymentaccount.MercadoPagoConnectRoute
@@ -73,12 +74,21 @@ fun LoResuelvoNav(
                     jobRequestDetail = {
                         JobRequestDetailRoute(
                             navController = navController,
-                            onAccepted = { requestId, _ ->
+                            onAccepted = { requestId, conversationId ->
                                 navController.previousBackStackEntry
                                     ?.savedStateHandle
                                     ?.set(Route.JobRequestDetail.resolvedRequestId, requestId)
-                                navController.popBackStack()
+                                navController.navigate(Route.Conversation.buildPath(conversationId)) {
+                                    popUpTo(Route.Home.path) { inclusive = false }
+                                    launchSingleTop = true
+                                }
                             },
+                        )
+                    },
+                    conversation = { conversationId ->
+                        ProviderConversationPlaceholderRoute(
+                            navController = navController,
+                            conversationId = conversationId,
                         )
                     },
                     mercadoPago = {

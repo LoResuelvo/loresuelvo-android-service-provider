@@ -9,8 +9,8 @@ import android.net.Uri
  * string by hand (and stay consistent with the `NavHost` arguments).
  *
  * New routes land here as their feature US ships. The Welcome and provider
- * onboarding routes are wired today; home / chat routes will be added
- * alongside their respective user stories.
+ * onboarding routes are wired today; the temporary conversation handoff is
+ * owned by the request-response story until the chat story replaces it.
  */
 sealed class Route(val path: String) {
 
@@ -53,6 +53,19 @@ sealed class Route(val path: String) {
         fun buildPath(jobRequestId: Int): String {
             require(jobRequestId > 0) { "jobRequestId must be positive" }
             return "job-request/$jobRequestId"
+        }
+    }
+
+    /**
+     * Temporary provider conversation destination. The following chat story
+     * replaces the destination body while keeping this id-based seam.
+     */
+    data object Conversation : Route("conversation/{conversationId}") {
+        const val argument: String = "conversationId"
+
+        fun buildPath(conversationId: Int): String {
+            require(conversationId > 0) { "conversationId must be positive" }
+            return "conversation/$conversationId"
         }
     }
 

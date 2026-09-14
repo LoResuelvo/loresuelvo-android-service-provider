@@ -35,6 +35,7 @@ fun LoResuelvoNavHost(
     professionalProfile: @Composable () -> Unit,
     home: @Composable () -> Unit,
     jobRequestDetail: @Composable (Int) -> Unit,
+    conversation: @Composable (Int) -> Unit,
     mercadoPago: @Composable () -> Unit = { MercadoPagoPlaceholder() },
 ) {
     Box(modifier = Modifier.padding(contentPadding)) {
@@ -55,6 +56,18 @@ fun LoResuelvoNavHost(
             ) { entry ->
                 jobRequestDetail(
                     entry.arguments?.getInt(Route.JobRequestDetail.argument) ?: -1,
+                )
+            }
+            composable(
+                route = Route.Conversation.path,
+                arguments = listOf(
+                    navArgument(Route.Conversation.argument) {
+                        type = NavType.IntType
+                    },
+                ),
+            ) { entry ->
+                conversation(
+                    entry.arguments?.getInt(Route.Conversation.argument) ?: -1,
                 )
             }
             composable(Route.MercadoPagoConnect.path) { mercadoPago() }
