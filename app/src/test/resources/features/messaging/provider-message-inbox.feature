@@ -1,90 +1,54 @@
-Feature: Home principal del prestador
-  Como prestador registrado y con el perfil completo
-  Quiero acceder a una pantalla principal con un resumen de mi actividad
-  Para consultar rápidamente mis solicitudes, trabajos y acciones disponibles
+Feature: Bandeja de mensajes del prestador
+  Como prestador autenticado
+  Quiero visualizar mis conversaciones y solicitudes de contacto
+  Para gestionar de manera organizada la comunicación con consumidores
 
   @wip
-  Scenario: 01-PHO Resolver una sesión vigente de prestador al abrir la app
-    Given que existe una sesión local vigente y la API devolverá un perfil completo con rol provider
-    When el prestador abre la aplicación
-    Then la app muestra un estado de carga hasta resolver el perfil autenticado
-    And navega directamente a Home sin mostrar Welcome ni el registro profesional momentáneamente
+  Scenario: 01-PMI Abrir Mensajes desde la navegación principal
+    Given que el prestador autenticado se encuentra en Home
+    When selecciona Mensajes en la barra de navegación inferior
+    Then la app muestra la bandeja de mensajes y marca Mensajes como destino seleccionado
+    And la barra permanece disponible en Home y Mensajes sin mostrarse en destinos de detalle o autenticación
 
   @wip
-  Scenario: 02-PHO Mostrar la identidad del prestador en Home
-    Given que la API devuelve el nombre, apellido, rubro y foto del prestador autenticado
-    When la app muestra Home
-    Then Home muestra el nombre completo, el rubro y la foto del prestador
-    And la foto tiene una alternativa accesible con las iniciales si no puede cargarse
+  Scenario: 02-PMI Mostrar los resúmenes de conversación del prestador
+    Given que la API devolverá conversaciones asociadas a la cuenta del prestador
+    When la bandeja termina de cargar
+    Then muestra todas las conversaciones en el orden recibido desde la API
+    And cada fila muestra el nombre completo del consumidor y su foto o sus iniciales como alternativa
+    And cada fila muestra el extracto disponible del último mensaje y una fecha u hora relativa
 
   @wip
-  Scenario: 03-PHO Dirigir al registro cuando el perfil no existe
-    Given que existe una sesión local pero la API responde 404 al consultar el perfil autenticado
-    When la app resuelve el destino privado inicial
-    Then navega al registro profesional sin mostrar Home
-    And conserva la sesión para completar el registro
+  Scenario: 03-PMI Distinguir una solicitud pendiente de aceptación
+    Given que la API devolverá una conversación pendiente y una conversación activa
+    When la bandeja muestra ambas conversaciones
+    Then la conversación pendiente exhibe un distintivo Pendiente de aceptación
+    And la conversación activa no exhibe ese distintivo
 
   @wip
-  Scenario: 04-PHO Impedir Home a una cuenta consumidora
-    Given que existe una sesión local y la API devuelve un perfil con rol consumer
-    When la app resuelve el destino privado inicial
-    Then impide el acceso a Home y muestra un mensaje amigable indicando que la cuenta no corresponde a un prestador
-    And ofrece volver a Welcome cerrando la sesión local
+  Scenario: 04-PMI Mostrar una bandeja vacía instructiva
+    Given que la API no devuelve conversaciones para la cuenta del prestador
+    When la bandeja termina de cargar
+    Then muestra un estado vacío que explica que los mensajes aparecerán al recibir o aceptar solicitudes
+    And no muestra una lista vacía ni un error
 
   @wip
-  Scenario: 05-PHO Cerrar una sesión vencida
-    Given que existe una sesión local pero la API rechaza el token con 401
-    When la app resuelve el destino privado inicial
-    Then elimina la sesión local y muestra Welcome
-    And ninguna pantalla privada permanece accesible mediante Atrás
-    
-  @wip
-  Scenario: 06-PHO Informar un error temporal sin cerrar la sesión
-    Given que existe una sesión local y la consulta del perfil falla por red o por un error 5xx
-    When la app resuelve el destino privado inicial
-    Then muestra un mensaje amigable con una acción para reintentar
-    And conserva la sesión sin mostrar Welcome, el registro profesional ni Home
+  Scenario: 05-PMI Mostrar la carga inicial de conversaciones
+    Given que la consulta de conversaciones permanece en curso
+    When el prestador abre la bandeja de mensajes
+    Then muestra un indicador de carga accesible hasta que la consulta finaliza
+    And no muestra simultáneamente contenido vacío, datos anteriores ni un error
 
   @wip
-  Scenario: 07-PHO Reintentar la recuperación del perfil
-    Given que la recuperación del perfil falló temporalmente y la siguiente consulta devolverá un prestador completo
+  Scenario: 06-PMI Reintentar una consulta fallida
+    Given que la consulta de conversaciones falló por red o por un error del servidor y el siguiente intento tendrá éxito
     When el prestador selecciona Reintentar
-    Then la app consulta nuevamente el perfil autenticado y muestra Home
-    And no solicita una nueva autenticación
+    Then la app ejecuta nuevamente la misma consulta una sola vez
+    And muestra las conversaciones recuperadas sin duplicar solicitudes en curso
 
   @wip
-  Scenario: 08-PHO Sincronizar el perfil registrado antes de Home
-    Given que el registro profesional finalizó y el prestador completó o decidió omitir el paso opcional de Mercado Pago
-    When el prestador continúa a Home
-    Then la app vuelve a consultar el perfil autenticado antes de mostrar Home
-    And el registro profesional y Mercado Pago no quedan accesibles mediante Atrás
-
-  @wip
-  Scenario: 09-PHO Mostrar la actividad disponible del prestador
-    Given que la API devuelve solicitudes pendientes y trabajos agendados del prestador autenticado
-    When la app termina de cargar la actividad de Home
-    Then cada solicitud muestra el consumidor, el título y la descripción disponibles
-    And cada trabajo muestra el consumidor, la descripción y la fecha y hora programadas
-    And el resumen muestra las cantidades reales de solicitudes pendientes y trabajos agendados
-    And Home ofrece accesos visibles a Solicitudes, Trabajos agendados y Mercado Pago
-
-  @wip
-  Scenario: 10-PHO Mostrar estados de actividad vacíos
-    Given que la API no devuelve solicitudes pendientes ni trabajos agendados para el prestador
-    When la app termina de cargar la actividad de Home
-    Then muestra estados vacíos claros para Solicitudes y Trabajos agendados
-    And muestra ambas cantidades en cero sin presentar un error ni inventar actividad
-
-  @wip
-  Scenario: 11-PHO Reintentar una sección de actividad que falló
-    Given que una sección de actividad falló temporalmente y la siguiente consulta devolverá datos
-    When el prestador reintenta esa sección desde Home
-    Then la app actualiza la sección con la respuesta más reciente
-    And conserva la identidad, la sesión y las demás secciones disponibles
-
-  @wip
-  Scenario: 12-PHO Evitar destinos duplicados al recrear la aplicación
-    Given que la app ya resolvió Home para una sesión vigente
-    When la actividad rota o se recrea el proceso
-    Then la app conserva un único destino Home y un estado de navegación coherente
-    And no agrega Welcome, el registro profesional ni otra Home al historial
+  Scenario: 07-PMI Abrir la ruta de una conversación seleccionada
+    Given que la bandeja muestra una conversación con un identificador válido
+    When el prestador selecciona esa conversación
+    Then la app navega una sola vez a la ruta de conversación identificada por conversation_id
+    And al volver regresa a la bandeja de mensajes conservada
