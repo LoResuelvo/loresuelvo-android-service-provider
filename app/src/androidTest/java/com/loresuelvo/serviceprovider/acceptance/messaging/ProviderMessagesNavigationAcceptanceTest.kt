@@ -24,8 +24,8 @@ import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
-import com.loresuelvo.serviceprovider.ui.navigation.PROVIDER_BOTTOM_BAR_TAG
-import com.loresuelvo.serviceprovider.ui.navigation.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
+import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
+import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_TAG
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.screens.messages.components.PROVIDER_MESSAGES_ROW_TAG_PREFIX
 import dagger.hilt.EntryPoint

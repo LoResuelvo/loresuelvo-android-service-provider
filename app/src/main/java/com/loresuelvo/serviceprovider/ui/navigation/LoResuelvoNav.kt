@@ -15,6 +15,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
+import com.loresuelvo.serviceprovider.ui.components.bottomnav.LoresuelvoBottomBar
 import com.loresuelvo.serviceprovider.ui.entry.ProviderEntryUiState
 import com.loresuelvo.serviceprovider.ui.entry.ProviderEntryViewModel
 import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderAccountMismatchScreen
@@ -65,7 +66,7 @@ fun LoResuelvoNav(
                 Scaffold(
                     contentWindowInsets = WindowInsets.navigationBars,
                     bottomBar = {
-                        ProviderBottomBar(
+                        LoresuelvoBottomBar(
                             currentRoute = currentRoute,
                             onNavigate = { destination ->
                                 navController.navigate(destination.route) {

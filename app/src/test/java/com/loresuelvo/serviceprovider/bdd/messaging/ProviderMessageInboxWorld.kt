@@ -1,6 +1,6 @@
 package com.loresuelvo.serviceprovider.bdd.messaging
 
-import com.loresuelvo.serviceprovider.ui.navigation.ProviderBottomDestination
+import com.loresuelvo.serviceprovider.ui.components.bottomnav.BottomDestination
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,8 +18,8 @@ internal class ProviderMessageInboxWorld {
     }
 
     fun selectMessages() {
-        assertTrue(ProviderBottomDestination.shouldShow(currentRoute))
-        selectedRoute = ProviderBottomDestination.Messages.route
+        assertTrue(BottomDestination.shouldShow(currentRoute))
+        selectedRoute = BottomDestination.Messages.route
         currentRoute = selectedRoute.orEmpty()
     }
 
@@ -29,10 +29,10 @@ internal class ProviderMessageInboxWorld {
     }
 
     fun assertBottomBarVisibility() {
-        assertTrue(ProviderBottomDestination.shouldShow(Route.Home.path))
-        assertTrue(ProviderBottomDestination.shouldShow(Route.Messages.path))
-        assertFalse(ProviderBottomDestination.shouldShow(Route.Welcome.path))
-        assertFalse(ProviderBottomDestination.shouldShow(Route.Conversation.path))
+        assertTrue(BottomDestination.shouldShow(Route.Home.path))
+        assertTrue(BottomDestination.shouldShow(Route.Messages.path))
+        assertFalse(BottomDestination.shouldShow(Route.Welcome.path))
+        assertFalse(BottomDestination.shouldShow(Route.Conversation.path))
     }
 
     fun openMessagesWithConversation() {
