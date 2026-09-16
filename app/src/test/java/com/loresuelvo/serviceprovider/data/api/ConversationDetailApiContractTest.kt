@@ -45,25 +45,30 @@ class ConversationDetailApiContractTest {
                 """
                 {
                   "id": 42,
+                  "type": "work",
                   "status": "active",
-                  "counterpart": {
-                    "id": 20,
-                    "role": "consumer",
-                    "name": "Ana",
-                    "surname": "Pérez",
-                    "profile_photo_url": null
+                  "work": {
+                    "counterpart": {
+                      "id": 20,
+                      "role": "consumer",
+                      "name": "Ana",
+                      "surname": "Pérez",
+                      "profile_photo_url": null
+                    }
                   },
                   "messages": [
                     {
                       "id": 1,
                       "sender_role": "consumer",
                       "content": "Hola",
+                      "images": [],
                       "created_on": "2026-05-30T14:20:00Z"
                     },
                     {
                       "id": 2,
                       "sender_role": "provider",
                       "content": "Listo",
+                      "images": [],
                       "created_on": "2026-05-30T14:25:00Z"
                     }
                   ],
@@ -95,12 +100,15 @@ class ConversationDetailApiContractTest {
                 """
                 {
                   "id": 42,
+                  "type": "work",
                   "status": "active",
-                  "counterpart": {
-                    "id": 20,
-                    "role": "consumer",
-                    "name": "Ana",
-                    "surname": "Pérez"
+                  "work": {
+                    "counterpart": {
+                      "id": 20,
+                      "role": "consumer",
+                      "name": "Ana",
+                      "surname": "Pérez"
+                    }
                   },
                   "messages": [],
                   "updated_on": "2026-05-30T14:25:00Z"

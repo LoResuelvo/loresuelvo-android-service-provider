@@ -24,7 +24,11 @@ internal fun ConversationDto.toDomain(): Conversation = Conversation(
 internal fun ConversationDetailDto.toDomain(): ConversationDetail = ConversationDetail(
     id = id.requirePositive("conversation id"),
     status = status.toConversationStatus(),
-    counterpart = counterpart.toDomain(),
+    counterpart = (work?.counterpart ?: counterpart)
+        ?.toDomain()
+        ?: throw IllegalArgumentException(
+            "Missing conversation counterpart (neither work.counterpart nor root counterpart)",
+        ),
     messages = messages.map { it.toDomain() },
     updatedOnEpochMillis = updatedOn?.toEpochMillis()
         ?: throw IllegalArgumentException("Missing conversation updated_on"),
