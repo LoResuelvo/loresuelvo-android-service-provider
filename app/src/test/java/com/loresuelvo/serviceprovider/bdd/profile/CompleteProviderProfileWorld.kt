@@ -187,6 +187,13 @@ class CompleteProviderProfileWorld : AutoCloseable {
 
     fun checkCoverageZone(zoneId: Int) = viewModel.onCoverageZoneChecked(zoneId, true)
 
+    fun arrangeTwoSelectedCoverageZones() {
+        arrangeReadyCoverageSelection()
+        checkCoverageZone(14)
+    }
+
+    fun uncheckCoverageZone(zoneId: Int) = viewModel.onCoverageZoneChecked(zoneId, false)
+
     fun assertSelectedCoverageZones(expected: List<Int>) {
         assertEquals(expected, viewModel.uiState.value.selectedCoverageZoneIds)
     }

@@ -128,4 +128,16 @@ class ProviderCoverageZonesSteps {
 
     @Y("se admiten zonas no contiguas")
     fun nonContiguousZonesAreAllowed() = world.assertSelectedCoverageZones(listOf(6, 14))
+
+    @Dado("que el prestador seleccionó dos zonas")
+    fun twoSelectedZones() = world.arrangeTwoSelectedCoverageZones()
+
+    @Cuando("el prestador desmarca una zona")
+    fun uncheckZone() = world.uncheckCoverageZone(14)
+
+    @Entonces("solamente esa zona se elimina de la selección")
+    fun onlyUncheckedZoneIsRemoved() = world.assertSelectedCoverageZones(listOf(6))
+
+    @Y("la otra zona permanece seleccionada")
+    fun otherZoneRemainsSelected() = world.assertSelectedCoverageZones(listOf(6))
 }

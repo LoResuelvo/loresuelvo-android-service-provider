@@ -52,7 +52,6 @@ Característica: Registrar prestador con zonas de cobertura
     Y las selecciones anteriores permanecen
     Y se admiten zonas no contiguas
 
-  @wip
   Escenario: 07-PCZ Quitar una zona antes del registro
     Dado que el prestador seleccionó dos zonas
     Cuando el prestador desmarca una zona
