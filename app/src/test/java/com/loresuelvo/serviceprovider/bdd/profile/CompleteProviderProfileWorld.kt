@@ -112,6 +112,14 @@ class CompleteProviderProfileWorld : AutoCloseable {
         coverageZoneRepository.outcome = CoverageZonesOutcome.Success(zones)
     }
 
+    fun configureCoverageFailure(server: Boolean) {
+        coverageZoneRepository.outcome = if (server) {
+            CoverageZonesOutcome.Failure.Server(500)
+        } else {
+            CoverageZonesOutcome.Failure.Network(RuntimeException("offline"))
+        }
+    }
+
     fun finishCoverageLoad() {
         coverageLoad?.complete(Unit)
         scheduler.advanceUntilIdle()
@@ -120,6 +128,10 @@ class CompleteProviderProfileWorld : AutoCloseable {
     fun assertCoverageZoneNamesInOrder(expectedNames: List<String>) {
         val state = viewModel.uiState.value.coverageZonesState as CoverageZonesLoadState.Ready
         assertEquals(expectedNames, state.zones.map { it.name })
+    }
+
+    fun assertCoverageZonesError() {
+        assertEquals(CoverageZonesLoadState.Error, viewModel.uiState.value.coverageZonesState)
     }
 
     fun assertCoverageZonesLoading() {

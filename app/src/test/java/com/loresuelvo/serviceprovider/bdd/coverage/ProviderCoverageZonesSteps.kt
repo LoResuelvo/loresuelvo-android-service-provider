@@ -66,4 +66,20 @@ class ProviderCoverageZonesSteps {
 
     @Y("ninguna zona queda seleccionada inicialmente en ningún entorno")
     fun noInitialSelection() = world.assertNoCoverageZoneSelected()
+
+    @Dado("que la carga de zonas devolverá una {string}")
+    fun coverageFailure(failure: String) {
+        world.configureCoverageFailure(server = failure == "falla del servidor")
+        world.configurePendingCoverageZones()
+        world.navigateToProfileDestination()
+    }
+
+    @Entonces("aparece un mensaje amigable y una acción para reintentar")
+    fun friendlyRetryableError() = world.assertCoverageZonesError()
+
+    @Y("no se solicita el registro del prestador")
+    fun providerIsNotRegistered() = world.assertRegistrationBlockedWhileCoverageLoads()
+
+    @Y("los demás datos del formulario permanecen sin cambios")
+    fun otherFormDataIsPreserved() = world.assertProfileFieldsRemainEditable()
 }

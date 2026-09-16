@@ -19,7 +19,6 @@ Característica: Registrar prestador con zonas de cobertura
     Y los nombres se muestran en lugar de los identificadores o referencias del mapa
     Y ninguna zona queda seleccionada inicialmente en ningún entorno
 
-  @wip
   Esquema del escenario: 03-PCZ Mostrar un error recuperable al fallar el catálogo
     Dado que la carga de zonas devolverá una "<Falla>"
     Cuando finaliza la carga del catálogo de zonas

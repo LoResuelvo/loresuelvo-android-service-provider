@@ -105,6 +105,7 @@ fun CompleteProviderProfileRoute(
         onSurnameChanged = viewModel::onSurnameChanged,
         onCategorySelected = viewModel::onCategorySelected,
         onRetryCategories = viewModel::retryLoadingCategories,
+        onRetryCoverageZones = viewModel::retryLoadingCoverageZones,
         onSelectPhoto = {
             photoPickerLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
@@ -128,6 +129,7 @@ fun CompleteProviderProfileScreen(
     onSurnameChanged: (String) -> Unit = {},
     onCategorySelected: (Category) -> Unit = {},
     onRetryCategories: () -> Unit = {},
+    onRetryCoverageZones: () -> Unit = {},
     onSelectPhoto: () -> Unit = {},
     onUploadPhoto: () -> Unit = {},
     onSubmit: () -> Unit = {},
@@ -315,7 +317,10 @@ fun CompleteProviderProfileScreen(
                 formLoading = uiState.loading,
             )
 
-            CoverageZoneSection(state = uiState.coverageZonesState)
+            CoverageZoneSection(
+                state = uiState.coverageZonesState,
+                onRetry = onRetryCoverageZones,
+            )
 
             // Disclaimer / Information
             Text(

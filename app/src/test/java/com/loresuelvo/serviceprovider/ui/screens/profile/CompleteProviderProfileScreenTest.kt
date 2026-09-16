@@ -231,6 +231,31 @@ class CompleteProviderProfileScreenTest {
     }
 
     @Test
+    fun renders_coverage_error_and_invokes_retry() {
+        var retried = false
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        coverageZonesState = CoverageZonesLoadState.Error,
+                    ),
+                    onRetryCoverageZones = { retried = true },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_load_error))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_retry))
+            .performScrollTo()
+            .performClick()
+        assertTrue(retried)
+    }
+
+    @Test
     fun invokes_callbacks_on_text_input_and_button_click() {
         var enteredName = ""
         var submitted = false

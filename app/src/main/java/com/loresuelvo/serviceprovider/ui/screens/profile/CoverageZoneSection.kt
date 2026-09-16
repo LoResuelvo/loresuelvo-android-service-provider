@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
@@ -20,6 +21,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 @Composable
 internal fun CoverageZoneSection(
     state: CoverageZonesLoadState,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -39,10 +41,21 @@ internal fun CoverageZoneSection(
                     Text(text = zone.name, style = MaterialTheme.typography.bodyLarge)
                 }
             }
-            is CoverageZonesLoadState.Empty,
-            is CoverageZonesLoadState.Error,
-            -> Unit
+            is CoverageZonesLoadState.Error -> CoverageZonesError(onRetry)
+            is CoverageZonesLoadState.Empty -> Unit
         }
+    }
+}
+
+@Composable
+private fun CoverageZonesError(onRetry: () -> Unit) {
+    Text(
+        text = stringResource(R.string.provider_profile_coverage_load_error),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.error,
+    )
+    OutlinedButton(onClick = onRetry) {
+        Text(text = stringResource(R.string.provider_profile_retry))
     }
 }
 

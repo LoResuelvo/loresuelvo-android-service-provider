@@ -87,6 +87,8 @@ class CompleteProviderProfileViewModel @Inject constructor(
         }
     }
 
+    fun retryLoadingCoverageZones() = loadCoverageZones()
+
     fun onNameChanged(name: String) {
         _uiState.update { it.copy(name = name, error = null) }
     }
