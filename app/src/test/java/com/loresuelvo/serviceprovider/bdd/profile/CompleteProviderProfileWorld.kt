@@ -174,6 +174,23 @@ class CompleteProviderProfileWorld : AutoCloseable {
         assertEquals("file_valid_123", state.confirmedPhotoFileId)
     }
 
+    fun arrangeReadyCoverageSelection() {
+        configureCoverageZones(
+            listOf(
+                CoverageZone(6, "Comuna 6", "place-6"),
+                CoverageZone(14, "Comuna 14", "place-14"),
+            ),
+        )
+        navigateToProfileDestination()
+        viewModel.onCoverageZoneChecked(6, true)
+    }
+
+    fun checkCoverageZone(zoneId: Int) = viewModel.onCoverageZoneChecked(zoneId, true)
+
+    fun assertSelectedCoverageZones(expected: List<Int>) {
+        assertEquals(expected, viewModel.uiState.value.selectedCoverageZoneIds)
+    }
+
     fun assertCoverageZonesLoading() {
         assertEquals(CoverageZonesLoadState.Loading, viewModel.uiState.value.coverageZonesState)
     }

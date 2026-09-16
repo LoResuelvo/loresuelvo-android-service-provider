@@ -45,7 +45,6 @@ Característica: Registrar prestador con zonas de cobertura
     Y el registro permanece bloqueado
     Y no se agrega ningún identificador predeterminado
 
-  @wip
   Escenario: 06-PCZ Seleccionar una o varias zonas disponibles
     Dado un catálogo disponible con ninguna o una zona seleccionada
     Cuando el prestador marca otra zona disponible

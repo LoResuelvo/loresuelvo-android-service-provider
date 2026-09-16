@@ -106,6 +106,7 @@ fun CompleteProviderProfileRoute(
         onCategorySelected = viewModel::onCategorySelected,
         onRetryCategories = viewModel::retryLoadingCategories,
         onRetryCoverageZones = viewModel::retryLoadingCoverageZones,
+        onCoverageZoneChecked = viewModel::onCoverageZoneChecked,
         onSelectPhoto = {
             photoPickerLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
@@ -130,6 +131,7 @@ fun CompleteProviderProfileScreen(
     onCategorySelected: (Category) -> Unit = {},
     onRetryCategories: () -> Unit = {},
     onRetryCoverageZones: () -> Unit = {},
+    onCoverageZoneChecked: (Int, Boolean) -> Unit = { _, _ -> },
     onSelectPhoto: () -> Unit = {},
     onUploadPhoto: () -> Unit = {},
     onSubmit: () -> Unit = {},
@@ -319,6 +321,9 @@ fun CompleteProviderProfileScreen(
 
             CoverageZoneSection(
                 state = uiState.coverageZonesState,
+                selectedZoneIds = uiState.selectedCoverageZoneIds,
+                enabled = !isBusy,
+                onCheckedChange = onCoverageZoneChecked,
                 onRetry = onRetryCoverageZones,
             )
 

@@ -105,6 +105,21 @@ class CompleteProviderProfileViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCoverageZoneIds = zoneIds, error = null) }
     }
 
+    fun onCoverageZoneChecked(zoneId: Int, checked: Boolean) {
+        val state = _uiState.value
+        if (state.loading || state.photoLoading) return
+        val catalog = (state.coverageZonesState as? CoverageZonesLoadState.Ready)?.zones ?: return
+        if (catalog.none { it.id == zoneId }) return
+        if ((zoneId in state.selectedCoverageZoneIds) == checked) return
+
+        val selected = if (checked) {
+            state.selectedCoverageZoneIds + zoneId
+        } else {
+            state.selectedCoverageZoneIds - zoneId
+        }
+        _uiState.update { it.copy(selectedCoverageZoneIds = selected, error = null) }
+    }
+
     fun onPhotoSelected(source: String) {
         if (_uiState.value.photoLoading || _uiState.value.loading) return
 

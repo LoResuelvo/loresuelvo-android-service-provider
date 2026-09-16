@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -13,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
@@ -21,6 +25,9 @@ import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 @Composable
 internal fun CoverageZoneSection(
     state: CoverageZonesLoadState,
+    selectedZoneIds: List<Int>,
+    enabled: Boolean,
+    onCheckedChange: (Int, Boolean) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -36,7 +43,23 @@ internal fun CoverageZoneSection(
             is CoverageZonesLoadState.Loading -> CoverageZonesLoading()
             is CoverageZonesLoadState.Ready -> state.zones.forEach { zone ->
                 key(zone.id) {
-                    Text(text = zone.name, style = MaterialTheme.typography.bodyLarge)
+                    val checked = zone.id in selectedZoneIds
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = checked,
+                                enabled = enabled,
+                                role = Role.Checkbox,
+                                onValueChange = { onCheckedChange(zone.id, it) },
+                            )
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
+                        Text(text = zone.name, style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
             is CoverageZonesLoadState.Error -> CoverageZonesError(onRetry)

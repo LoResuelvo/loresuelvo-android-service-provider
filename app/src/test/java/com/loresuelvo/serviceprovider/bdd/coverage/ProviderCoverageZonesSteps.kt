@@ -113,4 +113,19 @@ class ProviderCoverageZonesSteps {
 
     @Y("no se agrega ningún identificador predeterminado")
     fun noDefaultCoverageId() = world.assertNoCoverageZoneSelected()
+
+    @Dado("un catálogo disponible con ninguna o una zona seleccionada")
+    fun readyCoverageSelection() = world.arrangeReadyCoverageSelection()
+
+    @Cuando("el prestador marca otra zona disponible")
+    fun checkAnotherZone() = world.checkCoverageZone(14)
+
+    @Entonces("la zona elegida queda seleccionada una sola vez")
+    fun selectedOnce() = world.assertSelectedCoverageZones(listOf(6, 14))
+
+    @Y("las selecciones anteriores permanecen")
+    fun priorSelectionsRemain() = world.assertSelectedCoverageZones(listOf(6, 14))
+
+    @Y("se admiten zonas no contiguas")
+    fun nonContiguousZonesAreAllowed() = world.assertSelectedCoverageZones(listOf(6, 14))
 }

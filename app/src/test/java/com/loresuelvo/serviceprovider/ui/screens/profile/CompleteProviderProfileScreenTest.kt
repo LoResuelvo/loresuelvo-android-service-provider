@@ -231,6 +231,27 @@ class CompleteProviderProfileScreenTest {
     }
 
     @Test
+    fun checks_an_available_coverage_zone() {
+        var checked: Pair<Int, Boolean>? = null
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        coverageZonesState = CoverageZonesLoadState.Ready(
+                            listOf(CoverageZone(6, "Comuna 6", "place-6")),
+                        ),
+                    ),
+                    onCoverageZoneChecked = { id, value -> checked = id to value },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Comuna 6").performScrollTo().performClick()
+
+        assertEquals(6 to true, checked)
+    }
+
+    @Test
     fun renders_coverage_error_and_invokes_retry() {
         var retried = false
         composeTestRule.setContent {
