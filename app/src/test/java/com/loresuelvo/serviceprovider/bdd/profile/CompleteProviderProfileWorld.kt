@@ -6,6 +6,8 @@ import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZone
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZonesOutcome
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
@@ -104,6 +106,20 @@ class CompleteProviderProfileWorld : AutoCloseable {
     fun configurePendingCoverageZones() {
         coverageLoad = CompletableDeferred()
         coverageZoneRepository.beforeReturn = { coverageLoad?.await() }
+    }
+
+    fun configureCoverageZones(zones: List<CoverageZone>) {
+        coverageZoneRepository.outcome = CoverageZonesOutcome.Success(zones)
+    }
+
+    fun finishCoverageLoad() {
+        coverageLoad?.complete(Unit)
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertCoverageZoneNamesInOrder(expectedNames: List<String>) {
+        val state = viewModel.uiState.value.coverageZonesState as CoverageZonesLoadState.Ready
+        assertEquals(expectedNames, state.zones.map { it.name })
     }
 
     fun assertCoverageZonesLoading() {

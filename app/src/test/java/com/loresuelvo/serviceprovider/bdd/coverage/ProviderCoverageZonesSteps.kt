@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.bdd.coverage
 
 import com.loresuelvo.serviceprovider.bdd.profile.CompleteProviderProfileWorld
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZone
 import io.cucumber.java.After
 import io.cucumber.java.Before
 import io.cucumber.java.es.Cuando
@@ -39,4 +40,30 @@ class ProviderCoverageZonesSteps {
 
     @Y("los demás campos del perfil permanecen disponibles")
     fun profileFieldsRemainEditable() = world.assertProfileFieldsRemainEditable()
+
+    @Dado("que la API devolverá zonas disponibles con identificadores y nombres legibles")
+    fun availableCoverageZones() {
+        world.configureCoverageZones(
+            listOf(
+                CoverageZone(14, "Comuna 14", "place-14"),
+                CoverageZone(6, "Comuna 6", "place-6"),
+            ),
+        )
+        world.configurePendingCoverageZones()
+        world.navigateToProfileDestination()
+    }
+
+    @Cuando("finaliza la carga del catálogo de zonas")
+    fun finishCoverageLoad() = world.finishCoverageLoad()
+
+    @Entonces("cada nombre disponible aparece una sola vez en el orden del servidor")
+    fun namesAppearInServerOrder() =
+        world.assertCoverageZoneNamesInOrder(listOf("Comuna 14", "Comuna 6"))
+
+    @Y("los nombres se muestran en lugar de los identificadores o referencias del mapa")
+    fun readableNamesAreExposed() =
+        world.assertCoverageZoneNamesInOrder(listOf("Comuna 14", "Comuna 6"))
+
+    @Y("ninguna zona queda seleccionada inicialmente en ningún entorno")
+    fun noInitialSelection() = world.assertNoCoverageZoneSelected()
 }

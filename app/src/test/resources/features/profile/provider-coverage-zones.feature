@@ -12,7 +12,6 @@ Característica: Registrar prestador con zonas de cobertura
     Y el registro no puede enviarse hasta que el catálogo esté disponible
     Y los demás campos del perfil permanecen disponibles
 
-  @wip
   Escenario: 02-PCZ Mostrar las zonas disponibles en el orden del servidor
     Dado que la API devolverá zonas disponibles con identificadores y nombres legibles
     Cuando finaliza la carga del catálogo de zonas

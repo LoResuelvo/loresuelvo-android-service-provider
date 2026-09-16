@@ -9,6 +9,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -21,26 +22,41 @@ internal fun CoverageZoneSection(
     state: CoverageZonesLoadState,
     modifier: Modifier = Modifier,
 ) {
-    if (state !is CoverageZonesLoadState.Loading) return
-
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = stringResource(R.string.provider_profile_coverage_title),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            CircularProgressIndicator(modifier = Modifier.height(24.dp), strokeWidth = 2.dp)
+        if (state is CoverageZonesLoadState.Loading || state is CoverageZonesLoadState.Ready) {
             Text(
-                text = stringResource(R.string.provider_profile_coverage_loading),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(R.string.provider_profile_coverage_title),
+                style = MaterialTheme.typography.titleMedium,
             )
         }
+        when (state) {
+            is CoverageZonesLoadState.Loading -> CoverageZonesLoading()
+            is CoverageZonesLoadState.Ready -> state.zones.forEach { zone ->
+                key(zone.id) {
+                    Text(text = zone.name, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+            is CoverageZonesLoadState.Empty,
+            is CoverageZonesLoadState.Error,
+            -> Unit
+        }
+    }
+}
+
+@Composable
+private fun CoverageZonesLoading() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        CircularProgressIndicator(modifier = Modifier.height(24.dp), strokeWidth = 2.dp)
+        Text(
+            text = stringResource(R.string.provider_profile_coverage_loading),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

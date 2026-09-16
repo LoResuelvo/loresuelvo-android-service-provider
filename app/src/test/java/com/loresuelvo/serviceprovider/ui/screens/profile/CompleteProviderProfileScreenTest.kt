@@ -5,8 +5,10 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -206,6 +208,26 @@ class CompleteProviderProfileScreenTest {
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_profile_name_label))
             .assertIsEnabled()
+    }
+
+    @Test
+    fun renders_coverage_zone_names_in_server_order() {
+        val zones = listOf(
+            CoverageZone(14, "Comuna 14", "place-14"),
+            CoverageZone(6, "Comuna 6", "place-6"),
+        )
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        coverageZonesState = CoverageZonesLoadState.Ready(zones),
+                    ),
+                )
+            }
+        }
+
+        composeTestRule.onAllNodesWithText("Comuna 14").assertCountEquals(1)
+        composeTestRule.onAllNodesWithText("Comuna 6").assertCountEquals(1)
     }
 
     @Test
