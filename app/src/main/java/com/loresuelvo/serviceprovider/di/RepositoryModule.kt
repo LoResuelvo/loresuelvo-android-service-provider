@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.di
 
 import com.loresuelvo.serviceprovider.data.api.ApiCategoryRepository
 import com.loresuelvo.serviceprovider.data.api.ApiConversationRepository
+import com.loresuelvo.serviceprovider.data.api.ApiCoverageZoneRepository
 import com.loresuelvo.serviceprovider.data.api.ApiCurrentAccountRepository
 import com.loresuelvo.serviceprovider.data.api.ApiJobRequestRepository
 import com.loresuelvo.serviceprovider.data.api.ApiProviderRepository
@@ -10,6 +11,7 @@ import com.loresuelvo.serviceprovider.data.auth.EncryptedAuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZoneRepository
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
@@ -44,6 +46,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindConversationRepository(impl: ApiConversationRepository): ConversationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCoverageZoneRepository(impl: ApiCoverageZoneRepository): CoverageZoneRepository
 
     @Binds
     @Singleton

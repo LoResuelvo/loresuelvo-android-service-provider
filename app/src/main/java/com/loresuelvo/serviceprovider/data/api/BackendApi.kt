@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.data.api
 import com.loresuelvo.serviceprovider.data.api.dto.CategoryDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConfirmFileRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConversationDto
+import com.loresuelvo.serviceprovider.data.api.dto.CoverageZoneDto
 import com.loresuelvo.serviceprovider.data.api.dto.CurrentAccountDto
 import com.loresuelvo.serviceprovider.data.api.dto.FileResponseDto
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
@@ -55,6 +56,9 @@ interface BackendApi {
      */
     @GET("categories")
     suspend fun getCategories(): List<CategoryDto>
+
+    @GET("coverage-zones")
+    suspend fun getCoverageZones(): List<CoverageZoneDto>
 
     /**
      * `POST /providers` — creates the provider record on the platform.
