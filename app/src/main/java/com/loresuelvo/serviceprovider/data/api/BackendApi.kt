@@ -2,7 +2,9 @@ package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.dto.CategoryDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConfirmFileRequestDto
+import com.loresuelvo.serviceprovider.data.api.dto.ConversationDetailDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConversationDto
+import com.loresuelvo.serviceprovider.data.api.dto.ConversationMessageDto
 import com.loresuelvo.serviceprovider.data.api.dto.CoverageZoneDto
 import com.loresuelvo.serviceprovider.data.api.dto.CurrentAccountDto
 import com.loresuelvo.serviceprovider.data.api.dto.FileResponseDto
@@ -14,6 +16,7 @@ import com.loresuelvo.serviceprovider.data.api.dto.PresignFileResponseDto
 import com.loresuelvo.serviceprovider.data.api.dto.ProviderSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.ProviderProfileDto
 import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
+import com.loresuelvo.serviceprovider.data.api.dto.SendMessageRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderSummaryDto
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -46,6 +49,40 @@ interface BackendApi {
 
     @GET("conversations")
     suspend fun getConversations(): List<ConversationDto>
+
+    /**
+     * `GET /conversations/{conversationId}` — full snapshot of a
+     * single conversation including its complete ordered
+     * `messages` thread. The chat surface uses it on entry to
+     * render the header (counterpart, status) and the existing
+     * bubbles. Empty `messages` is a valid response for a brand-
+     * new conversation that was just opened by the consumer.
+     *
+     * 404 maps to [com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome.Failure.NotFound]
+     * at the repository layer.
+     */
+    @GET("conversations/{conversationId}")
+    suspend fun getConversationById(
+        @Path("conversationId") conversationId: Int,
+    ): ConversationDetailDto
+
+    /**
+     * `POST /conversations/{conversationId}/messages` — appends a
+     * provider-typed text message to the given conversation. The
+     * response carries the server-persisted message (with the
+     * backend-issued id and the authoritative `created_on`
+     * timestamp) so the ViewModel can replace its optimistic
+     * bubble without a follow-up `GET` round-trip.
+     *
+     * 404 maps to
+     * [com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.ConversationNotFound]
+     * at the repository layer.
+     */
+    @POST("conversations/{conversationId}/messages")
+    suspend fun postMessage(
+        @Path("conversationId") conversationId: Int,
+        @Body request: SendMessageRequestDto,
+    ): ConversationMessageDto
 
     /**
      * `GET /categories` — the platform's service categories. Public

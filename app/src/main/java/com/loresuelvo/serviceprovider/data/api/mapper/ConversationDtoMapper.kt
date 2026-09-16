@@ -1,10 +1,12 @@
 package com.loresuelvo.serviceprovider.data.api.mapper
 
 import com.loresuelvo.serviceprovider.data.api.dto.ConversationCounterpartDto
+import com.loresuelvo.serviceprovider.data.api.dto.ConversationDetailDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConversationDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConversationMessageDto
 import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessageKind
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
@@ -15,6 +17,15 @@ internal fun ConversationDto.toDomain(): Conversation = Conversation(
     status = status.toConversationStatus(),
     counterpart = counterpart.toDomain(),
     lastMessage = lastMessage?.toDomain(),
+    updatedOnEpochMillis = updatedOn?.toEpochMillis()
+        ?: throw IllegalArgumentException("Missing conversation updated_on"),
+)
+
+internal fun ConversationDetailDto.toDomain(): ConversationDetail = ConversationDetail(
+    id = id.requirePositive("conversation id"),
+    status = status.toConversationStatus(),
+    counterpart = counterpart.toDomain(),
+    messages = messages.map { it.toDomain() },
     updatedOnEpochMillis = updatedOn?.toEpochMillis()
         ?: throw IllegalArgumentException("Missing conversation updated_on"),
 )
