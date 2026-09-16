@@ -20,6 +20,7 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
+import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.coverage.CoverageZone
 import com.loresuelvo.serviceprovider.domain.coverage.CoverageZoneRepository
 import com.loresuelvo.serviceprovider.domain.coverage.CoverageZonesOutcome
@@ -135,6 +136,15 @@ class ProviderSignupConversationRepository : ConversationRepository {
 
     override suspend fun getConversations(): ConversationsOutcome =
         outcome
+
+    override suspend fun getConversationById(conversationId: Int) =
+        TODO("Not exercised by the signup acceptance test.")
+
+    override suspend fun sendMessage(
+        conversationId: Int,
+        content: String,
+    ): SendMessageOutcome =
+        TODO("Not exercised by the signup acceptance test.")
 }
 
 @Module

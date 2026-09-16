@@ -5,6 +5,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpar
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.GetConversationsUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +109,15 @@ class MessagesListViewModelTest {
             calls += 1
             return outcome
         }
+
+        override suspend fun getConversationById(conversationId: Int) =
+            TODO("not exercised by MessagesListViewModelTest")
+
+        override suspend fun sendMessage(
+            conversationId: Int,
+            content: String,
+        ): SendMessageOutcome =
+            TODO("not exercised by MessagesListViewModelTest")
     }
 
     private class SequencedConversationRepository(
@@ -117,6 +127,15 @@ class MessagesListViewModelTest {
 
         override suspend fun getConversations(): ConversationsOutcome =
             outcomes.getOrElse(calls++) { outcomes.last() }
+
+        override suspend fun getConversationById(conversationId: Int) =
+            TODO("not exercised by MessagesListViewModelTest")
+
+        override suspend fun sendMessage(
+            conversationId: Int,
+            content: String,
+        ): SendMessageOutcome =
+            TODO("not exercised by MessagesListViewModelTest")
     }
 
     private class BlockingConversationRepository(
@@ -129,5 +148,14 @@ class MessagesListViewModelTest {
             completion.await()
             return ConversationsOutcome.Success(emptyList())
         }
+
+        override suspend fun getConversationById(conversationId: Int) =
+            TODO("not exercised by MessagesListViewModelTest")
+
+        override suspend fun sendMessage(
+            conversationId: Int,
+            content: String,
+        ): SendMessageOutcome =
+            TODO("not exercised by MessagesListViewModelTest")
     }
 }

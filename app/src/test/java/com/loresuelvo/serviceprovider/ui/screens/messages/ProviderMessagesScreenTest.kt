@@ -16,6 +16,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessageKind
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
@@ -53,8 +54,9 @@ class ProviderMessagesScreenTest {
                                     profilePhotoUrl = null,
                                 ),
                                 lastMessage = ConversationMessage(
+                                    id = 9000,
+                                    sender = ConversationSender.Consumer,
                                     content = "Hola, ¿podés ayudarme?",
-                                    kind = ConversationMessageKind.Text,
                                     createdOnEpochMillis = System.currentTimeMillis(),
                                 ),
                                 updatedOnEpochMillis = System.currentTimeMillis(),

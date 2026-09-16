@@ -2,11 +2,14 @@ package com.loresuelvo.serviceprovider.bdd.messaging
 
 import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessageKind
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.GetConversationsUseCase
 import com.loresuelvo.serviceprovider.ui.screens.messages.MessagesListUiState
 import com.loresuelvo.serviceprovider.ui.screens.messages.MessagesListViewModel
@@ -161,8 +164,9 @@ internal class ProviderMessageInboxListWorld : AutoCloseable {
             profilePhotoUrl = if (id == 2) "https://example.test/ana.jpg" else null,
         ),
         lastMessage = ConversationMessage(
+            id = id * 1000,
+            sender = ConversationSender.Consumer,
             content = message,
-            kind = ConversationMessageKind.Text,
             createdOnEpochMillis = 1_000L,
         ),
         updatedOnEpochMillis = 1_000L,
@@ -179,5 +183,14 @@ internal class ProviderMessageInboxListWorld : AutoCloseable {
             pendingCompletion?.await()
             return outcomes.getOrNull(calls - 1) ?: outcome
         }
+
+        override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome =
+            error("getConversationById is not exercised by the inbox feature")
+
+        override suspend fun sendMessage(
+            conversationId: Int,
+            content: String,
+        ): SendMessageOutcome =
+            error("sendMessage is not exercised by the inbox feature")
     }
 }

@@ -7,6 +7,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessageKind
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 
 internal fun ConversationDto.toDomain(): Conversation = Conversation(
@@ -18,7 +19,7 @@ internal fun ConversationDto.toDomain(): Conversation = Conversation(
         ?: throw IllegalArgumentException("Missing conversation updated_on"),
 )
 
-private fun ConversationCounterpartDto.toDomain(): ConversationCounterpart {
+internal fun ConversationCounterpartDto.toDomain(): ConversationCounterpart {
     require(role.isNullOrBlank() || role.equals("consumer", ignoreCase = true)) {
         "Conversation counterpart is not a consumer"
     }
@@ -30,17 +31,30 @@ private fun ConversationCounterpartDto.toDomain(): ConversationCounterpart {
     )
 }
 
-private fun ConversationMessageDto.toDomain(): ConversationMessage = ConversationMessage(
-    content = content,
-    kind = when {
+internal fun ConversationMessageDto.toDomain(): ConversationMessage {
+    val messageId = id.requirePositive("message id")
+    val createdOnMillis = createdOn?.toEpochMillis()
+        ?: throw IllegalArgumentException("Missing message created_on")
+    val kind = when {
         audio != null -> ConversationMessageKind.Audio
         video != null -> ConversationMessageKind.Video
         else -> ConversationMessageKind.Text
-    },
-    createdOnEpochMillis = createdOn?.toEpochMillis()
-        ?: throw IllegalArgumentException("Missing message created_on"),
-).also {
-    id.requirePositive("message id")
+    }
+    return ConversationMessage(
+        id = messageId,
+        sender = senderRole.toConversationSender(messageId),
+        content = content,
+        createdOnEpochMillis = createdOnMillis,
+        kind = kind,
+    )
+}
+
+private fun String.toConversationSender(messageId: Int): ConversationSender = when (lowercase()) {
+    "consumer" -> ConversationSender.Consumer
+    "provider" -> ConversationSender.Provider
+    else -> throw IllegalArgumentException(
+        "Unsupported sender_role '$this' for message $messageId",
+    )
 }
 
 internal fun String.toConversationStatus(): ConversationStatus = when (lowercase()) {
