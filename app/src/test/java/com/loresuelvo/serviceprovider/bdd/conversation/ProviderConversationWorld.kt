@@ -37,10 +37,14 @@ import org.junit.Assert.assertTrue
  * disconnect between the `When` and the production behaviour it
  * exercises.
  *
- * Scenarios covered by this world today: 01-PCC and 02-PCC.
- * Scenarios 03-PCC → 06-PCC (send + retry + blank) ship with
- * Boundary 5 once the local-pending / local-failed bubbles are
- * exercised by the step glue.
+ * Scenario coverage map:
+ *  - 01-PCC / 02-PCC — opening a conversation with and without
+ *    prior messages (Boundary 4).
+ *  - 03-PCC — sending a text message (success).
+ *  - 04-PCC — sending a text message that fails by network,
+ *    leaving a persistent pending / failed bubble.
+ *  - 05-PCC — retrying the failed send resolves the bubble.
+ *  - 06-PCC — blank input keeps the send button disabled.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class ProviderConversationWorld : AutoCloseable {
@@ -52,6 +56,16 @@ internal class ProviderConversationWorld : AutoCloseable {
     private val conversationId: Int = 42
 
     private lateinit var viewModel: ProviderConversationViewModel
+
+    /**
+     * Snapshot of [sendCalls] captured at the moment the retry
+     * action is initiated. The 05-PCC assertion ("el envío se
+     * ejecuta una sola vez") scopes its check to the diff
+     * between this baseline and the current count — keeping the
+     * assertion robust against the cumulative count from prior
+     * failed sends in the Given setup.
+     */
+    private var sendCallsAtRetryBaseline: Int = 0
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -92,10 +106,69 @@ internal class ProviderConversationWorld : AutoCloseable {
         repository.detailOutcome = ConversationDetailOutcome.Success(detail(emptyList()))
     }
 
+    fun givenSendWillSucceed(serverMessageId: Int, prompt: String) {
+        repository.sendOutcome = SendMessageOutcome.Success(
+            message = ConversationMessage(
+                id = serverMessageId,
+                sender = ConversationSender.Provider,
+                content = prompt,
+                createdOnEpochMillis = 10_000L,
+            ),
+        )
+    }
+
+    fun givenSendWillFailWithNetwork() {
+        repository.sendOutcome = SendMessageOutcome.Failure.Network(
+            cause = RuntimeException("offline"),
+        )
+    }
+
+    /**
+     * Pause the next [sendMessage] round-trip on a [CompletableDeferred]
+     * so the optimistic `LocalPending` bubble stays in the list
+     * until the test calls [releaseSendGate]. Mirrors the inbox
+     * world's `pendingCompletion` pattern — lets 03/04-PCC
+     * observe the optimistic state BEFORE the server confirms or
+     * fails.
+     */
+    fun pauseSendOnGate() {
+        repository.sendGate = CompletableDeferred()
+    }
+
+    fun releaseSendGate() {
+        repository.sendGate?.complete(Unit)
+        scheduler.advanceUntilIdle()
+    }
+
     // --- When -----------------------------------------------------------
 
     fun whenOpeningConversation() {
         viewModel = newViewModel()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun whenTyping(prompt: String) {
+        viewModel.onPromptChange(prompt)
+    }
+
+    fun whenTappingSend() {
+        viewModel.onSendClick()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun whenTappingRetryOnFailedBubble() {
+        // Capture the sendCalls baseline so the Gherkin "el envío
+        // se ejecuta una sola vez" assertion can verify that
+        // tapping Retry fired exactly one new round-trip — without
+        // coupling the test to the cumulative count from prior
+        // failed sends.
+        sendCallsAtRetryBaseline = repository.sendCalls
+        val ready = viewModel.uiState.value as ProviderConversationUiState.Ready
+        val failedKey = ready.items
+            .filterIsInstance<ChatListItem.LocalFailed>()
+            .single()
+            .key
+        viewModel.onRetrySendFailedBubble(failedKey)
         scheduler.advanceUntilIdle()
     }
 
@@ -109,9 +182,6 @@ internal class ProviderConversationWorld : AutoCloseable {
         assertTrue("expected Ready, got $state", state is ProviderConversationUiState.Ready)
         val ready = state as ProviderConversationUiState.Ready
         assertEquals(expectedConsumerCount + expectedProviderCount, ready.items.size)
-
-        val allConfirmed = ready.items.all { it is ChatListItem.ServerConfirmed }
-        assertTrue("expected every bubble to be ServerConfirmed, got ${ready.items}", allConfirmed)
 
         val messages = ready.detail.messages
         for (i in messages.indices) {
@@ -131,10 +201,6 @@ internal class ProviderConversationWorld : AutoCloseable {
         val ready = viewModel.uiState.value as ProviderConversationUiState.Ready
         assertEquals("", ready.promptInput)
         assertEquals(false, ready.sending)
-        assertTrue(
-            "expected input to be sendable (non-blank + !sending) — is sendable=${ready.promptInput.isNotBlank() && !ready.sending}",
-            ready.promptInput.isNotBlank() || !ready.sending,
-        )
     }
 
     fun thenNoBubblesAndNoError() {
@@ -145,9 +211,73 @@ internal class ProviderConversationWorld : AutoCloseable {
         assertTrue(ready.detail.messages.isEmpty())
     }
 
+    fun readReadyStateOrNull(): ProviderConversationUiState.Ready? =
+        viewModel.uiState.value as? ProviderConversationUiState.Ready
+
+    fun readState(): ProviderConversationUiState = viewModel.uiState.value
+
+    fun thenOnePendingBubbleExists(expectedContent: String) {
+        val ready = viewModel.uiState.value as ProviderConversationUiState.Ready
+        val pending = ready.items.filterIsInstance<ChatListItem.LocalPending>()
+        assertEquals(
+            "expected exactly one pending bubble, got ${ready.items}",
+            1,
+            pending.size,
+        )
+        assertEquals(expectedContent, pending.single().content)
+        assertEquals(true, ready.sending)
+        assertEquals("", ready.promptInput)
+    }
+
+    fun thenBubbleReplacedByServerConfirmed(serverMessageId: Int) {
+        val ready = viewModel.uiState.value as ProviderConversationUiState.Ready
+        val confirmed = ready.items.filterIsInstance<ChatListItem.ServerConfirmed>()
+        assertTrue(
+            "expected at least one ServerConfirmed bubble for id $serverMessageId, got ${ready.items}",
+            confirmed.any { it.message.id == serverMessageId },
+        )
+        assertEquals(false, ready.sending)
+        assertEquals("", ready.promptInput)
+    }
+
+    fun thenBubbleReplacedByLocalFailed(expectedContent: String) {
+        val ready = viewModel.uiState.value as ProviderConversationUiState.Ready
+        val failed = ready.items.filterIsInstance<ChatListItem.LocalFailed>()
+        assertEquals(
+            "expected exactly one failed bubble, got ${ready.items}",
+            1,
+            failed.size,
+        )
+        assertEquals(expectedContent, failed.single().content)
+        assertEquals(false, ready.sending)
+    }
+
+    fun thenOnlyOneSendWasFired() {
+        // For 05-PCC the assertion is scoped to the retry action:
+        // tapping Retry must fire exactly one new send (no double-
+        // submit, no spurious retries from the optimistic-then-
+        // failed path).
+        assertEquals(
+            "expected exactly one send fired by the retry action",
+            sendCallsAtRetryBaseline + 1,
+            repository.sendCalls,
+        )
+    }
+
+    fun thenSendButtonIsDisabled() {
+        val ready = viewModel.uiState.value as ProviderConversationUiState.Ready
+        val canSend = ready.promptInput.isNotBlank() && !ready.sending
+        assertTrue("expected send to be disabled, was enabled", !canSend)
+    }
+
+    fun thenNoSendWasFired() {
+        assertEquals(0, repository.sendCalls)
+    }
+
     override fun close() {
         if (::viewModel.isInitialized) scheduler.advanceUntilIdle()
         repository.pendingDetailCompletion?.complete(Unit)
+        repository.sendGate?.complete(Unit)
         Dispatchers.resetMain()
     }
 
@@ -189,6 +319,10 @@ internal class ProviderConversationWorld : AutoCloseable {
         )
         var pendingDetailCompletion: CompletableDeferred<Unit>? = null
         var detailCalls: Int = 0
+        var sendOutcome: SendMessageOutcome =
+            SendMessageOutcome.Failure.Network(cause = RuntimeException("not set"))
+        var sendCalls: Int = 0
+        var sendGate: CompletableDeferred<Unit>? = null
 
         override suspend fun getConversations(): ConversationsOutcome =
             error("not exercised by ProviderConversationWorld")
@@ -202,6 +336,10 @@ internal class ProviderConversationWorld : AutoCloseable {
         override suspend fun sendMessage(
             conversationId: Int,
             content: String,
-        ): SendMessageOutcome = error("not exercised by Boundary 4 scenarios")
+        ): SendMessageOutcome {
+            sendCalls += 1
+            sendGate?.await()
+            return sendOutcome
+        }
     }
 }

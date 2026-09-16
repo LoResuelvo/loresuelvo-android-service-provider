@@ -16,7 +16,6 @@ Feature: Conversación del prestador con un consumidor
     Then la pantalla no muestra burbujas ni un estado de error
     And el input bar está vacío y habilitado
 
-  @wip
   Scenario: 03-PCC Enviar un mensaje de texto
     Given que la conversación 42 está abierta con 3 mensajes previos
     And que la API aceptará el envío de un nuevo mensaje con contenido "Listo para empezar"
@@ -25,7 +24,6 @@ Feature: Conversación del prestador con un consumidor
     And al confirmarse el envío la burbuja pendiente se reemplaza por la versión persistida por el servidor con id estable y timestamp autoritativo
     And el input bar vuelve a quedar vacío y habilitado
 
-  @wip
   Scenario: 04-PCC Un envío que falla por red queda pendiente con opción de reintentar
     Given que la conversación 42 está abierta con 3 mensajes previos
     And que el próximo envío del prestador fallará por red
@@ -33,7 +31,6 @@ Feature: Conversación del prestador con un consumidor
     Then la pantalla agrega optimistamente una burbuja pendiente con ese texto
     And al fallar el envío la burbuja permanece con un indicador de fallo y un botón Reintentar
 
-  @wip
   Scenario: 05-PCC Reintentar un envío pendiente fallido confirma el mensaje
     Given que la conversación 42 está abierta con una burbuja pendiente en fallo por red
     And que el reintento del envío tendrá éxito
@@ -41,7 +38,6 @@ Feature: Conversación del prestador con un consumidor
     Then el envío se ejecuta una sola vez
     And al confirmarse la burbuja pendiente se reemplaza por la versión persistida por el servidor
 
-  @wip
   Scenario: 06-PCC No enviar un mensaje en blanco
     Given que la conversación 42 está abierta con 3 mensajes previos
     When el prestador escribe solo espacios en el input
