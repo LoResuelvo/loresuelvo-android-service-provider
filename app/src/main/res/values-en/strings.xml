@@ -79,9 +79,22 @@
     <string name="provider_job_request_continue_conversation">Continuar conversación</string>
 
     <!-- Temporary provider conversation handoff -->
-    <string name="provider_conversation_title">Conversación</string>
-    <string name="provider_conversation_placeholder">La conversación estará disponible próximamente.</string>
-    <string name="provider_conversation_close">Volver a solicitudes</string>
+    <string name="provider_conversation_title">Conversation</string>
+    <string name="provider_conversation_placeholder">The conversation will be available soon.</string>
+    <string name="provider_conversation_close">Back to requests</string>
+
+    <!-- Provider conversation detail (US-A) -->
+    <string name="provider_conversation_input_hint">Write a message</string>
+    <string name="provider_conversation_send">Send</string>
+    <string name="provider_conversation_send_content_description">Send message</string>
+    <string name="provider_conversation_retry">Retry</string>
+    <string name="provider_conversation_retry_content_description">Retry sending</string>
+    <string name="provider_conversation_sending">Sending</string>
+    <string name="provider_conversation_send_failed">Send failed</string>
+    <string name="provider_conversation_error_network">We couldn\'t load the conversation. Check your connection and retry.</string>
+    <string name="provider_conversation_error_server">We couldn\'t load the conversation. Please try again later.</string>
+    <string name="provider_conversation_error_unauthorized">Your session expired. Please sign in again.</string>
+    <string name="provider_conversation_error_not_found">This conversation is no longer available.</string>
 
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>

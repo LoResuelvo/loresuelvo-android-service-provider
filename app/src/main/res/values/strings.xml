@@ -83,6 +83,19 @@
     <string name="provider_conversation_placeholder">La conversación estará disponible próximamente.</string>
     <string name="provider_conversation_close">Volver a solicitudes</string>
 
+    <!-- Provider conversation detail (US-A) -->
+    <string name="provider_conversation_input_hint">Escribí un mensaje</string>
+    <string name="provider_conversation_send">Enviar</string>
+    <string name="provider_conversation_send_content_description">Enviar mensaje</string>
+    <string name="provider_conversation_retry">Reintentar</string>
+    <string name="provider_conversation_retry_content_description">Reintentar envío</string>
+    <string name="provider_conversation_sending">Enviando</string>
+    <string name="provider_conversation_send_failed">Falló el envío</string>
+    <string name="provider_conversation_error_network">No pudimos cargar la conversación. Revisá tu conexión y reintentá.</string>
+    <string name="provider_conversation_error_server">No pudimos cargar la conversación. Reintentá más tarde.</string>
+    <string name="provider_conversation_error_unauthorized">Tu sesión expiró. Volvé a iniciar sesión.</string>
+    <string name="provider_conversation_error_not_found">Esta conversación ya no está disponible.</string>
+
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>
     <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>
