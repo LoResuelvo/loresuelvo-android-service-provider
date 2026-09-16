@@ -10,9 +10,11 @@ class FakeCoverageZoneRepository : CoverageZoneRepository {
     )
     var calls = 0
         private set
+    var beforeReturn: suspend () -> Unit = {}
 
     override suspend fun getCoverageZones(): CoverageZonesOutcome {
         calls += 1
+        beforeReturn()
         return outcome
     }
 }

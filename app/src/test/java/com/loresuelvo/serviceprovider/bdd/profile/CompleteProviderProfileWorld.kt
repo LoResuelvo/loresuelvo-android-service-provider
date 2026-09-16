@@ -29,6 +29,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileUiState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
+import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
 import com.loresuelvo.serviceprovider.testing.FakeCoverageZoneRepository
 import kotlinx.coroutines.CompletableDeferred
@@ -43,6 +44,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -76,6 +78,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
         private set
 
     private var effectsJob: Job? = null
+    private var coverageLoad: CompletableDeferred<Unit>? = null
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -96,6 +99,30 @@ class CompleteProviderProfileWorld : AutoCloseable {
 
     fun configureCategoryApiFailure() {
         categoryRepository.outcome = CategoriesOutcome.Failure.Network(RuntimeException("Network error"))
+    }
+
+    fun configurePendingCoverageZones() {
+        coverageLoad = CompletableDeferred()
+        coverageZoneRepository.beforeReturn = { coverageLoad?.await() }
+    }
+
+    fun assertCoverageZonesLoading() {
+        assertEquals(CoverageZonesLoadState.Loading, viewModel.uiState.value.coverageZonesState)
+    }
+
+    fun assertNoCoverageZoneSelected() {
+        assertTrue(viewModel.uiState.value.selectedCoverageZoneIds.isEmpty())
+    }
+
+    fun assertProfileFieldsRemainEditable() {
+        viewModel.onNameChanged("Carlos")
+        assertEquals("Carlos", viewModel.uiState.value.name)
+    }
+
+    fun assertRegistrationBlockedWhileCoverageLoads() {
+        viewModel.submit()
+        scheduler.runCurrent()
+        assertEquals(0, providerRepository.registerCalls)
     }
 
     fun navigateToProfileDestination() {
@@ -357,6 +384,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
     }
 
     override fun close() {
+        coverageLoad?.complete(Unit)
         effectsJob?.cancel()
         providerRepository.registerGate?.complete(Unit)
         scheduler.advanceUntilIdle()
