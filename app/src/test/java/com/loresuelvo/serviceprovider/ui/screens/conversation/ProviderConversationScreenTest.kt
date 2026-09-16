@@ -1,0 +1,251 @@
+package com.loresuelvo.serviceprovider.ui.screens.conversation
+
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import com.loresuelvo.serviceprovider.R
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "es-rAR", sdk = [34])
+class ProviderConversationScreenTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
+
+    @Test
+    fun renders_the_loading_indicator_when_state_is_Loading() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = ProviderConversationUiState.Loading,
+                    onPromptChange = {},
+                    onSendClick = {},
+                    onRetrySendFailedBubble = {},
+                    onRetryLoad = {},
+                    onClose = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_LOADING_TAG)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun renders_network_error_with_a_retry_button() {
+        var retryCalls = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = ProviderConversationUiState.Error(
+                        failure = ConversationDetailOutcome.Failure.Network(
+                            cause = RuntimeException("offline"),
+                        ),
+                    ),
+                    onPromptChange = {},
+                    onSendClick = {},
+                    onRetrySendFailedBubble = {},
+                    onRetryLoad = { retryCalls += 1 },
+                    onClose = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_ERROR_TAG)
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_RETRY_LOAD_TAG)
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_RETRY_LOAD_TAG)
+            .performClick()
+        assertEquals(1, retryCalls)
+    }
+
+    @Test
+    fun renders_NotFound_error_without_a_retry_button() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = ProviderConversationUiState.Error(
+                        failure = ConversationDetailOutcome.Failure.NotFound(
+                            message = "not found",
+                        ),
+                    ),
+                    onPromptChange = {},
+                    onSendClick = {},
+                    onRetrySendFailedBubble = {},
+                    onRetryLoad = {},
+                    onClose = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_ERROR_TAG)
+            .assertIsDisplayed()
+        // No retry button on NotFound — the conversation is gone.
+        composeTestRule.onNodeWithTag(PROVIDER_CONVERSATION_RETRY_LOAD_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun renders_Ready_state_with_header_input_and_send_button_disabled_when_blank() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(promptInput = ""),
+                    onPromptChange = {},
+                    onSendClick = {},
+                    onRetrySendFailedBubble = {},
+                    onRetryLoad = {},
+                    onClose = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG)
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText("Ana Pérez").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components
+                .PROVIDER_CHAT_INPUT_FIELD_TAG)
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components
+                .PROVIDER_CHAT_SEND_BUTTON_TAG)
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun renders_existing_messages_in_the_LazyColumn_when_present() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(
+                        promptInput = "",
+                        messages = listOf(
+                            ConversationMessage(
+                                id = 1,
+                                sender = ConversationSender.Consumer,
+                                content = "Hola",
+                                createdOnEpochMillis = 1L,
+                            ),
+                            ConversationMessage(
+                                id = 2,
+                                sender = ConversationSender.Provider,
+                                content = "Listo",
+                                createdOnEpochMillis = 2L,
+                            ),
+                        ),
+                    ),
+                    onPromptChange = {},
+                    onSendClick = {},
+                    onRetrySendFailedBubble = {},
+                    onRetryLoad = {},
+                    onClose = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_MESSAGES_TAG)
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(
+                com.loresuelvo.serviceprovider.ui.screens.conversation.components
+                    .PROVIDER_MESSAGE_BUBBLE_TAG_PREFIX + 1,
+            )
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(
+                com.loresuelvo.serviceprovider.ui.screens.conversation.components
+                    .PROVIDER_MESSAGE_BUBBLE_TAG_PREFIX + 2,
+            )
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun ready_state_send_button_is_enabled_when_prompt_is_not_blank() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(promptInput = "hola"),
+                    onPromptChange = {},
+                    onSendClick = {},
+                    onRetrySendFailedBubble = {},
+                    onRetryLoad = {},
+                    onClose = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components
+                .PROVIDER_CHAT_SEND_BUTTON_TAG)
+            .assertIsEnabled()
+    }
+
+    @Test
+    fun ready_state_close_button_invokes_onClose() {
+        var closeCalls = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(promptInput = ""),
+                    onPromptChange = {},
+                    onSendClick = {},
+                    onRetrySendFailedBubble = {},
+                    onRetryLoad = {},
+                    onClose = { closeCalls += 1 },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_BACK_TAG)
+            .performClick()
+
+        assertEquals(1, closeCalls)
+    }
+
+    private fun readyState(
+        promptInput: String,
+        messages: List<ConversationMessage> = emptyList(),
+    ): ProviderConversationUiState.Ready = ProviderConversationUiState.Ready(
+        detail = ConversationDetail(
+            id = 42,
+            status = ConversationStatus.Active,
+            counterpart = ConversationCounterpart(
+                id = 7,
+                name = "Ana",
+                surname = "Pérez",
+                profilePhotoUrl = null,
+            ),
+            messages = messages,
+            updatedOnEpochMillis = 1L,
+        ),
+        items = messages.map { ChatListItem.ServerConfirmed(it) },
+        promptInput = promptInput,
+        sending = false,
+    )
+}
