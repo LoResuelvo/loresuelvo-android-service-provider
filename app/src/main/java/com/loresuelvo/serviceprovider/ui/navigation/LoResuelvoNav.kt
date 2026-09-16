@@ -4,9 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -15,6 +20,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
+import com.loresuelvo.serviceprovider.ui.components.bottomnav.BottomDestination
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.LoresuelvoBottomBar
 import com.loresuelvo.serviceprovider.ui.entry.ProviderEntryUiState
 import com.loresuelvo.serviceprovider.ui.entry.ProviderEntryViewModel
@@ -63,9 +69,73 @@ fun LoResuelvoNav(
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route
 
-                Scaffold(
-                    contentWindowInsets = WindowInsets.navigationBars,
-                    bottomBar = {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Scaffold(
+                        contentWindowInsets = WindowInsets.navigationBars,
+                        bottomBar = {},
+                        containerColor = Color.Transparent,
+                    ) { contentPadding ->
+                        LoResuelvoNavHost(
+                            navController = navController,
+                            startDestination = startDestination,
+                            contentPadding = contentPadding,
+                            welcome = { WelcomeRoute(browserAuthenticationLauncher) },
+                            professionalProfile = { CompleteProviderProfileRoute(navController) },
+                            home = {
+                                provider?.let {
+                                    ProviderHomeRoute(
+                                        navController = navController,
+                                        provider = it,
+                                        onJobRequestClick = { request ->
+                                            navController.navigate(
+                                                Route.JobRequestDetail.buildPath(request.id),
+                                            )
+                                        },
+                                    )
+                                }
+                            },
+                            messages = {
+                                ProviderMessagesRoute(
+                                    onConversationClick = { conversationId ->
+                                        navController.navigate(
+                                            Route.Conversation.buildPath(conversationId),
+                                        ) {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                )
+                            },
+                            jobRequestDetail = {
+                                JobRequestDetailRoute(
+                                    navController = navController,
+                                    onAccepted = { requestId, conversationId ->
+                                        navController.previousBackStackEntry
+                                            ?.savedStateHandle
+                                            ?.set(Route.JobRequestDetail.resolvedRequestId, requestId)
+                                        navController.navigate(Route.Conversation.buildPath(conversationId)) {
+                                            popUpTo(Route.Home.path) { inclusive = false }
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                )
+                            },
+                            conversation = { conversationId ->
+                                ProviderConversationPlaceholderRoute(
+                                    navController = navController,
+                                    conversationId = conversationId,
+                                )
+                            },
+                            mercadoPago = {
+                                MercadoPagoConnectRoute(
+                                    navController = navController,
+                                    onHomeRequested = entryViewModel::refresh,
+                                    onWelcomeRequested = entryViewModel::refresh,
+                                )
+                            },
+                        )
+                    }
+
+                    if (BottomDestination.shouldShow(currentRoute)) {
                         LoresuelvoBottomBar(
                             currentRoute = currentRoute,
                             onNavigate = { destination ->
@@ -77,67 +147,9 @@ fun LoResuelvoNav(
                                     restoreState = true
                                 }
                             },
+                            modifier = Modifier.align(Alignment.BottomCenter),
                         )
-                    },
-                ) { contentPadding ->
-                    LoResuelvoNavHost(
-                        navController = navController,
-                        startDestination = startDestination,
-                        contentPadding = contentPadding,
-                        welcome = { WelcomeRoute(browserAuthenticationLauncher) },
-                        professionalProfile = { CompleteProviderProfileRoute(navController) },
-                        home = {
-                            provider?.let {
-                                ProviderHomeRoute(
-                                    navController = navController,
-                                    provider = it,
-                                    onJobRequestClick = { request ->
-                                        navController.navigate(
-                                            Route.JobRequestDetail.buildPath(request.id),
-                                        )
-                                    },
-                                )
-                            }
-                        },
-                        messages = {
-                            ProviderMessagesRoute(
-                                onConversationClick = { conversationId ->
-                                    navController.navigate(
-                                        Route.Conversation.buildPath(conversationId),
-                                    ) {
-                                        launchSingleTop = true
-                                    }
-                                },
-                            )
-                        },
-                        jobRequestDetail = {
-                            JobRequestDetailRoute(
-                                navController = navController,
-                                onAccepted = { requestId, conversationId ->
-                                    navController.previousBackStackEntry
-                                        ?.savedStateHandle
-                                        ?.set(Route.JobRequestDetail.resolvedRequestId, requestId)
-                                    navController.navigate(Route.Conversation.buildPath(conversationId)) {
-                                        popUpTo(Route.Home.path) { inclusive = false }
-                                        launchSingleTop = true
-                                    }
-                                },
-                            )
-                        },
-                        conversation = { conversationId ->
-                            ProviderConversationPlaceholderRoute(
-                                navController = navController,
-                                conversationId = conversationId,
-                            )
-                        },
-                        mercadoPago = {
-                            MercadoPagoConnectRoute(
-                                navController = navController,
-                                onHomeRequested = entryViewModel::refresh,
-                                onWelcomeRequested = entryViewModel::refresh,
-                            )
-                        },
-                    )
+                    }
                 }
             }
         }
