@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   # The emulator has a substantial startup cost, so only run device tests when
   # Android production/test code or the device-test configuration changes.
