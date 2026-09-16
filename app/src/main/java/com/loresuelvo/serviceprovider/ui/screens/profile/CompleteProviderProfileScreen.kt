@@ -55,6 +55,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileUiState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
+import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
 
 /**
@@ -314,6 +315,8 @@ fun CompleteProviderProfileScreen(
                 formLoading = uiState.loading,
             )
 
+            CoverageZoneSection(state = uiState.coverageZonesState)
+
             // Disclaimer / Information
             Text(
                 text = stringResource(R.string.provider_profile_disclaimer),
@@ -331,7 +334,7 @@ fun CompleteProviderProfileScreen(
                     stringResource(R.string.provider_profile_submit)
                 },
                 onClick = onSubmit,
-                enabled = !isBusy,
+                enabled = !isBusy && uiState.coverageZonesState is CoverageZonesLoadState.Ready,
             )
         }
     }

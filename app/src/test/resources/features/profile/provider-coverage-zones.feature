@@ -4,7 +4,6 @@ Característica: Registrar prestador con zonas de cobertura
   Quiero seleccionar las zonas donde puedo brindar servicios
   Para recibir solicitudes dentro de mi área de cobertura
 
-  @wip
   Escenario: 01-PCZ Mostrar el progreso de carga sin seleccionar una zona implícita
     Dado un prestador autenticado sin perfil completo y una carga de zonas pendiente
     Cuando el prestador abre el formulario de perfil

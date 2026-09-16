@@ -179,6 +179,8 @@ class CompleteProviderProfileViewModel @Inject constructor(
         val surname = state.surname.trim()
         val category = state.selectedCategory
 
+        if (state.coverageZonesState !is CoverageZonesLoadState.Ready) return
+
         if (name.isEmpty()) {
             _uiState.update { it.copy(error = ProfileFormError.MissingName) }
             return

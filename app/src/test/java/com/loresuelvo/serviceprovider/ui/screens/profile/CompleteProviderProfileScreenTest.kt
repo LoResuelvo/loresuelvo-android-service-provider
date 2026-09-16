@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.ui.screens.profile
 import android.content.Context
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -12,8 +13,10 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZone
 import com.loresuelvo.serviceprovider.ui.profile.CategoriesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileUiState
+import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import org.junit.Assert.assertEquals
@@ -185,6 +188,27 @@ class CompleteProviderProfileScreenTest {
     }
 
     @Test
+    fun renders_coverage_loading_and_disables_submit_without_disabling_inputs() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen()
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_loading))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_submit))
+            .performScrollTo()
+            .assertIsNotEnabled()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_name_label))
+            .assertIsEnabled()
+    }
+
+    @Test
     fun invokes_callbacks_on_text_input_and_button_click() {
         var enteredName = ""
         var submitted = false
@@ -192,6 +216,11 @@ class CompleteProviderProfileScreenTest {
         composeTestRule.setContent {
             LoresuelvoTheme {
                 CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        coverageZonesState = CoverageZonesLoadState.Ready(
+                            listOf(CoverageZone(1, "Comuna 1", "place-1")),
+                        ),
+                    ),
                     onNameChanged = { enteredName = it },
                     onSubmit = { submitted = true },
                 )
