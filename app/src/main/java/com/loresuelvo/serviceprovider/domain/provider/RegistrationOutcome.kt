@@ -14,5 +14,6 @@ sealed interface RegistrationOutcome {
         data class Server(val code: Int, val message: String) : Failure
         data object Unauthorized : Failure
         data object AlreadyRegistered : Failure
+        data object InvalidCoverageZones : Failure
     }
 }

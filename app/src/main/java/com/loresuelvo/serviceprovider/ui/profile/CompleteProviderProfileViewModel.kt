@@ -246,6 +246,9 @@ class CompleteProviderProfileViewModel @Inject constructor(
                     is RegistrationOutcome.Failure.AlreadyRegistered -> {
                         _uiState.update { it.copy(error = ProfileFormError.AlreadyRegistered) }
                     }
+                    is RegistrationOutcome.Failure.InvalidCoverageZones -> {
+                        _uiState.update { it.copy(error = ProfileFormError.MissingCoverageZones) }
+                    }
                     is RegistrationOutcome.Failure.Unauthorized -> {
                         sessionStore.clearSession()
                         _effects.send(CompleteProviderProfileEffect.NavigateToWelcome)

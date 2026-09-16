@@ -20,6 +20,7 @@ class RegisterProviderUseCaseTest {
         name = "Juan",
         surname = "Pérez",
         categoryId = 3,
+        coverageZoneIds = listOf(6),
     )
 
     @Test
@@ -50,5 +51,15 @@ class RegisterProviderUseCaseTest {
         val result = useCase(sampleCommand)
 
         assertEquals(expected, result)
+    }
+
+    @Test
+    fun `rejects invalid coverage zone ids without calling repository`() = runTest {
+        listOf(emptyList(), listOf(0), listOf(-1), listOf(6, 6)).forEach { zoneIds ->
+            val result = useCase(sampleCommand.copy(coverageZoneIds = zoneIds))
+
+            assertEquals(RegistrationOutcome.Failure.InvalidCoverageZones, result)
+        }
+        coVerify(exactly = 0) { repository.register(any()) }
     }
 }

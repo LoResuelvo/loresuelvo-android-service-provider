@@ -11,6 +11,11 @@ import javax.inject.Inject
 class RegisterProviderUseCase @Inject constructor(
     private val providerRepository: ProviderRepository,
 ) {
-    suspend operator fun invoke(command: ProviderRegistrationCommand): RegistrationOutcome =
-        providerRepository.register(command)
+    suspend operator fun invoke(command: ProviderRegistrationCommand): RegistrationOutcome {
+        val zoneIds = command.coverageZoneIds
+        if (zoneIds.isEmpty() || zoneIds.any { it <= 0 } || zoneIds.distinct().size != zoneIds.size) {
+            return RegistrationOutcome.Failure.InvalidCoverageZones
+        }
+        return providerRepository.register(command)
+    }
 }
