@@ -22,9 +22,11 @@ import com.loresuelvo.serviceprovider.domain.file.PresignUploadResult
 import com.loresuelvo.serviceprovider.domain.file.UploadBytesOutcome
 import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.coverage.GetCoverageZonesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
+import com.loresuelvo.serviceprovider.testing.FakeCoverageZoneRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +60,7 @@ class CompleteProviderProfileViewModelTest {
     private val dispatcher = StandardTestDispatcher(scheduler)
 
     private lateinit var categoryRepository: FakeCategoryRepository
+    private lateinit var coverageZoneRepository: FakeCoverageZoneRepository
     private lateinit var providerRepository: FakeProviderRepository
     private lateinit var sessionStore: RecordingAuthSessionStore
     private lateinit var photoPreparer: FakeProfilePhotoPreparer
@@ -80,6 +83,7 @@ class CompleteProviderProfileViewModelTest {
         Dispatchers.setMain(dispatcher)
         categoryRepository = FakeCategoryRepository()
         categoryRepository.outcome = CategoriesOutcome.Success(defaultCategories)
+        coverageZoneRepository = FakeCoverageZoneRepository()
         providerRepository = FakeProviderRepository()
         sessionStore = RecordingAuthSessionStore()
         sessionStore.saveSession(defaultSession)
@@ -87,14 +91,14 @@ class CompleteProviderProfileViewModelTest {
         fileRepository = FakeFileRepository()
     }
 
-    private fun newViewModel(initialCoverageZoneIds: List<Int> = emptyList()): CompleteProviderProfileViewModel =
+    private fun newViewModel(): CompleteProviderProfileViewModel =
         CompleteProviderProfileViewModel(
             getCategories = GetCategoriesUseCase(categoryRepository),
             registerProvider = RegisterProviderUseCase(providerRepository),
             sessionStore = sessionStore,
             prepareProfilePhoto = PrepareProfilePhotoUseCase(photoPreparer),
             uploadProfilePhoto = UploadProfilePhotoUseCase(fileRepository),
-            initialCoverageZoneIds = initialCoverageZoneIds,
+            getCoverageZones = GetCoverageZonesUseCase(coverageZoneRepository),
         )
 
     @After
@@ -103,22 +107,16 @@ class CompleteProviderProfileViewModelTest {
     }
 
     @Test
-    fun `should register with initial coverage zones without a coverage selector`() = runTest(scheduler) {
-        providerRepository.outcome = RegistrationOutcome.Success(providerId = 42)
-        viewModel = newViewModel(listOf(1))
-        advanceUntilIdle()
-        viewModel!!.onNameChanged("Carlos")
-        viewModel!!.onSurnameChanged("Gómez")
-        viewModel!!.onCategorySelected(defaultCategories[0])
-        viewModel!!.onPhotoConfirmed("file_123")
+    fun `starts coverage zones loading without an implicit selection`() = runTest(scheduler) {
+        viewModel = newViewModel()
 
-        viewModel!!.effects.test {
-            viewModel!!.submit()
-            advanceUntilIdle()
-            assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, awaitItem())
-        }
-        assertEquals(listOf(1), providerRepository.lastCommand?.coverageZoneIds)
-        assertNull(viewModel!!.uiState.value.error)
+        assertEquals(CoverageZonesLoadState.Loading, viewModel!!.uiState.value.coverageZonesState)
+        assertTrue(viewModel!!.uiState.value.selectedCoverageZoneIds.isEmpty())
+
+        advanceUntilIdle()
+
+        assertTrue(viewModel!!.uiState.value.coverageZonesState is CoverageZonesLoadState.Ready)
+        assertEquals(1, coverageZoneRepository.calls)
     }
 
     @Test

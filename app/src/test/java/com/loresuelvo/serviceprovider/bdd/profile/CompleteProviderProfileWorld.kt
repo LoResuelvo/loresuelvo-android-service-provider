@@ -21,6 +21,7 @@ import com.loresuelvo.serviceprovider.domain.file.PresignUploadRequest
 import com.loresuelvo.serviceprovider.domain.file.PresignUploadResult
 import com.loresuelvo.serviceprovider.domain.file.UploadBytesOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.coverage.GetCoverageZonesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
@@ -29,6 +30,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileUiState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
+import com.loresuelvo.serviceprovider.testing.FakeCoverageZoneRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +58,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
     private val dispatcher = StandardTestDispatcher(scheduler)
 
     private val categoryRepository = FakeCategoryRepository()
+    private val coverageZoneRepository = FakeCoverageZoneRepository()
     private val providerRepository = FakeProviderRepository()
     private val sessionStore = FakeAuthSessionStore()
     private val photoPreparer = FakeProfilePhotoPreparer()
@@ -102,6 +105,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
             sessionStore = sessionStore,
             prepareProfilePhoto = prepareProfilePhoto,
             uploadProfilePhoto = uploadProfilePhoto,
+            getCoverageZones = GetCoverageZonesUseCase(coverageZoneRepository),
         )
         effectsJob?.cancel()
         effectsJob = CoroutineScope(dispatcher).launch {

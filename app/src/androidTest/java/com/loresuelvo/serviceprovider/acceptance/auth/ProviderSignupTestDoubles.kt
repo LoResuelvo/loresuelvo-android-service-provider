@@ -20,6 +20,9 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZone
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZoneRepository
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZonesOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibility
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountEligibilityChecker
@@ -78,6 +81,12 @@ class ProviderSignupCategoryRepository : CategoryRepository {
 
     override suspend fun getCategories(): CategoriesOutcome =
         CategoriesOutcome.Success(categories)
+}
+
+class ProviderSignupCoverageZoneRepository : CoverageZoneRepository {
+    override suspend fun getCoverageZones(): CoverageZonesOutcome = CoverageZonesOutcome.Success(
+        listOf(CoverageZone(id = 1, name = "Comuna 1", boundaryPlaceId = "place-1")),
+    )
 }
 
 class ProviderSignupProviderRepository : ProviderRepository {
@@ -173,6 +182,10 @@ object ProviderSignupRepositoryTestModule {
     fun provideCategoryRepositoryBinding(
         implementation: ProviderSignupCategoryRepository,
     ): CategoryRepository = implementation
+
+    @Provides
+    @Singleton
+    fun provideCoverageZoneRepository(): CoverageZoneRepository = ProviderSignupCoverageZoneRepository()
 
     @Provides
     @Singleton

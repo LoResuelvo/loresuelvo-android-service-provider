@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZonesOutcome
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.coverage.GetCoverageZonesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoUseCase
@@ -22,13 +24,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import javax.inject.Named
 
 /**
  * ViewModel managing the provider profile completion form, categories loading,
  * input validation, and submission flow.
- * The sixth dependency supplies temporary Dev form defaults; remove it when
- * coverage-zone selection is implemented in US-35.5.
  */
 @HiltViewModel
 class CompleteProviderProfileViewModel @Inject constructor(
@@ -37,12 +36,10 @@ class CompleteProviderProfileViewModel @Inject constructor(
     private val sessionStore: AuthSessionStore,
     private val prepareProfilePhoto: PrepareProfilePhotoUseCase,
     private val uploadProfilePhoto: UploadProfilePhotoUseCase,
-    @Named("initialProviderCoverageZoneIds") initialCoverageZoneIds: List<Int> = emptyList(),
+    private val getCoverageZones: GetCoverageZonesUseCase,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        CompleteProviderProfileUiState(selectedCoverageZoneIds = initialCoverageZoneIds.toList()),
-    )
+    private val _uiState = MutableStateFlow(CompleteProviderProfileUiState())
     val uiState: StateFlow<CompleteProviderProfileUiState> = _uiState.asStateFlow()
 
     private val _effects = Channel<CompleteProviderProfileEffect>(Channel.BUFFERED)
@@ -50,6 +47,7 @@ class CompleteProviderProfileViewModel @Inject constructor(
 
     init {
         loadCategories()
+        loadCoverageZones()
     }
 
     fun loadCategories() {
@@ -68,6 +66,25 @@ class CompleteProviderProfileViewModel @Inject constructor(
 
     fun retryLoadingCategories() {
         loadCategories()
+    }
+
+    fun loadCoverageZones() {
+        _uiState.update { it.copy(coverageZonesState = CoverageZonesLoadState.Loading) }
+        viewModelScope.launch {
+            when (val outcome = getCoverageZones()) {
+                is CoverageZonesOutcome.Success -> {
+                    val state = if (outcome.zones.isEmpty()) {
+                        CoverageZonesLoadState.Empty
+                    } else {
+                        CoverageZonesLoadState.Ready(outcome.zones)
+                    }
+                    _uiState.update { it.copy(coverageZonesState = state) }
+                }
+                is CoverageZonesOutcome.Failure -> {
+                    _uiState.update { it.copy(coverageZonesState = CoverageZonesLoadState.Error) }
+                }
+            }
+        }
     }
 
     fun onNameChanged(name: String) {

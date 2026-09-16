@@ -16,6 +16,7 @@ import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationComman
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.category.GetCategoriesUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.coverage.GetCoverageZonesUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.PrepareProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.profile.UploadProfilePhotoUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.provider.RegisterProviderUseCase
@@ -24,6 +25,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileEffect
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
 import com.loresuelvo.serviceprovider.ui.profile.PhotoFormError
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
+import com.loresuelvo.serviceprovider.testing.FakeCoverageZoneRepository
 import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +52,7 @@ class ProviderProfilePhotoWorld : AutoCloseable {
     val dispatcher = StandardTestDispatcher(scheduler)
 
     val categoryRepository = FakeCategoryRepository()
+    val coverageZoneRepository = FakeCoverageZoneRepository()
     val providerRepository = FakeProviderRepository()
     val sessionStore = FakeAuthSessionStore()
     val photoPreparer = FakeProfilePhotoPreparer()
@@ -93,6 +96,7 @@ class ProviderProfilePhotoWorld : AutoCloseable {
             sessionStore = sessionStore,
             prepareProfilePhoto = prepareProfilePhoto,
             uploadProfilePhoto = uploadProfilePhoto,
+            getCoverageZones = GetCoverageZonesUseCase(coverageZoneRepository),
         )
         effectsJob?.cancel()
         effectsJob = CoroutineScope(dispatcher).launch {

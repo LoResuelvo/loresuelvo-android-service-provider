@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.profile
 
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZone
 import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
 
 /**
@@ -11,6 +12,7 @@ data class CompleteProviderProfileUiState(
     val surname: String = "",
     val selectedCategory: Category? = null,
     val categoriesState: CategoriesLoadState = CategoriesLoadState.Loading,
+    val coverageZonesState: CoverageZonesLoadState = CoverageZonesLoadState.Loading,
     val selectedPhoto: SelectedProfilePhoto? = null,
     val isPhotoConfirmed: Boolean = false,
     val confirmedPhotoFileId: String? = null,
@@ -40,6 +42,13 @@ sealed interface CategoriesLoadState {
     data object Loading : CategoriesLoadState
     data class Ready(val categories: List<Category>) : CategoriesLoadState
     data object Error : CategoriesLoadState
+}
+
+sealed interface CoverageZonesLoadState {
+    data object Loading : CoverageZonesLoadState
+    data class Ready(val zones: List<CoverageZone>) : CoverageZonesLoadState
+    data object Empty : CoverageZonesLoadState
+    data object Error : CoverageZonesLoadState
 }
 
 /**
