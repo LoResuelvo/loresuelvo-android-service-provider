@@ -3,7 +3,6 @@ Feature: Conversación del prestador con un consumidor
   Quiero leer y enviar mensajes dentro de una conversación
   Para coordinar el trabajo con el consumidor que aceptó mi postulación
 
-  @wip
   Scenario: 01-PCC Abrir una conversación con mensajes previos
     Given que la API devuelve el detalle de la conversación 42 con 3 mensajes (1 del consumidor, 2 del prestador)
     When el prestador navega a la ruta de la conversación 42
@@ -11,7 +10,6 @@ Feature: Conversación del prestador con un consumidor
     And el header exhibe el nombre completo del consumidor como título
     And el input bar está vacío y habilitado
 
-  @wip
   Scenario: 02-PCC Abrir una conversación sin mensajes
     Given que la API devuelve el detalle de la conversación 42 con 0 mensajes
     When el prestador navega a la ruta de la conversación 42
