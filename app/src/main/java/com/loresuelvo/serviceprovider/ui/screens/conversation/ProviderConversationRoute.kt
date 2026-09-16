@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.loresuelvo.serviceprovider.ui.navigation.Route
 
 /**
  * Route composable for `Route.Conversation` on the provider side.
@@ -33,6 +32,6 @@ fun ProviderConversationRoute(
         onSendClick = viewModel::onSendClick,
         onRetrySendFailedBubble = viewModel::onRetrySendFailedBubble,
         onRetryLoad = viewModel::onRetryLoad,
-        onClose = { navController.popBackStack(Route.Home.path, inclusive = false) },
+        onClose = { navController.popBackStack() },
     )
 }

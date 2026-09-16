@@ -28,7 +28,7 @@ import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderAccountMismatchSc
 import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderEntryErrorScreen
 import com.loresuelvo.serviceprovider.ui.screens.entry.ProviderEntryLoadingScreen
 import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
-import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationPlaceholderRoute
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationRoute
 import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
 import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailRoute
 import com.loresuelvo.serviceprovider.ui.screens.messages.ProviderMessagesRoute
@@ -120,7 +120,7 @@ fun LoResuelvoNav(
                                 )
                             },
                             conversation = { conversationId ->
-                                ProviderConversationPlaceholderRoute(
+                                ProviderConversationRoute(
                                     navController = navController,
                                     conversationId = conversationId,
                                 )

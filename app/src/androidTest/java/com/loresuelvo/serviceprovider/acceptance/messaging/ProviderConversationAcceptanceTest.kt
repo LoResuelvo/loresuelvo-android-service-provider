@@ -22,11 +22,18 @@ import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_TAG
 import com.loresuelvo.serviceprovider.ui.navigation.Route
+import com.loresuelvo.serviceprovider.ui.screens.conversation.PROVIDER_CONVERSATION_MESSAGES_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_INPUT_FIELD_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_SEND_BUTTON_TAG
 import com.loresuelvo.serviceprovider.ui.screens.messages.components.PROVIDER_MESSAGES_ROW_TAG_PREFIX
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -39,9 +46,17 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * Acceptance smoke for the provider conversation detail surface
+ * (US-A). Drives `Route.Conversation` through the existing
+ * inbox → row tap → conversation flow and asserts the live
+ * screen renders the counterpart's name, the messages list, the
+ * chat input bar, and the visibility contract (bottom bar hidden
+ * on the conversation destination).
+ */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
-class ProviderMessagesNavigationAcceptanceTest {
+class ProviderConversationAcceptanceTest {
 
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
@@ -58,7 +73,7 @@ class ProviderMessagesNavigationAcceptanceTest {
         hiltRule.inject()
         val entryPoint = EntryPointAccessors.fromApplication(
             ApplicationProvider.getApplicationContext(),
-            ProviderMessagesNavigationTestEntryPoint::class.java,
+            ProviderConversationTestEntryPoint::class.java,
         )
         sessionStore = entryPoint.sessionStore()
         currentAccountRepository = entryPoint.currentAccountRepository()
@@ -74,6 +89,7 @@ class ProviderMessagesNavigationAcceptanceTest {
                 profilePhotoUrl = null,
             ),
         )
+
         conversationRepository.outcome = ConversationsOutcome.Success(
             listOf(
                 Conversation(
@@ -86,10 +102,33 @@ class ProviderMessagesNavigationAcceptanceTest {
                         profilePhotoUrl = null,
                     ),
                     lastMessage = null,
-                    updatedOnEpochMillis = 1_000L,
+                    updatedOnEpochMillis = 1L,
                 ),
             ),
         )
+
+        conversationRepository.detailOutcome = ConversationDetailOutcome.Success(
+            detail = ConversationDetail(
+                id = 42,
+                status = ConversationStatus.Active,
+                counterpart = ConversationCounterpart(
+                    id = 7,
+                    name = "Ana",
+                    surname = "Pérez",
+                    profilePhotoUrl = null,
+                ),
+                messages = listOf(
+                    ConversationMessage(
+                        id = 1,
+                        sender = ConversationSender.Consumer,
+                        content = "Hola, ¿podés ayudarme?",
+                        createdOnEpochMillis = 1L,
+                    ),
+                ),
+                updatedOnEpochMillis = 1L,
+            ),
+        )
+
         sessionStore.saveSession(
             AuthSession(
                 user = User("auth0|provider-device", "provider@example.com"),
@@ -99,25 +138,42 @@ class ProviderMessagesNavigationAcceptanceTest {
     }
 
     @Test
-    fun opens_conversation_and_returns_to_the_retained_messages_inbox() {
+    fun opens_conversation_and_renders_messages_and_input_bar() {
         composeTestRule.waitForIdle()
+
+        // Tap Messages on the bottom bar.
         composeTestRule
             .onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path)
             .performClick()
         composeTestRule.waitForIdle()
 
+        // Tap the inbox row to open the conversation.
         val rowTag = PROVIDER_MESSAGES_ROW_TAG_PREFIX + 42
         composeTestRule.onNodeWithTag(rowTag).assertIsDisplayed().performClick()
         composeTestRule.waitForIdle()
 
-        // Conversation surface replaced the placeholder. The header
-        // renders the counterpart's full name and the bottom bar is
-        // hidden on this destination — those render contracts are
-        // asserted by [ProviderConversationAcceptanceTest]. Here we
-        // only pin the navigation contract: bottom bar hidden while
-        // the conversation is open.
+        // Header shows the counterpart full name.
+        composeTestRule.onNodeWithText("Ana Pérez").assertIsDisplayed()
+
+        // Messages list is rendered with the existing bubble.
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CONVERSATION_MESSAGES_TAG)
+            .assertIsDisplayed()
+
+        // Chat input bar is rendered and the send button is visible
+        // (the input is blank, so the button is disabled — we only
+        // assert that the Surface is on screen).
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG)
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CHAT_SEND_BUTTON_TAG)
+            .assertIsDisplayed()
+
+        // Bottom bar hidden on the conversation destination.
         composeTestRule.onAllNodesWithTag(PROVIDER_BOTTOM_BAR_TAG).assertCountEquals(0)
 
+        // Back button returns to the inbox without crashing.
         composeTestRule
             .onNodeWithContentDescription(
                 composeTestRule.activity.getString(R.string.provider_conversation_close),
@@ -130,7 +186,7 @@ class ProviderMessagesNavigationAcceptanceTest {
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
-interface ProviderMessagesNavigationTestEntryPoint {
+interface ProviderConversationTestEntryPoint {
 
     fun sessionStore(): ProviderSignupSessionStore
 

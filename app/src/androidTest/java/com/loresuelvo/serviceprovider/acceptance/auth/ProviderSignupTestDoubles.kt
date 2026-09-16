@@ -18,7 +18,11 @@ import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.coverage.CoverageZone
@@ -133,12 +137,26 @@ class ProviderSignupWorkOrderRepository : WorkOrderRepository {
 
 class ProviderSignupConversationRepository : ConversationRepository {
     var outcome: ConversationsOutcome = ConversationsOutcome.Success(emptyList())
+    var detailOutcome: ConversationDetailOutcome = ConversationDetailOutcome.Success(
+        detail = ConversationDetail(
+            id = 42,
+            status = ConversationStatus.Active,
+            counterpart = ConversationCounterpart(
+                id = 7,
+                name = "Ana",
+                surname = "Pérez",
+                profilePhotoUrl = null,
+            ),
+            messages = emptyList(),
+            updatedOnEpochMillis = 1L,
+        ),
+    )
 
     override suspend fun getConversations(): ConversationsOutcome =
         outcome
 
-    override suspend fun getConversationById(conversationId: Int) =
-        TODO("Not exercised by the signup acceptance test.")
+    override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome =
+        detailOutcome
 
     override suspend fun sendMessage(
         conversationId: Int,
