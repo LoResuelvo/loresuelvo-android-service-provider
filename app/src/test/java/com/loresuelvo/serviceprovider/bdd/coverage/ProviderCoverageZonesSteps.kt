@@ -140,4 +140,16 @@ class ProviderCoverageZonesSteps {
 
     @Y("la otra zona permanece seleccionada")
     fun otherZoneRemainsSelected() = world.assertSelectedCoverageZones(listOf(6))
+
+    @Dado("que una zona ya está seleccionada")
+    fun selectedZone() = world.arrangeReadyCoverageSelection()
+
+    @Cuando("se recibe nuevamente el mismo evento de selección marcada")
+    fun repeatSelectionEvent() = world.repeatCoverageZoneSelection(6)
+
+    @Entonces("el identificador aparece una sola vez en la selección")
+    fun selectedIdAppearsOnce() = world.assertSelectedCoverageZones(listOf(6))
+
+    @Y("no puede enviarse duplicado al registro")
+    fun duplicateCannotBeSubmitted() = world.assertCoverageSelectionHasNoDuplicates()
 }

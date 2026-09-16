@@ -194,8 +194,15 @@ class CompleteProviderProfileWorld : AutoCloseable {
 
     fun uncheckCoverageZone(zoneId: Int) = viewModel.onCoverageZoneChecked(zoneId, false)
 
+    fun repeatCoverageZoneSelection(zoneId: Int) = viewModel.onCoverageZoneChecked(zoneId, true)
+
     fun assertSelectedCoverageZones(expected: List<Int>) {
         assertEquals(expected, viewModel.uiState.value.selectedCoverageZoneIds)
+    }
+
+    fun assertCoverageSelectionHasNoDuplicates() {
+        val selectedIds = viewModel.uiState.value.selectedCoverageZoneIds
+        assertEquals(selectedIds.distinct(), selectedIds)
     }
 
     fun assertCoverageZonesLoading() {

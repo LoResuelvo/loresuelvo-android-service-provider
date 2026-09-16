@@ -58,7 +58,6 @@ Característica: Registrar prestador con zonas de cobertura
     Entonces solamente esa zona se elimina de la selección
     Y la otra zona permanece seleccionada
 
-  @wip
   Escenario: 08-PCZ Evitar una zona duplicada ante eventos repetidos
     Dado que una zona ya está seleccionada
     Cuando se recibe nuevamente el mismo evento de selección marcada
