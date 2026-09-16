@@ -40,8 +40,10 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.ChatListItem
  *    row, painted with the primary color so the provider's
  *    own messages read as "me".
  *  - Consumer bubbles align to the start of the row, painted
- *    with `surfaceContainerHigh` so the counterpart reads as
- *    "them".
+ *    with `surface` (not `surfaceContainerHigh`) so the counterpart
+ *    reads as "them" — the same colour the consumer uses for
+ *    the provider counterpart in its own `ConversationMessageBubble`
+ *    so both apps look like the same conversation from each side.
  *  - Local pending bubbles show a tiny inline `CircularProgressIndicator`
  *    trailing the text so the user can tell the bubble hasn't
  *    reached the server yet.
@@ -207,7 +209,10 @@ private fun BubbleSurface(
 @Composable
 private fun bubbleColorFor(sender: ConversationSender): Color = when (sender) {
     ConversationSender.Provider -> MaterialTheme.colorScheme.primary
-    ConversationSender.Consumer -> MaterialTheme.colorScheme.surfaceContainerHigh
+    // Matches the consumer's `ConversationMessageBubble` counterpart
+    // (consumer side) so the same chat looks symmetric from both
+    // sides of the conversation.
+    ConversationSender.Consumer -> MaterialTheme.colorScheme.surface
 }
 
 @Composable
