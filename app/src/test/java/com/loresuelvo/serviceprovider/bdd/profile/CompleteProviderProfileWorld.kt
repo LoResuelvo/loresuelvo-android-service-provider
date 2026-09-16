@@ -134,6 +134,38 @@ class CompleteProviderProfileWorld : AutoCloseable {
         assertEquals(CoverageZonesLoadState.Error, viewModel.uiState.value.coverageZonesState)
     }
 
+    fun arrangeCoverageErrorWithProfileData() {
+        configureCoverageFailure(server = true)
+        configurePendingCoverageZones()
+        navigateToProfileDestination()
+        finishCoverageLoad()
+        fillValidProfileData()
+    }
+
+    fun configureSuccessfulCoverageRetry() {
+        coverageZoneRepository.outcome = CoverageZonesOutcome.Success(
+            listOf(CoverageZone(6, "Comuna 6", "place-6")),
+        )
+        coverageZoneRepository.beforeReturn = {}
+    }
+
+    fun retryCoverageZones() {
+        viewModel.retryLoadingCoverageZones()
+        assertEquals(CoverageZonesLoadState.Loading, viewModel.uiState.value.coverageZonesState)
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertCoverageZonesReady() {
+        assertTrue(viewModel.uiState.value.coverageZonesState is CoverageZonesLoadState.Ready)
+    }
+
+    fun assertCompleteProfileDataPreserved() {
+        assertProfileDataPreserved()
+        val state = viewModel.uiState.value
+        assertTrue(state.isPhotoConfirmed)
+        assertEquals("file_valid_123", state.confirmedPhotoFileId)
+    }
+
     fun assertCoverageZonesLoading() {
         assertEquals(CoverageZonesLoadState.Loading, viewModel.uiState.value.coverageZonesState)
     }

@@ -31,7 +31,6 @@ Característica: Registrar prestador con zonas de cobertura
       | falla de red       |
       | falla del servidor |
 
-  @wip
   Escenario: 04-PCZ Reintentar la carga sin perder los datos del perfil
     Dado que hay un error de catálogo visible y el formulario contiene datos
     Y el siguiente intento devolverá zonas disponibles

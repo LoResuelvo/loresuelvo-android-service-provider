@@ -82,4 +82,19 @@ class ProviderCoverageZonesSteps {
 
     @Y("los demás datos del formulario permanecen sin cambios")
     fun otherFormDataIsPreserved() = world.assertProfileFieldsRemainEditable()
+
+    @Dado("que hay un error de catálogo visible y el formulario contiene datos")
+    fun coverageErrorWithProfileData() = world.arrangeCoverageErrorWithProfileData()
+
+    @Y("el siguiente intento devolverá zonas disponibles")
+    fun successfulRetry() = world.configureSuccessfulCoverageRetry()
+
+    @Cuando("el prestador reintenta la carga de zonas")
+    fun retryCoverageZones() = world.retryCoverageZones()
+
+    @Entonces("se muestra el progreso y luego las zonas disponibles")
+    fun loadingThenAvailableZones() = world.assertCoverageZonesReady()
+
+    @Y("se conservan nombre, apellido, rubro y foto confirmada")
+    fun completeProfileDataIsPreserved() = world.assertCompleteProfileDataPreserved()
 }
