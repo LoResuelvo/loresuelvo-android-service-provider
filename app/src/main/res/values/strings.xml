@@ -123,6 +123,8 @@
     <string name="provider_profile_coverage_title">Zonas de cobertura</string>
     <string name="provider_profile_coverage_loading">Cargando zonas…</string>
     <string name="provider_profile_coverage_load_error">No pudimos cargar las zonas de cobertura.</string>
+    <string name="provider_profile_coverage_empty">No hay zonas de cobertura disponibles.</string>
+    <string name="provider_profile_reload">Volver a cargar</string>
     <string name="provider_retrieved_photo_label">Foto de perfil cargada</string>
     <string name="provider_no_photo_label">Sin foto de perfil</string>
 

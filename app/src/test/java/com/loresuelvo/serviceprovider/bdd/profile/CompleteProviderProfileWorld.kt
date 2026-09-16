@@ -120,6 +120,10 @@ class CompleteProviderProfileWorld : AutoCloseable {
         }
     }
 
+    fun configureEmptyCoverageZones() {
+        coverageZoneRepository.outcome = CoverageZonesOutcome.Success(emptyList())
+    }
+
     fun finishCoverageLoad() {
         coverageLoad?.complete(Unit)
         scheduler.advanceUntilIdle()
@@ -157,6 +161,10 @@ class CompleteProviderProfileWorld : AutoCloseable {
 
     fun assertCoverageZonesReady() {
         assertTrue(viewModel.uiState.value.coverageZonesState is CoverageZonesLoadState.Ready)
+    }
+
+    fun assertCoverageZonesEmpty() {
+        assertEquals(CoverageZonesLoadState.Empty, viewModel.uiState.value.coverageZonesState)
     }
 
     fun assertCompleteProfileDataPreserved() {

@@ -97,4 +97,20 @@ class ProviderCoverageZonesSteps {
 
     @Y("se conservan nombre, apellido, rubro y foto confirmada")
     fun completeProfileDataIsPreserved() = world.assertCompleteProfileDataPreserved()
+
+    @Dado("que la API devolverá un catálogo de zonas vacío")
+    fun emptyCoverageCatalog() {
+        world.configureEmptyCoverageZones()
+        world.configurePendingCoverageZones()
+        world.navigateToProfileDestination()
+    }
+
+    @Entonces("aparece un mensaje amigable y una acción para volver a cargar")
+    fun emptyCatalogIsVisible() = world.assertCoverageZonesEmpty()
+
+    @Y("el registro permanece bloqueado")
+    fun registrationRemainsBlocked() = world.assertRegistrationBlockedWhileCoverageLoads()
+
+    @Y("no se agrega ningún identificador predeterminado")
+    fun noDefaultCoverageId() = world.assertNoCoverageZoneSelected()
 }

@@ -28,12 +28,10 @@ internal fun CoverageZoneSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (state is CoverageZonesLoadState.Loading || state is CoverageZonesLoadState.Ready) {
-            Text(
-                text = stringResource(R.string.provider_profile_coverage_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-        }
+        Text(
+            text = stringResource(R.string.provider_profile_coverage_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
         when (state) {
             is CoverageZonesLoadState.Loading -> CoverageZonesLoading()
             is CoverageZonesLoadState.Ready -> state.zones.forEach { zone ->
@@ -42,8 +40,20 @@ internal fun CoverageZoneSection(
                 }
             }
             is CoverageZonesLoadState.Error -> CoverageZonesError(onRetry)
-            is CoverageZonesLoadState.Empty -> Unit
+            is CoverageZonesLoadState.Empty -> CoverageZonesEmpty(onRetry)
         }
+    }
+}
+
+@Composable
+private fun CoverageZonesEmpty(onRetry: () -> Unit) {
+    Text(
+        text = stringResource(R.string.provider_profile_coverage_empty),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    OutlinedButton(onClick = onRetry) {
+        Text(text = stringResource(R.string.provider_profile_reload))
     }
 }
 

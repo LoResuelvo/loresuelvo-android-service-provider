@@ -38,7 +38,6 @@ Característica: Registrar prestador con zonas de cobertura
     Entonces se muestra el progreso y luego las zonas disponibles
     Y se conservan nombre, apellido, rubro y foto confirmada
 
-  @wip
   Escenario: 05-PCZ Informar que no hay zonas disponibles
     Dado que la API devolverá un catálogo de zonas vacío
     Cuando finaliza la carga del catálogo de zonas

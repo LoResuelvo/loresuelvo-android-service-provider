@@ -256,6 +256,31 @@ class CompleteProviderProfileScreenTest {
     }
 
     @Test
+    fun renders_empty_coverage_catalog_and_invokes_reload() {
+        var reloaded = false
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        coverageZonesState = CoverageZonesLoadState.Empty,
+                    ),
+                    onRetryCoverageZones = { reloaded = true },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_empty))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_reload))
+            .performScrollTo()
+            .performClick()
+        assertTrue(reloaded)
+    }
+
+    @Test
     fun invokes_callbacks_on_text_input_and_button_click() {
         var enteredName = ""
         var submitted = false
