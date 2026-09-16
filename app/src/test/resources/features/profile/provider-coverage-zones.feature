@@ -71,7 +71,6 @@ Característica: Registrar prestador con zonas de cobertura
     Entonces aparece una validación localizada junto a la sección de cobertura
     Y no se solicita el registro ni se navega a otra pantalla
 
-  @wip
   Esquema del escenario: 10-PCZ Registrar exactamente las zonas seleccionadas
     Dado un formulario válido con "<Selección>" proveniente del catálogo
     Y la API de registro responderá exitosamente

@@ -81,6 +81,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
 
     private var effectsJob: Job? = null
     private var coverageLoad: CompletableDeferred<Unit>? = null
+    private var expectedCoverageZoneIds: List<Int> = emptyList()
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -222,6 +223,34 @@ class CompleteProviderProfileWorld : AutoCloseable {
     fun assertRegistrationAndNavigationDidNotOccur() {
         assertEquals(0, providerRepository.registerCalls)
         assertEquals(null, latestEffect)
+    }
+
+    fun arrangeValidProfileWithCoverageSelection(selection: String) {
+        seedAuthenticatedSession()
+        configureCoverageZones(
+            listOf(
+                CoverageZone(6, "Comuna 6", "place-6"),
+                CoverageZone(10, "Comuna 10", "place-10"),
+                CoverageZone(14, "Comuna 14", "place-14"),
+            ),
+        )
+        navigateToProfileDestination()
+        viewModel.onNameChanged("Carlos")
+        viewModel.onSurnameChanged("Gómez")
+        val categories = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
+        viewModel.onCategorySelected(categories.categories.first())
+        viewModel.onPhotoConfirmed("file_valid_123")
+        expectedCoverageZoneIds = if (selection == "una zona") listOf(6) else listOf(6, 14)
+        expectedCoverageZoneIds.forEach { viewModel.onCoverageZoneChecked(it, true) }
+    }
+
+    fun configureSuccessfulRegistration() {
+        providerRepository.outcome = RegistrationOutcome.Success(providerId = 10)
+    }
+
+    fun assertExactCoverageSelectionRegisteredOnce() {
+        assertEquals(1, providerRepository.registerCalls)
+        assertEquals(expectedCoverageZoneIds, providerRepository.lastCommand?.coverageZoneIds)
     }
 
     fun assertCoverageZonesLoading() {
@@ -525,10 +554,13 @@ class CompleteProviderProfileWorld : AutoCloseable {
         var outcome: RegistrationOutcome = RegistrationOutcome.Success(providerId = 1)
         var registerCalls: Int = 0
             private set
+        var lastCommand: ProviderRegistrationCommand? = null
+            private set
         var registerGate: CompletableDeferred<Unit>? = null
 
         override suspend fun register(command: ProviderRegistrationCommand): RegistrationOutcome {
             registerCalls += 1
+            lastCommand = command
             registerGate?.await()
             return outcome
         }

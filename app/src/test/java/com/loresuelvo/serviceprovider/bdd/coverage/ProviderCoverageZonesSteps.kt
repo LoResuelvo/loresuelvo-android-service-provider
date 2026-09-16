@@ -167,4 +167,20 @@ class ProviderCoverageZonesSteps {
 
     @Y("no se solicita el registro ni se navega a otra pantalla")
     fun registrationAndNavigationDoNotOccur() = world.assertRegistrationAndNavigationDidNotOccur()
+
+    @Dado("un formulario válido con {string} proveniente del catálogo")
+    fun validFormWithCoverageSelection(selection: String) =
+        world.arrangeValidProfileWithCoverageSelection(selection)
+
+    @Y("la API de registro responderá exitosamente")
+    fun successfulRegistration() = world.configureSuccessfulRegistration()
+
+    @Entonces("se envían una vez exactamente los identificadores seleccionados")
+    fun exactSelectedIdsAreSentOnce() = world.assertExactCoverageSelectionRegisteredOnce()
+
+    @Y("el prestador avanza a la vinculación de Mercado Pago")
+    fun navigateToMercadoPago() = world.assertNavigatedToMercadoPago()
+
+    @Y("el formulario no es accesible mediante navegación hacia atrás")
+    fun profileIsRemovedFromBackStack() = world.assertProfileFormPoppedFromBackstack()
 }
