@@ -152,4 +152,19 @@ class ProviderCoverageZonesSteps {
 
     @Y("no puede enviarse duplicado al registro")
     fun duplicateCannotBeSubmitted() = world.assertCoverageSelectionHasNoDuplicates()
+
+    @Dado("que el catálogo está disponible y los demás datos requeridos son válidos")
+    fun validProfileWithoutCoverage() = world.arrangeValidProfileWithoutCoverageSelection()
+
+    @Y("no hay ninguna zona seleccionada")
+    fun noSelectedZone() = world.assertNoCoverageZoneSelected()
+
+    @Cuando("el prestador envía el formulario")
+    fun submitForm() = world.attemptSubmit()
+
+    @Entonces("aparece una validación localizada junto a la sección de cobertura")
+    fun missingCoverageValidation() = world.assertMissingCoverageZonesError()
+
+    @Y("no se solicita el registro ni se navega a otra pantalla")
+    fun registrationAndNavigationDoNotOccur() = world.assertRegistrationAndNavigationDidNotOccur()
 }

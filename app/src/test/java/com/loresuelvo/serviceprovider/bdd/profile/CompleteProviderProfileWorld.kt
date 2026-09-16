@@ -205,6 +205,25 @@ class CompleteProviderProfileWorld : AutoCloseable {
         assertEquals(selectedIds.distinct(), selectedIds)
     }
 
+    fun arrangeValidProfileWithoutCoverageSelection() {
+        configureCoverageZones(listOf(CoverageZone(6, "Comuna 6", "place-6")))
+        navigateToProfileDestination()
+        viewModel.onNameChanged("Carlos")
+        viewModel.onSurnameChanged("Gómez")
+        val categories = viewModel.uiState.value.categoriesState as CategoriesLoadState.Ready
+        viewModel.onCategorySelected(categories.categories.first())
+        viewModel.onPhotoConfirmed("file_valid_123")
+    }
+
+    fun assertMissingCoverageZonesError() {
+        assertEquals(ProfileFormError.MissingCoverageZones, viewModel.uiState.value.error)
+    }
+
+    fun assertRegistrationAndNavigationDidNotOccur() {
+        assertEquals(0, providerRepository.registerCalls)
+        assertEquals(null, latestEffect)
+    }
+
     fun assertCoverageZonesLoading() {
         assertEquals(CoverageZonesLoadState.Loading, viewModel.uiState.value.coverageZonesState)
     }

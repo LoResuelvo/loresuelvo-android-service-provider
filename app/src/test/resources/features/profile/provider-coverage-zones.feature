@@ -64,7 +64,6 @@ Característica: Registrar prestador con zonas de cobertura
     Entonces el identificador aparece una sola vez en la selección
     Y no puede enviarse duplicado al registro
 
-  @wip
   Escenario: 09-PCZ Exigir al menos una zona de cobertura
     Dado que el catálogo está disponible y los demás datos requeridos son válidos
     Y no hay ninguna zona seleccionada
