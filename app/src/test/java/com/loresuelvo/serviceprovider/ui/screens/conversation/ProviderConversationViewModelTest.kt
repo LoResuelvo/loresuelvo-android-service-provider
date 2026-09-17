@@ -1,6 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
 import androidx.lifecycle.SavedStateHandle
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
@@ -25,12 +28,15 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class ProviderConversationViewModelTest {
 
     private val scheduler = TestCoroutineScheduler()
@@ -272,6 +278,208 @@ class ProviderConversationViewModelTest {
         assertTrue(vm.uiState.value is ProviderConversationUiState.Error)
     }
 
+    @Test
+    fun onMediaPicked_stages_the_image_as_pendingMedia() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val image = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(
+            bytes = byteArrayOf(1, 2, 3, 4),
+            mimeType = "image/jpeg",
+            originalName = "kitchen.jpg",
+        )
+        val reader = FakeMediaReader(mapOf("content://images/42" to image))
+        val vm = viewModelWithMediaReader(repo, reader)
+        advanceUntilIdle()
+
+        vm.onMediaPicked(android.net.Uri.parse("content://images/42"))
+        advanceUntilIdle()
+
+        val ready = readyState(vm)
+        assertEquals(image, ready.pendingMedia)
+        assertEquals("", ready.promptInput)
+    }
+
+    @Test
+    fun onMediaPicked_with_a_reader_failure_sets_transientMediaError() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val reader = ThrowingMediaReader
+        val vm = viewModelWithMediaReader(repo, reader)
+        advanceUntilIdle()
+
+        vm.onMediaPicked(android.net.Uri.parse("content://missing/1"))
+        advanceUntilIdle()
+
+        val ready = readyState(vm)
+        assertNull(ready.pendingMedia)
+        assertTrue(
+            "expected Network failure, got ${ready.transientMediaError}",
+            ready.transientMediaError
+                is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Network,
+        )
+    }
+
+    @Test
+    fun onClearStagedMedia_discards_the_pending_image() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val image = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(
+            bytes = byteArrayOf(1),
+            mimeType = "image/jpeg",
+            originalName = "x.jpg",
+        )
+        val reader = FakeMediaReader(mapOf("content://x" to image))
+        val vm = viewModelWithMediaReader(repo, reader)
+        advanceUntilIdle()
+        vm.onMediaPicked(android.net.Uri.parse("content://x"))
+        advanceUntilIdle()
+        assertNotNull(readyState(vm).pendingMedia)
+
+        vm.onClearStagedMedia()
+        advanceUntilIdle()
+        assertNull(readyState(vm).pendingMedia)
+    }
+
+    @Test
+    fun onSendClick_with_pending_media_fires_sendMediaMessage_with_an_optimistic_pending_bubble() =
+        runTest(scheduler) {
+            val repo = RecordingRepository()
+            repo.detailOutcome = detailOutcome(messages = emptyList())
+            val image = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(
+                bytes = byteArrayOf(1, 2, 3),
+                mimeType = "image/jpeg",
+                originalName = "kitchen.jpg",
+            )
+            repo.sendOutcome = SendMessageOutcome.Success(
+                message = com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage(
+                    id = 99,
+                    sender = com.loresuelvo.serviceprovider.domain.conversation.ConversationSender.Provider,
+                    content = "",
+                    createdOnEpochMillis = 10_000L,
+                    media = com.loresuelvo.serviceprovider.domain.conversation.MediaReference.Image(
+                        id = "file-uuid-1",
+                        url = "https://example.test/kitchen.jpg",
+                        mimeType = "image/jpeg",
+                        originalName = "kitchen.jpg",
+                    ),
+                ),
+            )
+            val reader = FakeMediaReader(mapOf("content://x" to image))
+            val vm = viewModelWithMediaReader(repo, reader)
+            advanceUntilIdle()
+            vm.onMediaPicked(android.net.Uri.parse("content://x"))
+            advanceUntilIdle()
+
+            vm.onSendClick()
+            advanceUntilIdle()
+
+            assertEquals(1, repo.sendCalls)
+            val ready = readyState(vm)
+            assertEquals(false, ready.sending)
+            assertEquals(1, ready.items.size)
+            val confirmed = ready.items.single()
+            assertTrue(
+                "expected ServerConfirmed, got $confirmed",
+                confirmed is ChatListItem.ServerConfirmed,
+            )
+            assertEquals(
+                "https://example.test/kitchen.jpg",
+                ((confirmed as ChatListItem.ServerConfirmed).message.media
+                    as com.loresuelvo.serviceprovider.domain.conversation.MediaReference.Image).url,
+            )
+        }
+
+    @Test
+    fun onSendClick_with_pending_media_replaces_pending_with_failed_bubble_on_network_failure() =
+        runTest(scheduler) {
+            val repo = RecordingRepository()
+            repo.detailOutcome = detailOutcome(messages = emptyList())
+            val image = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(
+                bytes = byteArrayOf(1),
+                mimeType = "image/jpeg",
+                originalName = "x.jpg",
+            )
+            repo.sendOutcome = SendMessageOutcome.Failure.Network(
+                cause = RuntimeException("offline"),
+            )
+            val reader = FakeMediaReader(mapOf("content://x" to image))
+            val vm = viewModelWithMediaReader(repo, reader)
+            advanceUntilIdle()
+            vm.onMediaPicked(android.net.Uri.parse("content://x"))
+            advanceUntilIdle()
+
+            vm.onSendClick()
+            advanceUntilIdle()
+
+            val ready = readyState(vm)
+            assertEquals(1, ready.items.size)
+            val failed = ready.items.single()
+            assertTrue(
+                "expected LocalFailed, got $failed",
+                failed is ChatListItem.LocalFailed,
+            )
+            assertEquals(
+                image,
+                (failed as ChatListItem.LocalFailed).pendingMedia,
+            )
+            assertEquals(false, ready.sending)
+        }
+
+    @Test
+    fun onRetrySendFailedBubble_with_media_resubmits_and_replaces_with_confirmed() =
+        runTest(scheduler) {
+            val repo = RecordingRepository()
+            repo.detailOutcome = detailOutcome(messages = emptyList())
+            val image = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(
+                bytes = byteArrayOf(1),
+                mimeType = "image/jpeg",
+                originalName = "x.jpg",
+            )
+            repo.sendOutcome = SendMessageOutcome.Failure.Network(
+                cause = RuntimeException("offline"),
+            )
+            val reader = FakeMediaReader(mapOf("content://x" to image))
+            val vm = viewModelWithMediaReader(repo, reader)
+            advanceUntilIdle()
+            vm.onMediaPicked(android.net.Uri.parse("content://x"))
+            advanceUntilIdle()
+            vm.onSendClick()
+            advanceUntilIdle()
+
+            val failedKey = readyState(vm).items
+                .filterIsInstance<ChatListItem.LocalFailed>()
+                .single()
+                .key
+
+            repo.sendCalls = 0
+            repo.sendOutcome = SendMessageOutcome.Success(
+                message = com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage(
+                    id = 7,
+                    sender = com.loresuelvo.serviceprovider.domain.conversation.ConversationSender.Provider,
+                    content = "",
+                    createdOnEpochMillis = 1L,
+                    media = com.loresuelvo.serviceprovider.domain.conversation.MediaReference.Image(
+                        id = "file-uuid-1",
+                        url = "https://example.test/x.jpg",
+                        mimeType = "image/jpeg",
+                        originalName = "x.jpg",
+                    ),
+                ),
+            )
+            vm.onRetrySendFailedBubble(failedKey)
+            advanceUntilIdle()
+
+            assertEquals(1, repo.sendCalls)
+            val ready = readyState(vm)
+            assertEquals(1, ready.items.size)
+            val resolved = ready.items.single()
+            assertTrue(
+                "expected ServerConfirmed, got $resolved",
+                resolved is ChatListItem.ServerConfirmed,
+            )
+            assertEquals(7, (resolved as ChatListItem.ServerConfirmed).message.id)
+        }
+
     // --- helpers --------------------------------------------------------
 
     private fun viewModel(repo: RecordingRepository): ProviderConversationViewModel =
@@ -282,6 +490,17 @@ class ProviderConversationViewModelTest {
             sendMediaMessage = SendMediaMessageUseCase(repo),
             mediaReader = NotExercisedMediaReader,
         )
+
+    private fun viewModelWithMediaReader(
+        repo: RecordingRepository,
+        reader: com.loresuelvo.serviceprovider.data.media.MediaReader,
+    ): ProviderConversationViewModel = ProviderConversationViewModel(
+        savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
+        getConversationById = GetConversationByIdUseCase(repo),
+        sendMessage = SendMessageUseCase(repo),
+        sendMediaMessage = SendMediaMessageUseCase(repo),
+        mediaReader = reader,
+    )
 
     private fun readyState(vm: ProviderConversationViewModel): ProviderConversationUiState.Ready {
         val state = vm.uiState.value
@@ -321,6 +540,19 @@ class ProviderConversationViewModelTest {
             error("MediaReader is not exercised by US-A VM tests")
     }
 
+    private class FakeMediaReader(
+        private val images: Map<String, com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image>,
+    ) : com.loresuelvo.serviceprovider.data.media.MediaReader {
+        override suspend fun read(uri: android.net.Uri) =
+            images[uri.toString()]
+                ?: error("MediaReader has no entry for $uri")
+    }
+
+    private object ThrowingMediaReader : com.loresuelvo.serviceprovider.data.media.MediaReader {
+        override suspend fun read(uri: android.net.Uri): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
+            throw java.io.IOException("Could not open input stream for $uri")
+    }
+
     private class RecordingRepository(
         var detailOutcome: ConversationDetailOutcome = ConversationDetailOutcome.Success(
             detail = ConversationDetail(
@@ -351,6 +583,15 @@ class ProviderConversationViewModelTest {
         override suspend fun sendMessage(
             conversationId: Int,
             content: String,
+        ): SendMessageOutcome {
+            sendCalls += 1
+            sendGate?.await()
+            return sendOutcome
+        }
+
+        override suspend fun sendMediaMessage(
+            conversationId: Int,
+            media: List<com.loresuelvo.serviceprovider.domain.conversation.MediaUpload>,
         ): SendMessageOutcome {
             sendCalls += 1
             sendGate?.await()
