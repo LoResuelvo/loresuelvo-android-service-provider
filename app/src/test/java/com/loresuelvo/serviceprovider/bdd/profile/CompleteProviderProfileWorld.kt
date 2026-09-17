@@ -11,6 +11,7 @@ import com.loresuelvo.serviceprovider.domain.coverage.CoverageZonesOutcome
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
+import com.loresuelvo.serviceprovider.domain.provider.CoverageRejectionReason
 import com.loresuelvo.serviceprovider.domain.profile.PhotoValidationOutcome
 import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
 import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
@@ -267,6 +268,31 @@ class CompleteProviderProfileWorld : AutoCloseable {
     fun assertSubmittedCoverageSelectionUnchanged() {
         assertEquals(listOf(6), providerRepository.lastCommand?.coverageZoneIds)
         assertEquals(listOf(6), viewModel.uiState.value.selectedCoverageZoneIds)
+    }
+
+    fun arrangeRejectedCoverageSelection(reason: String) {
+        arrangeValidProfileWithCoverageSelection("una zona")
+        val rejectionReason = when (reason) {
+            "falta de zonas" -> CoverageRejectionReason.Missing
+            "zona inexistente" -> CoverageRejectionReason.NotFound
+            "zona no disponible" -> CoverageRejectionReason.Unavailable
+            else -> CoverageRejectionReason.Duplicate
+        }
+        providerRepository.outcome = RegistrationOutcome.Failure.CoverageRejected(rejectionReason)
+    }
+
+    fun assertCoverageRejectionVisible() {
+        assertEquals(ProfileFormError.CoverageRejected, viewModel.uiState.value.error)
+    }
+
+    fun assertProfileAndPhotoPreserved() {
+        assertProfileDataPreserved()
+        assertTrue(viewModel.uiState.value.isPhotoConfirmed)
+    }
+
+    fun correctCoverageWithoutAutomaticSubmit() {
+        viewModel.onCoverageZoneChecked(14, true)
+        assertEquals(1, providerRepository.registerCalls)
     }
 
     fun assertCoverageZonesLoading() {

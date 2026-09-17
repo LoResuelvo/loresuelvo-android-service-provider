@@ -84,7 +84,6 @@ Característica: Registrar prestador con zonas de cobertura
       | una zona                  |
       | varias zonas no contiguas |
 
-  @wip
   Esquema del escenario: 11-PCZ Corregir una selección rechazada por la API
     Dado un formulario válido cuya selección será rechazada por "<Motivo>"
     Cuando el prestador envía el formulario

@@ -198,4 +198,16 @@ class ProviderCoverageZonesSteps {
 
     @Y("los controles muestran el estado ocupado")
     fun controlsShowBusyState() = world.assertSubmitDisabledWithLoading()
+
+    @Dado("un formulario válido cuya selección será rechazada por {string}")
+    fun rejectedCoverageSelection(reason: String) = world.arrangeRejectedCoverageSelection(reason)
+
+    @Entonces("aparece un mensaje localizado para corregir la cobertura")
+    fun coverageCorrectionMessage() = world.assertCoverageRejectionVisible()
+
+    @Y("el prestador permanece en el formulario con sus datos y foto confirmada")
+    fun profileAndPhotoRemain() = world.assertProfileAndPhotoPreserved()
+
+    @Y("puede corregir o volver a cargar la selección sin un reenvío automático")
+    fun correctWithoutAutomaticSubmit() = world.correctCoverageWithoutAutomaticSubmit()
 }
