@@ -7,6 +7,8 @@ import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.CategoriesOutcome
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.category.CategoryRepository
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZone
+import com.loresuelvo.serviceprovider.domain.coverage.CoverageZonesOutcome
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
@@ -117,6 +119,46 @@ class CompleteProviderProfileViewModelTest {
 
         assertTrue(viewModel!!.uiState.value.coverageZonesState is CoverageZonesLoadState.Ready)
         assertEquals(1, coverageZoneRepository.calls)
+    }
+
+    @Test
+    fun `successful coverage reload removes unavailable selections and reports adjustment`() = runTest(scheduler) {
+        coverageZoneRepository.outcome = CoverageZonesOutcome.Success(
+            listOf(
+                CoverageZone(1, "Comuna 1", "place-1"),
+                CoverageZone(2, "Comuna 2", "place-2"),
+            ),
+        )
+        viewModel = newViewModel()
+        advanceUntilIdle()
+        viewModel!!.onCoverageZoneChecked(1, true)
+        viewModel!!.onCoverageZoneChecked(2, true)
+
+        coverageZoneRepository.outcome = CoverageZonesOutcome.Success(
+            listOf(CoverageZone(2, "Comuna 2", "place-2")),
+        )
+        viewModel!!.retryLoadingCoverageZones()
+        advanceUntilIdle()
+
+        assertEquals(listOf(2), viewModel!!.uiState.value.selectedCoverageZoneIds)
+        assertTrue(viewModel!!.uiState.value.coverageSelectionAdjusted)
+    }
+
+    @Test
+    fun `failed coverage reload retains selection but blocks registration`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+        viewModel!!.onCoverageZoneChecked(1, true)
+
+        coverageZoneRepository.outcome = CoverageZonesOutcome.Failure.Network(RuntimeException("offline"))
+        viewModel!!.retryLoadingCoverageZones()
+        advanceUntilIdle()
+        viewModel!!.submit()
+        advanceUntilIdle()
+
+        assertEquals(listOf(1), viewModel!!.uiState.value.selectedCoverageZoneIds)
+        assertEquals(CoverageZonesLoadState.Error, viewModel!!.uiState.value.coverageZonesState)
+        assertEquals(0, providerRepository.registerCalls)
     }
 
     @Test

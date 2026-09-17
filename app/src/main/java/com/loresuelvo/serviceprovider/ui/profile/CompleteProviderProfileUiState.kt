@@ -19,6 +19,7 @@ data class CompleteProviderProfileUiState(
     val photoLoading: Boolean = false,
     val photoError: PhotoFormError? = null,
     val selectedCoverageZoneIds: List<Int> = emptyList(),
+    val coverageSelectionAdjusted: Boolean = false,
     val loading: Boolean = false,
     val error: ProfileFormError? = null,
 )

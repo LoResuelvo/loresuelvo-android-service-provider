@@ -26,6 +26,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 internal fun CoverageZoneSection(
     state: CoverageZonesLoadState,
     selectedZoneIds: List<Int>,
+    selectionAdjusted: Boolean,
     enabled: Boolean,
     onCheckedChange: (Int, Boolean) -> Unit,
     onRetry: () -> Unit,
@@ -39,6 +40,13 @@ internal fun CoverageZoneSection(
             text = stringResource(R.string.provider_profile_coverage_title),
             style = MaterialTheme.typography.titleMedium,
         )
+        if (selectionAdjusted) {
+            Text(
+                text = stringResource(R.string.provider_profile_coverage_adjusted_notice),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         when (state) {
             is CoverageZonesLoadState.Loading -> CoverageZonesLoading()
             is CoverageZonesLoadState.Ready -> state.zones.forEach { zone ->

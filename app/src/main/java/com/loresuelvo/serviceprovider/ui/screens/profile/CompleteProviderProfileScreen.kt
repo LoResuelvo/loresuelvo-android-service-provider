@@ -336,6 +336,7 @@ fun CompleteProviderProfileScreen(
             CoverageZoneSection(
                 state = uiState.coverageZonesState,
                 selectedZoneIds = uiState.selectedCoverageZoneIds,
+                selectionAdjusted = uiState.coverageSelectionAdjusted,
                 enabled = !isBusy,
                 onCheckedChange = onCoverageZoneChecked,
                 onRetry = onRetryCoverageZones,

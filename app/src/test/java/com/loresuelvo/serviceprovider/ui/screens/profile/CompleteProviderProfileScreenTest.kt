@@ -188,6 +188,24 @@ class CompleteProviderProfileScreenTest {
     }
 
     @Test
+    fun renders_coverage_selection_adjustment_notice() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        coverageSelectionAdjusted = true,
+                    ),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_adjusted_notice))
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun renders_loading_indicator_and_disables_button_when_submitting() {
         composeTestRule.setContent {
             LoresuelvoTheme {

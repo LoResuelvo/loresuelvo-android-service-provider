@@ -78,7 +78,16 @@ class CompleteProviderProfileViewModel @Inject constructor(
                     } else {
                         CoverageZonesLoadState.Ready(outcome.zones)
                     }
-                    _uiState.update { it.copy(coverageZonesState = state) }
+                    _uiState.update {
+                        val availableIds = outcome.zones.mapTo(mutableSetOf()) { zone -> zone.id }
+                        val selectedIds = it.selectedCoverageZoneIds.filter(availableIds::contains)
+                        it.copy(
+                            coverageZonesState = state,
+                            selectedCoverageZoneIds = selectedIds,
+                            coverageSelectionAdjusted = selectedIds.size != it.selectedCoverageZoneIds.size,
+                            error = if (it.error == ProfileFormError.CoverageRejected) null else it.error,
+                        )
+                    }
                 }
                 is CoverageZonesOutcome.Failure -> {
                     _uiState.update { it.copy(coverageZonesState = CoverageZonesLoadState.Error) }
@@ -117,7 +126,13 @@ class CompleteProviderProfileViewModel @Inject constructor(
         } else {
             state.selectedCoverageZoneIds - zoneId
         }
-        _uiState.update { it.copy(selectedCoverageZoneIds = selected, error = null) }
+        _uiState.update {
+            it.copy(
+                selectedCoverageZoneIds = selected,
+                coverageSelectionAdjusted = false,
+                error = null,
+            )
+        }
     }
 
     fun onPhotoSelected(source: String) {
