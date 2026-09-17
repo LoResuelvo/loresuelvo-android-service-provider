@@ -43,3 +43,59 @@ Feature: Conversación del prestador con un consumidor
     When el prestador escribe solo espacios en el input
     Then el botón Enviar permanece deshabilitado
     And ningún envío se dispara
+
+  # =========================================================================
+  # US-B — Adjuntar imágenes a un mensaje (galería + cámara + upload + retry)
+  # =========================================================================
+
+  @wip
+  Scenario: 01-PCM Adjuntar una imagen de la galería como preview antes de enviar
+    Given que la conversación 42 está abierta sin mensajes previos
+    When el prestador selecciona una imagen JPEG de su galería
+    Then la pantalla muestra una preview de esa imagen en la barra del input
+    And el botón Enviar queda habilitado con esa imagen adjunta
+
+  @wip
+  Scenario: 02-PCM Adjuntar una foto recién tomada con la cámara como preview
+    Given que la conversación 42 está abierta sin mensajes previos
+    When el prestador toma una foto JPEG con la cámara del dispositivo
+    Then la pantalla muestra una preview de esa foto en la barra del input
+    And el botón Enviar queda habilitado con esa imagen adjunta
+
+  @wip
+  Scenario: 03-PCM Enviar una imagen con burbuja pendiente optimista
+    Given que la conversación 42 está abierta sin mensajes previos
+    And que el prestador tiene una imagen JPEG adjunta como preview
+    And que la API aceptará el upload de la imagen y el envío del mensaje
+    When el prestador selecciona Enviar
+    Then la pantalla agrega optimistamente una burbuja pendiente con la miniatura de esa imagen
+    And la preview local se descarta y el input bar queda vacío
+
+  @wip
+  Scenario: 04-PCM La imagen confirmada por el servidor reemplaza la burbuja pendiente
+    Given que la conversación 42 está abierta sin mensajes previos
+    And que el prestador está enviando una imagen JPEG
+    When el servidor confirma el upload y la persistencia del mensaje
+    Then la burbuja pendiente se reemplaza por la versión persistida con id estable y url de descarga
+
+  @wip
+  Scenario: 05-PCM Una subida de imagen fallida por red queda pendiente con retry
+    Given que la conversación 42 está abierta sin mensajes previos
+    And que el próximo upload de imagen del prestador fallará por red
+    When el prestador selecciona Enviar con una imagen adjunta
+    Then la pantalla agrega optimistamente una burbuja pendiente con la miniatura
+    And al fallar el upload la burbuja permanece con un indicador de fallo y un botón Reintentar
+
+  @wip
+  Scenario: 06-PCM Reintentar una subida de imagen pendiente confirma el mensaje
+    Given que la conversación 42 está abierta con una burbuja pendiente de imagen en fallo por red
+    And que el reintento del upload tendrá éxito
+    When el prestador selecciona Reintentar en esa burbuja
+    Then el upload se ejecuta una sola vez
+    And al confirmarse la burbuja pendiente se reemplaza por la versión persistida con url de descarga
+
+  @wip
+  Scenario: 07-PCM Renderizar la imagen recibida al abrir la conversación
+    Given que la API devuelve el detalle de la conversación 42 con un mensaje confirmado del prestador que lleva una imagen JPEG adjunta
+    When el prestador navega a la ruta de la conversación 42
+    Then la pantalla muestra la miniatura de esa imagen en su burbuja con el contenido accesible correcto
