@@ -1,5 +1,9 @@
 package com.loresuelvo.serviceprovider.domain.conversation
 
+import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
+import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
+
 /**
  * Port for the provider ↔ consumer conversations backend.
  * Implementations live in `data/api/` and translate the wire
@@ -58,4 +62,32 @@ interface ConversationRepository {
         conversationId: Int,
         content: String,
     ): SendMessageOutcome
+
+    /**
+     * Appends a provider-typed media message (image in US-B; audio
+     * lands in US-C on top) to the given conversation. The list
+     * is homogeneous — the repository dispatches on the first
+     * entry's runtime type and rejects mixed lists with a typed
+     * `Server` failure so the UI surfaces a clear error rather
+     * than silently dropping the rest.
+     *
+     * Implementations orchestrate the presign → upload → confirm
+     * pipeline (delegating to `FileRepository`) and then post the
+     * JSON message body with the joined file ids. The wire
+     * contract is JSON, not multipart: the backend does not
+     * accept attachments on the conversations endpoint
+     * directly.
+     *
+     * 404 on `conversationId` maps to
+     * [SendMessageOutcome.Failure.ConversationNotFound]. The
+     * default implementation throws so the port can be extended
+     * incrementally (US-B only requires images).
+     */
+    suspend fun sendMediaMessage(
+        conversationId: Int,
+        media: List<MediaUpload>,
+    ): SendMessageOutcome =
+        throw UnsupportedOperationException(
+            "sendMediaMessage is not implemented by this ConversationRepository",
+        )
 }

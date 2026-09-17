@@ -1,14 +1,18 @@
 package com.loresuelvo.serviceprovider.domain.conversation
 
 /**
- * Outcome of [ConversationRepository.sendMessage]. Sealed so
- * callers handle every branch explicitly — mirrors
+ * Outcome of [ConversationRepository.sendMessage] and
+ * [ConversationRepository.sendMediaMessage]. Sealed so callers
+ * handle every branch explicitly — mirrors
  * [ConversationsOutcome].
  *
  * On success, the carried [ConversationMessage] is the
- * server-persisted bubble (with the backend-issued id and the
- * authoritative `created_on` timestamp). The VM uses it to replace
- * the optimistic bubble it appended locally.
+ * server-persisted bubble (with the backend-issued numeric id
+ * and the authoritative `created_on` timestamp). The VM uses it
+ * to replace the optimistic bubble it appended locally — the
+ * optimistic id (`local-<uuid>`) is dropped in favour of the
+ * stable server id so `LazyColumn` keys stay stable across
+ * rotation and process death.
  *
  * The repository never throws on HTTP / network failures: every
  * exception is mapped to a typed [SendMessageOutcome.Failure].
@@ -35,5 +39,17 @@ sealed interface SendMessageOutcome {
          * inbox rather than offering a retry.
          */
         data class ConversationNotFound(val message: String) : Failure
+
+        /**
+         * A media payload exceeded the client-side size limit
+         * (audio only; images are bounded by the picker). The
+         * use case rejects oversized payloads before the
+         * network round-trip so the backend never sees them.
+         *
+         * Reserved for US-C (audio attachments). Kept in the
+         * shared `Failure` tree so US-B callers can pattern-match
+         * the exhaustive `when` without future churn.
+         */
+        data class PayloadTooLarge(val maxBytes: Long) : Failure
     }
 }

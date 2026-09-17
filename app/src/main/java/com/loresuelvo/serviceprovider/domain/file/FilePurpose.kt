@@ -2,8 +2,12 @@ package com.loresuelvo.serviceprovider.domain.file
 
 /**
  * Business purpose for an uploaded file on the LoResuelvo platform.
- * For the provider profile, this maps 1:1 to "profile_photo".
+ * Mirrors the backend's
+ * `internal/domain/file/file.go` `Purpose` constants one-to-one.
  */
 enum class FilePurpose {
     PROFILE_PHOTO,
+    CONVERSATION_MESSAGE_IMAGE,
+    CONVERSATION_MESSAGE_AUDIO,
+    CONVERSATION_MESSAGE_VIDEO,
 }

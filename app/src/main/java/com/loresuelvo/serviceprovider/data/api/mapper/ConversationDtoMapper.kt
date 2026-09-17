@@ -4,6 +4,7 @@ import com.loresuelvo.serviceprovider.data.api.dto.ConversationCounterpartDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConversationDetailDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConversationDto
 import com.loresuelvo.serviceprovider.data.api.dto.ConversationMessageDto
+import com.loresuelvo.serviceprovider.data.api.dto.MessageImageDto
 import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
@@ -11,6 +12,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessageKind
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.conversation.MediaReference
 
 internal fun ConversationDto.toDomain(): Conversation = Conversation(
     id = id.requirePositive("conversation id"),
@@ -61,8 +63,16 @@ internal fun ConversationMessageDto.toDomain(): ConversationMessage {
         content = content,
         createdOnEpochMillis = createdOnMillis,
         kind = kind,
+        media = images?.firstOrNull()?.toMediaReference(),
     )
 }
+
+private fun MessageImageDto.toMediaReference(): MediaReference.Image = MediaReference.Image(
+    id = id,
+    url = url,
+    mimeType = mimeType,
+    originalName = originalName,
+)
 
 private fun String.toConversationSender(messageId: Int): ConversationSender = when (lowercase()) {
     "consumer" -> ConversationSender.Consumer

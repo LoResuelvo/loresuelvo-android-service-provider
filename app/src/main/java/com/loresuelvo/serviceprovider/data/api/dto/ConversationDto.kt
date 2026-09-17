@@ -30,6 +30,7 @@ data class ConversationMessageDto(
     @SerialName("created_on") val createdOn: String? = null,
     @SerialName("audio") val audio: MessageAudioDto? = null,
     @SerialName("video") val video: MessageVideoDto? = null,
+    @SerialName("images") val images: List<MessageImageDto>? = null,
 )
 
 @Serializable

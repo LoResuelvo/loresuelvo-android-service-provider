@@ -174,7 +174,28 @@ class ConversationDetailApiContractTest {
     }
 
     private fun repository(): ApiConversationRepository {
-        return ApiConversationRepository(api())
+        return ApiConversationRepository(api(), StubFileRepository)
+    }
+
+    private object StubFileRepository :
+        com.loresuelvo.serviceprovider.domain.file.FileRepository {
+        override suspend fun presign(
+            request: com.loresuelvo.serviceprovider.domain.file.PresignUploadRequest,
+        ): com.loresuelvo.serviceprovider.domain.file.PresignUploadOutcome =
+            error("Not exercised by the conversation detail contract test")
+
+        override suspend fun uploadBytes(
+            uploadUrl: String,
+            headers: Map<String, String>,
+            bytes: ByteArray,
+        ): com.loresuelvo.serviceprovider.domain.file.UploadBytesOutcome =
+            error("Not exercised by the conversation detail contract test")
+
+        override suspend fun confirm(
+            fileId: String,
+            request: com.loresuelvo.serviceprovider.domain.file.ConfirmUploadRequest,
+        ): com.loresuelvo.serviceprovider.domain.file.ConfirmUploadOutcome =
+            error("Not exercised by the conversation detail contract test")
     }
 
     private fun api(): BackendApi = Retrofit.Builder()

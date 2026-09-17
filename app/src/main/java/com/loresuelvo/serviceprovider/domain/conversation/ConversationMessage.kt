@@ -32,6 +32,7 @@ data class ConversationMessage(
     val content: String,
     val createdOnEpochMillis: Long,
     val kind: ConversationMessageKind = ConversationMessageKind.Text,
+    val media: MediaReference? = null,
 )
 
 sealed interface ConversationMessageKind {

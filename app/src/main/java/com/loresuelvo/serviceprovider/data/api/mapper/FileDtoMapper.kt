@@ -44,10 +44,16 @@ internal fun FileResponseDto.toDomain(): ConfirmedFile =
 internal fun purposeToWire(purpose: FilePurpose): String =
     when (purpose) {
         FilePurpose.PROFILE_PHOTO -> "profile_photo"
+        FilePurpose.CONVERSATION_MESSAGE_IMAGE -> "conversation_message_image"
+        FilePurpose.CONVERSATION_MESSAGE_AUDIO -> "conversation_message_audio"
+        FilePurpose.CONVERSATION_MESSAGE_VIDEO -> "conversation_message_video"
     }
 
 internal fun purposeFromWire(value: String): FilePurpose =
     when (value) {
         "profile_photo" -> FilePurpose.PROFILE_PHOTO
+        "conversation_message_image" -> FilePurpose.CONVERSATION_MESSAGE_IMAGE
+        "conversation_message_audio" -> FilePurpose.CONVERSATION_MESSAGE_AUDIO
+        "conversation_message_video" -> FilePurpose.CONVERSATION_MESSAGE_VIDEO
         else -> throw IllegalArgumentException("Unknown file purpose: $value")
     }
