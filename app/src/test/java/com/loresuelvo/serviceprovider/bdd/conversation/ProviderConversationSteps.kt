@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.bdd.conversation
 
+import android.net.Uri
 import io.cucumber.java.After
 import io.cucumber.java.Before
 import io.cucumber.java.en.And
@@ -18,6 +19,12 @@ internal class ProviderConversationSteps {
     @Before
     fun setUp() {
         world = ProviderConversationWorld()
+        // Cucumber instantiates this class via reflection; the step
+        // methods are dispatched on the same thread that calls
+        // `setUp`, so Robolectric's runtime is online here. The
+        // synthetic URI is the same value the gallery / camera
+        // launchers would hand to `onMediaPicked(uri)`.
+        world.seedMediaUri(Uri.parse("content://media/picker/0"))
     }
 
     @After
@@ -113,6 +120,12 @@ internal class ProviderConversationSteps {
         // gate so we can observe the optimistic-then-confirmed
         // transition in two assertions.
         world.givenSendWillSucceed(serverMessageId = 7, prompt = "Mañana a las 10")
+        world.pauseSendOnGate()
+    }
+
+    @Given("que el reintento del upload tendrá éxito")
+    fun imageRetryWillSucceed() {
+        world.givenSendWillSucceedWithMedia(serverMessageId = 7)
         world.pauseSendOnGate()
     }
 
@@ -233,5 +246,142 @@ internal class ProviderConversationSteps {
     @And("el input bar vuelve a quedar vacío y habilitado")
     fun inputBarIsClearedAndReady() {
         world.thenInputBarIsEmptyAndEnabled()
+    }
+
+    // =====================================================================
+    // US-B — Adjuntar imágenes a un mensaje
+    // =====================================================================
+
+    @Given("que el prestador tiene una imagen JPEG adjunta como preview")
+    fun providerHasImagePending() {
+        world.givenMediaPickerReturns(
+            bytes = byteArrayOf(1, 2, 3, 4),
+            mimeType = "image/jpeg",
+            originalName = "kitchen.jpg",
+        )
+        world.whenProviderPicksMedia()
+    }
+
+    @When("el prestador selecciona una imagen JPEG de su galería")
+    fun providerPicksImageFromGallery() {
+        // Same flow as `providerHasImagePending` — the BDD World
+        // is gallery-vs-camera agnostic; the route decides which
+        // launcher fires and both end at `onMediaPicked(uri)`.
+        world.givenMediaPickerReturns(
+            bytes = byteArrayOf(1, 2, 3),
+            mimeType = "image/jpeg",
+            originalName = "kitchen.jpg",
+        )
+        world.whenProviderPicksMedia()
+    }
+
+    @When("el prestador toma una foto JPEG con la cámara del dispositivo")
+    fun providerTakesPhotoFromCamera() {
+        world.givenMediaPickerReturns(
+            bytes = byteArrayOf(9, 9, 9),
+            mimeType = "image/jpeg",
+            originalName = "capture.jpg",
+        )
+        world.whenProviderPicksMedia()
+    }
+
+    @When("el prestador selecciona Enviar con una imagen adjunta")
+    fun providerSendsWithImage() {
+        world.whenTappingSend()
+    }
+
+    @Given("que el próximo upload de imagen del prestador fallará por red")
+    fun nextImageUploadWillFail() {
+        world.givenSendWillFailWithNetwork()
+        world.pauseSendOnGate()
+    }
+
+    @Given("que la conversación {int} está abierta con una burbuja pendiente de imagen en fallo por red")
+    fun conversationHasFailedImageBubble(@Suppress("UNUSED_PARAMETER") conversationId: Int) {
+        world.givenEmptyDetail()
+        world.whenOpeningConversation()
+        world.givenMediaPickerReturns(
+            bytes = byteArrayOf(1),
+            mimeType = "image/jpeg",
+            originalName = "x.jpg",
+        )
+        world.whenProviderPicksMedia()
+        world.givenSendWillFailWithNetwork()
+        world.pauseSendOnGate()
+        world.whenTappingSend()
+        world.releaseSendGate()
+    }
+
+    @Then("la pantalla muestra una preview de esa imagen en la barra del input")
+    fun screenShowsImagePreview() {
+        world.thenStagedMediaBytes(expected = byteArrayOf(1, 2, 3, 4))
+    }
+
+    @And("el botón Enviar queda habilitado con esa imagen adjunta")
+    fun sendButtonIsEnabledWithImage() {
+        val ready = world.readReadyStateOrNull()
+            ?: error("expected Ready, got ${world.readState()}")
+        assertTrue(
+            "expected send to be enabled when media is staged",
+            ready.pendingMedia != null && !ready.sending,
+        )
+    }
+
+    @Given("que el servidor confirma el upload y la persistencia del mensaje")
+    fun serverConfirmsImageUpload() {
+        world.givenSendWillSucceedWithMedia(serverMessageId = 99)
+        world.pauseSendOnGate()
+    }
+
+    @Then("la pantalla agrega optimistamente una burbuja pendiente con la miniatura de esa imagen")
+    fun screenAddsOptimisticPendingImageBubble() {
+        val ready = world.readReadyStateOrNull()
+            ?: error("expected Ready, got ${world.readState()}")
+        val pending = ready.items.filterIsInstance<ChatListItem.LocalPending>()
+        assertEquals(
+            "expected exactly one pending image bubble, got ${ready.items}",
+            1,
+            pending.size,
+        )
+        assertTrue(
+            "expected pending bubble to carry the staged image",
+            pending.single().pendingMedia != null,
+        )
+    }
+
+    @Then("la preview local se descarta y el input bar queda vacío")
+    fun previewIsDiscardedAndInputBarIsCleared() {
+        world.thenNoStagedMedia()
+    }
+
+    @Then("la burbuja pendiente se reemplaza por la versión persistida con id estable y url de descarga")
+    fun pendingImageBubbleReplacedByConfirmed() {
+        // The BDD world configures the next successful send to
+        // return id 99 with the image URL echoed back; the media id
+        // is generated by the faked sendMediaMessage flow.
+        world.thenImageBubbleConfirmed(mediaId = "file-uuid-99")
+    }
+
+    @Then("al fallar el upload la burbuja permanece con un indicador de fallo y un botón Reintentar")
+    fun failedImageBubbleKeepsFailureIndicator() {
+        world.thenBubbleReplacedByLocalFailed(expectedContent = "")
+    }
+
+    @Then("al confirmarse la burbuja pendiente se reemplaza por la versión persistida con url de descarga")
+    fun retryFailedImageBubbleReplacedByConfirmed() {
+        world.thenImageBubbleConfirmed(mediaId = "file-uuid-7")
+    }
+
+    @Then("la pantalla muestra la miniatura de esa imagen en su burbuja con el contenido accesible correcto")
+    fun screenShowsReceivedImageBubble() {
+        val ready = world.readReadyStateOrNull()
+            ?: error("expected Ready, got ${world.readState()}")
+        val confirmed = ready.items
+            .filterIsInstance<ChatListItem.ServerConfirmed>()
+            .singleOrNull()
+            ?: error("expected a single ServerConfirmed bubble, got ${ready.items}")
+        val media = confirmed.message.media
+            ?: error("expected the bubble to carry an image, got ${confirmed.message}")
+        assertEquals("image/jpeg", media.mimeType)
     }
 }

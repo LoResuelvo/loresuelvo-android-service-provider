@@ -7,6 +7,8 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
+import com.loresuelvo.serviceprovider.domain.conversation.MediaReference
+import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
@@ -68,6 +70,26 @@ internal class ProviderConversationWorld : AutoCloseable {
      */
     private var sendCallsAtRetryBaseline: Int = 0
 
+    /**
+     * Staged media for the US-B scenarios. The [FakeMediaReader]
+     * resolves any URI to [stagedMedia] (the World's picker is
+     * permissive so the BDD steps can drive any URI through the
+     * VM regardless of the gallery / camera path).
+     *
+     * The synthetic URI is supplied by the Steps at `setUp()` time
+     * — under plain JUnit `Uri.parse` returns null (Android
+     * runtime stubs), so the Steps class is responsible for the
+     * Android-side construction.
+     */
+    private lateinit var mediaPickerUri: android.net.Uri
+    private lateinit var stagedMediaUri: android.net.Uri
+    private var stagedMedia: MediaUpload.Image? = null
+
+    fun seedMediaUri(uri: android.net.Uri) {
+        mediaPickerUri = uri
+        stagedMediaUri = uri
+    }
+
     init {
         Dispatchers.setMain(dispatcher)
     }
@@ -118,10 +140,56 @@ internal class ProviderConversationWorld : AutoCloseable {
         )
     }
 
+    /**
+     * US-B variant of [givenSendWillSucceed]: the server returns a
+     * media-bearing message. The id is used both for the persisted
+     * `ConversationMessage.id` and to seed the synthetic
+     * `MediaReference.Image.id` so the BDD assertions can pin both.
+     */
+    fun givenSendWillSucceedWithMedia(serverMessageId: Int, prompt: String = "") {
+        repository.sendOutcome = SendMessageOutcome.Success(
+            message = ConversationMessage(
+                id = serverMessageId,
+                sender = ConversationSender.Provider,
+                content = prompt,
+                createdOnEpochMillis = 10_000L,
+            ),
+        )
+    }
+
     fun givenSendWillFailWithNetwork() {
         repository.sendOutcome = SendMessageOutcome.Failure.Network(
             cause = RuntimeException("offline"),
         )
+    }
+
+    /**
+     * US-B: stage a media picker outcome so the next `onMediaPicked`
+     * invocation resolves to the given bytes + metadata. The
+     * synthetic `Uri` is the same key the World returns from
+     * [mediaPickerUri].
+     */
+    fun givenMediaPickerReturns(
+        bytes: ByteArray,
+        mimeType: String,
+        originalName: String,
+    ) {
+        stagedMediaUri = mediaPickerUri
+        stagedMedia = MediaUpload.Image(
+            bytes = bytes,
+            mimeType = mimeType,
+            originalName = originalName,
+        )
+    }
+
+    fun whenProviderPicksMedia() {
+        viewModel.onMediaPicked(stagedMediaUri)
+        scheduler.advanceUntilIdle()
+    }
+
+    fun whenProviderClearsMedia() {
+        viewModel.onClearStagedMedia()
+        scheduler.advanceUntilIdle()
     }
 
     /**
@@ -217,6 +285,37 @@ internal class ProviderConversationWorld : AutoCloseable {
 
     fun readState(): ProviderConversationUiState = viewModel.uiState.value
 
+    fun thenStagedMediaBytes(expected: ByteArray) {
+        val ready = readReadyStateOrNull()
+            ?: error("expected Ready, got ${readState()}")
+        val staged = ready.pendingMedia
+            ?: error("expected pendingMedia, got null")
+        assertTrue(
+            "expected ${expected.size}B, got ${staged.bytes.size}B",
+            expected.contentEquals(staged.bytes),
+        )
+    }
+
+    fun thenNoStagedMedia() {
+        val ready = readReadyStateOrNull()
+            ?: error("expected Ready, got ${readState()}")
+        org.junit.Assert.assertNull(ready.pendingMedia)
+    }
+
+    fun thenImageBubbleConfirmed(mediaId: String) {
+        val ready = readReadyStateOrNull()
+            ?: error("expected Ready, got ${readState()}")
+        val confirmed = ready.items
+            .filterIsInstance<ChatListItem.ServerConfirmed>()
+            .lastOrNull { item ->
+                val m = item.message.media
+                m is MediaReference.Image && m.id == mediaId
+            }
+            ?: error(
+                "expected a ServerConfirmed image bubble with id $mediaId, got ${ready.items}",
+            )
+    }
+
     fun thenOnePendingBubbleExists(expectedContent: String) {
         val ready = viewModel.uiState.value as ProviderConversationUiState.Ready
         val pending = ready.items.filterIsInstance<ChatListItem.LocalPending>()
@@ -289,7 +388,7 @@ internal class ProviderConversationWorld : AutoCloseable {
         getConversationById = GetConversationByIdUseCase(repository),
         sendMessage = SendMessageUseCase(repository),
         sendMediaMessage = SendMediaMessageUseCase(repository),
-        mediaReader = NotExercisedMediaReader,
+        mediaReader = BddMediaReader(stagedMedia),
     )
 
     private fun detail(messages: List<ConversationMessage>): ConversationDetail = ConversationDetail(
@@ -310,6 +409,13 @@ internal class ProviderConversationWorld : AutoCloseable {
         override suspend fun read(uri: android.net.Uri):
             com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
             error("MediaReader is not exercised by US-A BDD scenarios")
+    }
+
+    private class BddMediaReader(
+        private val media: MediaUpload.Image?,
+    ) : com.loresuelvo.serviceprovider.data.media.MediaReader {
+        override suspend fun read(uri: android.net.Uri): MediaUpload =
+            media ?: error("BDD media reader has no staged media for $uri")
     }
 
     private class FakeConversationRepository : ConversationRepository {
@@ -350,6 +456,39 @@ internal class ProviderConversationWorld : AutoCloseable {
             sendCalls += 1
             sendGate?.await()
             return sendOutcome
+        }
+
+        override suspend fun sendMediaMessage(
+            conversationId: Int,
+            media: List<com.loresuelvo.serviceprovider.domain.conversation.MediaUpload>,
+        ): SendMessageOutcome {
+            sendCalls += 1
+            sendGate?.await()
+            // Synthesize a server-confirmed media response so the
+            // BDD scenarios can assert on the persisted bubble.
+            // The id is derived from the configured sendOutcome to
+            // keep the success path distinguishable per scenario.
+            val baseId = (sendOutcome as? SendMessageOutcome.Success)
+                ?.message?.id ?: 99
+            return when (val outcome = sendOutcome) {
+                is SendMessageOutcome.Success -> SendMessageOutcome.Success(
+                    message = ConversationMessage(
+                        id = outcome.message.id.takeIf { it != 0 } ?: baseId,
+                        sender = ConversationSender.Provider,
+                        content = outcome.message.content,
+                        createdOnEpochMillis = outcome.message.createdOnEpochMillis,
+                        media = media.firstOrNull()?.let { upload ->
+                            MediaReference.Image(
+                                id = "file-uuid-${outcome.message.id.takeIf { it != 0 } ?: baseId}",
+                                url = "https://example.test/${upload.originalName}",
+                                mimeType = upload.mimeType,
+                                originalName = upload.originalName,
+                            )
+                        },
+                    ),
+                )
+                else -> outcome
+            }
         }
     }
 }
