@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.acceptance.profile
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -119,6 +120,37 @@ class CompleteProviderProfileNavigationAcceptanceTest {
             .assertIsDisplayed()
 
         // 7. Verify backend repository was not invoked without required photo
+        assertEquals(0, providerRepository.registerCalls)
+    }
+
+    @Test
+    fun activity_recreation_preserves_profile_fields_and_coverage_selection() {
+        authenticationLauncher.nextOutcome = AuthenticationOutcome.Success(
+            AuthSession(
+                user = User("auth0|provider-recreation", "recreation@loresuelvo.test"),
+                accessToken = "device-access-token",
+            ),
+        )
+        composeTestRule
+            .onNodeWithText(composeTestRule.activity.getString(R.string.welcome_register))
+            .performScrollTo()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_name_label))
+            .performTextInput("Carlos")
+        composeTestRule
+            .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_surname_label))
+            .performTextInput("Gómez")
+        composeTestRule.onNodeWithText("Comuna 1").performScrollTo().performClick()
+
+        composeTestRule.activityRule.scenario.recreate()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("Carlos").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Gómez").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Comuna 1").performScrollTo().assertIsOn()
         assertEquals(0, providerRepository.registerCalls)
     }
 }
