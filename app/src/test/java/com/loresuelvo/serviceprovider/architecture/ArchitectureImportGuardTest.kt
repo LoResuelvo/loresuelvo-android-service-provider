@@ -63,7 +63,17 @@ class ArchitectureImportGuardTest {
             "retrofit2.",
             "kotlinx.serialization.",
         )
-        val UI_FORBIDDEN = setOf("com.loresuelvo.serviceprovider.data.")
+        val UI_FORBIDDEN = setOf(
+            // The UI may import the platform media abstraction
+            // (`MediaReader` / `MediaOutputUriFactory`) because it
+            // owns the URI launcher callbacks (gallery picker,
+            // camera capture). The interface lives in `data.media`
+            // so the test fakes can swap a `FakeMediaReader`
+            // without Robolectric.
+            "com.loresuelvo.serviceprovider.data.api.",
+            "com.loresuelvo.serviceprovider.data.upload.",
+            "com.loresuelvo.serviceprovider.data.auth.",
+        )
         val DOMAIN_FIXTURES = listOf(
             "invalid-domain-android.kt",
             "invalid-domain-data.kt",

@@ -28,6 +28,9 @@ class ChatInputBarTest {
                     promptInput = "Listo para empezar",
                     canSend = true,
                     onPromptChange = {},
+                    pendingMedia = null,
+                    onAttachClick = {},
+                    onClearStagedMedia = {},
                     onSendClick = {},
                 )
             }
@@ -46,6 +49,9 @@ class ChatInputBarTest {
                     promptInput = "   ",
                     canSend = false,
                     onPromptChange = {},
+                    pendingMedia = null,
+                    onAttachClick = {},
+                    onClearStagedMedia = {},
                     onSendClick = {},
                 )
             }
@@ -64,6 +70,9 @@ class ChatInputBarTest {
                     promptInput = "hola",
                     canSend = true,
                     onPromptChange = {},
+                    pendingMedia = null,
+                    onAttachClick = {},
+                    onClearStagedMedia = {},
                     onSendClick = {},
                 )
             }
@@ -83,6 +92,9 @@ class ChatInputBarTest {
                     promptInput = "hola",
                     canSend = true,
                     onPromptChange = {},
+                    pendingMedia = null,
+                    onAttachClick = {},
+                    onClearStagedMedia = {},
                     onSendClick = { calls += 1 },
                 )
             }

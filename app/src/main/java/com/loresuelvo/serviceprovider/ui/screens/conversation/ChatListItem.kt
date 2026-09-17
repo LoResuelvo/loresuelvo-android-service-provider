@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.screens.conversation
 
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
+import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
 
 /**
  * Single row the chat surface renders. Modelled as a sealed
@@ -17,8 +18,9 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
  *    acknowledged. The key is a local UUID so the VM can find
  *    and replace it once the round-trip completes.
  *  - [LocalFailed] is the same bubble after a failed round-trip.
- *    It carries [pendingPrompt] so the VM's retry handler can
- *    resubmit it without the user re-typing.
+ *    It carries [pendingPrompt] (text) and [pendingMedia] (image)
+ *    so the VM's retry handler can resubmit either without the
+ *    user re-typing / re-picking.
  *
  * Delivery state lives in the UI layer on purpose — the domain
  * [ConversationMessage] is a faithful mirror of the server's
@@ -48,6 +50,7 @@ sealed interface ChatListItem {
         override val sender: ConversationSender,
         override val content: String,
         override val createdOnEpochMillis: Long,
+        val pendingMedia: MediaUpload? = null,
     ) : ChatListItem
 
     data class LocalFailed(
@@ -56,5 +59,6 @@ sealed interface ChatListItem {
         override val content: String,
         override val createdOnEpochMillis: Long,
         val pendingPrompt: String,
+        val pendingMedia: MediaUpload? = null,
     ) : ChatListItem
 }

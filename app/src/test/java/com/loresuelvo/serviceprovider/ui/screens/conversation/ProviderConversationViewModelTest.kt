@@ -11,6 +11,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.GetConversationByIdUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMediaMessageUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMessageUseCase
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import kotlinx.coroutines.CompletableDeferred
@@ -278,6 +279,8 @@ class ProviderConversationViewModelTest {
             savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
             getConversationById = GetConversationByIdUseCase(repo),
             sendMessage = SendMessageUseCase(repo),
+            sendMediaMessage = SendMediaMessageUseCase(repo),
+            mediaReader = NotExercisedMediaReader,
         )
 
     private fun readyState(vm: ProviderConversationViewModel): ProviderConversationUiState.Ready {
@@ -312,6 +315,11 @@ class ProviderConversationViewModelTest {
         content = content,
         createdOnEpochMillis = id.toLong(),
     )
+
+    private object NotExercisedMediaReader : com.loresuelvo.serviceprovider.data.media.MediaReader {
+        override suspend fun read(uri: android.net.Uri): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
+            error("MediaReader is not exercised by US-A VM tests")
+    }
 
     private class RecordingRepository(
         var detailOutcome: ConversationDetailOutcome = ConversationDetailOutcome.Success(

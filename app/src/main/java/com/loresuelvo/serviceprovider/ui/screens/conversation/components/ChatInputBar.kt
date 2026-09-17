@@ -3,19 +3,26 @@ package com.loresuelvo.serviceprovider.ui.screens.conversation.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,56 +32,109 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
+import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
 
 /**
  * Bottom-of-screen prompt composer for the provider conversation
- * screen (US-A). Stateless — the parent owns the prompt text,
- * the `canSend` gate, and the click handler.
+ * screen. Stateless — the parent owns the prompt text, the
+ * staged media, the `canSend` gate, and the click handlers.
  *
- * US-A scope is text only: no attach button, no microphone
- * affordance — those land on US-B (image attachments) and US-C
- * (audio attachments) on top of this seam.
+ * US-A scope was text-only. US-B adds an attach button that opens
+ * a [MediaAttachSheet] (gallery + camera) and a [MediaPreviewCard]
+ * mode that replaces the text field while a media is staged.
  *
- * The send button is disabled while [canSend] is false, with a
- * reduced opacity so the layout footprint stays stable across
- * the enabled / disabled transition (matching the consumer's
- * `ChatInputBar`).
+ *  - `pendingMedia == null` → renders the text input + attach
+ *    button + send button.
+ *  - `pendingMedia != null` → renders the [MediaPreviewCard] in
+ *    place of the text input. The send button stays enabled while
+ *    the staged media is non-empty.
+ *
+ * The send button is disabled when there's nothing to send (both
+ * prompt blank and no media) and while a previous send is in
+ * flight. `canSend` from the parent drives the disabled state so
+ * the rule lives in the VM.
  */
 @Composable
 fun ChatInputBar(
     promptInput: String,
+    pendingMedia: MediaUpload?,
     canSend: Boolean,
     onPromptChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onAttachClick: () -> Unit,
+    onClearStagedMedia: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(
-                start = 16.dp,
-                end = 16.dp,
-                top = 12.dp,
-                bottom = 20.dp,
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        PromptField(
-            value = promptInput,
-            onValueChange = onPromptChange,
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .widthIn(min = 56.dp)
-                .testTag(PROVIDER_CHAT_INPUT_FIELD_TAG),
-        )
+                .fillMaxWidth()
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = 20.dp,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (pendingMedia == null) {
+                AttachButton(onClick = onAttachClick)
+                PromptField(
+                    value = promptInput,
+                    onValueChange = onPromptChange,
+                    modifier = Modifier
+                        .weight(1f)
+                        .widthIn(min = 56.dp)
+                        .testTag(PROVIDER_CHAT_INPUT_FIELD_TAG),
+                )
+            } else {
+                Spacer(modifier = Modifier.size(48.dp))
+                val mediaImage = pendingMedia as? com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image
+                if (mediaImage != null) {
+                    MediaPreviewCard(
+                        media = mediaImage,
+                        onClear = onClearStagedMedia,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            SendButton(
+                canSend = canSend,
+                onSendClick = onSendClick,
+                modifier = Modifier.testTag(PROVIDER_CHAT_SEND_BUTTON_TAG),
+            )
+        }
+    }
+}
 
-        SendButton(
-            canSend = canSend,
-            onSendClick = onSendClick,
-            modifier = Modifier.testTag(PROVIDER_CHAT_SEND_BUTTON_TAG),
-        )
+@Composable
+private fun AttachButton(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .size(48.dp)
+            .testTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = stringResource(
+                    R.string.provider_conversation_attach_content_description,
+                ),
+            )
+        }
     }
 }
 
@@ -122,7 +182,7 @@ private fun SendButton(
         onClick = onSendClick,
         enabled = canSend,
         modifier = modifier.size(48.dp),
-        shape = androidx.compose.foundation.shape.CircleShape,
+        shape = CircleShape,
         color = if (canSend) {
             MaterialTheme.colorScheme.primary
         } else {
@@ -149,6 +209,80 @@ private fun SendButton(
     }
 }
 
+/**
+ * Bottom sheet that lets the provider choose between picking an
+ * image from the gallery or capturing a fresh photo with the
+ * camera. The actual launcher lives in the route (so the URIs
+ * stay inside the navigation entry's lifecycle); this composable
+ * just renders the two affordances and forwards the choice.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun MediaAttachSheet(
+    onPickFromGallery: () -> Unit,
+    onCaptureFromCamera: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+        ) {
+            MediaAttachRow(
+                labelRes = R.string.provider_conversation_attach_gallery,
+                onClick = {
+                    onPickFromGallery()
+                    onDismiss()
+                },
+                testTag = PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG,
+            )
+            MediaAttachRow(
+                labelRes = R.string.provider_conversation_attach_camera,
+                onClick = {
+                    onCaptureFromCamera()
+                    onDismiss()
+                },
+                testTag = PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MediaAttachRow(
+    labelRes: Int,
+    onClick: () -> Unit,
+    testTag: String,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .testTag(testTag),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(labelRes),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    }
+}
+
 const val PROVIDER_CHAT_INPUT_FIELD_TAG: String = "provider-chat-input-field"
 const val PROVIDER_CHAT_SEND_BUTTON_TAG: String = "provider-chat-send-button"
 const val PROVIDER_CHAT_SEND_ICON_TAG: String = "provider-chat-send-icon"
+const val PROVIDER_CHAT_ATTACH_BUTTON_TAG: String = "provider-chat-attach-button"
+const val PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG: String = "provider-media-attach-gallery-row"
+const val PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG: String = "provider-media-attach-camera-row"

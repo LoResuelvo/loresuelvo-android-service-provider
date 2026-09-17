@@ -96,6 +96,13 @@
     <string name="provider_conversation_error_unauthorized">Your session expired. Please sign in again.</string>
     <string name="provider_conversation_error_not_found">This conversation is no longer available.</string>
 
+    <!-- Provider conversation detail (US-B: image attachments) -->
+    <string name="provider_conversation_attach">Attach image</string>
+    <string name="provider_conversation_attach_content_description">Attach image</string>
+    <string name="provider_conversation_attach_gallery">Pick from gallery</string>
+    <string name="provider_conversation_attach_camera">Take photo</string>
+    <string name="provider_conversation_clear_media_content_description">Remove attached image</string>
+
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>
     <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>

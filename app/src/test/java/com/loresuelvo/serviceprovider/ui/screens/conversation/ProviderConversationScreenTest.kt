@@ -39,6 +39,8 @@ class ProviderConversationScreenTest {
                     onSendClick = {},
                     onRetrySendFailedBubble = {},
                     onRetryLoad = {},
+                    onMediaPicked = {},
+                    onClearStagedMedia = {},
                     onClose = {},
                 )
             }
@@ -64,6 +66,8 @@ class ProviderConversationScreenTest {
                     onSendClick = {},
                     onRetrySendFailedBubble = {},
                     onRetryLoad = { retryCalls += 1 },
+                    onMediaPicked = {},
+                    onClearStagedMedia = {},
                     onClose = {},
                 )
             }
@@ -95,6 +99,8 @@ class ProviderConversationScreenTest {
                     onSendClick = {},
                     onRetrySendFailedBubble = {},
                     onRetryLoad = {},
+                    onMediaPicked = {},
+                    onClearStagedMedia = {},
                     onClose = {},
                 )
             }
@@ -117,6 +123,8 @@ class ProviderConversationScreenTest {
                     onSendClick = {},
                     onRetrySendFailedBubble = {},
                     onRetryLoad = {},
+                    onMediaPicked = {},
+                    onClearStagedMedia = {},
                     onClose = {},
                 )
             }
@@ -162,6 +170,8 @@ class ProviderConversationScreenTest {
                     onSendClick = {},
                     onRetrySendFailedBubble = {},
                     onRetryLoad = {},
+                    onMediaPicked = {},
+                    onClearStagedMedia = {},
                     onClose = {},
                 )
             }
@@ -194,6 +204,8 @@ class ProviderConversationScreenTest {
                     onSendClick = {},
                     onRetrySendFailedBubble = {},
                     onRetryLoad = {},
+                    onMediaPicked = {},
+                    onClearStagedMedia = {},
                     onClose = {},
                 )
             }
@@ -216,6 +228,8 @@ class ProviderConversationScreenTest {
                     onSendClick = {},
                     onRetrySendFailedBubble = {},
                     onRetryLoad = {},
+                    onMediaPicked = {},
+                    onClearStagedMedia = {},
                     onClose = { closeCalls += 1 },
                 )
             }

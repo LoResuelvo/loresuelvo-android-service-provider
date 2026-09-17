@@ -1,15 +1,20 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.loresuelvo.serviceprovider.data.media.MediaReader
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
+import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.GetConversationByIdUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMediaMessageUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMessageUseCase
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +26,9 @@ import kotlinx.coroutines.launch
 /**
  * UDF ViewModel for the provider conversation detail screen
  * (`Route.Conversation`). Drives `GET /conversations/{id}` through
- * [GetConversationByIdUseCase] and `POST
- * /conversations/{id}/messages` through [SendMessageUseCase],
+ * [GetConversationByIdUseCase] and either
+ * `POST /conversations/{id}/messages` for text
+ * ([SendMessageUseCase]) or media ([SendMediaMessageUseCase]),
  * mapping the typed outcomes into the sealed
  * [ProviderConversationUiState].
  *
@@ -35,19 +41,33 @@ import kotlinx.coroutines.launch
  *
  * Compose flow (mirrors the consumer's [com.loresuelvo.consumer.ui.screens.chat.ConversationViewModel]
  *  but with persistent pending / failed bubbles — see scenarios
- *  03-PCC / 04-PCC / 05-PCC):
- *  - [onPromptChange] mirrors the field on [ProviderConversationUiState.Ready].
+ *  03-PCC / 04-PCC / 05-PCC, and 03-PCM / 05-PCM / 06-PCM for
+ *  media):
+ *  - [onPromptChange] mirrors the text field on
+ *    [ProviderConversationUiState.Ready].
+ *  - [onMediaPicked] resolves the URI through [MediaReader]
+ *    (gallery picker or camera capture) and stages the resulting
+ *    [MediaUpload.Image] into [pendingMedia]. IO failures map
+ *    to a typed `transientMediaError` so the chat surface can
+ *    surface them inline.
+ *  - [onClearStagedMedia] discards the staged media and returns
+ *    the input bar to its text-only state.
  *  - [onSendClick]:
- *      * Trims the prompt, bails on blank or `sending = true`.
+ *      * Trims the prompt, bails on blank + no media + `sending`.
+ *      * If [pendingMedia] is staged, fires [SendMediaMessageUseCase];
+ *        otherwise fires [SendMessageUseCase].
  *      * Appends a [ChatListItem.LocalPending] optimistic bubble
- *        immediately, clears the prompt, flips `sending = true`.
- *      * Fires [SendMessageUseCase]; on success, replaces the
- *        pending bubble with [ChatListItem.ServerConfirmed]
- *        carrying the server-persisted message; on failure,
- *        replaces with [ChatListItem.LocalFailed] (the bubble
- *        stays visible with its own retry CTA).
- *  - [onRetrySendFailedBubble] re-fires [SendMessageUseCase] with
- *    the stored [ChatListItem.LocalFailed.pendingPrompt] for the
+ *        immediately (carrying the local bytes when sending
+ *        media), clears the prompt + pendingMedia, flips
+ *        `sending = true`.
+ *      * On success, replaces the pending bubble with
+ *        [ChatListItem.ServerConfirmed] carrying the
+ *        server-persisted message.
+ *      * On failure, replaces the pending bubble with
+ *        [ChatListItem.LocalFailed] (carrying the original bytes
+ *        / prompt so the retry handler can resubmit without the
+ *        user re-typing / re-picking).
+ *  - [onRetrySendFailedBubble] re-fires the use case for the
  *    given local key. The flow mirrors [onSendClick] — pending
  *    bubble replaced by confirmed or failed.
  *
@@ -62,6 +82,8 @@ class ProviderConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getConversationById: GetConversationByIdUseCase,
     private val sendMessage: SendMessageUseCase,
+    private val sendMediaMessage: SendMediaMessageUseCase,
+    private val mediaReader: MediaReader,
 ) : ViewModel() {
 
     private val conversationId: Int = savedStateHandle.get<Int>(Route.Conversation.argument)
@@ -91,25 +113,68 @@ class ProviderConversationViewModel @Inject constructor(
         }
     }
 
+    fun onMediaPicked(uri: Uri) {
+        viewModelScope.launch {
+            val media = try {
+                mediaReader.read(uri)
+            } catch (e: IOException) {
+                _uiState.update { current ->
+                    if (current is ProviderConversationUiState.Ready) {
+                        current.copy(
+                            transientMediaError = SendMessageOutcome.Failure.Network(
+                                cause = e,
+                            ),
+                        )
+                    } else {
+                        current
+                    }
+                }
+                return@launch
+            }
+            _uiState.update { current ->
+                when (current) {
+                    is ProviderConversationUiState.Ready ->
+                        current.copy(
+                            pendingMedia = media,
+                            promptInput = "",
+                            transientMediaError = null,
+                        )
+                    else -> current
+                }
+            }
+        }
+    }
+
+    fun onClearStagedMedia() {
+        _uiState.update { current ->
+            when (current) {
+                is ProviderConversationUiState.Ready ->
+                    current.copy(pendingMedia = null, transientMediaError = null)
+                else -> current
+            }
+        }
+    }
+
+    fun onDismissMediaError() {
+        _uiState.update { current ->
+            when (current) {
+                is ProviderConversationUiState.Ready ->
+                    current.copy(transientMediaError = null)
+                else -> current
+            }
+        }
+    }
+
     fun onSendClick() {
         val state = _uiState.value as? ProviderConversationUiState.Ready ?: return
         val prompt = state.promptInput.trim()
-        if (prompt.isEmpty() || state.sending) return
+        val media = state.pendingMedia
+        if ((prompt.isEmpty() && media == null) || state.sending) return
 
-        val pending = ChatListItem.LocalPending(
-            key = newLocalKey(),
-            sender = ConversationSender.Provider,
-            content = prompt,
-            createdOnEpochMillis = System.currentTimeMillis(),
-        )
-        _uiState.update { current ->
-            (current as ProviderConversationUiState.Ready).copy(
-                promptInput = "",
-                items = current.items + pending,
-                sending = true,
-            )
+        when {
+            media != null -> fireSendMedia(media)
+            prompt.isNotEmpty() -> fireSendText(prompt)
         }
-        fireSend(pending, prompt)
     }
 
     fun onRetrySendFailedBubble(localKey: String) {
@@ -120,11 +185,14 @@ class ProviderConversationViewModel @Inject constructor(
             ?: return
         if (state.sending) return
 
+        // Replace failed with pending (preserving the local key so
+        // the LazyColumn animates the replacement in place).
         val pending = ChatListItem.LocalPending(
             key = failed.key,
             sender = failed.sender,
             content = failed.content,
             createdOnEpochMillis = failed.createdOnEpochMillis,
+            pendingMedia = failed.pendingMedia,
         )
         _uiState.update { current ->
             (current as ProviderConversationUiState.Ready).copy(
@@ -134,7 +202,11 @@ class ProviderConversationViewModel @Inject constructor(
                 sending = true,
             )
         }
-        fireSend(pending, failed.pendingPrompt)
+        if (failed.pendingMedia != null) {
+            fireSendMedia(failed.pendingMedia, retryKey = pending.key)
+        } else {
+            fireSendText(failed.pendingPrompt, retryKey = pending.key)
+        }
     }
 
     private fun load() {
@@ -147,6 +219,8 @@ class ProviderConversationViewModel @Inject constructor(
                         items = outcome.detail.messages.map(ChatListItem::ServerConfirmed),
                         promptInput = "",
                         sending = false,
+                        pendingMedia = null,
+                        transientMediaError = null,
                     )
                 }
                 is ConversationDetailOutcome.Failure ->
@@ -155,29 +229,110 @@ class ProviderConversationViewModel @Inject constructor(
         }
     }
 
-    private fun fireSend(pending: ChatListItem.LocalPending, prompt: String) {
-        viewModelScope.launch {
-            val outcome = sendMessage(conversationId, prompt)
+    private fun fireSendText(prompt: String, retryKey: String? = null) {
+        val pendingKey = retryKey ?: newLocalKey()
+        // On a fresh send the optimistic pending is appended to the
+        // list; on a retry the caller already replaced the failed
+        // bubble with a pending at the same key, so we only refresh
+        // the input bar / `sending` flag and skip the append.
+        if (retryKey == null) {
+            val pending = ChatListItem.LocalPending(
+                key = pendingKey,
+                sender = ConversationSender.Provider,
+                content = prompt,
+                createdOnEpochMillis = System.currentTimeMillis(),
+                pendingMedia = null,
+            )
             _uiState.update { current ->
-                val ready = current as? ProviderConversationUiState.Ready ?: return@update current
-                ready.copy(
-                    items = ready.items.map { item ->
-                        if (item.key == pending.key) item.toResolved(outcome) else item
-                    },
-                    sending = false,
+                (current as ProviderConversationUiState.Ready).copy(
+                    promptInput = "",
+                    pendingMedia = null,
+                    items = current.items + pending,
+                    sending = true,
+                    transientMediaError = null,
+                )
+            }
+        } else {
+            _uiState.update { current ->
+                (current as ProviderConversationUiState.Ready).copy(
+                    promptInput = "",
+                    pendingMedia = null,
+                    sending = true,
+                    transientMediaError = null,
                 )
             }
         }
+        viewModelScope.launch {
+            val outcome = sendMessage(conversationId, prompt)
+            resolveSendOutcome(pendingKey, prompt, null, outcome)
+        }
     }
 
-    private fun ChatListItem.toResolved(outcome: SendMessageOutcome): ChatListItem = when (outcome) {
+    private fun fireSendMedia(media: MediaUpload, retryKey: String? = null) {
+        val pendingKey = retryKey ?: newLocalKey()
+        if (retryKey == null) {
+            val pending = ChatListItem.LocalPending(
+                key = pendingKey,
+                sender = ConversationSender.Provider,
+                content = "",
+                createdOnEpochMillis = System.currentTimeMillis(),
+                pendingMedia = media,
+            )
+            _uiState.update { current ->
+                (current as ProviderConversationUiState.Ready).copy(
+                    promptInput = "",
+                    pendingMedia = null,
+                    items = current.items + pending,
+                    sending = true,
+                    transientMediaError = null,
+                )
+            }
+        } else {
+            _uiState.update { current ->
+                (current as ProviderConversationUiState.Ready).copy(
+                    promptInput = "",
+                    pendingMedia = null,
+                    sending = true,
+                    transientMediaError = null,
+                )
+            }
+        }
+        viewModelScope.launch {
+            val outcome = sendMediaMessage(conversationId, listOf(media))
+            resolveSendOutcome(pendingKey, "", media, outcome)
+        }
+    }
+
+    private fun resolveSendOutcome(
+        pendingKey: String,
+        prompt: String,
+        media: MediaUpload?,
+        outcome: SendMessageOutcome,
+    ) {
+        _uiState.update { current ->
+            val ready = current as? ProviderConversationUiState.Ready ?: return@update current
+            ready.copy(
+                items = ready.items.map { item ->
+                    if (item.key == pendingKey) item.toResolved(outcome, prompt, media) else item
+                },
+                sending = false,
+            )
+        }
+    }
+
+    private fun ChatListItem.toResolved(
+        outcome: SendMessageOutcome,
+        prompt: String,
+        media: MediaUpload?,
+    ): ChatListItem = when (outcome) {
         is SendMessageOutcome.Success -> ChatListItem.ServerConfirmed(outcome.message)
         is SendMessageOutcome.Failure -> ChatListItem.LocalFailed(
             key = key,
             sender = sender,
             content = content,
             createdOnEpochMillis = createdOnEpochMillis,
-            pendingPrompt = content,
+            pendingPrompt = prompt,
+            pendingMedia = media,
         )
     }
 

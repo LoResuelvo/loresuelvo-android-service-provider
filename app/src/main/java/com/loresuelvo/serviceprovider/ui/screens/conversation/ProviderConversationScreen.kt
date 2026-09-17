@@ -18,10 +18,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -33,13 +40,15 @@ import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.ChatInputBar
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MediaAttachSheet
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MessageBubble
+import kotlinx.coroutines.launch
 
 /**
  * Stateless screen for the provider conversation detail
  * (`Route.Conversation`). The route acquires the
  * [ProviderConversationViewModel] and forwards its [uiState] plus
- * the typed event handlers; this composable renders the three
+ * the typed event callbacks; this composable renders the three
  * branches of the sealed state without owning any of the data
  * flow.
  *
@@ -54,9 +63,18 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.components.Message
  *    without a loaded detail is meaningless.
  *  - [ProviderConversationUiState.Ready] — Scaffold with the
  *    counterpart name in the top bar, a reverse-stacked
- *    [LazyColumn] of bubbles, and the [ChatInputBar] at the
- *    bottom. Newly arrived bubbles auto-scroll into view so the
+ *    [LazyColumn] of bubbles, the [ChatInputBar] at the bottom,
+ *    and a [MediaAttachSheet] modal triggered by the attach
+ *    button. Newly arrived bubbles auto-scroll into view so the
  *    user doesn't have to chase the conversation on every send.
+ *
+ * US-B additions:
+ *  - The input bar swaps the text field for a [MediaPreviewCard]
+ *    when [Ready.pendingMedia] is non-null.
+ *  - A media attach sheet is rendered via
+ *    [MediaAttachSheet] when the user taps the attach button.
+ *  - A [SnackbarHost] surfaces transient media errors (failed
+ *    URI reads, missing bytes) without blocking the composer.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,21 +84,113 @@ fun ProviderConversationScreen(
     onSendClick: () -> Unit,
     onRetrySendFailedBubble: (String) -> Unit,
     onRetryLoad: () -> Unit,
+    onMediaPicked: (android.net.Uri) -> Unit,
+    onClearStagedMedia: () -> Unit,
     onClose: () -> Unit,
+    onAttachClick: () -> Unit = {},
+    onPickFromGallery: () -> Unit = {},
+    onCaptureFromCamera: () -> Unit = {},
+    onDismissMediaError: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    when (state) {
-        ProviderConversationUiState.Loading -> LoadingState(modifier)
-        is ProviderConversationUiState.Error -> ErrorState(state, onRetryLoad, modifier)
-        is ProviderConversationUiState.Ready -> ReadyState(
-            state = state,
-            onPromptChange = onPromptChange,
-            onSendClick = onSendClick,
-            onRetrySendFailedBubble = onRetrySendFailedBubble,
-            onClose = onClose,
-            modifier = modifier,
+    var attachSheetVisible by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(state) {
+        val ready = state as? ProviderConversationUiState.Ready ?: return@LaunchedEffect
+        val error = ready.transientMediaError ?: return@LaunchedEffect
+        val message = when (error) {
+            is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Network ->
+                "No pudimos leer la imagen seleccionada."
+            is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Server ->
+                error.message
+            is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Unauthorized ->
+                "Tu sesión expiró."
+            is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.ConversationNotFound ->
+                "La conversación ya no está disponible."
+            is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.PayloadTooLarge ->
+                "El archivo es demasiado grande."
+        }
+        scope.launch {
+            snackbarHostState.showSnackbar(message)
+            onDismissMediaError()
+        }
+    }
+
+    Scaffold(
+        modifier = modifier.testTag(PROVIDER_CONVERSATION_READY_TAG),
+        topBar = {
+            TopAppBar(
+                title = {
+                    if (state is ProviderConversationUiState.Ready) {
+                        Text(
+                            text = "${state.detail.counterpart.name} ${state.detail.counterpart.surname}",
+                            modifier = Modifier.semantics { heading() },
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.testTag(PROVIDER_CONVERSATION_BACK_TAG),
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(
+                                R.string.provider_conversation_close,
+                            ),
+                        )
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            if (state is ProviderConversationUiState.Ready) {
+                ChatInputBar(
+                    promptInput = state.promptInput,
+                    pendingMedia = state.pendingMedia,
+                    canSend = (state.promptInput.isNotBlank() || state.pendingMedia != null) &&
+                        !state.sending,
+                    onPromptChange = onPromptChange,
+                    onSendClick = onSendClick,
+                    onAttachClick = { attachSheetVisible = true },
+                    onClearStagedMedia = onClearStagedMedia,
+                )
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { contentPadding ->
+        when (state) {
+            ProviderConversationUiState.Loading -> LoadingState(
+                modifier = Modifier.padding(contentPadding),
+            )
+            is ProviderConversationUiState.Error -> ErrorState(
+                state = state,
+                onRetryLoad = onRetryLoad,
+                modifier = Modifier.padding(contentPadding),
+            )
+            is ProviderConversationUiState.Ready -> ReadyState(
+                state = state,
+                onRetrySendFailedBubble = onRetrySendFailedBubble,
+                listState = rememberLazyListState(),
+                contentPadding = contentPadding,
+            )
+        }
+    }
+
+    if (attachSheetVisible) {
+        MediaAttachSheet(
+            onPickFromGallery = onPickFromGallery,
+            onCaptureFromCamera = onCaptureFromCamera,
+            onDismiss = { attachSheetVisible = false },
         )
     }
+
+    // Avoid unused-parameter lint warnings for callbacks that
+    // the route wires up but the screen doesn't surface (US-A
+    // tests exercise the screen with the defaults).
+    @Suppress("UnusedParameter") val keepOnAttach = onAttachClick
 }
 
 @Composable
@@ -133,59 +243,21 @@ private fun ErrorState(
 @Composable
 private fun ReadyState(
     state: ProviderConversationUiState.Ready,
-    onPromptChange: (String) -> Unit,
-    onSendClick: () -> Unit,
     onRetrySendFailedBubble: (String) -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    contentPadding: PaddingValues,
 ) {
-    val listState = rememberLazyListState()
     LaunchedEffect(state.items.size) {
         if (state.items.isNotEmpty()) {
             listState.animateScrollToItem(state.items.lastIndex)
         }
     }
-    Scaffold(
-        modifier = modifier.testTag(PROVIDER_CONVERSATION_READY_TAG),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "${state.detail.counterpart.name} ${state.detail.counterpart.surname}",
-                        modifier = Modifier.semantics { heading() },
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.testTag(PROVIDER_CONVERSATION_BACK_TAG),
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(
-                                R.string.provider_conversation_close,
-                            ),
-                        )
-                    }
-                },
-            )
-        },
-        bottomBar = {
-            ChatInputBar(
-                promptInput = state.promptInput,
-                canSend = state.promptInput.isNotBlank() && !state.sending,
-                onPromptChange = onPromptChange,
-                onSendClick = onSendClick,
-            )
-        },
-    ) { contentPadding ->
-        MessagesList(
-            items = state.items,
-            onRetrySendFailedBubble = onRetrySendFailedBubble,
-            listState = listState,
-            contentPadding = contentPadding,
-        )
-    }
+    MessagesList(
+        items = state.items,
+        onRetrySendFailedBubble = onRetrySendFailedBubble,
+        listState = listState,
+        contentPadding = contentPadding,
+    )
 }
 
 @Composable

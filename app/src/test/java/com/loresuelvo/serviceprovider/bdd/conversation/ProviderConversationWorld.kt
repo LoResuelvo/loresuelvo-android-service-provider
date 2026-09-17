@@ -11,6 +11,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.GetConversationByIdUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMediaMessageUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMessageUseCase
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ChatListItem
@@ -287,6 +288,8 @@ internal class ProviderConversationWorld : AutoCloseable {
         savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to conversationId)),
         getConversationById = GetConversationByIdUseCase(repository),
         sendMessage = SendMessageUseCase(repository),
+        sendMediaMessage = SendMediaMessageUseCase(repository),
+        mediaReader = NotExercisedMediaReader,
     )
 
     private fun detail(messages: List<ConversationMessage>): ConversationDetail = ConversationDetail(
@@ -301,6 +304,13 @@ internal class ProviderConversationWorld : AutoCloseable {
         messages = messages,
         updatedOnEpochMillis = 1L,
     )
+
+    private object NotExercisedMediaReader :
+        com.loresuelvo.serviceprovider.data.media.MediaReader {
+        override suspend fun read(uri: android.net.Uri):
+            com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
+            error("MediaReader is not exercised by US-A BDD scenarios")
+    }
 
     private class FakeConversationRepository : ConversationRepository {
         var detailOutcome: ConversationDetailOutcome = ConversationDetailOutcome.Success(
