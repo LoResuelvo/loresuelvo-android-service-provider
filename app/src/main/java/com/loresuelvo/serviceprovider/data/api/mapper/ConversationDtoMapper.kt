@@ -57,13 +57,18 @@ internal fun ConversationMessageDto.toDomain(): ConversationMessage {
         video != null -> ConversationMessageKind.Video
         else -> ConversationMessageKind.Text
     }
+    val media: MediaReference? = when {
+        images?.firstOrNull() != null -> images.first().toMediaReference()
+        audio != null -> audio.toMediaReference()
+        else -> null
+    }
     return ConversationMessage(
         id = messageId,
         sender = senderRole.toConversationSender(messageId),
         content = content,
         createdOnEpochMillis = createdOnMillis,
         kind = kind,
-        media = images?.firstOrNull()?.toMediaReference(),
+        media = media,
     )
 }
 
@@ -73,6 +78,15 @@ private fun MessageImageDto.toMediaReference(): MediaReference.Image = MediaRefe
     mimeType = mimeType,
     originalName = originalName,
 )
+
+private fun com.loresuelvo.serviceprovider.data.api.dto.MessageAudioDto.toMediaReference(): MediaReference.Audio =
+    MediaReference.Audio(
+        id = id,
+        url = url,
+        mimeType = mimeType,
+        originalName = originalName,
+        durationMillis = durationSeconds.toLong() * 1000L,
+    )
 
 private fun String.toConversationSender(messageId: Int): ConversationSender = when (lowercase()) {
     "consumer" -> ConversationSender.Consumer

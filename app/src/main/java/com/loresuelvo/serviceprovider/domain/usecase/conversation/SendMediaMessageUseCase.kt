@@ -1,25 +1,32 @@
 package com.loresuelvo.serviceprovider.domain.usecase.conversation
 
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
+import com.loresuelvo.serviceprovider.domain.conversation.MAX_AUDIO_BYTES
 import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import javax.inject.Inject
 
 /**
- * Sends a provider-typed media message (image in US-B; audio
- * lands in US-C on top) to an existing conversation.
+ * Sends a provider-typed media message (image in US-B; audio in
+ * US-C) to an existing conversation.
  *
  * Single seam the ViewModel uses to fire `POST
  * /conversations/{id}/messages` with `image_file_ids[]` /
- * `audio_file_id` — future attachment flows (US-C audio) land on
- * the same port via parallel use cases rather than overloading
- * this one.
+ * `audio_file_id` — the upload orchestration (presign → upload →
+ * confirm → post) lives in the data layer so the use case stays
+ * a thin pass-through.
  *
  *  - Rejects an empty payload with a typed `Server` outcome so
  *    the backend never sees a meaningless request — catches the
  *    corner case where the picker returns a URI but the
  *    `ContentResolver` can't open an `InputStream` (revoked
  *    permission, deleted file, misconfigured file provider).
+ *  - Rejects audio clips larger than [MAX_AUDIO_BYTES] (10 MB)
+ *    with a typed [SendMessageOutcome.Failure.PayloadTooLarge]
+ *    so the backend never sees the request — saves a wasted
+ *    round-trip and gives the UI a clearer copy than a generic
+ *    `Server(413)`. Image uploads don't need this guard — the
+ *    picker caps the dimensions before they reach the use case.
  *  - Forwards a non-empty payload verbatim to the backend. The
  *    server's `created_on`, id, and confirmed media URLs are
  *    surfaced back through [SendMessageOutcome.Success.message]
@@ -40,6 +47,15 @@ class SendMediaMessageUseCase @Inject constructor(
                 code = 0,
                 message = "Media payload is empty",
             )
+        }
+        media.forEach { attachment ->
+            if (attachment is MediaUpload.Audio &&
+                attachment.bytes.size.toLong() > MAX_AUDIO_BYTES
+            ) {
+                return SendMessageOutcome.Failure.PayloadTooLarge(
+                    maxBytes = MAX_AUDIO_BYTES,
+                )
+            }
         }
         return repository.sendMediaMessage(conversationId, media)
     }

@@ -50,4 +50,48 @@ sealed interface MediaUpload {
             return result
         }
     }
+
+    /**
+     * Audio clip the provider recorded in-app. [durationMillis]
+     * is measured at recording time so the server can echo it
+     * back without re-decoding the file.
+     */
+    data class Audio(
+        override val bytes: ByteArray,
+        override val mimeType: String,
+        override val originalName: String,
+        val durationMillis: Long,
+    ) : MediaUpload {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Audio) return false
+            return bytes.contentEquals(other.bytes) &&
+                mimeType == other.mimeType &&
+                originalName == other.originalName &&
+                durationMillis == other.durationMillis
+        }
+
+        override fun hashCode(): Int {
+            var result = bytes.contentHashCode()
+            result = 31 * result + mimeType.hashCode()
+            result = 31 * result + originalName.hashCode()
+            result = 31 * result + durationMillis.hashCode()
+            return result
+        }
+    }
 }
+
+/**
+ * Maximum size (in bytes) the provider app will upload for an
+ * audio clip. Mirrors the backend's `UploadPolicy.MaxAudioBytes`
+ * cap (10 MB at the time of writing). The use case rejects
+ * payloads larger than this with a typed
+ * [SendMessageOutcome.Failure.PayloadTooLarge] so the backend
+ * never sees the request — saves a wasted round-trip and gives
+ * the UI a clearer copy than "Server(413)".
+ *
+ * Held here (domain) so both the use case and the UI can
+ * reference the same source of truth: the UI surfaces the limit
+ * in the error message and the use case enforces it.
+ */
+const val MAX_AUDIO_BYTES: Long = 10L * 1024L * 1024L

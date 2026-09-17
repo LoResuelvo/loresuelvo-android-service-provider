@@ -138,10 +138,10 @@ class ApiConversationRepository @Inject constructor(
     }
 
     /**
-     * US-B orchestrator. Walks the presign → upload → confirm
-     * pipeline per attachment (US-B is image-only; US-C will
-     * extend this branch with audio) and finally posts the JSON
-     * message body carrying the joined file ids.
+     * US-B + US-C orchestrator. Walks the presign → upload →
+     * confirm pipeline per attachment (homogeneous list — image
+     * OR audio, never mixed) and finally posts the JSON message
+     * body carrying the joined file ids.
      *
      * Failure modes collapse into the same
      * [SendMessageOutcome.Failure] tree so the ViewModel renders
@@ -160,6 +160,7 @@ class ApiConversationRepository @Inject constructor(
         }
         return when (val first = media.first()) {
             is MediaUpload.Image -> sendImages(conversationId, media.map { it as MediaUpload.Image })
+            is MediaUpload.Audio -> sendAudio(conversationId, media.map { it as MediaUpload.Audio })
         }
     }
 
@@ -191,6 +192,57 @@ class ApiConversationRepository @Inject constructor(
         return postMessageWithImageFileIds(conversationId, fileIds)
     }
 
+    private suspend fun sendAudio(
+        conversationId: Int,
+        audios: List<MediaUpload.Audio>,
+    ): SendMessageOutcome {
+        // The wire payload only renders one audio per bubble so
+        // a multi-entry list surfaces a typed Server failure
+        // instead of silently dropping the rest.
+        val audio = audios.singleOrNull() ?: return SendMessageOutcome.Failure.Server(
+            code = 0,
+            message = "Audio messages accept exactly one clip",
+        )
+        Log.d(
+            TAG,
+            "sendAudio start: conversationId=$conversationId " +
+                "mime=${audio.mimeType} size=${audio.bytes.size}B " +
+                "duration=${audio.durationMillis}ms",
+        )
+        val fileId = when (
+            val r = runPresignUploadConfirm(
+                originalName = audio.originalName,
+                mimeType = audio.mimeType,
+                bytes = audio.bytes,
+                purpose = FilePurpose.CONVERSATION_MESSAGE_AUDIO,
+            )
+        ) {
+            is UploadFlow.Failure -> return r.failure
+            is UploadFlow.Success -> r.fileId
+        }
+        return postMessageWithAudioFileId(conversationId, fileId)
+    }
+
+    private suspend fun postMessageWithAudioFileId(
+        conversationId: Int,
+        fileId: String,
+    ): SendMessageOutcome = try {
+        val dto = backendApi.postMessage(
+            conversationId = conversationId,
+            request = SendMessageRequestDto(
+                content = "",
+                audioFileId = fileId,
+            ),
+        )
+        SendMessageOutcome.Success(dto.toDomain())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: HttpException) {
+        mapPostFailure(e, conversationId)
+    } catch (e: Throwable) {
+        mapPostThrowableFailure(e)
+    }
+
     private suspend fun postMessageWithImageFileIds(
         conversationId: Int,
         fileIds: List<String>,
@@ -206,6 +258,12 @@ class ApiConversationRepository @Inject constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: HttpException) {
+        mapPostFailure(e, conversationId)
+    } catch (e: Throwable) {
+        mapPostThrowableFailure(e)
+    }
+
+    private fun mapPostFailure(e: HttpException, conversationId: Int): SendMessageOutcome =
         when (e.code()) {
             404 -> SendMessageOutcome.Failure.ConversationNotFound(
                 message = e.message().ifBlank { "Conversation $conversationId not found" },
@@ -227,9 +285,10 @@ class ApiConversationRepository @Inject constructor(
                 }
             }
         }
-    } catch (e: Throwable) {
+
+    private fun mapPostThrowableFailure(e: Throwable): SendMessageOutcome {
         val error = e.toApiError()
-        when (error) {
+        return when (error) {
             is ApiError.Network ->
                 SendMessageOutcome.Failure.Network(error.networkCause)
             is ApiError.Unauthorized ->
