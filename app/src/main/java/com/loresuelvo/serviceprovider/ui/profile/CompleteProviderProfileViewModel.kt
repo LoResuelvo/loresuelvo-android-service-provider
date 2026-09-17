@@ -89,7 +89,12 @@ class CompleteProviderProfileViewModel @Inject constructor(
                         )
                     }
                 }
-                is CoverageZonesOutcome.Failure -> {
+                is CoverageZonesOutcome.Failure.Unauthorized -> {
+                    sessionStore.clearSession()
+                    _effects.send(CompleteProviderProfileEffect.NavigateToWelcome)
+                }
+                is CoverageZonesOutcome.Failure.Network,
+                is CoverageZonesOutcome.Failure.Server -> {
                     _uiState.update { it.copy(coverageZonesState = CoverageZonesLoadState.Error) }
                 }
             }

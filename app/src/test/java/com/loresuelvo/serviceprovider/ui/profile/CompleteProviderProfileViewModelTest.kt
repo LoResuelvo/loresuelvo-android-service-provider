@@ -162,6 +162,21 @@ class CompleteProviderProfileViewModelTest {
     }
 
     @Test
+    fun `unauthorized coverage load clears session and navigates to welcome`() = runTest(scheduler) {
+        coverageZoneRepository.outcome = CoverageZonesOutcome.Failure.Unauthorized
+
+        viewModel = newViewModel()
+        viewModel!!.effects.test {
+            advanceUntilIdle()
+
+            assertEquals(CompleteProviderProfileEffect.NavigateToWelcome, awaitItem())
+            assertEquals(null, sessionStore.getSession())
+            assertEquals(0, providerRepository.registerCalls)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `should start with loading state before categories call resolves`() = runTest(scheduler) {
         viewModel = newViewModel()
 
