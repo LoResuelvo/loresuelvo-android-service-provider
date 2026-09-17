@@ -83,6 +83,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
     private var effectsJob: Job? = null
     private var coverageLoad: CompletableDeferred<Unit>? = null
     private var expectedCoverageZoneIds: List<Int> = emptyList()
+    private var coverageReloadWillFail: Boolean = false
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -292,6 +293,43 @@ class CompleteProviderProfileWorld : AutoCloseable {
 
     fun correctCoverageWithoutAutomaticSubmit() {
         viewModel.onCoverageZoneChecked(14, true)
+        assertEquals(1, providerRepository.registerCalls)
+    }
+
+    fun arrangeVisibleCoverageRejectionWithSelection() {
+        arrangeValidProfileWithCoverageSelection("varias zonas no contiguas")
+        providerRepository.outcome = RegistrationOutcome.Failure.CoverageRejected(
+            CoverageRejectionReason.Unavailable,
+        )
+        attemptSubmit()
+    }
+
+    fun configureCoverageReload(result: String) {
+        coverageReloadWillFail = result == "falla"
+        coverageZoneRepository.outcome = if (coverageReloadWillFail) {
+            CoverageZonesOutcome.Failure.Network(RuntimeException("offline"))
+        } else {
+            CoverageZonesOutcome.Success(listOf(CoverageZone(6, "Comuna 6", "place-6")))
+        }
+    }
+
+    fun assertReloadedCoverageSelection() {
+        val expected = if (coverageReloadWillFail) listOf(6, 14) else listOf(6)
+        assertSelectedCoverageZones(expected)
+    }
+
+    fun assertCoverageAdjustmentReportedWhenNeeded() {
+        assertEquals(!coverageReloadWillFail, viewModel.uiState.value.coverageSelectionAdjusted)
+    }
+
+    fun assertProfilePreservedWithoutResubmission() {
+        assertProfileAndPhotoPreserved()
+        assertEquals(1, providerRepository.registerCalls)
+    }
+
+    fun assertRegistrationBlockedAfterFailedReload() {
+        if (!coverageReloadWillFail) return
+        attemptSubmit()
         assertEquals(1, providerRepository.registerCalls)
     }
 

@@ -210,4 +210,25 @@ class ProviderCoverageZonesSteps {
 
     @Y("puede corregir o volver a cargar la selección sin un reenvío automático")
     fun correctWithoutAutomaticSubmit() = world.correctCoverageWithoutAutomaticSubmit()
+
+    @Dado("que un rechazo de cobertura está visible y existe una selección previa")
+    fun visibleCoverageRejectionWithSelection() = world.arrangeVisibleCoverageRejectionWithSelection()
+
+    @Y("la nueva carga del catálogo {string}")
+    fun configureCatalogReload(result: String) = world.configureCoverageReload(result)
+
+    @Cuando("el prestador vuelve a cargar las zonas")
+    fun reloadCoverageZones() = world.retryCoverageZones()
+
+    @Entonces("se conservan las selecciones que siguen disponibles")
+    fun availableSelectionsRemain() = world.assertReloadedCoverageSelection()
+
+    @Y("se informa cualquier selección eliminada cuando la carga es exitosa")
+    fun removedSelectionsAreReported() = world.assertCoverageAdjustmentReportedWhenNeeded()
+
+    @Y("se conservan los demás datos sin reenviar el formulario")
+    fun profileRemainsWithoutResubmission() = world.assertProfilePreservedWithoutResubmission()
+
+    @Y("el registro permanece bloqueado si la carga falla")
+    fun registrationRemainsBlockedAfterFailure() = world.assertRegistrationBlockedAfterFailedReload()
 }

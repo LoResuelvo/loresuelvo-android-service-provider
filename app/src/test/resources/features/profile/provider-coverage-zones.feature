@@ -98,7 +98,6 @@ Característica: Registrar prestador con zonas de cobertura
       | zona no disponible       |
       | zona seleccionada dos veces |
 
-  @wip
   Esquema del escenario: 12-PCZ Conciliar la selección con un catálogo actualizado
     Dado que un rechazo de cobertura está visible y existe una selección previa
     Y la nueva carga del catálogo "<Resultado>"
