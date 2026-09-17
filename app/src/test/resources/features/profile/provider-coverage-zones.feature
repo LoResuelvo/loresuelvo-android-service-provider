@@ -121,7 +121,6 @@ Característica: Registrar prestador con zonas de cobertura
     Entonces se elimina la sesión y el prestador vuelve a la pantalla de bienvenida
     Y no se solicita el registro ni se repite la carga automáticamente
 
-  @wip
   Escenario: 14-PCZ Evitar cambios y envíos duplicados durante el registro
     Dado que un registro válido está en curso
     Cuando se reciben más acciones de envío o selección de cobertura

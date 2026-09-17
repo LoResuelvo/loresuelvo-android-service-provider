@@ -253,6 +253,22 @@ class CompleteProviderProfileWorld : AutoCloseable {
         assertEquals(expectedCoverageZoneIds, providerRepository.lastCommand?.coverageZoneIds)
     }
 
+    fun arrangeRegistrationInProgress() {
+        arrangeValidProfileWithCoverageSelection("una zona")
+        holdRegistrationInFlight()
+        submitForm()
+    }
+
+    fun repeatSubmitAndCoverageSelection() {
+        pressSubmitButtonAgain()
+        viewModel.onCoverageZoneChecked(14, true)
+    }
+
+    fun assertSubmittedCoverageSelectionUnchanged() {
+        assertEquals(listOf(6), providerRepository.lastCommand?.coverageZoneIds)
+        assertEquals(listOf(6), viewModel.uiState.value.selectedCoverageZoneIds)
+    }
+
     fun assertCoverageZonesLoading() {
         assertEquals(CoverageZonesLoadState.Loading, viewModel.uiState.value.coverageZonesState)
     }

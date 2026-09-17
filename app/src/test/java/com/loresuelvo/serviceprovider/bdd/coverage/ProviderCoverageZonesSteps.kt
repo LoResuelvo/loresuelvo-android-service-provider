@@ -183,4 +183,19 @@ class ProviderCoverageZonesSteps {
 
     @Y("el formulario no es accesible mediante navegación hacia atrás")
     fun profileIsRemovedFromBackStack() = world.assertProfileFormPoppedFromBackstack()
+
+    @Dado("que un registro válido está en curso")
+    fun registrationInProgress() = world.arrangeRegistrationInProgress()
+
+    @Cuando("se reciben más acciones de envío o selección de cobertura")
+    fun repeatSubmitAndSelection() = world.repeatSubmitAndCoverageSelection()
+
+    @Entonces("existe solamente la solicitud de registro original")
+    fun onlyOriginalRegistrationExists() = world.assertSingleRegistrationCall()
+
+    @Y("su selección enviada permanece sin cambios")
+    fun submittedSelectionRemainsUnchanged() = world.assertSubmittedCoverageSelectionUnchanged()
+
+    @Y("los controles muestran el estado ocupado")
+    fun controlsShowBusyState() = world.assertSubmitDisabledWithLoading()
 }
