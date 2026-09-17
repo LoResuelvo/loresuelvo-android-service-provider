@@ -1,5 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Camera capture for the chat media attach flow (US-B). The
+      system camera app writes the captured photo to a
+      `FileProvider`-backed URI in the app's cache directory;
+      the manifest declares the provider with the
+      `${applicationId}.fileprovider` authority and the
+      `file_paths.xml` resource grants access to `cacheDir/camera/`.
+      No runtime CAMERA permission is required because the
+      provider app does not read the camera sensor directly — it
+      delegates to the system camera via `TakePicture`.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
 
     <application
         android:name=".LoresuelvoApp"
@@ -39,6 +57,16 @@
             </intent-filter>
 
         </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Grants the FileProvider (declared in AndroidManifest.xml
+      under the `${applicationId}.fileprovider` authority) write
+      access to `cacheDir/camera/`. The chat attach camera flow
+      (US-B) writes the captured photo to a fresh file in this
+      directory and hands the resulting URI to
+      `ActivityResultContracts.TakePicture`. The system camera
+      app receives the URI via `Intent.FLAG_GRANT_WRITE_URI_PERMISSION`
+      and writes to it without the provider app needing the
+      runtime `CAMERA` permission (which would only be required if
+      the provider app read the camera sensor directly).
+    -->
+    <cache-path
+        name="camera"
+        path="camera/" />
+</paths>
