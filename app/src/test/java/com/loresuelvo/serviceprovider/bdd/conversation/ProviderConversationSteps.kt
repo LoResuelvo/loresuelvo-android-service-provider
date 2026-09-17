@@ -19,12 +19,13 @@ internal class ProviderConversationSteps {
     @Before
     fun setUp() {
         world = ProviderConversationWorld()
-        // Cucumber instantiates this class via reflection; the step
-        // methods are dispatched on the same thread that calls
-        // `setUp`, so Robolectric's runtime is online here. The
-        // synthetic URI is the same value the gallery / camera
-        // launchers would hand to `onMediaPicked(uri)`.
-        world.seedMediaUri(Uri.parse("content://media/picker/0"))
+        // The PCM scenarios (image attach, US-B) drive
+        // `world.seedMediaUri(...)` from their own Given steps.
+        // Constructing a real `android.net.Uri` requires Robolectric
+        // (plain JUnit returns null), so we lazy-seed it there
+        // instead of unconditionally in `setUp`. PCC scenarios
+        // (US-A) don't touch media and never reach the URi's
+        // constructor.
     }
 
     @After
