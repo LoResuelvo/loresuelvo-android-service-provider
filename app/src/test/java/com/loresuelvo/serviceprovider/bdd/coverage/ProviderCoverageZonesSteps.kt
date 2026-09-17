@@ -231,4 +231,13 @@ class ProviderCoverageZonesSteps {
 
     @Y("el registro permanece bloqueado si la carga falla")
     fun registrationRemainsBlockedAfterFailure() = world.assertRegistrationBlockedAfterFailedReload()
+
+    @Dado("un formulario autenticado cuya carga de zonas devolverá un error 401")
+    fun unauthorizedCoverageLoad() = world.arrangeUnauthorizedCoverageLoad()
+
+    @Entonces("se elimina la sesión y el prestador vuelve a la pantalla de bienvenida")
+    fun sessionIsClearedAndWelcomeIsRequested() = world.assertSessionClearedAndWelcomeRequested()
+
+    @Y("no se solicita el registro ni se repite la carga automáticamente")
+    fun noRegistrationOrAutomaticReload() = world.assertNoRegistrationOrCoverageReload()
 }

@@ -112,7 +112,6 @@ Característica: Registrar prestador con zonas de cobertura
       | elimina una zona no disponible y conserva otra |
       | falla                                           |
 
-  @wip
   Escenario: 13-PCZ Volver al inicio cuando vence la sesión al cargar zonas
     Dado un formulario autenticado cuya carga de zonas devolverá un error 401
     Cuando finaliza la carga del catálogo de zonas

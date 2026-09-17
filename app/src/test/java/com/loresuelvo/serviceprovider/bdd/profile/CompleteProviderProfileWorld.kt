@@ -333,6 +333,23 @@ class CompleteProviderProfileWorld : AutoCloseable {
         assertEquals(1, providerRepository.registerCalls)
     }
 
+    fun arrangeUnauthorizedCoverageLoad() {
+        seedAuthenticatedSession()
+        coverageZoneRepository.outcome = CoverageZonesOutcome.Failure.Unauthorized
+        configurePendingCoverageZones()
+        navigateToProfileDestination()
+    }
+
+    fun assertSessionClearedAndWelcomeRequested() {
+        assertEquals(null, sessionStore.getSession())
+        assertEquals(CompleteProviderProfileEffect.NavigateToWelcome, latestEffect)
+    }
+
+    fun assertNoRegistrationOrCoverageReload() {
+        assertEquals(0, providerRepository.registerCalls)
+        assertEquals(1, coverageZoneRepository.calls)
+    }
+
     fun assertCoverageZonesLoading() {
         assertEquals(CoverageZonesLoadState.Loading, viewModel.uiState.value.coverageZonesState)
     }
