@@ -19,6 +19,16 @@
         </intent>
     </queries>
 
+    <!--
+      Audio capture for the chat media attach flow (US-C). The
+      provider app does read the microphone directly via
+      `MediaRecorder`, so the runtime permission is required —
+      the chat route requests it via
+      `ActivityResultContracts.RequestPermission` before starting
+      a recording.
+    -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <application
         android:name=".LoresuelvoApp"
         android:allowBackup="true"
