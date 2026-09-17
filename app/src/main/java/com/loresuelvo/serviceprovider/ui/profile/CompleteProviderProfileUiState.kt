@@ -60,6 +60,7 @@ sealed interface ProfileFormError {
     data object MissingCategory : ProfileFormError
     data object MissingPhoto : ProfileFormError
     data object MissingCoverageZones : ProfileFormError
+    data object CoverageRejected : ProfileFormError
     data class Network(val message: String) : ProfileFormError
     data class Server(val code: Int, val message: String) : ProfileFormError
     data object Unauthorized : ProfileFormError

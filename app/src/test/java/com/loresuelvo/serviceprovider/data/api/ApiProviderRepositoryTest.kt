@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.data.api
 
 import com.loresuelvo.serviceprovider.data.api.dto.ProviderSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
+import com.loresuelvo.serviceprovider.domain.provider.CoverageRejectionReason
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
 import io.mockk.coEvery
@@ -92,6 +93,29 @@ class ApiProviderRepositoryTest {
         val serverFailure = result as RegistrationOutcome.Failure.Server
         assertEquals(400, serverFailure.code)
         assertEquals("Nombre inválido", serverFailure.message)
+    }
+
+    @Test
+    fun `register maps exact coverage validation messages`() = runTest {
+        val cases = mapOf(
+            "At least one coverage zone must be selected" to CoverageRejectionReason.Missing,
+            "Coverage zone does not exist" to CoverageRejectionReason.NotFound,
+            "Coverage zone is not available" to CoverageRejectionReason.Unavailable,
+            "Coverage zone cannot be selected more than once" to CoverageRejectionReason.Duplicate,
+        )
+
+        cases.forEach { (message, reason) ->
+            val response = Response.error<ProviderSummaryDto>(
+                400,
+                "{\"error\":\"$message\"}".toResponseBody("application/json".toMediaType()),
+            )
+            coEvery { backendApi.registerProvider(expectedDto) } throws HttpException(response)
+
+            assertEquals(
+                RegistrationOutcome.Failure.CoverageRejected(reason),
+                repository.register(sampleCommand),
+            )
+        }
     }
 
     @Test

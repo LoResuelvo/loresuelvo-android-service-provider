@@ -15,5 +15,13 @@ sealed interface RegistrationOutcome {
         data object Unauthorized : Failure
         data object AlreadyRegistered : Failure
         data object InvalidCoverageZones : Failure
+        data class CoverageRejected(val reason: CoverageRejectionReason) : Failure
     }
+}
+
+enum class CoverageRejectionReason {
+    Missing,
+    NotFound,
+    Unavailable,
+    Duplicate,
 }

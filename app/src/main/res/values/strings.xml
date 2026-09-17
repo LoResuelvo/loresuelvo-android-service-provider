@@ -120,6 +120,7 @@
     <string name="provider_profile_photo_error_upload">No se pudo cargar la foto. Revisá tu conexión e intentá de nuevo.</string>
     <string name="provider_profile_photo_required_error">Debés seleccionar y cargar una foto de perfil antes de continuar.</string>
     <string name="provider_profile_zones_required_error">Debés seleccionar al menos una zona de cobertura.</string>
+    <string name="provider_profile_coverage_rejected_error">Revisá las zonas seleccionadas y volvé a intentar.</string>
     <string name="provider_profile_coverage_title">Zonas de cobertura</string>
     <string name="provider_profile_coverage_loading">Cargando zonas…</string>
     <string name="provider_profile_coverage_load_error">No pudimos cargar las zonas de cobertura.</string>

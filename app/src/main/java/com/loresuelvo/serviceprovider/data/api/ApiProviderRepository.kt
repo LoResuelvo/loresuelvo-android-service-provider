@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.data.api
 import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
 import com.loresuelvo.serviceprovider.domain.api.ApiError
 import com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome
+import com.loresuelvo.serviceprovider.domain.provider.CoverageRejectionReason
 import com.loresuelvo.serviceprovider.domain.provider.ProviderProfile
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
@@ -64,11 +65,23 @@ class ApiProviderRepository @Inject constructor(
                 if (error.code == 409) {
                     RegistrationOutcome.Failure.AlreadyRegistered
                 } else {
-                    RegistrationOutcome.Failure.Server(error.code, error.errorMessage)
+                    mapServerFailure(error.code, error.errorMessage)
                 }
             is ApiError.Unknown ->
                 RegistrationOutcome.Failure.Server(0, error.message ?: "Unknown error")
         }
+
+    private fun mapServerFailure(code: Int, message: String): RegistrationOutcome.Failure {
+        if (code != 400) return RegistrationOutcome.Failure.Server(code, message)
+        val reason = when (message) {
+            "At least one coverage zone must be selected" -> CoverageRejectionReason.Missing
+            "Coverage zone does not exist" -> CoverageRejectionReason.NotFound
+            "Coverage zone is not available" -> CoverageRejectionReason.Unavailable
+            "Coverage zone cannot be selected more than once" -> CoverageRejectionReason.Duplicate
+            else -> return RegistrationOutcome.Failure.Server(code, message)
+        }
+        return RegistrationOutcome.Failure.CoverageRejected(reason)
+    }
 
     private fun mapToGetProfileFailure(e: Throwable): GetProviderProfileOutcome.Failure =
         when (val error = e.toApiError()) {

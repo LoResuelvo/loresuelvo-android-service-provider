@@ -171,6 +171,23 @@ class CompleteProviderProfileScreenTest {
     }
 
     @Test
+    fun renders_coverage_rejection_without_backend_text() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        error = ProfileFormError.CoverageRejected,
+                    ),
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_rejected_error))
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun renders_loading_indicator_and_disables_button_when_submitting() {
         composeTestRule.setContent {
             LoresuelvoTheme {

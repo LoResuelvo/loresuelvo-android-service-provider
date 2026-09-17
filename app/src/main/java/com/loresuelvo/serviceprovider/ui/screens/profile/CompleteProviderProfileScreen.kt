@@ -218,6 +218,20 @@ fun CompleteProviderProfileScreen(
                         )
                     }
                 }
+                is ProfileFormError.CoverageRejected -> {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.provider_profile_coverage_rejected_error),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
                 else -> Unit
             }
 
