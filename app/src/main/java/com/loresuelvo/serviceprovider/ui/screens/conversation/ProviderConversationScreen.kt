@@ -90,6 +90,10 @@ fun ProviderConversationScreen(
     onAttachClick: () -> Unit = {},
     onPickFromGallery: () -> Unit = {},
     onCaptureFromCamera: () -> Unit = {},
+    onMicClick: () -> Unit = {},
+    onStopRecording: () -> Unit = {},
+    onPlayAudio: (String, String) -> Unit = { _, _ -> },
+    onPauseAudio: () -> Unit = {},
     onDismissMediaError: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -151,11 +155,14 @@ fun ProviderConversationScreen(
                     promptInput = state.promptInput,
                     pendingMedia = state.pendingMedia,
                     canSend = (state.promptInput.isNotBlank() || state.pendingMedia != null) &&
-                        !state.sending,
+                        !state.sending &&
+                        state.recordingState == RecordingState.Idle,
+                    isRecording = state.recordingState is RecordingState.Recording,
                     onPromptChange = onPromptChange,
                     onSendClick = onSendClick,
                     onAttachClick = { attachSheetVisible = true },
                     onClearStagedMedia = onClearStagedMedia,
+                    onMicClick = onMicClick,
                 )
             }
         },

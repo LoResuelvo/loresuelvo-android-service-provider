@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.loresuelvo.serviceprovider.data.media.AudioPlayer
+import com.loresuelvo.serviceprovider.data.media.AudioRecorder
 import com.loresuelvo.serviceprovider.data.media.MediaReader
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
@@ -17,6 +19,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,57 +29,22 @@ import kotlinx.coroutines.launch
 
 /**
  * UDF ViewModel for the provider conversation detail screen
- * (`Route.Conversation`). Drives `GET /conversations/{id}` through
- * [GetConversationByIdUseCase] and either
- * `POST /conversations/{id}/messages` for text
- * ([SendMessageUseCase]) or media ([SendMediaMessageUseCase]),
- * mapping the typed outcomes into the sealed
- * [ProviderConversationUiState].
+ * (`Route.Conversation`).
  *
- * Loading:
- *  - [init] fires [load] once; the screen rerun on configuration
- *    change gets the same VM instance through Hilt's route-scoping
- *    so the state survives rotation.
- *  - [onRetryLoad] re-fires the same fetch — used by the screen's
- *    error-state retry CTA.
+ * Drives the text / image / audio flows end-to-end:
  *
- * Compose flow (mirrors the consumer's [com.loresuelvo.consumer.ui.screens.chat.ConversationViewModel]
- *  but with persistent pending / failed bubbles — see scenarios
- *  03-PCC / 04-PCC / 05-PCC, and 03-PCM / 05-PCM / 06-PCM for
- *  media):
- *  - [onPromptChange] mirrors the text field on
- *    [ProviderConversationUiState.Ready].
- *  - [onMediaPicked] resolves the URI through [MediaReader]
- *    (gallery picker or camera capture) and stages the resulting
- *    [MediaUpload.Image] into [pendingMedia]. IO failures map
- *    to a typed `transientMediaError` so the chat surface can
- *    surface them inline.
- *  - [onClearStagedMedia] discards the staged media and returns
- *    the input bar to its text-only state.
- *  - [onSendClick]:
- *      * Trims the prompt, bails on blank + no media + `sending`.
- *      * If [pendingMedia] is staged, fires [SendMediaMessageUseCase];
- *        otherwise fires [SendMessageUseCase].
- *      * Appends a [ChatListItem.LocalPending] optimistic bubble
- *        immediately (carrying the local bytes when sending
- *        media), clears the prompt + pendingMedia, flips
- *        `sending = true`.
- *      * On success, replaces the pending bubble with
- *        [ChatListItem.ServerConfirmed] carrying the
- *        server-persisted message.
- *      * On failure, replaces the pending bubble with
- *        [ChatListItem.LocalFailed] (carrying the original bytes
- *        / prompt so the retry handler can resubmit without the
- *        user re-typing / re-picking).
- *  - [onRetrySendFailedBubble] re-fires the use case for the
- *    given local key. The flow mirrors [onSendClick] — pending
- *    bubble replaced by confirmed or failed.
+ * Loading: see [load].
  *
- * The conversation id is provided by the host
- * ([com.loresuelvo.serviceprovider.ui.navigation.LoResuelvoNav])
- * via `SavedStateHandle` (read from the `Route.Conversation.argument`
- * nav argument) and is immutable for the lifetime of the route
- * entry.
+ * Text flow: see [onSendClick] (US-A, scenarios 03-PCC..06-PCC).
+ *
+ * Image flow (US-B, scenarios 01-PCM..07-PCM): see [onMediaPicked]
+ * for the gallery / camera URI handler and [onClearStagedMedia]
+ * for the preview discard.
+ *
+ * Audio flow (US-C, scenarios 01-PCA..03-PCA): see
+ * [onStartRecording] / [onStopRecording] / [onCancelRecording]
+ * for the in-app recorder and [onPlayAudio] / [onPauseAudio] for
+ * the bubble-level playback controls.
  */
 @HiltViewModel
 class ProviderConversationViewModel @Inject constructor(
@@ -84,6 +53,8 @@ class ProviderConversationViewModel @Inject constructor(
     private val sendMessage: SendMessageUseCase,
     private val sendMediaMessage: SendMediaMessageUseCase,
     private val mediaReader: MediaReader,
+    private val audioRecorder: AudioRecorder,
+    private val audioPlayer: AudioPlayer,
 ) : ViewModel() {
 
     private val conversationId: Int = savedStateHandle.get<Int>(Route.Conversation.argument)
@@ -94,6 +65,9 @@ class ProviderConversationViewModel @Inject constructor(
     )
 
     val uiState: StateFlow<ProviderConversationUiState> = _uiState.asStateFlow()
+
+    /** Coroutine that drives [RecordingState.Recording.elapsedMillis]. */
+    private var recordingTickerJob: Job? = null
 
     init {
         load()
@@ -165,6 +139,154 @@ class ProviderConversationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Starts an in-app audio recording. The route must have
+     * already acquired the `RECORD_AUDIO` runtime permission
+     * before invoking this — the VM does NOT request it (UI layer
+     * concern).
+     */
+    fun onStartRecording() {
+        val started = audioRecorder.start()
+        if (started.isFailure) {
+            _uiState.update { current ->
+                if (current is ProviderConversationUiState.Ready) {
+                    current.copy(
+                        transientMediaError = SendMessageOutcome.Failure.Server(
+                            code = 0,
+                            message = started.exceptionOrNull()?.message
+                                ?: "Could not start audio recording",
+                        ),
+                    )
+                } else {
+                    current
+                }
+            }
+            return
+        }
+        _uiState.update { current ->
+            if (current is ProviderConversationUiState.Ready) {
+                current.copy(
+                    recordingState = RecordingState.Recording(elapsedMillis = 0L),
+                )
+            } else {
+                current
+            }
+        }
+        recordingTickerJob?.cancel()
+        recordingTickerJob = viewModelScope.launch {
+            val startedAt = System.currentTimeMillis()
+            while (true) {
+                delay(250L)
+                val elapsed = System.currentTimeMillis() - startedAt
+                _uiState.update { current ->
+                    if (current is ProviderConversationUiState.Ready &&
+                        current.recordingState is RecordingState.Recording
+                    ) {
+                        current.copy(
+                            recordingState = RecordingState.Recording(elapsedMillis = elapsed),
+                        )
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Stops the in-progress recording and stages the captured
+     * clip as [MediaUpload.Audio] in
+     * [ProviderConversationUiState.Ready.pendingMedia].
+     */
+    fun onStopRecording() {
+        recordingTickerJob?.cancel()
+        recordingTickerJob = null
+        val stopped = audioRecorder.stop()
+        val uri = stopped.getOrNull()
+        if (uri == null) {
+            _uiState.update { current ->
+                if (current is ProviderConversationUiState.Ready) {
+                    current.copy(
+                        recordingState = RecordingState.Idle,
+                        transientMediaError = SendMessageOutcome.Failure.Server(
+                            code = 0,
+                            message = stopped.exceptionOrNull()?.message
+                                ?: "Could not stop audio recording",
+                        ),
+                    )
+                } else {
+                    current
+                }
+            }
+            return
+        }
+        viewModelScope.launch {
+            val media = try {
+                mediaReader.read(uri)
+            } catch (e: IOException) {
+                _uiState.update { current ->
+                    if (current is ProviderConversationUiState.Ready) {
+                        current.copy(
+                            recordingState = RecordingState.Idle,
+                            transientMediaError = SendMessageOutcome.Failure.Network(
+                                cause = e,
+                            ),
+                        )
+                    } else {
+                        current
+                    }
+                }
+                return@launch
+            }
+            _uiState.update { current ->
+                if (current is ProviderConversationUiState.Ready) {
+                    current.copy(
+                        pendingMedia = media,
+                        recordingState = RecordingState.Idle,
+                        promptInput = "",
+                    )
+                } else {
+                    current
+                }
+            }
+        }
+    }
+
+    fun onCancelRecording() {
+        recordingTickerJob?.cancel()
+        recordingTickerJob = null
+        audioRecorder.cancel()
+        _uiState.update { current ->
+            if (current is ProviderConversationUiState.Ready) {
+                current.copy(recordingState = RecordingState.Idle)
+            } else {
+                current
+            }
+        }
+    }
+
+    fun onPlayAudio(bubbleKey: String, url: String) {
+        audioPlayer.play(url)
+        _uiState.update { current ->
+            if (current is ProviderConversationUiState.Ready) {
+                current.copy(playingMediaKey = bubbleKey)
+            } else {
+                current
+            }
+        }
+    }
+
+    fun onPauseAudio() {
+        audioPlayer.pause()
+        _uiState.update { current ->
+            if (current is ProviderConversationUiState.Ready) {
+                current.copy(playingMediaKey = null)
+            } else {
+                current
+            }
+        }
+    }
+
     fun onSendClick() {
         val state = _uiState.value as? ProviderConversationUiState.Ready ?: return
         val prompt = state.promptInput.trim()
@@ -185,8 +307,6 @@ class ProviderConversationViewModel @Inject constructor(
             ?: return
         if (state.sending) return
 
-        // Replace failed with pending (preserving the local key so
-        // the LazyColumn animates the replacement in place).
         val pending = ChatListItem.LocalPending(
             key = failed.key,
             sender = failed.sender,
@@ -209,6 +329,13 @@ class ProviderConversationViewModel @Inject constructor(
         }
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        recordingTickerJob?.cancel()
+        audioRecorder.cancel()
+        audioPlayer.stop()
+    }
+
     private fun load() {
         _uiState.value = ProviderConversationUiState.Loading
         viewModelScope.launch {
@@ -221,6 +348,9 @@ class ProviderConversationViewModel @Inject constructor(
                         sending = false,
                         pendingMedia = null,
                         transientMediaError = null,
+                        recordingState = RecordingState.Idle,
+                        playingMediaKey = null,
+                        playingPositionMillis = 0L,
                     )
                 }
                 is ConversationDetailOutcome.Failure ->
@@ -231,10 +361,6 @@ class ProviderConversationViewModel @Inject constructor(
 
     private fun fireSendText(prompt: String, retryKey: String? = null) {
         val pendingKey = retryKey ?: newLocalKey()
-        // On a fresh send the optimistic pending is appended to the
-        // list; on a retry the caller already replaced the failed
-        // bubble with a pending at the same key, so we only refresh
-        // the input bar / `sending` flag and skip the append.
         if (retryKey == null) {
             val pending = ChatListItem.LocalPending(
                 key = pendingKey,

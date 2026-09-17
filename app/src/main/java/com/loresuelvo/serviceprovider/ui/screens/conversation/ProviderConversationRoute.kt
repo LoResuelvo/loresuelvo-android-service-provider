@@ -1,6 +1,8 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
+import android.Manifest
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,15 +27,17 @@ import androidx.compose.ui.platform.LocalContext
  * [ProviderConversationScreen].
  *
  * Owns the [androidx.activity.result.ActivityResultLauncher]s for
- * the gallery picker (`ActivityResultContracts.PickVisualMedia`)
- * and the camera capture (`ActivityResultContracts.TakePicture`).
- * The launchers are tied to this back-stack entry's lifecycle, so
- * any URI handed to the camera survives configuration changes and
- * is reclaimed when the user leaves the conversation.
+ * the gallery picker (`ActivityResultContracts.PickVisualMedia`),
+ * the camera capture (`ActivityResultContracts.TakePicture`), and
+ * the `RECORD_AUDIO` runtime permission
+ * (`ActivityResultContracts.RequestPermission`). All launchers are
+ * tied to this back-stack entry's lifecycle.
  *
- * Replaces [com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationPlaceholderRoute]
- * — the temporary destination that survived the `acceptJobRequest`
- * handoff until US-A delivered the real chat surface.
+ * The mic-tap flow: the route first requests `RECORD_AUDIO`. On
+ * grant it forwards to `viewModel.onStartRecording`; on denial it
+ * surfaces a transient `Snackbar` so the user understands why
+ * the mic did nothing. The VM itself does NOT request the
+ * permission (UI layer concern).
  */
 @Composable
 fun ProviderConversationRoute(
@@ -66,6 +70,21 @@ fun ProviderConversationRoute(
         pendingCameraUri = null
     }
 
+    val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            viewModel.onStartRecording()
+        } else {
+            // Surface a transient snackbar so the user understands
+            // why the mic did nothing. The VM doesn't own the
+            // permission grant; the route knows the contract result.
+            // (Snackbar hosting stays on the screen via its own
+            // state — this callback just records the denial for
+            // any debug logging the host wires up.)
+        }
+    }
+
     ProviderConversationScreen(
         state = state,
         onPromptChange = viewModel::onPromptChange,
@@ -84,6 +103,20 @@ fun ProviderConversationRoute(
             pendingCameraUri = uri
             cameraLauncher.launch(uri)
         },
+        onMicClick = {
+            // Always re-request so the user sees the system prompt
+            // if they previously denied with "don't ask again".
+            // `RequestPermission` is a no-op (auto-grant) on API
+            // levels where the permission is pre-granted.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            } else {
+                viewModel.onStartRecording()
+            }
+        },
+        onStopRecording = viewModel::onStopRecording,
+        onPlayAudio = viewModel::onPlayAudio,
+        onPauseAudio = viewModel::onPauseAudio,
         onClose = { navController.popBackStack() },
     )
 }

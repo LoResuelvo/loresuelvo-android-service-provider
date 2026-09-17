@@ -21,14 +21,24 @@ import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
  *    rendered.
  *  - [Ready] — the detail loaded; the composer is live and the
  *    user may send messages. [pendingMedia] holds the bytes of
- *    an image the user just picked from the gallery / camera —
- *    when non-null, the chat input bar hides the text field and
- *    renders the [com.loresuelvo.serviceprovider.ui.screens.conversation.components.MediaPreviewCard]
- *    instead. Tapping Send with media staged calls
- *    `SendMediaMessageUseCase`; tapping Send with no media and a
- *    non-blank prompt calls `SendMessageUseCase`. The same
- *    optimistic-pending / failed / confirmed bubble flow applies
- *    to both.
+ *    an image the user just picked from the gallery / camera OR
+ *    the audio clip the user just recorded. Tapping Send calls
+ *    [SendMessageUseCase] (text only) or [SendMediaMessageUseCase]
+ *    (image or audio) and the optimistic pending bubble carries
+ *    the staged media for the local preview until the server
+ *    echoes the persisted media URLs.
+ *
+ * Recording state (US-C):
+ *  - [recordingState] is `Idle` when no recording is in flight
+ *    and `Recording(elapsedMillis)` while the recorder is
+ *    capturing. The input bar swaps its text field for a
+ *    "Stop" affordance while `Recording` is non-null.
+ *
+ * Audio playback state (US-C):
+ *  - [playingMediaKey] carries the [ChatListItem.key] of the
+ *    bubble currently driving the audio player — `null` when
+ *    nothing is playing. The bubble surfaces its own play /
+ *    pause affordance and asks the VM to start / stop playback.
  *
  * The composer is gated on [Ready.sending] (scenario 03-PCC
  * avoids double-submission) and on having either [promptInput]
@@ -51,5 +61,21 @@ sealed interface ProviderConversationUiState {
         val sending: Boolean,
         val pendingMedia: MediaUpload? = null,
         val transientMediaError: SendMessageOutcome.Failure? = null,
+        val recordingState: RecordingState = RecordingState.Idle,
+        val playingMediaKey: String? = null,
+        val playingPositionMillis: Long = 0L,
     ) : ProviderConversationUiState
+}
+
+/**
+ * US-C recording lifecycle. The chat surface renders the input
+ * bar differently for each variant:
+ *  - [Idle] — empty prompt + no staged media → mic button.
+ *  - [Recording] — recorder is live; the input bar swaps its
+ *    text field for a stop affordance and a live elapsed-millis
+ *    counter.
+ */
+sealed interface RecordingState {
+    data object Idle : RecordingState
+    data class Recording(val elapsedMillis: Long) : RecordingState
 }

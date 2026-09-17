@@ -389,6 +389,8 @@ internal class ProviderConversationWorld : AutoCloseable {
         sendMessage = SendMessageUseCase(repository),
         sendMediaMessage = SendMediaMessageUseCase(repository),
         mediaReader = BddMediaReader(stagedMedia),
+        audioRecorder = NotExercisedAudioRecorder,
+        audioPlayer = NotExercisedAudioPlayer,
     )
 
     private fun detail(messages: List<ConversationMessage>): ConversationDetail = ConversationDetail(
@@ -416,6 +418,25 @@ internal class ProviderConversationWorld : AutoCloseable {
     ) : com.loresuelvo.serviceprovider.data.media.MediaReader {
         override suspend fun read(uri: android.net.Uri): MediaUpload =
             media ?: error("BDD media reader has no staged media for $uri")
+    }
+
+    private object NotExercisedAudioRecorder :
+        com.loresuelvo.serviceprovider.data.media.AudioRecorder {
+        override fun start(): Result<Unit> =
+            error("AudioRecorder is not exercised by US-A BDD scenarios")
+        override fun stop(): Result<android.net.Uri> =
+            error("AudioRecorder is not exercised by US-A BDD scenarios")
+        override fun cancel() =
+            error("AudioRecorder is not exercised by US-A BDD scenarios")
+    }
+
+    private object NotExercisedAudioPlayer :
+        com.loresuelvo.serviceprovider.data.media.AudioPlayer {
+        override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
+        override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
+        override fun play(url: String, startPositionMillis: Long) = Unit
+        override fun pause() = Unit
+        override fun stop() = Unit
     }
 
     private class FakeConversationRepository : ConversationRepository {

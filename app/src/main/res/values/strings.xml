@@ -103,6 +103,13 @@
     <string name="provider_conversation_attach_camera">Tomar foto</string>
     <string name="provider_conversation_clear_media_content_description">Quitar imagen adjunta</string>
 
+    <!-- Provider conversation detail (US-C: audio attachments) -->
+    <string name="provider_conversation_record_audio_content_description">Grabar audio</string>
+    <string name="provider_conversation_recording">Grabando…</string>
+    <string name="provider_conversation_audio_bubble">Audio (%1$s)</string>
+    <string name="provider_conversation_play_audio_content_description">Reproducir audio</string>
+    <string name="provider_conversation_pause_audio_content_description">Pausar audio</string>
+
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>
     <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>

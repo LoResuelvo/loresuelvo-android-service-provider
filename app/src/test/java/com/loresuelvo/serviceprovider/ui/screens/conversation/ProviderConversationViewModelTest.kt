@@ -489,6 +489,8 @@ class ProviderConversationViewModelTest {
             sendMessage = SendMessageUseCase(repo),
             sendMediaMessage = SendMediaMessageUseCase(repo),
             mediaReader = NotExercisedMediaReader,
+            audioRecorder = NotExercisedAudioRecorder,
+            audioPlayer = NotExercisedAudioPlayer,
         )
 
     private fun viewModelWithMediaReader(
@@ -500,6 +502,8 @@ class ProviderConversationViewModelTest {
         sendMessage = SendMessageUseCase(repo),
         sendMediaMessage = SendMediaMessageUseCase(repo),
         mediaReader = reader,
+        audioRecorder = NotExercisedAudioRecorder,
+        audioPlayer = NotExercisedAudioPlayer,
     )
 
     private fun readyState(vm: ProviderConversationViewModel): ProviderConversationUiState.Ready {
@@ -538,6 +542,20 @@ class ProviderConversationViewModelTest {
     private object NotExercisedMediaReader : com.loresuelvo.serviceprovider.data.media.MediaReader {
         override suspend fun read(uri: android.net.Uri): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
             error("MediaReader is not exercised by US-A VM tests")
+    }
+
+    private object NotExercisedAudioRecorder : com.loresuelvo.serviceprovider.data.media.AudioRecorder {
+        override fun start(): Result<Unit> = error("AudioRecorder is not exercised by US-A VM tests")
+        override fun stop(): Result<android.net.Uri> = error("AudioRecorder is not exercised by US-A VM tests")
+        override fun cancel() = error("AudioRecorder is not exercised by US-A VM tests")
+    }
+
+    private object NotExercisedAudioPlayer : com.loresuelvo.serviceprovider.data.media.AudioPlayer {
+        override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
+        override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
+        override fun play(url: String, startPositionMillis: Long) = Unit
+        override fun pause() = Unit
+        override fun stop() = Unit
     }
 
     private class FakeMediaReader(

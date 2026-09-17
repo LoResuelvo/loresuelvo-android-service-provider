@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -59,10 +61,12 @@ fun ChatInputBar(
     promptInput: String,
     pendingMedia: MediaUpload?,
     canSend: Boolean,
+    isRecording: Boolean,
     onPromptChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onAttachClick: () -> Unit,
     onClearStagedMedia: () -> Unit,
+    onMicClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -284,5 +288,8 @@ const val PROVIDER_CHAT_INPUT_FIELD_TAG: String = "provider-chat-input-field"
 const val PROVIDER_CHAT_SEND_BUTTON_TAG: String = "provider-chat-send-button"
 const val PROVIDER_CHAT_SEND_ICON_TAG: String = "provider-chat-send-icon"
 const val PROVIDER_CHAT_ATTACH_BUTTON_TAG: String = "provider-chat-attach-button"
+const val PROVIDER_CHAT_MIC_BUTTON_TAG: String = "provider-chat-mic-button"
+const val PROVIDER_CHAT_MIC_ROW_TAG: String = "provider-chat-mic-row"
+const val PROVIDER_CHAT_RECORDING_INDICATOR_TAG: String = "provider-chat-recording-indicator"
 const val PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG: String = "provider-media-attach-gallery-row"
 const val PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG: String = "provider-media-attach-camera-row"
