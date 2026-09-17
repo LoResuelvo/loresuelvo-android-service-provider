@@ -99,3 +99,32 @@ Feature: Conversación del prestador con un consumidor
     Given que la API devuelve el detalle de la conversación 42 con un mensaje confirmado del prestador que lleva una imagen JPEG adjunta
     When el prestador navega a la ruta de la conversación 42
     Then la pantalla muestra la miniatura de esa imagen en su burbuja con el contenido accesible correcto
+
+  # =========================================================================
+  # US-C — Adjuntar audios a un mensaje (grabar + enviar + reproducir)
+  # =========================================================================
+
+  @wip
+  Scenario: 01-PCA Grabar y enviar un audio como mensaje
+    Given que el permiso de micrófono del prestador está concedido
+    And que la conversación 42 está abierta sin mensajes previos
+    When el prestador graba un clip de audio WebM de 3 segundos
+    And selecciona Enviar
+    Then la pantalla agrega optimistamente una burbuja pendiente con el reproductor y la duración del clip
+    And al confirmarse el envío la burbuja pendiente se reemplaza por la versión persistida con id estable y url de descarga
+
+  @wip
+  Scenario: 02-PCA Reproducir un audio recibido
+    Given que la API devuelve el detalle de la conversación 42 con un mensaje confirmado del consumidor que lleva un audio WebM de 5 segundos adjunto
+    When el prestador navega a la ruta de la conversación 42
+    And selecciona reproducir sobre la burbuja de audio
+    Then el reproductor muestra el contador avanzando hasta la duración total
+
+  @wip
+  Scenario: 03-PCA Cancelar una grabación de audio en curso
+    Given que el permiso de micrófono del prestador está concedido
+    And que la conversación 42 está abierta sin mensajes previos
+    When el prestador inicia una grabación de audio
+    And cancela la grabación mid-way
+    Then ningún envío se dispara
+    And el botón de micrófono vuelve a estar disponible para una nueva grabación
