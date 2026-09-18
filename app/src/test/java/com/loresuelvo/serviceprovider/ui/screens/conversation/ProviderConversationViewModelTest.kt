@@ -558,6 +558,230 @@ class ProviderConversationViewModelTest {
         override fun stop() = Unit
     }
 
+    // ------------------------------------------------------------------------
+    // US-C — Audio recording flow tests
+    // ------------------------------------------------------------------------
+
+    @Test
+    fun onStartRecording_sets_recordingState_with_zero_elapsed_millis() =
+        runTest(scheduler) {
+            val repo = RecordingRepository()
+            repo.detailOutcome = detailOutcome(messages = emptyList())
+            val recorder = FakeAudioRecorder()
+            val player = NotExercisedAudioPlayer
+            val vm = viewModelWithAudio(repo, recorder, player)
+            advanceUntilIdle()
+
+            vm.onStartRecording()
+            // The recording ticker loops with delay(250L); advance
+            // only the immediate queue to observe the synchronous
+            // Recording(0) state without looping forever.
+            scheduler.runCurrent()
+            stopTicker(vm)
+
+            val ready = readyState(vm)
+            assertTrue(
+                "expected Recording state, got ${ready.recordingState}",
+                ready.recordingState is RecordingState.Recording,
+            )
+            assertEquals(0L, (ready.recordingState as RecordingState.Recording).elapsedMillis)
+        }
+
+    @Test
+    fun onStartRecording_with_recorder_failure_sets_transientMediaError() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val recorder = ThrowingAudioRecorder
+        val player = NotExercisedAudioPlayer
+        val vm = viewModelWithAudio(repo, recorder, player)
+        advanceUntilIdle()
+
+        vm.onStartRecording()
+            scheduler.runCurrent()
+
+            val ready = readyState(vm)
+            assertTrue(
+                "expected Idle after recorder failure, got ${ready.recordingState}",
+                ready.recordingState is RecordingState.Idle,
+            )
+            assertTrue(
+                "expected Server failure, got ${ready.transientMediaError}",
+                ready.transientMediaError
+                    is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Server,
+            )
+        }
+
+    @Test
+    fun onStopRecording_stages_audio_as_pendingMedia() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val recorder = FakeAudioRecorder()
+        val audio = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Audio(
+            bytes = byteArrayOf(1, 2, 3, 4, 5),
+            mimeType = "audio/webm",
+            originalName = "recording.webm",
+            durationMillis = 2_500L,
+        )
+        val reader = AudioMediaReader(
+            audioForUri = mapOf(FakeAudioRecorder.OUTPUT_URI to audio),
+        )
+        val player = NotExercisedAudioPlayer
+        val vm = viewModelWithAudioAndReader(repo, recorder, player, reader)
+        advanceUntilIdle()
+
+        vm.onStartRecording()
+        scheduler.runCurrent()
+        vm.onStopRecording()
+        advanceUntilIdle()
+
+        val ready = readyState(vm)
+        assertTrue(
+            "expected Idle after stop, got ${ready.recordingState}",
+            ready.recordingState is RecordingState.Idle,
+        )
+        assertEquals(audio, ready.pendingMedia)
+    }
+
+    @Test
+    fun onCancelRecording_clears_recording_state() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val recorder = FakeAudioRecorder()
+        val player = NotExercisedAudioPlayer
+        val vm = viewModelWithAudio(repo, recorder, player)
+        advanceUntilIdle()
+
+        vm.onStartRecording()
+        scheduler.runCurrent()
+        vm.onCancelRecording()
+        scheduler.runCurrent()
+
+        val ready = readyState(vm)
+        assertTrue(
+            "expected Idle after cancel, got ${ready.recordingState}",
+            ready.recordingState is RecordingState.Idle,
+        )
+    }
+
+    @Test
+    fun onPlayAudio_sets_playingMediaKey() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val player = NotExercisedAudioPlayer
+        val vm = viewModelWithAudio(repo, NotExercisedAudioRecorder, player)
+        advanceUntilIdle()
+
+        vm.onPlayAudio(
+            bubbleKey = "bubble-1",
+            url = "https://example.test/audio.webm",
+        )
+        advanceUntilIdle()
+
+        val ready = readyState(vm)
+        assertEquals("bubble-1", ready.playingMediaKey)
+    }
+
+    @Test
+    fun onPauseAudio_clears_playingMediaKey() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val player = NotExercisedAudioPlayer
+        val vm = viewModelWithAudio(repo, NotExercisedAudioRecorder, player)
+        advanceUntilIdle()
+        vm.onPlayAudio("bubble-1", "https://example.test/audio.webm")
+        advanceUntilIdle()
+
+        vm.onPauseAudio()
+        advanceUntilIdle()
+
+        val ready = readyState(vm)
+        assertNull(ready.playingMediaKey)
+    }
+
+    /** Cancel the recording ticker via reflection so the test
+     *  scheduler can exit `advanceUntilIdle` without looping. */
+    private fun stopTicker(vm: ProviderConversationViewModel) {
+        val field = vm::class.java.getDeclaredField("recordingTickerJob")
+        field.isAccessible = true
+        val job = field.get(vm) as? kotlinx.coroutines.Job ?: return
+        job.cancel()
+        scheduler.runCurrent()
+    }
+
+    private fun viewModelWithAudio(
+        repo: RecordingRepository,
+        recorder: com.loresuelvo.serviceprovider.data.media.AudioRecorder,
+        player: com.loresuelvo.serviceprovider.data.media.AudioPlayer,
+    ): ProviderConversationViewModel = ProviderConversationViewModel(
+        savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
+        getConversationById = GetConversationByIdUseCase(repo),
+        sendMessage = SendMessageUseCase(repo),
+        sendMediaMessage = SendMediaMessageUseCase(repo),
+        mediaReader = NotExercisedMediaReader,
+        audioRecorder = recorder,
+        audioPlayer = player,
+    )
+
+    private fun viewModelWithAudioAndReader(
+        repo: RecordingRepository,
+        recorder: com.loresuelvo.serviceprovider.data.media.AudioRecorder,
+        player: com.loresuelvo.serviceprovider.data.media.AudioPlayer,
+        reader: com.loresuelvo.serviceprovider.data.media.MediaReader,
+    ): ProviderConversationViewModel = ProviderConversationViewModel(
+        savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
+        getConversationById = GetConversationByIdUseCase(repo),
+        sendMessage = SendMessageUseCase(repo),
+        sendMediaMessage = SendMediaMessageUseCase(repo),
+        mediaReader = reader,
+        audioRecorder = recorder,
+        audioPlayer = player,
+    )
+
+    private class FakeAudioRecorder : com.loresuelvo.serviceprovider.data.media.AudioRecorder {
+        private var started = false
+
+        override fun start(): Result<Unit> {
+            if (started) return Result.failure(
+                IllegalStateException("Audio recording is already in progress"),
+            )
+            started = true
+            return Result.success(Unit)
+        }
+
+        override fun stop(): Result<android.net.Uri> {
+            if (!started) return Result.failure(
+                IllegalStateException("Audio recording is not in progress"),
+            )
+            started = false
+            return Result.success(OUTPUT_URI)
+        }
+
+        override fun cancel() {
+            started = false
+        }
+
+        companion object {
+            val OUTPUT_URI: android.net.Uri =
+                android.net.Uri.parse("file:///fake/audio-recording.webm")
+        }
+    }
+
+    private object ThrowingAudioRecorder : com.loresuelvo.serviceprovider.data.media.AudioRecorder {
+        override fun start(): Result<Unit> =
+            Result.failure(IllegalStateException("Mic is busy"))
+        override fun stop(): Result<android.net.Uri> =
+            Result.failure(IllegalStateException("Recording not started"))
+        override fun cancel() = Unit
+    }
+
+    private class AudioMediaReader(
+        private val audioForUri: Map<android.net.Uri, com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Audio>,
+    ) : com.loresuelvo.serviceprovider.data.media.MediaReader {
+        override suspend fun read(uri: android.net.Uri) =
+            audioForUri[uri]
+                ?: error("AudioMediaReader has no entry for $uri")
+    }
+
     private class FakeMediaReader(
         private val images: Map<String, com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image>,
     ) : com.loresuelvo.serviceprovider.data.media.MediaReader {
