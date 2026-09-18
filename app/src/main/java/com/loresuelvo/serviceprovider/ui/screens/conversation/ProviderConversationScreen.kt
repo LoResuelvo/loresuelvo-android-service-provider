@@ -151,18 +151,22 @@ fun ProviderConversationScreen(
         },
         bottomBar = {
             if (state is ProviderConversationUiState.Ready) {
+                val recording = state.recordingState
+                val elapsed = (recording as? RecordingState.Recording)?.elapsedMillis ?: 0L
                 ChatInputBar(
                     promptInput = state.promptInput,
                     pendingMedia = state.pendingMedia,
                     canSend = (state.promptInput.isNotBlank() || state.pendingMedia != null) &&
                         !state.sending &&
                         state.recordingState == RecordingState.Idle,
-                    isRecording = state.recordingState is RecordingState.Recording,
+                    isRecording = recording is RecordingState.Recording,
+                    recordingElapsedMillis = elapsed,
                     onPromptChange = onPromptChange,
                     onSendClick = onSendClick,
                     onAttachClick = { attachSheetVisible = true },
                     onClearStagedMedia = onClearStagedMedia,
                     onMicClick = onMicClick,
+                    onStopRecordingClick = onStopRecording,
                 )
             }
         },

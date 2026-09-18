@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,18 @@ import androidx.compose.ui.platform.LocalContext
  */
 @Composable
 fun MediaPreviewCard(
+    media: MediaUpload,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (media) {
+        is MediaUpload.Image -> ImagePreviewCard(media, onClear, modifier)
+        is MediaUpload.Audio -> AudioPreviewCard(media, onClear, modifier)
+    }
+}
+
+@Composable
+private fun ImagePreviewCard(
     media: MediaUpload.Image,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
@@ -90,5 +103,63 @@ fun MediaPreviewCard(
     }
 }
 
+@Composable
+private fun AudioPreviewCard(
+    media: MediaUpload.Audio,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)
+            .testTag(PROVIDER_CHAT_AUDIO_PREVIEW_TAG),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = Icons.Filled.Mic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = androidx.compose.ui.res.stringResource(
+                R.string.provider_conversation_audio_preview_label,
+                formatDuration(media.durationMillis),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(
+            onClick = onClear,
+            modifier = Modifier.testTag(PROVIDER_CHAT_MEDIA_PREVIEW_CLEAR_TAG),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = androidx.compose.ui.res.stringResource(
+                    R.string.provider_conversation_clear_media_content_description,
+                ),
+            )
+        }
+    }
+}
+
+private fun formatDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
+}
+
 const val PROVIDER_CHAT_MEDIA_PREVIEW_TAG: String = "provider-chat-media-preview"
+const val PROVIDER_CHAT_AUDIO_PREVIEW_TAG: String = "provider-chat-audio-preview"
 const val PROVIDER_CHAT_MEDIA_PREVIEW_CLEAR_TAG: String = "provider-chat-media-preview-clear"

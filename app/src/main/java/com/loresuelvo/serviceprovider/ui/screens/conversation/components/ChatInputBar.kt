@@ -62,11 +62,13 @@ fun ChatInputBar(
     pendingMedia: MediaUpload?,
     canSend: Boolean,
     isRecording: Boolean,
+    recordingElapsedMillis: Long = 0L,
     onPromptChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onAttachClick: () -> Unit,
     onClearStagedMedia: () -> Unit,
     onMicClick: () -> Unit,
+    onStopRecordingClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -291,5 +293,7 @@ const val PROVIDER_CHAT_ATTACH_BUTTON_TAG: String = "provider-chat-attach-button
 const val PROVIDER_CHAT_MIC_BUTTON_TAG: String = "provider-chat-mic-button"
 const val PROVIDER_CHAT_MIC_ROW_TAG: String = "provider-chat-mic-row"
 const val PROVIDER_CHAT_RECORDING_INDICATOR_TAG: String = "provider-chat-recording-indicator"
+const val PROVIDER_CHAT_RECORDING_TIMER_TAG: String = "provider-chat-recording-timer"
+const val PROVIDER_CHAT_STOP_RECORDING_BUTTON_TAG: String = "provider-chat-stop-recording-button"
 const val PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG: String = "provider-media-attach-gallery-row"
 const val PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG: String = "provider-media-attach-camera-row"

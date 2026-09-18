@@ -106,9 +106,11 @@
     <!-- Provider conversation detail (US-C: audio attachments) -->
     <string name="provider_conversation_record_audio_content_description">Record audio</string>
     <string name="provider_conversation_recording">Recording…</string>
+    <string name="provider_conversation_stop_recording_content_description">Stop recording</string>
     <string name="provider_conversation_audio_bubble">Audio (%1$s)</string>
     <string name="provider_conversation_play_audio_content_description">Play audio</string>
     <string name="provider_conversation_pause_audio_content_description">Pause audio</string>
+    <string name="provider_conversation_audio_preview_label">Audio · %1$s</string>
 
     <!-- Provider profile onboarding -->
     <string name="provider_profile_title">Completá tu perfil profesional</string>
