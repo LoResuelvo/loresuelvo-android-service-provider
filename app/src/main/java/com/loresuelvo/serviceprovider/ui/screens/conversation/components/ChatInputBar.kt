@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -89,24 +90,32 @@ fun ChatInputBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (pendingMedia == null) {
-                AttachButton(onClick = onAttachClick)
-                PromptField(
-                    value = promptInput,
-                    onValueChange = onPromptChange,
-                    modifier = Modifier
-                        .weight(1f)
-                        .widthIn(min = 56.dp)
-                        .testTag(PROVIDER_CHAT_INPUT_FIELD_TAG),
-                )
-            } else {
-                Spacer(modifier = Modifier.size(48.dp))
-                val mediaImage = pendingMedia as? com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image
-                if (mediaImage != null) {
+            when {
+                pendingMedia != null -> {
+                    Spacer(modifier = Modifier.size(48.dp))
                     MediaPreviewCard(
-                        media = mediaImage,
+                        media = pendingMedia,
                         onClear = onClearStagedMedia,
                         modifier = Modifier.weight(1f),
+                    )
+                }
+                isRecording -> {
+                    Spacer(modifier = Modifier.size(48.dp))
+                    RecordingIndicator(
+                        elapsedMillis = recordingElapsedMillis,
+                        onStop = onStopRecordingClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                else -> {
+                    AttachButton(onClick = onAttachClick)
+                    PromptField(
+                        value = promptInput,
+                        onValueChange = onPromptChange,
+                        modifier = Modifier
+                            .weight(1f)
+                            .widthIn(min = 56.dp)
+                            .testTag(PROVIDER_CHAT_INPUT_FIELD_TAG),
                     )
                 }
             }
@@ -116,7 +125,96 @@ fun ChatInputBar(
                 modifier = Modifier.testTag(PROVIDER_CHAT_SEND_BUTTON_TAG),
             )
         }
+        if (pendingMedia == null && !isRecording && promptInput.isBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag(PROVIDER_CHAT_MIC_ROW_TAG),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MicButton(onClick = onMicClick)
+            }
+        }
     }
+}
+
+@Composable
+private fun MicButton(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .size(48.dp)
+            .testTag(PROVIDER_CHAT_MIC_BUTTON_TAG),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Mic,
+                contentDescription = stringResource(
+                    R.string.provider_conversation_record_audio_content_description,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecordingIndicator(
+    elapsedMillis: Long,
+    onStop: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.testTag(PROVIDER_CHAT_RECORDING_INDICATOR_TAG),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Mic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = formatElapsed(elapsedMillis),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier
+                    .testTag(PROVIDER_CHAT_RECORDING_TIMER_TAG)
+                    .padding(horizontal = 4.dp),
+            )
+            IconButton(
+                onClick = onStop,
+                modifier = Modifier.testTag(PROVIDER_CHAT_STOP_RECORDING_BUTTON_TAG),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Stop,
+                    contentDescription = stringResource(
+                        R.string.provider_conversation_stop_recording_content_description,
+                    ),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+        }
+    }
+}
+
+private fun formatElapsed(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
 }
 
 @Composable
