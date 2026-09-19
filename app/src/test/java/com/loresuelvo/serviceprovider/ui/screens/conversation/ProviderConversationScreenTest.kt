@@ -138,10 +138,13 @@ class ProviderConversationScreenTest {
             .onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components
                 .PROVIDER_CHAT_INPUT_FIELD_TAG)
             .assertIsDisplayed()
+        // Trailing slot is the mic button when the input is blank
+        // and there's no media — mirrors the consumer's pattern
+        // (the send button only appears with text or staged media).
         composeTestRule
             .onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components
-                .PROVIDER_CHAT_SEND_BUTTON_TAG)
-            .assertIsNotEnabled()
+                .PROVIDER_CHAT_MIC_BUTTON_TAG)
+            .assertIsDisplayed()
     }
 
     @Test

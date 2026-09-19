@@ -48,7 +48,7 @@ class ChatInputBarTest {
         composeTestRule.setContent {
             LoresuelvoTheme {
                 ChatInputBar(
-                    promptInput = "   ",
+                    promptInput = "hola",
                     canSend = false,
                     onPromptChange = {},
                     isRecording = false,
@@ -64,6 +64,53 @@ class ChatInputBarTest {
         composeTestRule
             .onNodeWithTag(PROVIDER_CHAT_SEND_BUTTON_TAG)
             .assertIsNotEnabled()
+    }
+
+    @Test
+    fun trailing_slot_shows_mic_button_when_input_is_blank_and_not_recording() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ChatInputBar(
+                    promptInput = "",
+                    canSend = false,
+                    onPromptChange = {},
+                    isRecording = false,
+                    onMicClick = {},
+                    pendingMedia = null,
+                    onAttachClick = {},
+                    onClearStagedMedia = {},
+                    onSendClick = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CHAT_MIC_BUTTON_TAG)
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun trailing_slot_shows_stop_button_when_recording() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ChatInputBar(
+                    promptInput = "hola",
+                    canSend = false,
+                    onPromptChange = {},
+                    isRecording = true,
+                    recordingElapsedMillis = 3_000L,
+                    onMicClick = {},
+                    pendingMedia = null,
+                    onAttachClick = {},
+                    onClearStagedMedia = {},
+                    onSendClick = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_CHAT_STOP_BUTTON_TAG)
+            .assertIsDisplayed()
     }
 
     @Test

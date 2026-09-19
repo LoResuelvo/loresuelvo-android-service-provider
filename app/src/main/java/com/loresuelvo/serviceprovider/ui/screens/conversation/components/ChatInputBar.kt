@@ -92,7 +92,7 @@ fun ChatInputBar(
         ) {
             when {
                 pendingMedia != null -> {
-                    Spacer(modifier = Modifier.size(48.dp))
+                    AttachButton(onClick = onAttachClick)
                     MediaPreviewCard(
                         media = pendingMedia,
                         onClear = onClearStagedMedia,
@@ -100,7 +100,6 @@ fun ChatInputBar(
                     )
                 }
                 isRecording -> {
-                    Spacer(modifier = Modifier.size(48.dp))
                     RecordingIndicator(
                         elapsedMillis = recordingElapsedMillis,
                         onStop = onStopRecordingClick,
@@ -119,22 +118,18 @@ fun ChatInputBar(
                     )
                 }
             }
-            SendButton(
-                canSend = canSend,
-                onSendClick = onSendClick,
-                modifier = Modifier.testTag(PROVIDER_CHAT_SEND_BUTTON_TAG),
-            )
-        }
-        if (pendingMedia == null && !isRecording && promptInput.isBlank()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .testTag(PROVIDER_CHAT_MIC_ROW_TAG),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                MicButton(onClick = onMicClick)
+            // Trailing slot — single button that swaps affordance
+            // (Send / Mic / Stop) so the chat composer keeps a
+            // single tap target. Mirrors the consumer's pattern.
+            when {
+                isRecording -> StopButton(onClick = onStopRecordingClick)
+                promptInput.isBlank() && pendingMedia == null && !canSend ->
+                    MicButton(onClick = onMicClick)
+                else -> SendButton(
+                    canSend = canSend,
+                    onSendClick = onSendClick,
+                    modifier = Modifier.testTag(PROVIDER_CHAT_SEND_BUTTON_TAG),
+                )
             }
         }
     }
@@ -159,6 +154,31 @@ private fun MicButton(onClick: () -> Unit) {
                 imageVector = Icons.Filled.Mic,
                 contentDescription = stringResource(
                     R.string.provider_conversation_record_audio_content_description,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StopButton(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .size(48.dp)
+            .testTag(PROVIDER_CHAT_STOP_BUTTON_TAG),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.error,
+        contentColor = MaterialTheme.colorScheme.onError,
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Stop,
+                contentDescription = stringResource(
+                    R.string.provider_conversation_stop_recording_content_description,
                 ),
             )
         }
@@ -196,7 +216,7 @@ private fun RecordingIndicator(
             )
             IconButton(
                 onClick = onStop,
-                modifier = Modifier.testTag(PROVIDER_CHAT_STOP_RECORDING_BUTTON_TAG),
+                modifier = Modifier.testTag(PROVIDER_CHAT_RECORDING_STOP_BUTTON_TAG),
             ) {
                 Icon(
                     imageVector = Icons.Filled.Stop,
@@ -389,9 +409,9 @@ const val PROVIDER_CHAT_SEND_BUTTON_TAG: String = "provider-chat-send-button"
 const val PROVIDER_CHAT_SEND_ICON_TAG: String = "provider-chat-send-icon"
 const val PROVIDER_CHAT_ATTACH_BUTTON_TAG: String = "provider-chat-attach-button"
 const val PROVIDER_CHAT_MIC_BUTTON_TAG: String = "provider-chat-mic-button"
-const val PROVIDER_CHAT_MIC_ROW_TAG: String = "provider-chat-mic-row"
+const val PROVIDER_CHAT_STOP_BUTTON_TAG: String = "provider-chat-stop-button"
 const val PROVIDER_CHAT_RECORDING_INDICATOR_TAG: String = "provider-chat-recording-indicator"
 const val PROVIDER_CHAT_RECORDING_TIMER_TAG: String = "provider-chat-recording-timer"
-const val PROVIDER_CHAT_STOP_RECORDING_BUTTON_TAG: String = "provider-chat-stop-recording-button"
+const val PROVIDER_CHAT_RECORDING_STOP_BUTTON_TAG: String = "provider-chat-recording-stop-button"
 const val PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG: String = "provider-media-attach-gallery-row"
 const val PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG: String = "provider-media-attach-camera-row"
