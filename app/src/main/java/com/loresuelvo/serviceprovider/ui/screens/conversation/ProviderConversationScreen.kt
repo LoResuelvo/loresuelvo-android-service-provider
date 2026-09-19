@@ -184,6 +184,8 @@ fun ProviderConversationScreen(
             is ProviderConversationUiState.Ready -> ReadyState(
                 state = state,
                 onRetrySendFailedBubble = onRetrySendFailedBubble,
+                onPlayAudio = onPlayAudio,
+                onPauseAudio = onPauseAudio,
                 listState = rememberLazyListState(),
                 contentPadding = contentPadding,
             )
@@ -255,6 +257,8 @@ private fun ErrorState(
 private fun ReadyState(
     state: ProviderConversationUiState.Ready,
     onRetrySendFailedBubble: (String) -> Unit,
+    onPlayAudio: (String, String) -> Unit,
+    onPauseAudio: () -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState,
     contentPadding: PaddingValues,
 ) {
@@ -266,6 +270,11 @@ private fun ReadyState(
     MessagesList(
         items = state.items,
         onRetrySendFailedBubble = onRetrySendFailedBubble,
+        onPlayAudio = onPlayAudio,
+        onPauseAudio = onPauseAudio,
+        playingMediaKey = state.playingMediaKey,
+        playingPositionMillis = state.playingPositionMillis,
+        isPlaying = state.isPlaying,
         listState = listState,
         contentPadding = contentPadding,
     )
@@ -275,6 +284,11 @@ private fun ReadyState(
 private fun MessagesList(
     items: List<ChatListItem>,
     onRetrySendFailedBubble: (String) -> Unit,
+    onPlayAudio: (String, String) -> Unit,
+    onPauseAudio: () -> Unit,
+    playingMediaKey: String?,
+    playingPositionMillis: Long,
+    isPlaying: Boolean,
     listState: androidx.compose.foundation.lazy.LazyListState,
     contentPadding: PaddingValues,
 ) {
@@ -291,6 +305,11 @@ private fun MessagesList(
             MessageBubble(
                 item = item,
                 onRetrySendFailedBubble = onRetrySendFailedBubble,
+                onPlayAudio = onPlayAudio,
+                onPauseAudio = onPauseAudio,
+                playingMediaKey = playingMediaKey,
+                playingPositionMillis = playingPositionMillis,
+                isPlaying = isPlaying,
             )
         }
     }
