@@ -33,7 +33,7 @@ import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BA
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.screens.conversation.PROVIDER_CONVERSATION_MESSAGES_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_INPUT_FIELD_TAG
-import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_SEND_BUTTON_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_MIC_BUTTON_TAG
 import com.loresuelvo.serviceprovider.ui.screens.messages.components.PROVIDER_MESSAGES_ROW_TAG_PREFIX
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -160,14 +160,16 @@ class ProviderConversationAcceptanceTest {
             .onNodeWithTag(PROVIDER_CONVERSATION_MESSAGES_TAG)
             .assertIsDisplayed()
 
-        // Chat input bar is rendered and the send button is visible
-        // (the input is blank, so the button is disabled — we only
-        // assert that the Surface is on screen).
+        // Chat input bar is rendered and the trailing-slot action
+        // is on screen. With a blank input + no staged media the
+        // trailing slot swaps to the mic affordance (US-C, commit
+        // 0553efe), so we assert MicButton here. The Send button
+        // only appears once the user types or attaches something.
         composeTestRule
             .onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG)
             .assertIsDisplayed()
         composeTestRule
-            .onNodeWithTag(PROVIDER_CHAT_SEND_BUTTON_TAG)
+            .onNodeWithTag(PROVIDER_CHAT_MIC_BUTTON_TAG)
             .assertIsDisplayed()
 
         // Bottom bar hidden on the conversation destination.
