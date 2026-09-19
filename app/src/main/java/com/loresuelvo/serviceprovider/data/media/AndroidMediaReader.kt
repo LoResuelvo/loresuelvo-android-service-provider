@@ -33,12 +33,24 @@ import kotlinx.coroutines.withContext
  * `OpenableColumns.DISPLAY_NAME` and falls back to the URI's
  * last path segment when the cursor returns no column.
  *
- * US-B only emits [MediaUpload.Image] (audio lands in US-C).
- * A mime that doesn't start with `image/` still packages as
- * `MediaUpload.Image` so the backend's presign endpoint —
- * which expects `conversation_message_image` as the purpose —
- * doesn't reject the upload with `ErrUnsupportedMessageImage`.
- * The backend validates the actual bytes after the upload.
+ * Dispatch: a mime starting with `image/` packages as
+ * [MediaUpload.Image]; a mime starting with `audio/`
+ * packages as [MediaUpload.Audio]; anything else falls
+ * through to [MediaUpload.Image] so the backend's presign
+ * endpoint — which expects `conversation_message_image` /
+ * `conversation_message_audio` as the purpose — receives a
+ * shape that maps to a valid purpose. The backend validates
+ * the actual bytes after the upload.
+ *
+ * `.webm` resolves to `audio/webm` (NOT `video/webm`)
+ * because the only producer of WebM files in this app is
+ * `AndroidAudioRecorder`, which writes an audio-only Opus
+ * stream inside a WebM container. Mapping it to
+ * `video/webm` would route the audio upload through the
+ * `MediaUpload.Image` branch and the backend would reject the
+ * presign with `ErrUnsupportedMessageAudio` because
+ * `conversationMessageAudioPolicy.AllowedMimeTypes` only
+ * accepts `audio/webm`.
  */
 @Singleton
 class AndroidMediaReader @Inject constructor(
@@ -57,11 +69,24 @@ class AndroidMediaReader @Inject constructor(
         } ?: throw java.io.IOException(
             "Could not open input stream for $uri",
         )
-        MediaUpload.Image(
-            bytes = bytes,
-            mimeType = mimeType,
-            originalName = displayName,
-        )
+        when {
+            mimeType.startsWith("image/") -> MediaUpload.Image(
+                bytes = bytes,
+                mimeType = mimeType,
+                originalName = displayName,
+            )
+            mimeType.startsWith("audio/") -> MediaUpload.Audio(
+                bytes = bytes,
+                mimeType = mimeType,
+                originalName = displayName,
+                durationMillis = 0L,
+            )
+            else -> MediaUpload.Image(
+                bytes = bytes,
+                mimeType = mimeType,
+                originalName = displayName,
+            )
+        }
     }
 
     private fun queryDisplayName(uri: Uri): String? {
@@ -85,6 +110,18 @@ class AndroidMediaReader @Inject constructor(
      * caller falls back to [DEFAULT_MIME] so the upload still
      * ships rather than crashing on a backend that rejects
      * empty `Content-Type`.
+     *
+     * `.webm` resolves to `audio/webm` (NOT `video/webm`)
+     * because the only producer of WebM files in this app is
+     * `AndroidAudioRecorder`, which writes an audio-only Opus
+     * stream inside a WebM container. Mapping it to
+     * `video/webm` would route the audio upload to the
+     * `MediaUpload.Image` branch (since the dispatch below
+     * keys on the audio prefix, image prefix, or `else`) and
+     * the backend would reject the presign with
+     * `ErrUnsupportedMessageAudio` because
+     * `conversationMessageAudioPolicy.AllowedMimeTypes` only
+     * accepts `audio/webm`.
      */
     private fun inferMimeFromUri(uri: Uri): String? {
         val last = uri.lastPathSegment ?: return null
@@ -96,6 +133,13 @@ class AndroidMediaReader @Inject constructor(
             "png" -> "image/png"
             "webp" -> "image/webp"
             "gif" -> "image/gif"
+            "mp4" -> "video/mp4"
+            "webm" -> "audio/webm"
+            "m4a" -> "audio/mp4"
+            "aac" -> "audio/aac"
+            "ogg" -> "audio/ogg"
+            "wav" -> "audio/wav"
+            "3gp" -> "audio/3gpp"
             else -> null
         }
     }
