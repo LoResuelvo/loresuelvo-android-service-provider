@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -558,6 +559,30 @@ class ProviderConversationViewModelTest {
         override fun stop() = Unit
     }
 
+    /**
+     * Controllable [AudioPlayer] for the play / pause / collector
+     * tests. The VM mirrors [isPlaying] and [currentPositionMillis]
+     * via a long-lived collector, so the test flips the values
+     * imperatively to simulate `MediaPlayer` callbacks without
+     * pulling Robolectric into the picture.
+     */
+    private class FakeAudioPlayer : com.loresuelvo.serviceprovider.data.media.AudioPlayer {
+        override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
+        override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
+        var playCalls = mutableListOf<String>()
+        var pauseCalls = 0
+        var stopCalls = 0
+        override fun play(url: String, startPositionMillis: Long) {
+            playCalls += url
+        }
+        override fun pause() {
+            pauseCalls += 1
+        }
+        override fun stop() {
+            stopCalls += 1
+        }
+    }
+
     // ------------------------------------------------------------------------
     // US-C — Audio recording flow tests
     // ------------------------------------------------------------------------
@@ -667,7 +692,7 @@ class ProviderConversationViewModelTest {
     fun onPlayAudio_sets_playingMediaKey() = runTest(scheduler) {
         val repo = RecordingRepository()
         repo.detailOutcome = detailOutcome(messages = emptyList())
-        val player = NotExercisedAudioPlayer
+        val player = FakeAudioPlayer()
         val vm = viewModelWithAudio(repo, NotExercisedAudioRecorder, player)
         advanceUntilIdle()
 
@@ -675,27 +700,70 @@ class ProviderConversationViewModelTest {
             bubbleKey = "bubble-1",
             url = "https://example.test/audio.webm",
         )
+        player.isPlaying.value = true
+        player.currentPositionMillis.value = 1_000L
         advanceUntilIdle()
 
         val ready = readyState(vm)
         assertEquals("bubble-1", ready.playingMediaKey)
+        assertTrue(
+            "VM should mirror AudioPlayer.isPlaying into state, got ${ready.isPlaying}",
+            ready.isPlaying,
+        )
+        assertEquals(1_000L, ready.playingPositionMillis)
     }
 
     @Test
-    fun onPauseAudio_clears_playingMediaKey() = runTest(scheduler) {
+    fun onPauseAudio_clears_playingMediaKey_and_mirrors_player_state() = runTest(scheduler) {
         val repo = RecordingRepository()
         repo.detailOutcome = detailOutcome(messages = emptyList())
-        val player = NotExercisedAudioPlayer
+        val player = FakeAudioPlayer()
         val vm = viewModelWithAudio(repo, NotExercisedAudioRecorder, player)
         advanceUntilIdle()
         vm.onPlayAudio("bubble-1", "https://example.test/audio.webm")
+        player.isPlaying.value = true
+        player.currentPositionMillis.value = 2_500L
         advanceUntilIdle()
 
         vm.onPauseAudio()
+        // The player emits isPlaying=false + a fresh position
+        // snapshot the moment it pauses.
+        player.isPlaying.value = false
+        player.currentPositionMillis.value = 2_500L
         advanceUntilIdle()
 
         val ready = readyState(vm)
         assertNull(ready.playingMediaKey)
+        assertFalse(
+            "VM should mirror paused state, got isPlaying=${ready.isPlaying}",
+            ready.isPlaying,
+        )
+        // Position is preserved so the bubble can show the mm:ss
+        // counter at the paused frame.
+        assertEquals(2_500L, ready.playingPositionMillis)
+    }
+
+    @Test
+    fun player_completion_resets_isPlaying_and_position_in_state() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        repo.detailOutcome = detailOutcome(messages = emptyList())
+        val player = FakeAudioPlayer()
+        val vm = viewModelWithAudio(repo, NotExercisedAudioRecorder, player)
+        advanceUntilIdle()
+        vm.onPlayAudio("bubble-1", "https://example.test/audio.webm")
+        player.isPlaying.value = true
+        player.currentPositionMillis.value = 5_000L
+        advanceUntilIdle()
+
+        // Simulate AndroidAudioPlayer's setOnCompletionListener
+        // semantics: isPlaying flips false, position resets to 0.
+        player.isPlaying.value = false
+        player.currentPositionMillis.value = 0L
+        advanceUntilIdle()
+
+        val ready = readyState(vm)
+        assertFalse(ready.isPlaying)
+        assertEquals(0L, ready.playingPositionMillis)
     }
 
     /** Cancel the recording ticker via reflection so the test

@@ -24,6 +24,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -71,6 +72,7 @@ class ProviderConversationViewModel @Inject constructor(
 
     init {
         load()
+        observeAudioPlayer()
     }
 
     fun onRetryLoad() {
@@ -338,6 +340,10 @@ class ProviderConversationViewModel @Inject constructor(
 
     private fun load() {
         _uiState.value = ProviderConversationUiState.Loading
+        // Drop any playback the user might have started on a
+        // previous screen so the bubble doesn't show a stale
+        // `isPlaying = true` after navigation.
+        audioPlayer.stop()
         viewModelScope.launch {
             _uiState.value = when (val outcome = getConversationById(conversationId)) {
                 is ConversationDetailOutcome.Success -> {
@@ -351,11 +357,42 @@ class ProviderConversationViewModel @Inject constructor(
                         recordingState = RecordingState.Idle,
                         playingMediaKey = null,
                         playingPositionMillis = 0L,
+                        isPlaying = false,
                     )
                 }
                 is ConversationDetailOutcome.Failure ->
                     ProviderConversationUiState.Error(outcome)
             }
+        }
+    }
+
+    /**
+     * Mirrors [AudioPlayer.isPlaying] and
+     * [AudioPlayer.currentPositionMillis] into the UI state so
+     * the bubble can swap its play / pause icon and advance its
+     * progress bar without leaking the player itself into the UI
+     * layer. Runs for the whole ViewModel lifetime; the bubble
+     * decides whether to render the values based on
+     * [ProviderConversationUiState.Ready.playingMediaKey].
+     */
+    private fun observeAudioPlayer() {
+        viewModelScope.launch {
+            combine(
+                audioPlayer.isPlaying,
+                audioPlayer.currentPositionMillis,
+            ) { playing, position -> playing to position }
+                .collect { (playing, position) ->
+                    _uiState.update { current ->
+                        if (current is ProviderConversationUiState.Ready) {
+                            current.copy(
+                                isPlaying = playing,
+                                playingPositionMillis = position,
+                            )
+                        } else {
+                            current
+                        }
+                    }
+                }
         }
     }
 

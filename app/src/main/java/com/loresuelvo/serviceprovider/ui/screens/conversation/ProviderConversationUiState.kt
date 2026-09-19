@@ -64,6 +64,7 @@ sealed interface ProviderConversationUiState {
         val recordingState: RecordingState = RecordingState.Idle,
         val playingMediaKey: String? = null,
         val playingPositionMillis: Long = 0L,
+        val isPlaying: Boolean = false,
     ) : ProviderConversationUiState
 }
 
