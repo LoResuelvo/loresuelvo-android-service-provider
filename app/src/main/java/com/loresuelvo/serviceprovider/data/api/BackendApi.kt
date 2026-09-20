@@ -9,6 +9,7 @@ import com.loresuelvo.serviceprovider.data.api.dto.CoverageZoneDto
 import com.loresuelvo.serviceprovider.data.api.dto.CurrentAccountDto
 import com.loresuelvo.serviceprovider.data.api.dto.FileResponseDto
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
+import com.loresuelvo.serviceprovider.data.api.dto.IdentityVerificationSessionDto
 import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountAuthorizationDto
 import com.loresuelvo.serviceprovider.data.api.dto.PaymentAccountStatusDto
 import com.loresuelvo.serviceprovider.data.api.dto.PresignFileRequestDto
@@ -105,6 +106,9 @@ interface BackendApi {
     suspend fun registerProvider(
         @Body request: RegisterProviderRequestDto,
     ): ProviderSummaryDto
+
+    @POST("providers/me/identity-verification-sessions")
+    suspend fun startIdentityVerification(): IdentityVerificationSessionDto
 
     /**
      * `GET /providers/{providerID}` — retrieves public provider profile.
