@@ -29,4 +29,22 @@ class OptionalIdentityVerificationSteps {
         check(verificarAhora.isNotBlank() && masTarde.isNotBlank())
         world.assertOptionalIdentityDestinationRequested()
     }
+
+    @Dado("que el paso de identidad opcional está visible y no hay una solicitud activa")
+    fun pasoOpcionalVisible() = world.arrangeOptionalStep()
+
+    @Cuando("el prestador selecciona {string}")
+    fun seleccionaAccion(accion: String) {
+        check(accion == "Más tarde")
+        world.selectLater()
+    }
+
+    @Entonces("la app no solicita una sesión de identidad ni abre el SDK")
+    fun noIniciaVerificacion() = world.assertNoVerificationStarted()
+
+    @Y("navega una sola vez al flujo existente de Mercado Pago")
+    fun navegaUnaVezAMercadoPago() = world.assertMercadoPagoRequestedOnce()
+
+    @Y("Atrás no permite reabrir el perfil completado ni el paso opcional")
+    fun atrasNoReabrePasosCompletados() = world.assertCompletedStepsCannotReopen()
 }

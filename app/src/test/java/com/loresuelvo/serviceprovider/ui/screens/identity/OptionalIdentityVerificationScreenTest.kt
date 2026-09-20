@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,5 +35,19 @@ class OptionalIdentityVerificationScreenTest {
         composeRule.onNodeWithText(context.getString(R.string.identity_optional_description)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.identity_verify_now)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.identity_verify_later)).assertIsDisplayed()
+    }
+
+    @Test
+    fun later_action_is_forwarded() {
+        var laterSelected = false
+        composeRule.setContent {
+            LoresuelvoTheme {
+                OptionalIdentityVerificationScreen(onLater = { laterSelected = true })
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.identity_verify_later)).performClick()
+
+        assertTrue(laterSelected)
     }
 }
