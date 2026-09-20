@@ -48,6 +48,9 @@ android {
         minSdk = 24
         targetSdk = 35
 
+        buildConfigField("String", "GOOGLE_MAPS_MAP_ID", "\"${envVar("GOOGLE_MAPS_MAP_ID")}\"")
+        manifestPlaceholders["googleMapsApiKey"] = envVar("GOOGLE_MAPS_API_KEY")
+
         // Added in Fase 1: HiltTestRunner for instrumented tests with Hilt
         testInstrumentationRunner = "com.loresuelvo.serviceprovider.HiltTestRunner"
     }
@@ -204,6 +207,7 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.google.maps)
 
     // Hilt (added in Fase 1)
     implementation(libs.hilt.android)
