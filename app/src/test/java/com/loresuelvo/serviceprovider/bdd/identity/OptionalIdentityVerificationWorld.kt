@@ -89,7 +89,13 @@ class OptionalIdentityVerificationWorld : AutoCloseable {
         identityViewModel.verifyNow()
         identityViewModel.verifyNow()
         scheduler.advanceUntilIdle()
-        effect = runBlocking { identityViewModel.effects.first() }
+        effect = when (identityRepository.outcome) {
+            is StartIdentityVerificationOutcome.Success,
+            StartIdentityVerificationOutcome.AlreadyApproved,
+            StartIdentityVerificationOutcome.Failure.Unauthorized,
+            -> runBlocking { identityViewModel.effects.first() }
+            else -> null
+        }
     }
 
     fun assertOneSessionAndLaunch() {
@@ -158,6 +164,36 @@ class OptionalIdentityVerificationWorld : AutoCloseable {
     fun assertNoIdentityStatusPersisted() {
         assertEquals(1, identityRepository.calls)
         check(identityViewModel.uiState.value.feedback != null)
+    }
+
+    fun arrangeSessionResponse(response: String) {
+        identityRepository.outcome = when (response) {
+            "error de transporte" -> StartIdentityVerificationOutcome.Failure.Network
+            "respuesta inválida" -> StartIdentityVerificationOutcome.Failure.InvalidResponse
+            "403" -> StartIdentityVerificationOutcome.Failure.Forbidden
+            "409" -> StartIdentityVerificationOutcome.AlreadyApproved
+            "5xx" -> StartIdentityVerificationOutcome.Failure.Server(503)
+            "401" -> StartIdentityVerificationOutcome.Failure.Unauthorized
+            else -> error("Unsupported response")
+        }
+    }
+
+    fun assertNoSdkLaunch() {
+        check(effect !is OptionalIdentityVerificationEffect.LaunchVerification)
+    }
+
+    fun assertSessionRecovery() {
+        when (identityRepository.outcome) {
+            StartIdentityVerificationOutcome.AlreadyApproved ->
+                assertEquals(OptionalIdentityVerificationEffect.NavigateToMercadoPago, effect)
+            StartIdentityVerificationOutcome.Failure.Unauthorized ->
+                assertEquals(OptionalIdentityVerificationEffect.NavigateToWelcome, effect)
+            else -> assertRecoverableFeedback(IdentityVerificationFeedback.SessionStartFailed)
+        }
+    }
+
+    fun assertOneRegistrationBoundary() {
+        assertEquals(1, identityRepository.calls)
     }
 
     override fun close() {

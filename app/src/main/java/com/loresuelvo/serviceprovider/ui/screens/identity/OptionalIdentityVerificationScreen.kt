@@ -134,6 +134,7 @@ fun OptionalIdentityVerificationScreen(
                             IdentityVerificationFeedback.Cancelled -> R.string.identity_cancelled
                             IdentityVerificationFeedback.PermissionDenied -> R.string.identity_permission_denied
                             IdentityVerificationFeedback.Failed -> R.string.identity_sdk_error
+                            IdentityVerificationFeedback.SessionStartFailed -> R.string.identity_session_error
                         },
                     ),
                     color = MaterialTheme.colorScheme.error,

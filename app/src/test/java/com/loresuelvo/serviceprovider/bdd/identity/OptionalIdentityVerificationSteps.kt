@@ -114,4 +114,19 @@ class OptionalIdentityVerificationSteps {
 
     @Y("no expone detalles sin procesar del SDK")
     fun noExponeDetalles() = world.assertSafeFailureFeedback()
+
+    @Dado("^que el paso opcional está visible y el endpoint de sesión devolverá (.+)$")
+    fun endpointDevuelve(respuesta: String) = world.arrangeSessionResponse(respuesta)
+
+    @Entonces("la app no abre el SDK sin un token válido")
+    fun noAbreSdkSinToken() = world.assertNoSdkLaunch()
+
+    @Y("^aplica la recuperación segura correspondiente a (.+)$")
+    fun aplicaRecuperacion(respuesta: String) {
+        check(respuesta.isNotBlank())
+        world.assertSessionRecovery()
+    }
+
+    @Y("la cuenta creada no vuelve a registrarse")
+    fun noRepiteRegistro() = world.assertOneRegistrationBoundary()
 }

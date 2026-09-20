@@ -101,17 +101,67 @@ class OptionalIdentityVerificationViewModelTest {
         }
     }
 
+    @Test
+    fun `session start failures never launch the SDK`() = runTest(dispatcher.scheduler) {
+        val failures = listOf(
+            StartIdentityVerificationOutcome.Failure.Network,
+            StartIdentityVerificationOutcome.Failure.InvalidResponse,
+            StartIdentityVerificationOutcome.Failure.Forbidden,
+            StartIdentityVerificationOutcome.Failure.Server(503),
+            StartIdentityVerificationOutcome.Failure.Unknown,
+        )
+
+        failures.forEach { failure ->
+            repository.outcome = failure
+            val viewModel = viewModel()
+            viewModel.effects.test {
+                viewModel.verifyNow()
+                advanceUntilIdle()
+
+                assertEquals(
+                    IdentityVerificationFeedback.SessionStartFailed,
+                    viewModel.uiState.value.feedback,
+                )
+                assertFalse(viewModel.uiState.value.loading)
+                expectNoEvents()
+            }
+        }
+    }
+
+    @Test
+    fun `authoritative and authentication outcomes navigate without SDK launch`() = runTest(dispatcher.scheduler) {
+        val cases = listOf(
+            StartIdentityVerificationOutcome.AlreadyApproved to
+                OptionalIdentityVerificationEffect.NavigateToMercadoPago,
+            StartIdentityVerificationOutcome.Failure.Unauthorized to
+                OptionalIdentityVerificationEffect.NavigateToWelcome,
+        )
+
+        cases.forEach { (outcome, expectedEffect) ->
+            repository.outcome = outcome
+            val viewModel = viewModel()
+            viewModel.effects.test {
+                viewModel.verifyNow()
+                advanceUntilIdle()
+
+                assertEquals(expectedEffect, awaitItem())
+                expectNoEvents()
+            }
+        }
+    }
+
     private fun viewModel() = OptionalIdentityVerificationViewModel(
         StartIdentityVerificationUseCase(repository),
     )
 
     private class FakeIdentityVerificationRepository : IdentityVerificationRepository {
         var calls = 0
+        var outcome: StartIdentityVerificationOutcome = StartIdentityVerificationOutcome.Success(
+            IdentityVerificationCredential("temporary-token"),
+        )
         override suspend fun start(): StartIdentityVerificationOutcome {
             calls += 1
-            return StartIdentityVerificationOutcome.Success(
-                IdentityVerificationCredential("temporary-token"),
-            )
+            return outcome
         }
     }
 }

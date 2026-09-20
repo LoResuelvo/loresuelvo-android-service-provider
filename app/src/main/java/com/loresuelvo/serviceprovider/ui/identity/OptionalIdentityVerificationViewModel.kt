@@ -25,6 +25,7 @@ sealed interface IdentityVerificationFeedback {
     data object Cancelled : IdentityVerificationFeedback
     data object PermissionDenied : IdentityVerificationFeedback
     data object Failed : IdentityVerificationFeedback
+    data object SessionStartFailed : IdentityVerificationFeedback
 }
 
 sealed interface OptionalIdentityVerificationEffect {
@@ -62,7 +63,7 @@ class OptionalIdentityVerificationViewModel @Inject constructor(
                     navigationRequested = true
                     _effects.send(OptionalIdentityVerificationEffect.NavigateToWelcome)
                 }
-                else -> _uiState.value = OptionalIdentityVerificationUiState()
+                else -> showFeedback(IdentityVerificationFeedback.SessionStartFailed)
             }
         }
     }
