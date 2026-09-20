@@ -155,7 +155,7 @@
     <string name="provider_profile_coverage_selection_summary">%1$d selected: %2$s</string>
     <string name="provider_profile_coverage_map_description">Interactive coverage zone map</string>
     <string name="provider_profile_coverage_title">Coverage zones</string>
-    <string name="provider_profile_coverage_dropdown_label">Communes</string>
+    <string name="provider_profile_coverage_dropdown_label">Comunas</string>
     <string name="provider_profile_coverage_placeholder">Select one or more communes</string>
     <string name="provider_profile_coverage_loading">Loading zones…</string>
     <string name="provider_profile_coverage_load_error">We couldn’t load the coverage zones.</string>
