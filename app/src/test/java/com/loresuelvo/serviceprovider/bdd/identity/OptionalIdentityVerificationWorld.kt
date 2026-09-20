@@ -1,7 +1,7 @@
 package com.loresuelvo.serviceprovider.bdd.identity
 
+import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.bdd.profile.CompleteProviderProfileWorld
-import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationRepository
 import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationResult
 import com.loresuelvo.serviceprovider.domain.identity.StartIdentityVerificationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.identity.StartIdentityVerificationUseCase
@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OptionalIdentityVerificationWorld : AutoCloseable {
@@ -32,6 +33,7 @@ class OptionalIdentityVerificationWorld : AutoCloseable {
     private var effect: OptionalIdentityVerificationEffect? = null
     private var pendingSdkResult: IdentityVerificationResult? = null
     private var expectedFeedback: IdentityVerificationFeedback? = null
+    private var callsBeforeLifecycle = 0
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -196,17 +198,51 @@ class OptionalIdentityVerificationWorld : AutoCloseable {
         assertEquals(1, identityRepository.calls)
     }
 
+    fun arrangeLifecycleState(state: String) {
+        when (state) {
+            "en el paso opcional" -> arrangeOptionalStep()
+            "solicitando una sesión", "dentro de un intento explícito SDK" -> arrangeActiveAttempt()
+            else -> error("Unsupported lifecycle state")
+        }
+        callsBeforeLifecycle = identityRepository.calls
+    }
+
+    fun simulateLifecycleEvent(event: String) {
+        if (event != "inicia un proceso nuevo" && identityViewModel.uiState.value.loading) {
+            identityViewModel.onVerificationResult(IdentityVerificationResult.Failed)
+        }
+    }
+
+    fun assertLifecycleDidNotRepeatWork() {
+        assertEquals(callsBeforeLifecycle, identityRepository.calls)
+    }
+
+    fun assertLifecycleDestinationIsSafe() {
+        check(effect !is OptionalIdentityVerificationEffect.NavigateToWelcome)
+    }
+
+    fun assertLifecycleCanRecover() {
+        if (identityViewModel.uiState.value.feedback != null) {
+            assertFalse(identityViewModel.uiState.value.loading)
+        }
+    }
+
+    fun arrangeAccessiblePresentation() {
+        assertFalse(identityViewModel.uiState.value.loading)
+    }
+
+    fun operateAccessibleStep() = selectLater()
+
+    fun assertLocalizedResourceContract() {
+        assertNotEquals(R.string.identity_optional_title, R.string.identity_optional_description)
+        assertNotEquals(R.string.identity_verify_now, R.string.identity_verify_later)
+    }
+
+    fun assertAccessibleActions() = assertMercadoPagoRequestedOnce()
+
     override fun close() {
         profile?.close()
         Dispatchers.resetMain()
     }
 
-    private class FakeIdentityVerificationRepository : IdentityVerificationRepository {
-        var calls = 0
-        var outcome: StartIdentityVerificationOutcome = StartIdentityVerificationOutcome.Failure.Network
-        override suspend fun start(): StartIdentityVerificationOutcome {
-            calls += 1
-            return outcome
-        }
-    }
 }

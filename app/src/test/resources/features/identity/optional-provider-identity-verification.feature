@@ -11,7 +11,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
     Y la app muestra antes de Mercado Pago que la cuenta ya fue creada y la verificación de identidad es opcional
     Y las acciones visibles son "Verificar ahora" y "Más tarde"
 
-  @wip
   Escenario: 02-PIV Posponer la verificación sin crear una sesión
     Dado que el paso de identidad opcional está visible y no hay una solicitud activa
     Cuando el prestador selecciona "Más tarde"
@@ -19,7 +18,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
     Y navega una sola vez al flujo existente de Mercado Pago
     Y Atrás no permite reabrir el perfil completado ni el paso opcional
 
-  @wip
   Escenario: 03-PIV Iniciar una única verificación nativa
     Dado que el paso opcional está visible y el endpoint autenticado devolverá una sesión temporal válida
     Cuando el prestador selecciona "Verificar ahora"
@@ -28,7 +26,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
     Y abre una sola vez el SDK nativo usando únicamente el session_token recibido
     Y los toques repetidos, la recomposición y las señales duplicadas no crean otra solicitud ni apertura
 
-  @wip
   Esquema del escenario: 04-PIV Continuar sin inferir el estado de identidad
     Dado que hay un intento explícito del SDK activo que informará un resumen <resumen>
     Cuando el intento del SDK se completa
@@ -42,7 +39,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
       | pendiente |
       | rechazado |
 
-  @wip
   Escenario: 05-PIV Recuperarse de la cancelación del SDK
     Dado que hay un intento explícito del SDK activo
     Cuando el prestador cancela el flujo del SDK
@@ -51,7 +47,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
     Y la cuenta permanece creada y Mercado Pago continúa accesible
     Y no inventa ni persiste un estado de identidad
 
-  @wip
   Esquema del escenario: 06-PIV Recuperarse de un fallo del SDK
     Dado que un intento explícito del SDK fallará por <fallo>
     Cuando el SDK devuelve el fallo
@@ -68,7 +63,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
       | SDK no inicializado      |
       | error desconocido        |
 
-  @wip
   Esquema del escenario: 07-PIV Recuperarse de un fallo al crear la sesión
     Dado que el paso opcional está visible y el endpoint de sesión devolverá <respuesta>
     Cuando el prestador selecciona "Verificar ahora"
@@ -85,7 +79,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
       | 5xx                |
       | 401                |
 
-  @wip
   Esquema del escenario: 08-PIV Preservar el flujo durante cambios de ciclo de vida
     Dado que el prestador está <estado>
     Cuando Android <evento>
@@ -99,7 +92,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
       | solicitando una sesión             | vuelve de segundo plano  |
       | dentro de un intento explícito SDK | inicia un proceso nuevo  |
 
-  @wip
   Escenario: 09-PIV Mantener el paso localizado, accesible y adaptable
     Dado que la pantalla opcional se muestra en un idioma compatible y con ajustes de accesibilidad
     Cuando el prestador lee y opera el paso

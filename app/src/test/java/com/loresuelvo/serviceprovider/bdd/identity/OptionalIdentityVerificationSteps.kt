@@ -129,4 +129,37 @@ class OptionalIdentityVerificationSteps {
 
     @Y("la cuenta creada no vuelve a registrarse")
     fun noRepiteRegistro() = world.assertOneRegistrationBoundary()
+
+    @Dado("^que el prestador está (.+)$")
+    fun prestadorEstaEn(estado: String) = world.arrangeLifecycleState(estado)
+
+    @Cuando("^Android (.+)$")
+    fun androidEjecuta(evento: String) = world.simulateLifecycleEvent(evento)
+
+    @Entonces("la app no repite el registro ni abre automáticamente otra sesión de Didit")
+    fun noRepiteTrabajo() = world.assertLifecycleDidNotRepeatWork()
+
+    @Y("conserva o resuelve el destino seguro definido para el ciclo de vida")
+    fun conservaDestinoSeguro() = world.assertLifecycleDestinationIsSafe()
+
+    @Y("la interfaz no queda permanentemente ocupada después de un fallo recuperable")
+    fun recuperaInterfaz() = world.assertLifecycleCanRecover()
+
+    @Dado("que la pantalla opcional se muestra en un idioma compatible y con ajustes de accesibilidad")
+    fun pantallaAccesible() = world.arrangeAccessiblePresentation()
+
+    @Cuando("el prestador lee y opera el paso")
+    fun operaPaso() = world.operateAccessibleStep()
+
+    @Entonces("todos los textos y errores de la app provienen de recursos localizados")
+    fun textosLocalizados() = world.assertLocalizedResourceContract()
+
+    @Y("los títulos, el progreso, los errores y las acciones tienen semántica y objetivos táctiles significativos")
+    fun semanticaAccesible() = world.assertAccessibleActions()
+
+    @Y("la pantalla sigue siendo utilizable en anchos compactos y expandidos, paisaje, fuente grande, tema oscuro y RTL")
+    fun pantallaAdaptable() = world.assertAccessibleActions()
+
+    @Y("el SDK conserva la responsabilidad por su accesibilidad y localización internas")
+    fun sdkConservaResponsabilidad() = world.assertAccessibleActions()
 }

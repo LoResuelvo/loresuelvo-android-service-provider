@@ -2,9 +2,12 @@ package com.loresuelvo.serviceprovider.ui.screens.identity
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
@@ -38,6 +41,11 @@ class OptionalIdentityVerificationScreenTest {
         composeRule.onNodeWithText(context.getString(R.string.identity_optional_description)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.identity_verify_now)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.identity_verify_later)).assertIsDisplayed()
+        composeRule.onNode(
+            hasText(context.getString(R.string.identity_optional_title)) and isHeading(),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.identity_verify_now)).assertHasClickAction()
+        composeRule.onNodeWithText(context.getString(R.string.identity_verify_later)).assertHasClickAction()
     }
 
     @Test
