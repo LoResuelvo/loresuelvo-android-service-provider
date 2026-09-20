@@ -125,7 +125,6 @@ Característica: Registrar prestador con zonas de cobertura
     Y su selección enviada permanece sin cambios
     Y los controles muestran el estado ocupado
 
-  @wip
   Escenario: 15-PCZ Conservar la selección al recrear la actividad
     Dado un formulario disponible con zonas seleccionadas y datos ingresados
     Cuando se recrea la actividad por un cambio de configuración

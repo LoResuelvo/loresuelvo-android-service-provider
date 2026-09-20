@@ -1,5 +1,8 @@
 package com.loresuelvo.serviceprovider.bdd.profile
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -54,6 +57,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 
 /**
@@ -76,6 +80,19 @@ class CompleteProviderProfileWorld : AutoCloseable {
     private val registerProvider = RegisterProviderUseCase(providerRepository)
     private val prepareProfilePhoto = PrepareProfilePhotoUseCase(photoPreparer)
     private val uploadProfilePhoto = UploadProfilePhotoUseCase(fileRepository)
+    private val viewModelStore = ViewModelStore()
+    private val viewModelFactory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            CompleteProviderProfileViewModel(
+                getCategories = getCategories,
+                registerProvider = registerProvider,
+                sessionStore = sessionStore,
+                prepareProfilePhoto = prepareProfilePhoto,
+                uploadProfilePhoto = uploadProfilePhoto,
+                getCoverageZones = GetCoverageZonesUseCase(coverageZoneRepository),
+            ) as T
+    }
 
     lateinit var viewModel: CompleteProviderProfileViewModel
         private set
@@ -403,6 +420,26 @@ class CompleteProviderProfileWorld : AutoCloseable {
         assertNavigatedToMercadoPago()
     }
 
+    fun arrangeProfileForConfigurationRecreation() {
+        arrangeValidProfileWithCoverageSelection("varias zonas no contiguas")
+    }
+
+    fun recreateConfigurationOwner() {
+        val retainedViewModel = viewModel
+        navigateToProfileDestination()
+        assertSame(retainedViewModel, viewModel)
+    }
+
+    fun assertProfileAndCoverageRetained() {
+        assertProfileAndPhotoPreserved()
+        assertSelectedCoverageZones(listOf(6, 14))
+    }
+
+    fun assertRecreationHasNoRegistrationOrExtraSelection() {
+        assertEquals(0, providerRepository.registerCalls)
+        assertSelectedCoverageZones(listOf(6, 14))
+    }
+
     fun assertCoverageZonesLoading() {
         assertEquals(CoverageZonesLoadState.Loading, viewModel.uiState.value.coverageZonesState)
     }
@@ -423,14 +460,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
     }
 
     fun navigateToProfileDestination() {
-        viewModel = CompleteProviderProfileViewModel(
-            getCategories = getCategories,
-            registerProvider = registerProvider,
-            sessionStore = sessionStore,
-            prepareProfilePhoto = prepareProfilePhoto,
-            uploadProfilePhoto = uploadProfilePhoto,
-            getCoverageZones = GetCoverageZonesUseCase(coverageZoneRepository),
-        )
+        viewModel = ViewModelProvider(viewModelStore, viewModelFactory)[CompleteProviderProfileViewModel::class.java]
         effectsJob?.cancel()
         effectsJob = CoroutineScope(dispatcher).launch {
             viewModel.effects.collect { effect ->
@@ -684,6 +714,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
         coverageLoad?.complete(Unit)
         effectsJob?.cancel()
         providerRepository.registerGate?.complete(Unit)
+        viewModelStore.clear()
         scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }

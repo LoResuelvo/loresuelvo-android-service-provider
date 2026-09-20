@@ -241,6 +241,18 @@ class ProviderCoverageZonesSteps {
     @Y("no se solicita el registro ni se repite la carga automáticamente")
     fun noRegistrationOrAutomaticReload() = world.assertNoRegistrationOrCoverageReload()
 
+    @Dado("un formulario disponible con zonas seleccionadas y datos ingresados")
+    fun profileReadyForConfigurationRecreation() = world.arrangeProfileForConfigurationRecreation()
+
+    @Cuando("se recrea la actividad por un cambio de configuración")
+    fun recreateActivityForConfigurationChange() = world.recreateConfigurationOwner()
+
+    @Entonces("se conservan la selección y los datos del formulario")
+    fun profileAndCoverageAreRetained() = world.assertProfileAndCoverageRetained()
+
+    @Y("no se solicita otro registro ni se selecciona otra zona")
+    fun recreationHasNoSideEffects() = world.assertRecreationHasNoRegistrationOrExtraSelection()
+
     @Dado("un mapa nativo y un catálogo disponibles")
     fun readyCoverageMap() = world.arrangeReadyCoverageMap()
 
