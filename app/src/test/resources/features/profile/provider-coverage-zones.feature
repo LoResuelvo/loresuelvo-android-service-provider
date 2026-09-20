@@ -139,7 +139,6 @@ Característica: Registrar prestador con zonas de cobertura
     Y las demás selecciones permanecen
     Y el resumen de nombres y cantidad coincide con la selección
 
-  @wip
   Escenario: 17-PCZ Seleccionar una zona tocando una región disponible
     Dado un mapa nativo y un catálogo disponibles
     Cuando el prestador toca una región disponible

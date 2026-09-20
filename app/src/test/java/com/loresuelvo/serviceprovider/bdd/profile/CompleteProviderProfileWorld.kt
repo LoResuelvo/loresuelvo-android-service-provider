@@ -35,6 +35,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewMode
 import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
 import com.loresuelvo.serviceprovider.ui.screens.profile.selectedCoveragePlaceIds
+import com.loresuelvo.serviceprovider.ui.screens.profile.coverageZoneIdForPlaceId
 import com.loresuelvo.serviceprovider.testing.FakeCoverageZoneRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -366,6 +367,21 @@ class CompleteProviderProfileWorld : AutoCloseable {
         val state = viewModel.uiState.value
         val zones = (state.coverageZonesState as CoverageZonesLoadState.Ready).zones
         assertEquals(listOf("Comuna 6", "Comuna 14"), zones.filter { it.id in state.selectedCoverageZoneIds }.map { it.name })
+    }
+
+    fun tapAvailableCoverageRegion() {
+        val zones = (viewModel.uiState.value.coverageZonesState as CoverageZonesLoadState.Ready).zones
+        val zoneId = coverageZoneIdForPlaceId(zones, "place-14") ?: error("Missing catalog region")
+        viewModel.onCoverageZoneChecked(zoneId, zoneId !in viewModel.uiState.value.selectedCoverageZoneIds)
+    }
+
+    fun assertMapTapToggledSelectionOnce() = assertSelectedCoverageZones(listOf(6, 14))
+
+    fun assertUnrelatedMapRegionIgnored() {
+        val state = viewModel.uiState.value
+        val zones = (state.coverageZonesState as CoverageZonesLoadState.Ready).zones
+        assertEquals(null, coverageZoneIdForPlaceId(zones, "unrelated-place"))
+        assertEquals(listOf(6, 14), state.selectedCoverageZoneIds)
     }
 
     fun assertCoverageZonesLoading() {

@@ -255,4 +255,13 @@ class ProviderCoverageZonesSteps {
 
     @Y("el resumen de nombres y cantidad coincide con la selección")
     fun coverageSummaryMatches() = world.assertCoverageSelectionSummary()
+
+    @Cuando("el prestador toca una región disponible")
+    fun tapAvailableRegion() = world.tapAvailableCoverageRegion()
+
+    @Entonces("la zona se alterna una sola vez en la selección y en la lista")
+    fun mapTapTogglesOnce() = world.assertMapTapToggledSelectionOnce()
+
+    @Y("una región que no pertenece al catálogo no puede agregarse")
+    fun unrelatedRegionIsIgnored() = world.assertUnrelatedMapRegionIgnored()
 }
