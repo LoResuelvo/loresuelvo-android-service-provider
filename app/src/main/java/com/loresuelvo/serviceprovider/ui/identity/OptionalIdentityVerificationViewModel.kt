@@ -16,7 +16,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-data class OptionalIdentityVerificationUiState(val loading: Boolean = false)
+data class OptionalIdentityVerificationUiState(
+    val loading: Boolean = false,
+    val feedback: IdentityVerificationFeedback? = null,
+)
+
+sealed interface IdentityVerificationFeedback {
+    data object Cancelled : IdentityVerificationFeedback
+    data object PermissionDenied : IdentityVerificationFeedback
+    data object Failed : IdentityVerificationFeedback
+}
 
 sealed interface OptionalIdentityVerificationEffect {
     data class LaunchVerification(
@@ -37,14 +46,17 @@ class OptionalIdentityVerificationViewModel @Inject constructor(
     val effects: Flow<OptionalIdentityVerificationEffect> = _effects.receiveAsFlow()
 
     private var navigationRequested = false
+    private var attemptActive = false
 
     fun verifyNow() {
         if (navigationRequested || _uiState.value.loading) return
         _uiState.value = OptionalIdentityVerificationUiState(loading = true)
         viewModelScope.launch {
             when (val outcome = startIdentityVerification()) {
-                is StartIdentityVerificationOutcome.Success ->
+                is StartIdentityVerificationOutcome.Success -> {
+                    attemptActive = true
                     _effects.send(OptionalIdentityVerificationEffect.LaunchVerification(outcome.credential))
+                }
                 StartIdentityVerificationOutcome.AlreadyApproved -> navigateToMercadoPago()
                 StartIdentityVerificationOutcome.Failure.Unauthorized -> {
                     navigationRequested = true
@@ -55,7 +67,17 @@ class OptionalIdentityVerificationViewModel @Inject constructor(
         }
     }
 
-    fun onVerificationResult(result: IdentityVerificationResult) = Unit
+    fun onVerificationResult(result: IdentityVerificationResult) {
+        if (!attemptActive || navigationRequested) return
+        attemptActive = false
+        when (result) {
+            IdentityVerificationResult.Completed -> navigateToMercadoPago()
+            IdentityVerificationResult.Cancelled -> showFeedback(IdentityVerificationFeedback.Cancelled)
+            IdentityVerificationResult.PermissionDenied ->
+                showFeedback(IdentityVerificationFeedback.PermissionDenied)
+            IdentityVerificationResult.Failed -> showFeedback(IdentityVerificationFeedback.Failed)
+        }
+    }
 
     fun later() {
         if (navigationRequested || _uiState.value.loading) return
@@ -66,5 +88,9 @@ class OptionalIdentityVerificationViewModel @Inject constructor(
         if (navigationRequested) return
         navigationRequested = true
         _effects.trySend(OptionalIdentityVerificationEffect.NavigateToMercadoPago)
+    }
+
+    private fun showFeedback(feedback: IdentityVerificationFeedback) {
+        _uiState.value = OptionalIdentityVerificationUiState(feedback = feedback)
     }
 }

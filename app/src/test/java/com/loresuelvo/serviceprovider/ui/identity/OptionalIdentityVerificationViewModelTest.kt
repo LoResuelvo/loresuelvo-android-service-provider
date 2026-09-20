@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.ui.identity
 import app.cash.turbine.test
 import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationCredential
 import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationRepository
+import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationResult
 import com.loresuelvo.serviceprovider.domain.identity.StartIdentityVerificationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.identity.StartIdentityVerificationUseCase
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -57,6 +59,46 @@ class OptionalIdentityVerificationViewModelTest {
             expectNoEvents()
         }
         assertEquals(1, repository.calls)
+    }
+
+    @Test
+    fun `completion navigates once without another backend request`() = runTest(dispatcher.scheduler) {
+        val viewModel = viewModel()
+
+        viewModel.effects.test {
+            viewModel.verifyNow()
+            advanceUntilIdle()
+            awaitItem()
+            viewModel.onVerificationResult(IdentityVerificationResult.Completed)
+            viewModel.onVerificationResult(IdentityVerificationResult.Completed)
+
+            assertEquals(OptionalIdentityVerificationEffect.NavigateToMercadoPago, awaitItem())
+            expectNoEvents()
+        }
+        assertEquals(1, repository.calls)
+    }
+
+    @Test
+    fun `cancellation and failures restore both actions with safe feedback`() = runTest(dispatcher.scheduler) {
+        val cases = listOf(
+            IdentityVerificationResult.Cancelled to IdentityVerificationFeedback.Cancelled,
+            IdentityVerificationResult.PermissionDenied to IdentityVerificationFeedback.PermissionDenied,
+            IdentityVerificationResult.Failed to IdentityVerificationFeedback.Failed,
+        )
+
+        cases.forEach { (result, feedback) ->
+            val viewModel = viewModel()
+            viewModel.effects.test {
+                viewModel.verifyNow()
+                advanceUntilIdle()
+                awaitItem()
+                viewModel.onVerificationResult(result)
+
+                assertFalse(viewModel.uiState.value.loading)
+                assertEquals(feedback, viewModel.uiState.value.feedback)
+                expectNoEvents()
+            }
+        }
     }
 
     private fun viewModel() = OptionalIdentityVerificationViewModel(

@@ -2,10 +2,12 @@ package com.loresuelvo.serviceprovider.bdd.identity
 
 import com.loresuelvo.serviceprovider.bdd.profile.CompleteProviderProfileWorld
 import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationRepository
+import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationResult
 import com.loresuelvo.serviceprovider.domain.identity.StartIdentityVerificationOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.identity.StartIdentityVerificationUseCase
 import com.loresuelvo.serviceprovider.ui.identity.OptionalIdentityVerificationEffect
 import com.loresuelvo.serviceprovider.ui.identity.OptionalIdentityVerificationViewModel
+import com.loresuelvo.serviceprovider.ui.identity.IdentityVerificationFeedback
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,8 @@ class OptionalIdentityVerificationWorld : AutoCloseable {
         StartIdentityVerificationUseCase(identityRepository),
     )
     private var effect: OptionalIdentityVerificationEffect? = null
+    private var pendingSdkResult: IdentityVerificationResult? = null
+    private var expectedFeedback: IdentityVerificationFeedback? = null
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -94,6 +98,66 @@ class OptionalIdentityVerificationWorld : AutoCloseable {
             "temporary-token",
             (effect as OptionalIdentityVerificationEffect.LaunchVerification).credential.token,
         )
+    }
+
+    fun arrangeActiveAttempt() {
+        arrangeValidSession()
+        selectVerifyNow()
+    }
+
+    fun completeAttempt() {
+        identityViewModel.onVerificationResult(IdentityVerificationResult.Completed)
+        effect = runBlocking { identityViewModel.effects.first() }
+    }
+
+    fun cancelAttempt() {
+        identityViewModel.onVerificationResult(IdentityVerificationResult.Cancelled)
+    }
+
+    fun failAttempt(permissionDenied: Boolean) {
+        pendingSdkResult = if (permissionDenied) {
+            IdentityVerificationResult.PermissionDenied
+        } else {
+            IdentityVerificationResult.Failed
+        }
+        expectedFeedback = if (permissionDenied) {
+            IdentityVerificationFeedback.PermissionDenied
+        } else {
+            IdentityVerificationFeedback.Failed
+        }
+    }
+
+    fun returnPendingFailure() {
+        identityViewModel.onVerificationResult(checkNotNull(pendingSdkResult))
+    }
+
+    fun assertCompletedWithoutPolling() {
+        assertMercadoPagoRequestedOnce()
+        assertEquals(1, identityRepository.calls)
+    }
+
+    fun assertRecoverableFeedback(expected: IdentityVerificationFeedback) {
+        assertEquals(expected, identityViewModel.uiState.value.feedback)
+        assertFalse(identityViewModel.uiState.value.loading)
+    }
+
+    fun assertSafeFailureFeedback() {
+        assertRecoverableFeedback(checkNotNull(expectedFeedback))
+    }
+
+    fun assertActionsEnabled() {
+        assertFalse(identityViewModel.uiState.value.loading)
+    }
+
+    fun continueToMercadoPago() {
+        identityViewModel.later()
+        effect = runBlocking { identityViewModel.effects.first() }
+        assertMercadoPagoRequestedOnce()
+    }
+
+    fun assertNoIdentityStatusPersisted() {
+        assertEquals(1, identityRepository.calls)
+        check(identityViewModel.uiState.value.feedback != null)
     }
 
     override fun close() {

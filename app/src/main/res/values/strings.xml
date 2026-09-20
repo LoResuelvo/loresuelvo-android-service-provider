@@ -139,6 +139,9 @@
     <string name="identity_verify_now">Verificar ahora</string>
     <string name="identity_verify_later">Más tarde</string>
     <string name="identity_starting_verification">Iniciando verificación…</string>
+    <string name="identity_cancelled">La verificación fue cancelada. Podés reintentar o continuar más tarde.</string>
+    <string name="identity_permission_denied">Necesitás permitir el acceso a la cámara para verificar tu identidad.</string>
+    <string name="identity_sdk_error">No pudimos completar la verificación. Podés reintentar o continuar más tarde.</string>
 
     <!-- Provider profile photo -->
     <string name="provider_profile_photo_section_title">Foto de perfil</string>

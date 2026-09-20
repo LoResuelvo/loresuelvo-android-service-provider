@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.identity.OptionalIdentityVerificationUiState
+import com.loresuelvo.serviceprovider.ui.identity.IdentityVerificationFeedback
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -67,5 +68,22 @@ class OptionalIdentityVerificationScreenTest {
             .assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.identity_verify_now)).assertIsNotEnabled()
         composeRule.onNodeWithText(context.getString(R.string.identity_verify_later)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun safe_failure_feedback_keeps_both_actions_enabled() {
+        composeRule.setContent {
+            LoresuelvoTheme {
+                OptionalIdentityVerificationScreen(
+                    uiState = OptionalIdentityVerificationUiState(
+                        feedback = IdentityVerificationFeedback.PermissionDenied,
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.identity_permission_denied)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.identity_verify_now)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.identity_verify_later)).assertIsDisplayed()
     }
 }

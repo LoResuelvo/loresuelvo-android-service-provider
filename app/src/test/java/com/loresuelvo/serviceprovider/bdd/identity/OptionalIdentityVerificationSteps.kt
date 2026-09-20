@@ -5,6 +5,7 @@ import io.cucumber.java.es.Cuando
 import io.cucumber.java.es.Dado
 import io.cucumber.java.es.Entonces
 import io.cucumber.java.es.Y
+import com.loresuelvo.serviceprovider.ui.identity.IdentityVerificationFeedback
 
 class OptionalIdentityVerificationSteps {
     private val world = OptionalIdentityVerificationWorld()
@@ -62,4 +63,55 @@ class OptionalIdentityVerificationSteps {
 
     @Y("los toques repetidos, la recomposición y las señales duplicadas no crean otra solicitud ni apertura")
     fun evitaDuplicados() = world.assertOneSessionAndLaunch()
+
+    @Dado("^que hay un intento explícito del SDK activo que informará un resumen (.+)$")
+    fun intentoActivoConResumen(resumen: String) {
+        check(resumen in setOf("aprobado", "pendiente", "rechazado"))
+        world.arrangeActiveAttempt()
+    }
+
+    @Cuando("el intento del SDK se completa")
+    fun intentoSeCompleta() = world.completeAttempt()
+
+    @Entonces("la app navega una sola vez a Mercado Pago")
+    fun navegaAMercadoPago() = world.assertCompletedWithoutPolling()
+
+    @Y("no repite el registro, consulta el estado, hace polling, espera la aprobación ni actualiza una aprobación local")
+    fun noEsperaAprobacion() = world.assertCompletedWithoutPolling()
+
+    @Y("el resumen no se trata como el estado de identidad autoritativo del prestador")
+    fun noInfiereEstado() = world.assertCompletedWithoutPolling()
+
+    @Dado("que hay un intento explícito del SDK activo")
+    fun intentoActivo() = world.arrangeActiveAttempt()
+
+    @Cuando("el prestador cancela el flujo del SDK")
+    fun cancelaSdk() = world.cancelAttempt()
+
+    @Entonces("la app vuelve al paso opcional y muestra un mensaje de cancelación localizado")
+    fun muestraCancelacion() = world.assertRecoverableFeedback(IdentityVerificationFeedback.Cancelled)
+
+    @Y("vuelve a habilitar el reintento y \"Más tarde\"")
+    fun habilitaAcciones() = world.assertActionsEnabled()
+
+    @Y("la cuenta permanece creada y Mercado Pago continúa accesible")
+    fun cuentaPermaneceCreada() = world.continueToMercadoPago()
+
+    @Y("no inventa ni persiste un estado de identidad")
+    fun noPersisteEstado() = world.assertNoIdentityStatusPersisted()
+
+    @Dado("^que un intento explícito del SDK fallará por (.+)$")
+    fun intentoFallara(fallo: String) {
+        world.arrangeActiveAttempt()
+        world.failAttempt(permissionDenied = fallo == "permiso de cámara denegado")
+    }
+
+    @Cuando("el SDK devuelve el fallo")
+    fun sdkDevuelveFallo() = world.returnPendingFailure()
+
+    @Entonces("la app muestra un error localizado seguro para el tipo de fallo")
+    fun muestraErrorSeguro() = world.assertSafeFailureFeedback()
+
+    @Y("no expone detalles sin procesar del SDK")
+    fun noExponeDetalles() = world.assertSafeFailureFeedback()
 }

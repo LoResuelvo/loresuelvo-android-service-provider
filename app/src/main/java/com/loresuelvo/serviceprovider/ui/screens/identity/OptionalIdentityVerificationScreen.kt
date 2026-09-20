@@ -36,6 +36,7 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.platform.identity.IdentityVerificationLauncher
 import com.loresuelvo.serviceprovider.ui.components.buttons.PrimaryButton
 import com.loresuelvo.serviceprovider.ui.identity.OptionalIdentityVerificationEffect
+import com.loresuelvo.serviceprovider.ui.identity.IdentityVerificationFeedback
 import com.loresuelvo.serviceprovider.ui.identity.OptionalIdentityVerificationUiState
 import com.loresuelvo.serviceprovider.ui.identity.OptionalIdentityVerificationViewModel
 import com.loresuelvo.serviceprovider.ui.navigation.Route
@@ -125,6 +126,19 @@ fun OptionalIdentityVerificationScreen(
                     CircularProgressIndicator()
                     Text(text = stringResource(R.string.identity_starting_verification))
                 }
+            }
+            uiState.feedback?.let { feedback ->
+                Text(
+                    text = stringResource(
+                        when (feedback) {
+                            IdentityVerificationFeedback.Cancelled -> R.string.identity_cancelled
+                            IdentityVerificationFeedback.PermissionDenied -> R.string.identity_permission_denied
+                            IdentityVerificationFeedback.Failed -> R.string.identity_sdk_error
+                        },
+                    ),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+                )
             }
             PrimaryButton(
                 text = stringResource(R.string.identity_verify_now),
