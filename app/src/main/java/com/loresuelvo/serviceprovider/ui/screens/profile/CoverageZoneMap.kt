@@ -144,3 +144,5 @@ internal fun selectedCoveragePlaceIds(zones: List<CoverageZone>, selectedZoneIds
 
 internal fun coverageZoneIdForPlaceId(zones: List<CoverageZone>, placeId: String): Int? =
     zones.firstOrNull { it.boundaryPlaceId == placeId }?.id
+
+internal fun isCoverageMapConfigured(mapId: String): Boolean = mapId.isNotBlank()

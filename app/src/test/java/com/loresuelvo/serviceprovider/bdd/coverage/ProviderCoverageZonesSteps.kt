@@ -264,4 +264,19 @@ class ProviderCoverageZonesSteps {
 
     @Y("una región que no pertenece al catálogo no puede agregarse")
     fun unrelatedRegionIsIgnored() = world.assertUnrelatedMapRegionIgnored()
+
+    @Dado("un catálogo disponible y zonas seleccionadas")
+    fun selectedCoverageWithMapFallback() = world.arrangeSelectedCoverageWithMapFallback()
+
+    @Cuando("el mapa informa que no puede cargar o mostrar sus límites")
+    fun mapReportsUnavailable() = world.reportCoverageMapUnavailable()
+
+    @Entonces("aparece un aviso localizado que no bloquea el formulario")
+    fun nonBlockingMapNoticeAppears() = world.assertCoverageMapFallbackReported()
+
+    @Y("la lista conserva la selección y permite completar el registro")
+    fun listCompletesRegistration() = world.assertCoverageListCanCompleteRegistration()
+
+    @Y("se envían exactamente los identificadores seleccionados")
+    fun fallbackSendsExactSelection() = world.assertExactCoverageSelectionRegisteredOnce()
 }

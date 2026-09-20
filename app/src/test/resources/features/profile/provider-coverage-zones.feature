@@ -145,7 +145,6 @@ Característica: Registrar prestador con zonas de cobertura
     Entonces la zona se alterna una sola vez en la selección y en la lista
     Y una región que no pertenece al catálogo no puede agregarse
 
-  @wip
   Escenario: 18-PCZ Continuar desde la lista cuando el mapa no está disponible
     Dado un catálogo disponible y zonas seleccionadas
     Cuando el mapa informa que no puede cargar o mostrar sus límites

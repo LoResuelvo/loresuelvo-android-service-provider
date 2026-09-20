@@ -287,6 +287,31 @@ class CompleteProviderProfileScreenTest {
     }
 
     @Test
+    fun keeps_coverage_list_available_when_map_is_not_configured() {
+        var selectedZoneId: Int? = null
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(
+                    uiState = CompleteProviderProfileUiState(
+                        coverageZonesState = CoverageZonesLoadState.Ready(
+                            listOf(CoverageZone(6, "Comuna 6", "place-6")),
+                        ),
+                    ),
+                    coverageMapId = "",
+                    onCoverageZoneChecked = { id, _ -> selectedZoneId = id },
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_map_unavailable))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText("Comuna 6").performScrollTo().performClick()
+        assertEquals(6, selectedZoneId)
+    }
+
+    @Test
     fun renders_coverage_error_and_invokes_retry() {
         var retried = false
         composeTestRule.setContent {

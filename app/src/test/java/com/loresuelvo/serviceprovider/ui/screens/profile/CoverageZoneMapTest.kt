@@ -15,5 +15,7 @@ class CoverageZoneMapTest {
         assertEquals(14, coverageZoneIdForPlaceId(zones, "place-14"))
         assertEquals(null, coverageZoneIdForPlaceId(zones, "unrelated"))
         assertEquals(setOf("place-6"), selectedCoveragePlaceIds(zones, listOf(6)))
+        assertEquals(false, isCoverageMapConfigured(""))
+        assertEquals(true, isCoverageMapConfigured("android-map-id"))
     }
 }

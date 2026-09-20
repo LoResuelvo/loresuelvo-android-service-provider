@@ -36,6 +36,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
 import com.loresuelvo.serviceprovider.ui.screens.profile.selectedCoveragePlaceIds
 import com.loresuelvo.serviceprovider.ui.screens.profile.coverageZoneIdForPlaceId
+import com.loresuelvo.serviceprovider.ui.screens.profile.isCoverageMapConfigured
 import com.loresuelvo.serviceprovider.testing.FakeCoverageZoneRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -86,6 +87,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
     private var coverageLoad: CompletableDeferred<Unit>? = null
     private var expectedCoverageZoneIds: List<Int> = emptyList()
     private var coverageReloadWillFail: Boolean = false
+    private var coverageMapUnavailable: Boolean = false
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -382,6 +384,23 @@ class CompleteProviderProfileWorld : AutoCloseable {
         val zones = (state.coverageZonesState as CoverageZonesLoadState.Ready).zones
         assertEquals(null, coverageZoneIdForPlaceId(zones, "unrelated-place"))
         assertEquals(listOf(6, 14), state.selectedCoverageZoneIds)
+    }
+
+    fun arrangeSelectedCoverageWithMapFallback() {
+        arrangeValidProfileWithCoverageSelection("una zona")
+    }
+
+    fun reportCoverageMapUnavailable() {
+        coverageMapUnavailable = !isCoverageMapConfigured("")
+    }
+
+    fun assertCoverageMapFallbackReported() = assertTrue(coverageMapUnavailable)
+
+    fun assertCoverageListCanCompleteRegistration() {
+        configureSuccessfulRegistration()
+        attemptSubmit()
+        assertEquals(listOf(6), providerRepository.lastCommand?.coverageZoneIds)
+        assertNavigatedToMercadoPago()
     }
 
     fun assertCoverageZonesLoading() {

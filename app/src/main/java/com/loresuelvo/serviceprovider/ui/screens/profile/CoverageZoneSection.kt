@@ -37,7 +37,7 @@ internal fun CoverageZoneSection(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var mapUnavailable by remember(mapId) { mutableStateOf(mapId.isBlank()) }
+    var mapUnavailable by remember(mapId) { mutableStateOf(!isCoverageMapConfigured(mapId)) }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
