@@ -132,7 +132,6 @@ Característica: Registrar prestador con zonas de cobertura
     Entonces se conservan la selección y los datos del formulario
     Y no se solicita otro registro ni se selecciona otra zona
 
-  @wip
   Escenario: 16-PCZ Sincronizar la lista con las regiones del mapa
     Dado un mapa nativo y un catálogo disponibles
     Cuando el prestador marca o desmarca una zona desde la lista

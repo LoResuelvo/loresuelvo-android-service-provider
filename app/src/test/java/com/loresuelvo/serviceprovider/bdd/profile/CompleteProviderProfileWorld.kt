@@ -34,6 +34,7 @@ import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileUiState
 import com.loresuelvo.serviceprovider.ui.profile.CompleteProviderProfileViewModel
 import com.loresuelvo.serviceprovider.ui.profile.CoverageZonesLoadState
 import com.loresuelvo.serviceprovider.ui.profile.ProfileFormError
+import com.loresuelvo.serviceprovider.ui.screens.profile.selectedCoveragePlaceIds
 import com.loresuelvo.serviceprovider.testing.FakeCoverageZoneRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -348,6 +349,23 @@ class CompleteProviderProfileWorld : AutoCloseable {
     fun assertNoRegistrationOrCoverageReload() {
         assertEquals(0, providerRepository.registerCalls)
         assertEquals(1, coverageZoneRepository.calls)
+    }
+
+    fun arrangeReadyCoverageMap() = arrangeReadyCoverageSelection()
+
+    fun selectCoverageFromList() = checkCoverageZone(14)
+
+    fun assertMapAndListSelectionMatch() {
+        val state = viewModel.uiState.value
+        val zones = (state.coverageZonesState as CoverageZonesLoadState.Ready).zones
+        assertEquals(setOf("place-6", "place-14"), selectedCoveragePlaceIds(zones, state.selectedCoverageZoneIds))
+        assertEquals(listOf(6, 14), state.selectedCoverageZoneIds)
+    }
+
+    fun assertCoverageSelectionSummary() {
+        val state = viewModel.uiState.value
+        val zones = (state.coverageZonesState as CoverageZonesLoadState.Ready).zones
+        assertEquals(listOf("Comuna 6", "Comuna 14"), zones.filter { it.id in state.selectedCoverageZoneIds }.map { it.name })
     }
 
     fun assertCoverageZonesLoading() {

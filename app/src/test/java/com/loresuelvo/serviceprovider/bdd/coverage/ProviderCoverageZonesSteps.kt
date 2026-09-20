@@ -240,4 +240,19 @@ class ProviderCoverageZonesSteps {
 
     @Y("no se solicita el registro ni se repite la carga automáticamente")
     fun noRegistrationOrAutomaticReload() = world.assertNoRegistrationOrCoverageReload()
+
+    @Dado("un mapa nativo y un catálogo disponibles")
+    fun readyCoverageMap() = world.arrangeReadyCoverageMap()
+
+    @Cuando("el prestador marca o desmarca una zona desde la lista")
+    fun selectCoverageFromList() = world.selectCoverageFromList()
+
+    @Entonces("la región y la fila correspondiente muestran el mismo estado")
+    fun mapAndListSelectionMatch() = world.assertMapAndListSelectionMatch()
+
+    @Y("las demás selecciones permanecen")
+    fun otherMapSelectionsRemain() = world.assertSelectedCoverageZones(listOf(6, 14))
+
+    @Y("el resumen de nombres y cantidad coincide con la selección")
+    fun coverageSummaryMatches() = world.assertCoverageSelectionSummary()
 }
