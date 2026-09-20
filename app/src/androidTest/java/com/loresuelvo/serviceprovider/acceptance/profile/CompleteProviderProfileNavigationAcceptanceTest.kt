@@ -144,6 +144,10 @@ class CompleteProviderProfileNavigationAcceptanceTest {
         composeTestRule
             .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_surname_label))
             .performTextInput("Gómez")
+        composeTestRule
+            .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_coverage_dropdown_label))
+            .performScrollTo()
+            .performClick()
         composeTestRule.onNodeWithText("Comuna 1").performScrollTo().performClick()
 
         composeTestRule.activityRule.scenario.recreate()
@@ -151,7 +155,16 @@ class CompleteProviderProfileNavigationAcceptanceTest {
 
         composeTestRule.onNodeWithText("Carlos").assertIsDisplayed()
         composeTestRule.onNodeWithText("Gómez").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Comuna 1").performScrollTo().assertIsOn()
+        composeTestRule
+            .onNodeWithText(
+                composeTestRule.activity.getString(
+                    R.string.provider_profile_coverage_selection_summary,
+                    1,
+                    "Comuna 1",
+                ),
+            )
+            .performScrollTo()
+            .assertIsDisplayed()
         assertEquals(0, providerRepository.registerCalls)
     }
 }

@@ -261,6 +261,10 @@ class CompleteProviderProfileScreenTest {
             }
         }
 
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_dropdown_label))
+            .performScrollTo()
+            .performClick()
         composeTestRule.onAllNodesWithText("Comuna 14").assertCountEquals(1)
         composeTestRule.onAllNodesWithText("Comuna 6").assertCountEquals(1)
     }
@@ -281,6 +285,10 @@ class CompleteProviderProfileScreenTest {
             }
         }
 
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_dropdown_label))
+            .performScrollTo()
+            .performClick()
         composeTestRule.onNodeWithText("Comuna 6").performScrollTo().performClick()
 
         assertEquals(6 to true, checked)
@@ -307,6 +315,10 @@ class CompleteProviderProfileScreenTest {
             .onNodeWithText(context.getString(R.string.provider_profile_coverage_map_unavailable))
             .performScrollTo()
             .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(context.getString(R.string.provider_profile_coverage_dropdown_label))
+            .performScrollTo()
+            .performClick()
         composeTestRule.onNodeWithText("Comuna 6").performScrollTo().performClick()
         assertEquals(6, selectedZoneId)
     }
