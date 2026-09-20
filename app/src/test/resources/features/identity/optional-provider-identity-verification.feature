@@ -4,7 +4,6 @@ Característica: Ofrecer verificación de identidad opcional al prestador
   Quiero identificarme opcionalmente con Didit
   Para continuar mi incorporación sin que el resultado bloquee mi cuenta
 
-  @wip
   Escenario: 01-PIV Mostrar la verificación opcional después del registro
     Dado que un prestador autenticado envía un perfil profesional válido y la API crea el prestador
     Cuando el registro se completa exitosamente
