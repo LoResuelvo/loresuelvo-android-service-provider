@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
+import me.didit.sdk.DiditSdk
 
 /**
  * Application entry point. `@HiltAndroidApp` triggers Hilt's code
@@ -13,4 +14,9 @@ import dagger.hilt.android.HiltAndroidApp
  * first `hiltViewModel()` call in the navigation graph).
  */
 @HiltAndroidApp
-class LoresuelvoApp : Application()
+class LoresuelvoApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        DiditSdk.initialize(this)
+    }
+}

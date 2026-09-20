@@ -29,6 +29,7 @@ robolectric = "4.13"
 cucumberJvm = "7.20.1"
 coil = "3.0.4"
 googleMaps = "20.0.0"
+didit = "4.9.0"
 
 [libraries]
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
@@ -58,6 +59,7 @@ androidx-security-crypto = { group = "androidx.security", name = "security-crypt
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 google-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "googleMaps" }
+didit-sdk-autodetection = { group = "me.didit", name = "didit-sdk-autodetection", version.ref = "didit" }
 
 # Hilt (added in Fase 1)
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }

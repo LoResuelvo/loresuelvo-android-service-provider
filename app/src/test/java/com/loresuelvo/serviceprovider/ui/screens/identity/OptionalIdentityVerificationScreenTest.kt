@@ -2,12 +2,14 @@ package com.loresuelvo.serviceprovider.ui.screens.identity
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import com.loresuelvo.serviceprovider.ui.identity.OptionalIdentityVerificationUiState
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -49,5 +51,21 @@ class OptionalIdentityVerificationScreenTest {
         composeRule.onNodeWithText(context.getString(R.string.identity_verify_later)).performClick()
 
         assertTrue(laterSelected)
+    }
+
+    @Test
+    fun loading_is_announced_and_disables_both_actions() {
+        composeRule.setContent {
+            LoresuelvoTheme {
+                OptionalIdentityVerificationScreen(
+                    uiState = OptionalIdentityVerificationUiState(loading = true),
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.identity_starting_verification))
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.identity_verify_now)).assertIsNotEnabled()
+        composeRule.onNodeWithText(context.getString(R.string.identity_verify_later)).assertIsNotEnabled()
     }
 }

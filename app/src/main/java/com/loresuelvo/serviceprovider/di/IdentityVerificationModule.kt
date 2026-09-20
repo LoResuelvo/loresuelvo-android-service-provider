@@ -2,6 +2,8 @@ package com.loresuelvo.serviceprovider.di
 
 import com.loresuelvo.serviceprovider.data.api.ApiIdentityVerificationRepository
 import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationRepository
+import com.loresuelvo.serviceprovider.platform.identity.DiditIdentityVerificationLauncher
+import com.loresuelvo.serviceprovider.platform.identity.IdentityVerificationLauncher
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -16,4 +18,10 @@ abstract class IdentityVerificationModule {
     abstract fun bindIdentityVerificationRepository(
         implementation: ApiIdentityVerificationRepository,
     ): IdentityVerificationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindIdentityVerificationLauncher(
+        implementation: DiditIdentityVerificationLauncher,
+    ): IdentityVerificationLauncher
 }

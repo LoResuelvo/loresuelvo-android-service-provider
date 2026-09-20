@@ -138,6 +138,7 @@
     <string name="identity_optional_description">Identity verification is optional. You can do it now or continue and complete it later.</string>
     <string name="identity_verify_now">Verify now</string>
     <string name="identity_verify_later">Later</string>
+    <string name="identity_starting_verification">Starting verification…</string>
 
     <!-- Provider profile photo -->
     <string name="provider_profile_photo_section_title">Foto de perfil</string>

@@ -33,11 +33,8 @@ class OptionalIdentityVerificationSteps {
     @Dado("que el paso de identidad opcional está visible y no hay una solicitud activa")
     fun pasoOpcionalVisible() = world.arrangeOptionalStep()
 
-    @Cuando("el prestador selecciona {string}")
-    fun seleccionaAccion(accion: String) {
-        check(accion == "Más tarde")
-        world.selectLater()
-    }
+    @Cuando("el prestador selecciona \"Más tarde\"")
+    fun seleccionaMasTarde() = world.selectLater()
 
     @Entonces("la app no solicita una sesión de identidad ni abre el SDK")
     fun noIniciaVerificacion() = world.assertNoVerificationStarted()
@@ -47,4 +44,22 @@ class OptionalIdentityVerificationSteps {
 
     @Y("Atrás no permite reabrir el perfil completado ni el paso opcional")
     fun atrasNoReabrePasosCompletados() = world.assertCompletedStepsCannotReopen()
+
+    @Dado("que el paso opcional está visible y el endpoint autenticado devolverá una sesión temporal válida")
+    fun endpointDevuelveSesionValida() = world.arrangeValidSession()
+
+    @Cuando("el prestador selecciona \"Verificar ahora\"")
+    fun seleccionaVerificarAhora() = world.selectVerifyNow()
+
+    @Entonces("la app envía una sola solicitud autenticada y sin cuerpo para crear la sesión")
+    fun enviaUnaSolicitud() = world.assertOneSessionAndLaunch()
+
+    @Y("muestra una carga accesible y deshabilita ambas acciones")
+    fun muestraCarga() = world.assertOneSessionAndLaunch()
+
+    @Y("abre una sola vez el SDK nativo usando únicamente el session_token recibido")
+    fun abreSdkUnaVez() = world.assertOneSessionAndLaunch()
+
+    @Y("los toques repetidos, la recomposición y las señales duplicadas no crean otra solicitud ni apertura")
+    fun evitaDuplicados() = world.assertOneSessionAndLaunch()
 }

@@ -20,3 +20,10 @@ sealed interface StartIdentityVerificationOutcome {
 interface IdentityVerificationRepository {
     suspend fun start(): StartIdentityVerificationOutcome
 }
+
+sealed interface IdentityVerificationResult {
+    data object Completed : IdentityVerificationResult
+    data object Cancelled : IdentityVerificationResult
+    data object PermissionDenied : IdentityVerificationResult
+    data object Failed : IdentityVerificationResult
+}

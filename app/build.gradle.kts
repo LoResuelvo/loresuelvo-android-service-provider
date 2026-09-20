@@ -77,6 +77,9 @@ android {
         compose = true
         buildConfig = true
     }
+    packaging {
+        resources.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+    }
 
     testOptions {
         unitTests {
@@ -208,6 +211,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.google.maps)
+    implementation(libs.didit.sdk.autodetection)
 
     // Hilt (added in Fase 1)
     implementation(libs.hilt.android)

@@ -19,6 +19,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
+import com.loresuelvo.serviceprovider.platform.identity.IdentityVerificationLauncher
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.BottomDestination
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.LoresuelvoBottomBar
@@ -48,6 +49,7 @@ import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfile
 @Composable
 fun LoResuelvoNav(
     browserAuthenticationLauncher: BrowserAuthenticationLauncher,
+    identityVerificationLauncher: IdentityVerificationLauncher,
 ) {
     val entryViewModel: ProviderEntryViewModel = hiltViewModel()
     val entryState by entryViewModel.uiState.collectAsStateWithLifecycle()
@@ -83,7 +85,10 @@ fun LoResuelvoNav(
                             welcome = { WelcomeRoute(browserAuthenticationLauncher) },
                             professionalProfile = { CompleteProviderProfileRoute(navController) },
                             optionalIdentityVerification = {
-                                OptionalIdentityVerificationRoute(navController)
+                                OptionalIdentityVerificationRoute(
+                                    navController = navController,
+                                    launcher = identityVerificationLauncher,
+                                )
                             },
                             home = {
                                 provider?.let {
