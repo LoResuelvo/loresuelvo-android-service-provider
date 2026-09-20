@@ -498,11 +498,11 @@ class ProviderProfilePhotoWorld : AutoCloseable {
     }
 
     fun assertNavigatedToMercadoPago() {
-        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+        assertEquals(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification, latestEffect)
     }
 
     fun assertProfileFormPoppedFromBackstack() {
-        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+        assertEquals(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification, latestEffect)
     }
 
     fun arrangeRegistrationRecoverableFailure() {
@@ -535,7 +535,7 @@ class ProviderProfilePhotoWorld : AutoCloseable {
         providerRepository.outcome = RegistrationOutcome.Success(providerId = registeredProviderId)
         viewModel.submit()
         scheduler.advanceUntilIdle()
-        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+        assertEquals(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification, latestEffect)
     }
 
     fun clearLocalDeviceSelection() {

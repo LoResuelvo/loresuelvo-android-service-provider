@@ -365,7 +365,7 @@ class CompleteProviderProfileViewModelTest {
     }
 
     @Test
-    fun `should submit successfully and emit NavigateToMercadoPago effect`() = runTest(scheduler) {
+    fun `should submit successfully and emit optional identity effect`() = runTest(scheduler) {
         providerRepository.outcome = RegistrationOutcome.Success(providerId = 42)
 
         viewModel = newViewModel()
@@ -381,7 +381,7 @@ class CompleteProviderProfileViewModelTest {
             viewModel!!.submit()
             advanceUntilIdle()
 
-            assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, awaitItem())
+            assertEquals(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
 
@@ -430,7 +430,7 @@ class CompleteProviderProfileViewModelTest {
             viewModel!!.submit()
             advanceUntilIdle()
 
-            assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, awaitItem())
+            assertEquals(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification, awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
 

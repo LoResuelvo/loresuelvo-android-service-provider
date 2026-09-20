@@ -64,5 +64,5 @@ Característica: Completar perfil profesional del prestador
     Dado que el prestador ingresó nombre, apellido válidos y seleccionó un rubro
     Y los datos de foto y zonas de cobertura están disponibles
     Cuando el registro se completa exitosamente
-    Entonces el prestador navega al paso de vinculación de Mercado Pago
+    Entonces el prestador navega al paso opcional de verificación de identidad
     Y el formulario ya no es accesible mediante navegación hacia atrás

@@ -84,8 +84,8 @@ fun CompleteProviderProfileRoute(
     LaunchedEffect(viewModel, navController) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is CompleteProviderProfileEffect.NavigateToMercadoPago -> {
-                    navController.navigate(Route.MercadoPagoConnect.path) {
+                is CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification -> {
+                    navController.navigate(Route.OptionalIdentityVerification.path) {
                         popUpTo(Route.CompleteProviderProfile.path) { inclusive = true }
                         launchSingleTop = true
                     }

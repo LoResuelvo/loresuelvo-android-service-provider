@@ -256,8 +256,8 @@ class CompleteProviderProfileSteps {
         world.completeRegistrationSuccessfully()
     }
 
-    @Entonces("el prestador navega al paso de vinculación de Mercado Pago")
-    fun prestadorNavegaPasoMercadoPago() {
+    @Entonces("el prestador navega al paso opcional de verificación de identidad")
+    fun prestadorNavegaPasoVerificacionOpcional() {
         world.assertNavigatedToMercadoPago()
     }
 

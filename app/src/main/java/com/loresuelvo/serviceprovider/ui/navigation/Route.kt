@@ -27,6 +27,9 @@ sealed class Route(val path: String) {
      */
     data object CompleteProviderProfile : Route("complete_provider_profile")
 
+    /** Optional identity step shown after provider creation. */
+    data object OptionalIdentityVerification : Route("optional_identity_verification")
+
     /**
      * Provider Mercado Pago linking destination. Reached after provider profile
      * completion succeeds.

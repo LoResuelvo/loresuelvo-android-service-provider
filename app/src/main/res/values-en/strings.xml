@@ -133,6 +133,12 @@
     <string name="provider_profile_already_registered_error">Esta cuenta ya está registrada. Por favor, iniciá sesión.</string>
     <string name="provider_profile_generic_error">No pudimos guardar tu perfil. Revisá tu conexión e intentá de nuevo.</string>
 
+    <!-- Optional identity verification -->
+    <string name="identity_optional_title">Your account is ready</string>
+    <string name="identity_optional_description">Identity verification is optional. You can do it now or continue and complete it later.</string>
+    <string name="identity_verify_now">Verify now</string>
+    <string name="identity_verify_later">Later</string>
+
     <!-- Provider profile photo -->
     <string name="provider_profile_photo_section_title">Foto de perfil</string>
     <string name="provider_profile_photo_select">Seleccionar foto</string>

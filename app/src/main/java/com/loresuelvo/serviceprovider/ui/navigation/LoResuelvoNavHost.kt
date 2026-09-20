@@ -32,6 +32,7 @@ fun LoResuelvoNavHost(
     contentPadding: PaddingValues = PaddingValues(0.dp),
     welcome: @Composable () -> Unit,
     professionalProfile: @Composable () -> Unit,
+    optionalIdentityVerification: @Composable () -> Unit,
     home: @Composable () -> Unit,
     messages: @Composable () -> Unit,
     jobRequestDetail: @Composable (Int) -> Unit,
@@ -45,6 +46,7 @@ fun LoResuelvoNavHost(
         ) {
             composable(Route.Welcome.path) { welcome() }
             composable(Route.CompleteProviderProfile.path) { professionalProfile() }
+            composable(Route.OptionalIdentityVerification.path) { optionalIdentityVerification() }
             composable(Route.Home.path) { home() }
             composable(Route.Messages.path) { messages() }
             composable(

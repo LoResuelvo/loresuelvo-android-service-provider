@@ -625,7 +625,7 @@ class CompleteProviderProfileWorld : AutoCloseable {
         val state = viewModel.uiState.value
         assertEquals(false, state.loading)
         assertEquals(null, state.error)
-        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+        assertEquals(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification, latestEffect)
     }
 
     // --- 08-CPP ---
@@ -703,11 +703,11 @@ class CompleteProviderProfileWorld : AutoCloseable {
     }
 
     fun assertNavigatedToMercadoPago() {
-        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+        assertEquals(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification, latestEffect)
     }
 
     fun assertProfileFormPoppedFromBackstack() {
-        assertEquals(CompleteProviderProfileEffect.NavigateToMercadoPago, latestEffect)
+        assertEquals(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification, latestEffect)
     }
 
     override fun close() {

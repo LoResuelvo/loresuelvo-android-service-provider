@@ -261,7 +261,7 @@ class CompleteProviderProfileViewModel @Inject constructor(
                 )
                 when (val outcome = registerProvider(command)) {
                     is RegistrationOutcome.Success -> {
-                        _effects.send(CompleteProviderProfileEffect.NavigateToMercadoPago)
+                        _effects.send(CompleteProviderProfileEffect.NavigateToOptionalIdentityVerification)
                     }
                     is RegistrationOutcome.Failure.AlreadyRegistered -> {
                         _uiState.update { it.copy(error = ProfileFormError.AlreadyRegistered) }

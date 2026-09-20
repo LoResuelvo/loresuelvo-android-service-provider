@@ -72,6 +72,6 @@ sealed interface ProfileFormError {
  * One-shot navigation side effects for the provider profile flow.
  */
 sealed interface CompleteProviderProfileEffect {
-    data object NavigateToMercadoPago : CompleteProviderProfileEffect
+    data object NavigateToOptionalIdentityVerification : CompleteProviderProfileEffect
     data object NavigateToWelcome : CompleteProviderProfileEffect
 }

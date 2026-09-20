@@ -32,6 +32,7 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversati
 import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
 import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailRoute
 import com.loresuelvo.serviceprovider.ui.screens.messages.ProviderMessagesRoute
+import com.loresuelvo.serviceprovider.ui.screens.identity.OptionalIdentityVerificationScreen
 import com.loresuelvo.serviceprovider.ui.screens.paymentaccount.MercadoPagoConnectRoute
 import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
 
@@ -81,6 +82,9 @@ fun LoResuelvoNav(
                             contentPadding = contentPadding,
                             welcome = { WelcomeRoute(browserAuthenticationLauncher) },
                             professionalProfile = { CompleteProviderProfileRoute(navController) },
+                            optionalIdentityVerification = {
+                                OptionalIdentityVerificationScreen()
+                            },
                             home = {
                                 provider?.let {
                                     ProviderHomeRoute(
