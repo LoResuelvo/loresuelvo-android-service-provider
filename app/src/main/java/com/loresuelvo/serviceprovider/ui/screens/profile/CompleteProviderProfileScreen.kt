@@ -47,6 +47,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.loresuelvo.serviceprovider.R
+import com.loresuelvo.serviceprovider.BuildConfig
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.ui.components.buttons.PrimaryButton
 import com.loresuelvo.serviceprovider.ui.components.inputs.PrimaryTextField
@@ -114,6 +115,7 @@ fun CompleteProviderProfileRoute(
         },
         onUploadPhoto = viewModel::onUploadPhoto,
         onSubmit = viewModel::submit,
+        coverageMapId = BuildConfig.GOOGLE_MAPS_MAP_ID,
         modifier = modifier,
     )
 }
@@ -135,6 +137,7 @@ fun CompleteProviderProfileScreen(
     onSelectPhoto: () -> Unit = {},
     onUploadPhoto: () -> Unit = {},
     onSubmit: () -> Unit = {},
+    coverageMapId: String = "",
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -337,6 +340,7 @@ fun CompleteProviderProfileScreen(
                 state = uiState.coverageZonesState,
                 selectedZoneIds = uiState.selectedCoverageZoneIds,
                 selectionAdjusted = uiState.coverageSelectionAdjusted,
+                mapId = coverageMapId,
                 enabled = !isBusy,
                 onCheckedChange = onCoverageZoneChecked,
                 onRetry = onRetryCoverageZones,

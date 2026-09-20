@@ -13,7 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -27,11 +31,13 @@ internal fun CoverageZoneSection(
     state: CoverageZonesLoadState,
     selectedZoneIds: List<Int>,
     selectionAdjusted: Boolean,
+    mapId: String,
     enabled: Boolean,
     onCheckedChange: (Int, Boolean) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var mapUnavailable by remember(mapId) { mutableStateOf(mapId.isBlank()) }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -49,8 +55,33 @@ internal fun CoverageZoneSection(
         }
         when (state) {
             is CoverageZonesLoadState.Loading -> CoverageZonesLoading()
-            is CoverageZonesLoadState.Ready -> state.zones.forEach { zone ->
-                key(zone.id) {
+            is CoverageZonesLoadState.Ready -> {
+                if (mapUnavailable) {
+                    Text(
+                        text = stringResource(R.string.provider_profile_coverage_map_unavailable),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    CoverageZoneMap(
+                        mapId = mapId,
+                        zones = state.zones,
+                        selectedZoneIds = selectedZoneIds,
+                        enabled = enabled,
+                        onCheckedChange = onCheckedChange,
+                        onUnavailable = { mapUnavailable = true },
+                    )
+                }
+                val selectedNames = state.zones.filter { it.id in selectedZoneIds }.map { it.name }
+                Text(
+                    text = stringResource(
+                        R.string.provider_profile_coverage_selection_summary,
+                        selectedZoneIds.size,
+                        selectedNames.joinToString(),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                state.zones.forEach { zone -> key(zone.id) {
                     val checked = zone.id in selectedZoneIds
                     Row(
                         modifier = Modifier
@@ -68,7 +99,7 @@ internal fun CoverageZoneSection(
                         Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
                         Text(text = zone.name, style = MaterialTheme.typography.bodyLarge)
                     }
-                }
+                } }
             }
             is CoverageZonesLoadState.Error -> CoverageZonesError(onRetry)
             is CoverageZonesLoadState.Empty -> CoverageZonesEmpty(onRetry)

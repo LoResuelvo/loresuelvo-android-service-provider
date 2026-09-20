@@ -151,6 +151,9 @@
     <string name="provider_profile_zones_required_error">Debés seleccionar al menos una zona de cobertura.</string>
     <string name="provider_profile_coverage_rejected_error">Revisá las zonas seleccionadas y volvé a intentar.</string>
     <string name="provider_profile_coverage_adjusted_notice">Quitamos las zonas que ya no están disponibles.</string>
+    <string name="provider_profile_coverage_map_unavailable">El mapa no está disponible. Podés seleccionar las zonas desde la lista.</string>
+    <string name="provider_profile_coverage_selection_summary">%1$d seleccionadas: %2$s</string>
+    <string name="provider_profile_coverage_map_description">Mapa interactivo de zonas de cobertura</string>
     <string name="provider_profile_coverage_title">Zonas de cobertura</string>
     <string name="provider_profile_coverage_loading">Cargando zonas…</string>
     <string name="provider_profile_coverage_load_error">No pudimos cargar las zonas de cobertura.</string>

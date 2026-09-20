@@ -117,6 +117,7 @@ class CompleteProviderProfileNavigationAcceptanceTest {
         // 6. Observe photo required validation error banner
         composeTestRule
             .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_photo_required_error))
+            .performScrollTo()
             .assertIsDisplayed()
 
         // 7. Verify backend repository was not invoked without required photo
