@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.screens.identity.OptionalIdentityVerificationScreen
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,6 +25,7 @@ class OptionalIdentityVerificationAcceptanceTest {
         }
 
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals("Tu cuenta ya está creada", context.getString(R.string.identity_optional_title))
         composeRule.onNodeWithText(context.getString(R.string.identity_optional_title)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.identity_optional_description)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.identity_verify_now))

@@ -15,6 +15,7 @@ import me.didit.sdk.DiditSdk
 import me.didit.sdk.DiditSdkState
 import me.didit.sdk.VerificationError
 import me.didit.sdk.VerificationResult
+import me.didit.sdk.core.localization.SupportedLanguage
 
 class DiditIdentityVerificationLauncher @Inject constructor() : IdentityVerificationLauncher {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -54,7 +55,10 @@ class DiditIdentityVerificationLauncher @Inject constructor() : IdentityVerifica
         callback = onResult
         DiditSdk.startVerification(
             token = credential.token,
-            configuration = Configuration(loggingEnabled = false),
+            configuration = Configuration(
+                languageLocale = SupportedLanguage.SPANISH,
+                loggingEnabled = false,
+            ),
         ) { result -> finish(result.toIdentityVerificationResult()) }
     }
 

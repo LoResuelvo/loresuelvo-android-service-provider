@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.identity
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -15,6 +16,8 @@ import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.identity.OptionalIdentityVerificationUiState
 import com.loresuelvo.serviceprovider.ui.identity.IdentityVerificationFeedback
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import java.util.Locale
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,6 +33,15 @@ class OptionalIdentityVerificationScreenTest {
 
     private val context: Context
         get() = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun identity_step_remains_in_spanish_for_english_device_locale() {
+        val english = Configuration(context.resources.configuration).apply { setLocale(Locale.ENGLISH) }
+        val localized = context.createConfigurationContext(english)
+
+        assertEquals("Tu cuenta ya está creada", localized.getString(R.string.identity_optional_title))
+        assertEquals("Verificar ahora", localized.getString(R.string.identity_verify_now))
+    }
 
     @Test
     fun shows_created_account_and_optional_actions() {
