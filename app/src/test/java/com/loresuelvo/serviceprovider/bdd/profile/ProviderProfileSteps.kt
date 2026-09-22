@@ -180,6 +180,18 @@ internal class ProviderProfileSteps {
     @And("no se anuncia una conexión exitosa")
     fun paymentIsNotAnnouncedConnected() = world.assertPaymentNotConnected()
 
+    @Given("que estaba consultando Perfil")
+    fun providerWasViewingProfile() = world.openProfile()
+
+    @When("{string}")
+    fun providerReturnsToProfileAfter(action: String) = world.returnToProfileAfter(action)
+
+    @Then("vuelvo a ver Perfil con mis datos actuales")
+    fun currentProfileIsVisibleAgain() = world.assertCurrentProfileAfterReturn()
+
+    @And("no se repite el registro ni se abre una autorización automáticamente")
+    fun returnDoesNotRestartRegistrationOrAuthorization() = world.assertNoAutomaticAuthorization()
+
     @After
     fun tearDown() {
         paymentWorld?.close()

@@ -1,5 +1,4 @@
 # language: es
-# Draft for functional review; @wip does not imply approval or implementation.
 @us62
 Característica: Ver mi perfil y consultar mis conexiones
   Como prestador registrado
@@ -97,7 +96,6 @@ Característica: Ver mi perfil y consultar mis conexiones
     Y mis datos personales siguen visibles
     Y no se anuncia una conexión exitosa
 
-  @wip
   Esquema del escenario: 11-PRF Recuperar Perfil al volver a la pantalla
     Dado que estaba consultando Perfil
     Cuando "<Acción>"

@@ -45,7 +45,7 @@ internal class ProviderProfileWorld : AutoCloseable {
     private val sessionStore = ProfileSessionStore()
     private val currentAccount = ProfileCurrentAccountRepository()
     private val paymentAccount = ProfilePaymentAccountRepository()
-    private val viewModelStore = ViewModelStore()
+    private var viewModelStore = ViewModelStore()
     private val viewModelFactory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -248,6 +248,32 @@ internal class ProviderProfileWorld : AutoCloseable {
 
     fun assertPaymentNotConnected() {
         assertTrue((viewModel.uiState.value as ProviderProfileUiState.Ready).payment != ProfilePaymentState.Connected)
+        assertEquals(0, paymentAccount.authorizationCalls)
+    }
+
+    fun returnToProfileAfter(action: String) {
+        when (action.trim()) {
+            "Vuelvo a Perfil después de visitar otra pestaña" -> {
+                openTab("Mensajes")
+                selectProfile()
+            }
+            "Regreso a la app después de dejarla en segundo plano" -> openProfile()
+            "Se recrea la pantalla con su estado guardado" -> {
+                viewModelStore.clear()
+                viewModelStore = ViewModelStore()
+                openProfile()
+            }
+            else -> error("Unsupported Profile return action: $action")
+        }
+    }
+
+    fun assertCurrentProfileAfterReturn() {
+        assertProviderIdentity()
+        assertEquals(2, currentAccount.calls)
+        assertEquals(2, paymentAccount.statusCalls)
+    }
+
+    fun assertNoAutomaticAuthorization() {
         assertEquals(0, paymentAccount.authorizationCalls)
     }
 

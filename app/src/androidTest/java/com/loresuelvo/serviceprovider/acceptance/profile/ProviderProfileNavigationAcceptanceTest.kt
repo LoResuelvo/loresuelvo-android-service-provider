@@ -218,6 +218,37 @@ class ProviderProfileNavigationAcceptanceTest {
     }
 
     @Test
+    fun returning_to_profile_from_messages_keeps_data_without_authorization() {
+        composeTestRule.waitForIdle()
+        openProfileFrom(Route.Home)
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path)
+            .performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Profile.path)
+            .performClick()
+
+        assertProfileRestoredWithoutAuthorization()
+    }
+
+    @Test
+    fun resuming_profile_from_background_keeps_data_without_authorization() {
+        composeTestRule.waitForIdle()
+        openProfileFrom(Route.Home)
+        composeTestRule.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        composeTestRule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+
+        assertProfileRestoredWithoutAuthorization()
+    }
+
+    @Test
+    fun recreating_profile_keeps_data_without_authorization() {
+        composeTestRule.waitForIdle()
+        openProfileFrom(Route.Home)
+        composeTestRule.activityRule.scenario.recreate()
+
+        assertProfileRestoredWithoutAuthorization()
+    }
+
+    @Test
     fun missing_current_account_replaces_the_authenticated_shell_with_onboarding() {
         currentAccountRepository.outcome = CurrentAccountOutcome.Failure.NotFound
         sessionStore.clearSession()
@@ -325,6 +356,15 @@ class ProviderProfileNavigationAcceptanceTest {
         composeTestRule
             .onNodeWithTag(PROVIDER_BOTTOM_BAR_TAG)
             .assertIsDisplayed()
+    }
+
+    private fun assertProfileRestoredWithoutAuthorization() {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Carlos Gómez").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Profile.path)
+            .assertIsSelected()
+        org.junit.Assert.assertEquals(0, paymentBrowserLauncher.launchCount)
     }
 
     private fun provider() = CurrentAccount.Provider(
