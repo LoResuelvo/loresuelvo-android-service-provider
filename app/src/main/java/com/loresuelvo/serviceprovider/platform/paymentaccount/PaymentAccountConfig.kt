@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.platform.paymentaccount
 
 data class PaymentAccountConfig(
     val allowedDomains: Set<String> = setOf("mercadopago.com", "mercadopago.com.ar"),
+    val returnHost: String = "",
     val returnPath: String = DEFAULT_RETURN_PATH,
     val allowedSchemes: Set<String> = setOf(HTTPS_SCHEME),
 ) {

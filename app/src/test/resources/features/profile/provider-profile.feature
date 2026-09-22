@@ -67,7 +67,6 @@ Característica: Ver mi perfil y consultar mis conexiones
     Entonces se abre la autorización oficial en el navegador
     Y la app no me solicita credenciales de Mercado Pago
 
-  @wip
   Esquema del escenario: 08-PRF Consultar el resultado al volver de Mercado Pago
     Dado que inicié la conexión desde Perfil
     Y el navegador terminó con "<Resultado>"

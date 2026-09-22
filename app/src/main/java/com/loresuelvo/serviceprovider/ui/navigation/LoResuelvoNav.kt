@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +23,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.loresuelvo.serviceprovider.platform.auth.BrowserAuthenticationLauncher
 import com.loresuelvo.serviceprovider.platform.identity.IdentityVerificationLauncher
+import com.loresuelvo.serviceprovider.platform.paymentaccount.PaymentAccountBrowserLauncher
+import com.loresuelvo.serviceprovider.platform.paymentaccount.PaymentAccountReturnHint
+import com.loresuelvo.serviceprovider.platform.paymentaccount.PaymentAccountReturnLinkParser
 import com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.BottomDestination
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.LoresuelvoBottomBar
@@ -37,6 +43,7 @@ import com.loresuelvo.serviceprovider.ui.screens.identity.OptionalIdentityVerifi
 import com.loresuelvo.serviceprovider.ui.screens.paymentaccount.MercadoPagoConnectRoute
 import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
 import com.loresuelvo.serviceprovider.ui.screens.profile.ProviderProfileRoute
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Composition root for the provider app. Welcome is the initial destination
@@ -51,9 +58,16 @@ import com.loresuelvo.serviceprovider.ui.screens.profile.ProviderProfileRoute
 fun LoResuelvoNav(
     browserAuthenticationLauncher: BrowserAuthenticationLauncher,
     identityVerificationLauncher: IdentityVerificationLauncher,
+    paymentAccountBrowserLauncher: PaymentAccountBrowserLauncher,
+    paymentReturnLinkParser: PaymentAccountReturnLinkParser,
+    paymentReturnUrl: StateFlow<String?>,
+    onPaymentReturnConsumed: () -> Unit,
 ) {
     val entryViewModel: ProviderEntryViewModel = hiltViewModel()
     val entryState by entryViewModel.uiState.collectAsStateWithLifecycle()
+    val returnUrl by paymentReturnUrl.collectAsStateWithLifecycle()
+    var onboardingReturnHint by remember { mutableStateOf<PaymentAccountReturnHint?>(null) }
+    var profileReturnRefresh by remember { mutableStateOf(0) }
 
     when (val state = entryState) {
         ProviderEntryUiState.Loading -> ProviderEntryLoadingScreen()
@@ -72,6 +86,23 @@ fun LoResuelvoNav(
                 val navController = rememberNavController()
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route
+
+                LaunchedEffect(returnUrl, currentRoute) {
+                    val hint = returnUrl?.let(paymentReturnLinkParser::parse) ?: return@LaunchedEffect
+                    when (currentRoute) {
+                        null -> return@LaunchedEffect
+                        Route.MercadoPagoConnect.path -> {
+                            if (navController.previousBackStackEntry?.destination?.route == Route.Profile.path) {
+                                navController.popBackStack(Route.Profile.path, inclusive = false)
+                            } else {
+                                onboardingReturnHint = hint
+                            }
+                        }
+                        Route.Profile.path -> profileReturnRefresh += 1
+                        else -> navController.navigate(Route.Profile.path) { launchSingleTop = true }
+                    }
+                    onPaymentReturnConsumed()
+                }
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     Scaffold(
@@ -117,6 +148,7 @@ fun LoResuelvoNav(
                             },
                             profile = {
                                 ProviderProfileRoute(
+                                    returnRefreshKey = profileReturnRefresh,
                                     onBack = {
                                         navController.popBackStack(
                                             Route.Home.path,
@@ -153,8 +185,17 @@ fun LoResuelvoNav(
                                 )
                             },
                             mercadoPago = {
+                                val fromProfile = navController.previousBackStackEntry
+                                    ?.destination?.route == Route.Profile.path
                                 MercadoPagoConnectRoute(
                                     navController = navController,
+                                    browserLauncher = paymentAccountBrowserLauncher,
+                                    fromProfile = fromProfile,
+                                    returnHint = onboardingReturnHint,
+                                    onReturnHintConsumed = { onboardingReturnHint = null },
+                                    onProfileRequested = {
+                                        navController.popBackStack(Route.Profile.path, inclusive = false)
+                                    },
                                     onHomeRequested = entryViewModel::refresh,
                                     onWelcomeRequested = entryViewModel::refresh,
                                 )

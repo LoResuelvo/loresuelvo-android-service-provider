@@ -14,6 +14,7 @@ import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileViewModel
 @Composable
 fun ProviderProfileRoute(
     onBack: () -> Unit,
+    returnRefreshKey: Int = 0,
     onIncompleteProfile: () -> Unit = {},
     onAccountMismatch: () -> Unit = {},
     onConnectMercadoPago: () -> Unit = {},
@@ -23,6 +24,9 @@ fun ProviderProfileRoute(
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
+    }
+    LaunchedEffect(returnRefreshKey) {
+        if (returnRefreshKey > 0) viewModel.refresh()
     }
     LaunchedEffect(state) {
         when (state) {

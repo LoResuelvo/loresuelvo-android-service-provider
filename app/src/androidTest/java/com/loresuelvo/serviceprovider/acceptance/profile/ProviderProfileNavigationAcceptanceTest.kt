@@ -1,5 +1,8 @@
 package com.loresuelvo.serviceprovider.acceptance.profile
 
+import android.content.Intent
+import android.net.Uri
+import androidx.lifecycle.Lifecycle
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -55,6 +58,8 @@ class ProviderProfileNavigationAcceptanceTest {
 
     private lateinit var sessionStore: ProviderSignupSessionStore
     private lateinit var currentAccountRepository: ProviderSignupCurrentAccountRepository
+    private lateinit var paymentAccountRepository: ProviderSignupPaymentAccountRepository
+    private lateinit var paymentBrowserLauncher: TestPaymentAccountBrowserLauncher
 
     @Before
     fun setUp() {
@@ -66,7 +71,9 @@ class ProviderProfileNavigationAcceptanceTest {
         sessionStore = entryPoint.sessionStore()
         currentAccountRepository = entryPoint.currentAccountRepository()
         currentAccountRepository.outcome = CurrentAccountOutcome.Success(provider())
-        entryPoint.paymentAccountRepository().outcome = PaymentAccountStatusOutcome.Success(
+        paymentAccountRepository = entryPoint.paymentAccountRepository()
+        paymentBrowserLauncher = entryPoint.paymentBrowserLauncher()
+        paymentAccountRepository.outcome = PaymentAccountStatusOutcome.Success(
             PaymentAccountStatus(ConnectionStatus.PENDING),
         )
         sessionStore.saveSession(
@@ -143,24 +150,54 @@ class ProviderProfileNavigationAcceptanceTest {
     @Test
     fun pending_connection_opens_the_existing_mercado_pago_flow() {
         composeTestRule.waitForIdle()
-        openProfileFrom(Route.Home)
+        openPaymentFlowFromProfile()
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.mercadopago_return_profile),
+        ).assertExists()
+    }
 
+    @Test
+    fun success_return_shows_api_confirmed_connected_status_in_profile() {
+        composeTestRule.waitForIdle()
+        startAuthorizationFromProfile()
+        paymentAccountRepository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.CONNECTED),
+        )
+
+        deliverPaymentReturn("success")
+
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.provider_profile_connection_connected),
+        ).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun cancelled_return_keeps_api_pending_status_in_profile() {
+        composeTestRule.waitForIdle()
+        startAuthorizationFromProfile()
+
+        deliverPaymentReturn("cancelled")
+
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithText(
             composeTestRule.activity.getString(R.string.provider_profile_connection_pending),
         ).performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText(
-            composeTestRule.activity.getString(R.string.provider_profile_calendar_coming_soon),
-        ).performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performTouchInput { swipeUp() }
-        composeTestRule.onNodeWithText(
-            composeTestRule.activity.getString(R.string.mercadopago_connect_button),
-        ).assertIsDisplayed().performClick()
+    }
+
+    @Test
+    fun closing_browser_without_link_rechecks_status_in_profile() {
+        composeTestRule.waitForIdle()
+        startAuthorizationFromProfile()
+
+        composeTestRule.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        composeTestRule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         composeTestRule.waitForIdle()
 
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithText(
-            composeTestRule.activity.getString(R.string.mercadopago_connect_title),
-        ).assertExists()
-        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
+            composeTestRule.activity.getString(R.string.provider_profile_connection_pending),
+        ).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -215,6 +252,43 @@ class ProviderProfileNavigationAcceptanceTest {
         composeTestRule.waitForIdle()
     }
 
+    private fun openPaymentFlowFromProfile() {
+        openProfileFrom(Route.Home)
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.provider_profile_calendar_coming_soon),
+        ).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performTouchInput { swipeUp() }
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.mercadopago_connect_button),
+        ).assertIsDisplayed().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.mercadopago_connect_title),
+        ).assertExists()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
+    }
+
+    private fun startAuthorizationFromProfile() {
+        openPaymentFlowFromProfile()
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.mercadopago_connect_button),
+        ).performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        org.junit.Assert.assertEquals(1, paymentBrowserLauncher.launchCount)
+    }
+
+    private fun deliverPaymentReturn(result: String) {
+        val activity = composeTestRule.activity
+        val returnIntent = Intent(activity, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            data = Uri.parse(
+                "https://return.example.test/provider/register/mercado-pago?result=$result",
+            )
+        }
+        composeTestRule.runOnUiThread { activity.acceptPaymentReturn(returnIntent) }
+        composeTestRule.waitForIdle()
+    }
+
     private fun assertProfileData() {
         composeTestRule.onNodeWithTag(PROVIDER_PROFILE_SCREEN_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
@@ -255,4 +329,6 @@ interface ProviderProfileNavigationTestEntryPoint {
     fun currentAccountRepository(): ProviderSignupCurrentAccountRepository
 
     fun paymentAccountRepository(): ProviderSignupPaymentAccountRepository
+
+    fun paymentBrowserLauncher(): TestPaymentAccountBrowserLauncher
 }

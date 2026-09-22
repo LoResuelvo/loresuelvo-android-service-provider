@@ -33,6 +33,7 @@ import com.loresuelvo.serviceprovider.ui.paymentaccount.MercadoPagoConnectUiStat
 @Composable
 fun MercadoPagoConnectScreen(
     uiState: MercadoPagoConnectUiState,
+    returnToProfile: Boolean = false,
     onConnectClick: () -> Unit = {},
     onContinueWithoutConnecting: () -> Unit = {},
     onContinueHome: () -> Unit = {},
@@ -184,7 +185,10 @@ fun MercadoPagoConnectScreen(
                     }
                     Spacer(modifier = Modifier.weight(1f, fill = false))
                     PrimaryButton(
-                        text = stringResource(R.string.mercadopago_continue_home),
+                        text = stringResource(
+                            if (returnToProfile) R.string.mercadopago_return_profile
+                            else R.string.mercadopago_continue_home,
+                        ),
                         onClick = onContinueHome,
                         enabled = !uiState.loading,
                     )
@@ -254,7 +258,10 @@ fun MercadoPagoConnectScreen(
                             shape = RoundedCornerShape(14.dp),
                             enabled = !uiState.loading,
                         ) {
-                            Text(text = stringResource(R.string.mercadopago_continue_without_connecting))
+                            Text(text = stringResource(
+                                if (returnToProfile) R.string.mercadopago_return_profile
+                                else R.string.mercadopago_continue_without_connecting,
+                            ))
                         }
                     }
                 }

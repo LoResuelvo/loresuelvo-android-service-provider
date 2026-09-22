@@ -7,4 +7,5 @@
     <string name="provider_profile_connection_unavailable">Estado no disponible</string>
     <string name="provider_profile_calendar_label">Google Calendar</string>
     <string name="provider_profile_calendar_coming_soon">Próximamente</string>
+    <string name="mercadopago_return_profile">Volver a Perfil</string>
 </resources>

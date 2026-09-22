@@ -1,6 +1,8 @@
 package com.loresuelvo.serviceprovider.bdd.profile
 
 import com.loresuelvo.serviceprovider.bdd.paymentaccount.ConnectMercadoPagoWorld
+import com.loresuelvo.serviceprovider.platform.paymentaccount.PaymentAccountConfig
+import com.loresuelvo.serviceprovider.platform.paymentaccount.PaymentAccountReturnLinkParser
 import io.cucumber.java.After
 import io.cucumber.java.en.And
 import io.cucumber.java.en.Given
@@ -11,6 +13,9 @@ internal class ProviderProfileSteps {
 
     private val world = ProviderProfileWorld()
     private var paymentWorld: ConnectMercadoPagoWorld? = null
+    private val returnLinkParser = PaymentAccountReturnLinkParser(
+        PaymentAccountConfig(returnHost = "return.example.test"),
+    )
 
     @Given("que inicié sesión como prestador con mi perfil profesional completo")
     fun authenticatedProviderHasCompleteProfile() = world.configureAuthenticatedProvider()
@@ -118,6 +123,35 @@ internal class ProviderProfileSteps {
     @And("la app no me solicita credenciales de Mercado Pago")
     fun applicationDoesNotAskForPaymentCredentials() =
         payment().assertNoCredentialsRequestedWithinApp()
+
+    @Given("que inicié la conexión desde Perfil")
+    fun connectionStartedFromProfile() {
+        world.openProfile()
+        world.assertPendingPaymentConnection()
+    }
+
+    @And("el navegador terminó con {string}")
+    fun browserFinishedWith(result: String) {
+        val url = when (result) {
+            "Autorización completada" -> "https://return.example.test/provider/register/mercado-pago?result=success"
+            "Autorización cancelada" -> "https://return.example.test/provider/register/mercado-pago?result=cancelled"
+            "Navegador cerrado sin enlace" -> null
+            else -> error("Unsupported browser result: $result")
+        }
+        check(url == null || returnLinkParser.parse(url) != null)
+    }
+
+    @And("el servicio informa que mi cuenta está {string}")
+    fun serviceReportsPaymentStatus(status: String) = world.configurePaymentReturnStatus(status)
+
+    @When("regreso a la app")
+    fun providerReturnsToApplication() = world.openProfile()
+
+    @Then("vuelvo a Perfil")
+    fun providerReturnsToProfile() = world.assertProfileRefreshedAfterReturn()
+
+    @And("Mercado Pago aparece {string} según la nueva consulta al servicio")
+    fun profileShowsFreshPaymentStatus(status: String) = world.assertPaymentReturnStatus(status)
 
     @After
     fun tearDown() {

@@ -205,6 +205,30 @@ internal class ProviderProfileWorld : AutoCloseable {
         assertEquals(0, paymentAccount.authorizationCalls)
     }
 
+    fun configurePaymentReturnStatus(status: String) {
+        val connection = when (status) {
+            "Conectada" -> ConnectionStatus.CONNECTED
+            "Pendiente" -> ConnectionStatus.PENDING
+            else -> error("Unsupported payment return status: $status")
+        }
+        paymentAccount.outcome = PaymentAccountStatusOutcome.Success(PaymentAccountStatus(connection))
+    }
+
+    fun assertProfileRefreshedAfterReturn() {
+        assertTrue(viewModel.uiState.value is ProviderProfileUiState.Ready)
+        assertEquals(2, currentAccount.calls)
+        assertEquals(2, paymentAccount.statusCalls)
+    }
+
+    fun assertPaymentReturnStatus(status: String) {
+        val expected = when (status) {
+            "Conectada" -> ProfilePaymentState.Connected
+            "Pendiente" -> ProfilePaymentState.Pending
+            else -> error("Unsupported payment return status: $status")
+        }
+        assertEquals(expected, (viewModel.uiState.value as ProviderProfileUiState.Ready).payment)
+    }
+
     fun openProfile() {
         viewModel = ViewModelProvider(viewModelStore, viewModelFactory)[
             "provider-profile",

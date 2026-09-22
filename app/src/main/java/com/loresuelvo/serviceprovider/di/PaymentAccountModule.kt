@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.di
 
+import com.loresuelvo.serviceprovider.BuildConfig
 import com.loresuelvo.serviceprovider.platform.paymentaccount.ExternalPaymentAccountBrowserLauncher
 import com.loresuelvo.serviceprovider.platform.paymentaccount.PaymentAccountBrowserLauncher
 import com.loresuelvo.serviceprovider.platform.paymentaccount.PaymentAccountConfig
@@ -23,6 +24,8 @@ abstract class PaymentAccountModule {
     companion object {
         @Provides
         @Singleton
-        fun providePaymentAccountConfig(): PaymentAccountConfig = PaymentAccountConfig()
+        fun providePaymentAccountConfig(): PaymentAccountConfig = PaymentAccountConfig(
+            returnHost = BuildConfig.PAYMENT_RETURN_HOST,
+        )
     }
 }
