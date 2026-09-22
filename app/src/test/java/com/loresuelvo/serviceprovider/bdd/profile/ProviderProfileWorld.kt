@@ -229,6 +229,11 @@ internal class ProviderProfileWorld : AutoCloseable {
         assertEquals(expected, (viewModel.uiState.value as ProviderProfileUiState.Ready).payment)
     }
 
+    fun assertConnectedPaymentHasNoAuthorization() {
+        assertEquals(ProfilePaymentState.Connected, (viewModel.uiState.value as ProviderProfileUiState.Ready).payment)
+        assertEquals(0, paymentAccount.authorizationCalls)
+    }
+
     fun openProfile() {
         viewModel = ViewModelProvider(viewModelStore, viewModelFactory)[
             "provider-profile",

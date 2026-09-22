@@ -201,6 +201,23 @@ class ProviderProfileNavigationAcceptanceTest {
     }
 
     @Test
+    fun connected_payment_account_has_no_authorization_action_in_profile() {
+        paymentAccountRepository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.CONNECTED),
+        )
+        composeTestRule.waitForIdle()
+        openProfileFrom(Route.Home)
+
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.provider_profile_connection_connected),
+        ).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.mercadopago_connect_button),
+        ).assertDoesNotExist()
+        org.junit.Assert.assertEquals(0, paymentBrowserLauncher.launchCount)
+    }
+
+    @Test
     fun missing_current_account_replaces_the_authenticated_shell_with_onboarding() {
         currentAccountRepository.outcome = CurrentAccountOutcome.Failure.NotFound
         sessionStore.clearSession()

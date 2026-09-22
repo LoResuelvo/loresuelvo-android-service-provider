@@ -83,7 +83,6 @@ Característica: Ver mi perfil y consultar mis conexiones
       | Autorización cancelada       | Conectada |
       | Navegador cerrado sin enlace | Pendiente |
 
-  @wip
   Escenario: 09-PRF Consultar una cuenta de Mercado Pago ya conectada
     Dado que el servicio confirma que Mercado Pago está conectado
     Cuando consulto mis conexiones en Perfil

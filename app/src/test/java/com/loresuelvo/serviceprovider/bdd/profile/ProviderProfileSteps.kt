@@ -153,6 +153,18 @@ internal class ProviderProfileSteps {
     @And("Mercado Pago aparece {string} según la nueva consulta al servicio")
     fun profileShowsFreshPaymentStatus(status: String) = world.assertPaymentReturnStatus(status)
 
+    @Given("que el servicio confirma que Mercado Pago está conectado")
+    fun paymentAccountIsConnected() = world.configurePaymentReturnStatus("Conectada")
+
+    @When("consulto mis conexiones en Perfil")
+    fun providerConsultsConnections() = world.openProfile()
+
+    @Then("Mercado Pago aparece conectado")
+    fun profileShowsConnectedPaymentAccount() = world.assertPaymentReturnStatus("Conectada")
+
+    @And("no puedo iniciar otra autorización")
+    fun anotherAuthorizationIsUnavailable() = world.assertConnectedPaymentHasNoAuthorization()
+
     @After
     fun tearDown() {
         paymentWorld?.close()
