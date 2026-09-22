@@ -17,6 +17,7 @@ import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileViewModel
 import java.util.ArrayDeque
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,6 +89,58 @@ internal class ProviderProfileWorld : AutoCloseable {
         assertTrue(BottomDestination.shouldShow(Route.Profile.path))
     }
 
+    fun configureAccountSituation(situation: String) {
+        when (situation) {
+            "Sigue pendiente" -> currentAccount.pending = CompletableDeferred()
+            "Falla por falta de red" -> currentAccount.defaultResponse =
+                CurrentAccountOutcome.Failure.Network(IllegalStateException("offline"))
+            "Falla en el servicio" -> currentAccount.defaultResponse =
+                CurrentAccountOutcome.Failure.Server(503)
+            else -> error("Unsupported account situation: $situation")
+        }
+    }
+
+    fun assertAccountResult(result: String) {
+        val expected = when (result) {
+            "Una indicación de carga" -> ProviderProfileUiState.Loading
+            "Un error con opción de reintentar" -> ProviderProfileUiState.Unavailable
+            else -> error("Unsupported account result: $result")
+        }
+        assertEquals(expected, viewModel.uiState.value)
+    }
+
+    fun assertConnectionActionsUnavailable() {
+        assertTrue(viewModel.uiState.value !is ProviderProfileUiState.Ready)
+    }
+
+    fun configureFailedProfileWithRetry() {
+        currentAccount.defaultResponse = CurrentAccountOutcome.Failure.Network(
+            IllegalStateException("offline"),
+        )
+        openProfile()
+        assertEquals(ProviderProfileUiState.Unavailable, viewModel.uiState.value)
+    }
+
+    fun restoreAccountService() {
+        currentAccount.defaultResponse = CurrentAccountOutcome.Success(
+            provider().copy(name = "María"),
+        )
+    }
+
+    fun selectRetry() {
+        viewModel.refresh()
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertUpdatedProvider() {
+        assertEquals("María", readyProvider().name)
+        assertEquals(2, currentAccount.calls)
+    }
+
+    fun assertErrorGone() {
+        assertTrue(viewModel.uiState.value is ProviderProfileUiState.Ready)
+    }
+
     fun openProfile() {
         viewModel = ViewModelProvider(viewModelStore, viewModelFactory)[
             "provider-profile",
@@ -126,9 +179,13 @@ internal class ProviderProfileWorld : AutoCloseable {
     private class ProfileCurrentAccountRepository : CurrentAccountRepository {
         val responses = ArrayDeque<CurrentAccountOutcome>()
         var defaultResponse: CurrentAccountOutcome = CurrentAccountOutcome.Failure.NotFound
+        var pending: CompletableDeferred<CurrentAccountOutcome>? = null
+        var calls = 0
 
         override suspend fun getCurrentAccount(): CurrentAccountOutcome {
-            return if (responses.isEmpty()) defaultResponse else responses.removeFirst()
+            calls += 1
+            return pending?.await()
+                ?: if (responses.isEmpty()) defaultResponse else responses.removeFirst()
         }
     }
 

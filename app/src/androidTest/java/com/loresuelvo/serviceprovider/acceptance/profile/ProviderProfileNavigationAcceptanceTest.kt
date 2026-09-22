@@ -94,6 +94,30 @@ class ProviderProfileNavigationAcceptanceTest {
     }
 
     @Test
+    fun retries_a_failed_profile_load_without_rebuilding_the_authenticated_shell() {
+        composeTestRule.waitForIdle()
+        currentAccountRepository.outcome = CurrentAccountOutcome.Failure.Network(
+            IllegalStateException("offline"),
+        )
+
+        openProfileFrom(Route.Home)
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.provider_profile_view_unavailable),
+        ).assertIsDisplayed()
+
+        currentAccountRepository.outcome = CurrentAccountOutcome.Success(provider().copy(name = "María"))
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.provider_profile_view_retry),
+        ).performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText("María Gómez").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_TAG).assertIsDisplayed()
+    }
+
+    @Test
     fun missing_current_account_replaces_the_authenticated_shell_with_onboarding() {
         currentAccountRepository.outcome = CurrentAccountOutcome.Failure.NotFound
         sessionStore.clearSession()

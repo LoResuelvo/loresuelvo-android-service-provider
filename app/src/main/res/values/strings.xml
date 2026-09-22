@@ -70,7 +70,9 @@
     <!-- Retrieved provider profile -->
     <string name="provider_profile_view_title">Perfil</string>
     <string name="provider_profile_back">Volver a Inicio</string>
+    <string name="provider_profile_view_loading">Cargando tu perfil…</string>
     <string name="provider_profile_view_unavailable">Tu perfil no está disponible en este momento.</string>
+    <string name="provider_profile_view_retry">Reintentar</string>
     <string name="provider_profile_incomplete">Completá tu perfil profesional para continuar.</string>
     <string name="provider_profile_account_mismatch">Esta cuenta no corresponde a un prestador.</string>
     <string name="provider_profile_email_label">Correo</string>

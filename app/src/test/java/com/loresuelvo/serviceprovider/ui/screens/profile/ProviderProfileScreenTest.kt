@@ -5,12 +5,17 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
+import android.content.Context
+import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Assert.assertEquals
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -38,6 +43,45 @@ class ProviderProfileScreenTest {
         composeTestRule.onNodeWithText("Carlos Gómez").assertIsDisplayed()
         composeTestRule.onNodeWithText("carlos@example.com").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText("Plomería").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun loading_hides_private_data_and_connection_actions() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(state = ProviderProfileUiState.Loading, onBack = {})
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_view_loading))
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun account_failure_shows_retry_without_connection_action() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        var retries = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(
+                    state = ProviderProfileUiState.Unavailable,
+                    onBack = {},
+                    onRetry = { retries += 1 },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_view_unavailable))
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_view_retry))
+            .performClick()
+        assertEquals(1, retries)
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button))
+            .assertDoesNotExist()
     }
 
     private fun provider() = CurrentAccount.Provider(

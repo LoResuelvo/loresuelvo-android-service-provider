@@ -8,6 +8,7 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.usecase.account.ResolveProviderEntryUseCase
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,6 +75,52 @@ class ProviderProfileViewModelTest {
         assertEquals(ProviderProfileUiState.AccountMismatch, viewModel.uiState.value)
     }
 
+    @Test
+    fun keeps_loading_visible_while_account_request_is_pending() = runTest(scheduler) {
+        repository.pending = CompletableDeferred()
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertEquals(ProviderProfileUiState.Loading, viewModel.uiState.value)
+        assertEquals(1, repository.calls)
+    }
+
+    @Test
+    fun network_and_server_failures_offer_a_retryable_state() = runTest(scheduler) {
+        val viewModel = viewModel()
+
+        repository.outcome = CurrentAccountOutcome.Failure.Network(IllegalStateException("offline"))
+        viewModel.refresh()
+        advanceUntilIdle()
+        assertEquals(ProviderProfileUiState.Unavailable, viewModel.uiState.value)
+
+        repository.outcome = CurrentAccountOutcome.Failure.Server(503)
+        viewModel.refresh()
+        advanceUntilIdle()
+        assertEquals(ProviderProfileUiState.Unavailable, viewModel.uiState.value)
+        assertEquals(2, repository.calls)
+    }
+
+    @Test
+    fun retry_replaces_an_error_with_fresh_provider_data() = runTest(scheduler) {
+        val viewModel = viewModel()
+        repository.outcome = CurrentAccountOutcome.Failure.Network(IllegalStateException("offline"))
+        viewModel.refresh()
+        advanceUntilIdle()
+        assertEquals(ProviderProfileUiState.Unavailable, viewModel.uiState.value)
+
+        val updated = provider().copy(name = "María")
+        repository.outcome = CurrentAccountOutcome.Success(updated)
+        viewModel.refresh()
+        assertEquals(ProviderProfileUiState.Loading, viewModel.uiState.value)
+        advanceUntilIdle()
+
+        assertEquals(ProviderProfileUiState.Ready(updated), viewModel.uiState.value)
+        assertEquals(2, repository.calls)
+    }
+
     private fun viewModel() = ProviderProfileViewModel(
         ResolveProviderEntryUseCase(SessionStore(), repository),
     )
@@ -89,11 +136,12 @@ class ProviderProfileViewModelTest {
 
     private class FakeCurrentAccountRepository : CurrentAccountRepository {
         var outcome: CurrentAccountOutcome = CurrentAccountOutcome.Failure.NotFound
+        var pending: CompletableDeferred<CurrentAccountOutcome>? = null
         var calls = 0
 
         override suspend fun getCurrentAccount(): CurrentAccountOutcome {
             calls += 1
-            return outcome
+            return pending?.await() ?: outcome
         }
     }
 

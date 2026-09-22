@@ -21,7 +21,6 @@ Característica: Ver mi perfil y consultar mis conexiones
       | Inicio   |
       | Mensajes |
 
-  @wip
   Esquema del escenario: 02-PRF Entender la carga o el error de mis datos
     Dado que la consulta de mis datos "<Situación>"
     Cuando abro Perfil
@@ -34,7 +33,6 @@ Característica: Ver mi perfil y consultar mis conexiones
       | Falla por falta de red  | Un error con opción de reintentar |
       | Falla en el servicio    | Un error con opción de reintentar |
 
-  @wip
   Escenario: 03-PRF Reintentar la carga del perfil
     Dado que no se pudieron cargar mis datos y veo la opción de reintentar
     Y el servicio vuelve a estar disponible

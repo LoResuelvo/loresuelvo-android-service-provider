@@ -35,5 +35,6 @@ fun ProviderProfileRoute(
     ProviderProfileScreen(
         state = state,
         onBack = onBack,
+        onRetry = viewModel::refresh,
     )
 }

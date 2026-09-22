@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +37,7 @@ import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
 fun ProviderProfileScreen(
     state: ProviderProfileUiState,
     onBack: () -> Unit,
+    onRetry: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -61,6 +63,7 @@ fun ProviderProfileScreen(
             ProviderProfileUiState.Unavailable -> ProfileUnavailableState(
                 contentPadding,
                 R.string.provider_profile_view_unavailable,
+                onRetry,
             )
             ProviderProfileUiState.IncompleteProfile -> ProfileUnavailableState(
                 contentPadding,
@@ -82,15 +85,22 @@ fun ProviderProfileScreen(
 private fun ProfileUnavailableState(
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
     messageRes: Int,
+    onRetry: (() -> Unit)? = null,
 ) {
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
             .padding(24.dp),
-        contentAlignment = Alignment.Center,
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(text = stringResource(messageRes))
+        if (onRetry != null) {
+            Button(onClick = onRetry) {
+                Text(text = stringResource(R.string.provider_profile_view_retry))
+            }
+        }
     }
 }
 
@@ -99,14 +109,16 @@ private fun ProfileLoadingState(
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
     modifier: Modifier,
 ) {
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .padding(contentPadding)
             .testTag(PROVIDER_PROFILE_LOADING_TAG),
-        contentAlignment = Alignment.Center,
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CircularProgressIndicator()
+        Text(text = stringResource(R.string.provider_profile_view_loading))
     }
 }
 

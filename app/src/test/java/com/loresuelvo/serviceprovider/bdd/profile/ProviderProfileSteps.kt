@@ -28,6 +28,33 @@ internal class ProviderProfileSteps {
     @And("Perfil queda seleccionado junto a Inicio y Mensajes")
     fun profileIsSelectedWithPrimaryTabs() = world.assertPrimaryTabs()
 
+    @Given("que la consulta de mis datos {string}")
+    fun accountQueryHasSituation(situation: String) = world.configureAccountSituation(situation)
+
+    @When("abro Perfil")
+    fun providerOpensProfile() = world.openProfile()
+
+    @Then("veo {string}")
+    fun profileShowsAccountResult(result: String) = world.assertAccountResult(result)
+
+    @And("las acciones de conexión no están disponibles todavía")
+    fun connectionActionsAreUnavailable() = world.assertConnectionActionsUnavailable()
+
+    @Given("que no se pudieron cargar mis datos y veo la opción de reintentar")
+    fun profileLoadFailedWithRetry() = world.configureFailedProfileWithRetry()
+
+    @And("el servicio vuelve a estar disponible")
+    fun accountServiceReturns() = world.restoreAccountService()
+
+    @When("selecciono Reintentar")
+    fun providerRetriesProfile() = world.selectRetry()
+
+    @Then("veo mis datos actualizados")
+    fun profileShowsUpdatedData() = world.assertUpdatedProvider()
+
+    @And("desaparece el error")
+    fun profileErrorDisappears() = world.assertErrorGone()
+
     @After
     fun tearDown() = world.close()
 }
