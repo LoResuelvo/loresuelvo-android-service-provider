@@ -141,6 +141,19 @@ internal class ProviderProfileWorld : AutoCloseable {
         assertTrue(viewModel.uiState.value is ProviderProfileUiState.Ready)
     }
 
+    fun expireSessionAtAccountLookup() {
+        currentAccount.defaultResponse = CurrentAccountOutcome.Failure.Unauthorized
+    }
+
+    fun assertReLoginRequired() {
+        assertEquals(ProviderProfileUiState.SessionExpired, viewModel.uiState.value)
+        assertEquals(null, sessionStore.getSession())
+    }
+
+    fun assertPrivateDataGone() {
+        assertTrue(viewModel.uiState.value !is ProviderProfileUiState.Ready)
+    }
+
     fun openProfile() {
         viewModel = ViewModelProvider(viewModelStore, viewModelFactory)[
             "provider-profile",
@@ -151,7 +164,13 @@ internal class ProviderProfileWorld : AutoCloseable {
     }
 
     override fun close() {
+        Dispatchers.setMain(dispatcher)
+        currentAccount.pending?.complete(CurrentAccountOutcome.Failure.Network(
+            IllegalStateException("scenario finished"),
+        ))
+        scheduler.advanceUntilIdle()
         viewModelStore.clear()
+        scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
     }
 

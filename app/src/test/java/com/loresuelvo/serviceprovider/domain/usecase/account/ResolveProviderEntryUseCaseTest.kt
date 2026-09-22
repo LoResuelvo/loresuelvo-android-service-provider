@@ -8,9 +8,12 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.runCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -83,6 +86,23 @@ class ResolveProviderEntryUseCaseTest {
         assertEquals(ProviderEntryOutcome.RetryableFailure, outcome)
         assertEquals(0, store.clearCalls)
         assertEquals(session(), store.getSession())
+    }
+
+    @Test
+    fun ignores_a_provider_response_after_its_session_was_cleared() = runTest {
+        val store = RecordingSessionStore(session())
+        val pending = CompletableDeferred<CurrentAccountOutcome>()
+        val repository = object : CurrentAccountRepository {
+            override suspend fun getCurrentAccount(): CurrentAccountOutcome = pending.await()
+        }
+        val lookup = async { ResolveProviderEntryUseCase(store, repository)() }
+        runCurrent()
+
+        store.clearSession()
+        pending.complete(CurrentAccountOutcome.Success(providerAccount()))
+
+        assertEquals(ProviderEntryOutcome.Unauthenticated, lookup.await())
+        assertEquals(null, store.getSession())
     }
 
     private fun providerAccount() = CurrentAccount.Provider(

@@ -118,6 +118,20 @@ class ProviderProfileNavigationAcceptanceTest {
     }
 
     @Test
+    fun expired_profile_session_returns_to_sign_in_without_private_data() {
+        composeTestRule.waitForIdle()
+        currentAccountRepository.outcome = CurrentAccountOutcome.Failure.Unauthorized
+
+        openProfileFrom(Route.Home)
+
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.welcome_login),
+        ).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
+        composeTestRule.onAllNodesWithTag(PROVIDER_BOTTOM_BAR_TAG).assertCountEquals(0)
+    }
+
+    @Test
     fun missing_current_account_replaces_the_authenticated_shell_with_onboarding() {
         currentAccountRepository.outcome = CurrentAccountOutcome.Failure.NotFound
         sessionStore.clearSession()

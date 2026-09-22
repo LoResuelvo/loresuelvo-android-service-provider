@@ -75,7 +75,7 @@ fun ProviderProfileScreen(
             )
             ProviderProfileUiState.SessionExpired,
             ProviderProfileUiState.Unauthenticated,
-            -> ProfileUnavailableState(contentPadding, R.string.provider_profile_view_unavailable)
+            -> ProfileUnavailableState(contentPadding, R.string.welcome_auth_unauthorized_error)
             is ProviderProfileUiState.Ready -> ProfileReadyState(contentPadding, state.provider)
         }
     }

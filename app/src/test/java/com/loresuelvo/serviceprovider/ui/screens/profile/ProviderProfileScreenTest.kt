@@ -84,6 +84,20 @@ class ProviderProfileScreenTest {
             .assertDoesNotExist()
     }
 
+    @Test
+    fun expired_session_asks_for_sign_in_and_hides_private_data() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(state = ProviderProfileUiState.SessionExpired, onBack = {})
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.welcome_auth_unauthorized_error))
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
+    }
+
     private fun provider() = CurrentAccount.Provider(
         id = 1,
         name = "Carlos",

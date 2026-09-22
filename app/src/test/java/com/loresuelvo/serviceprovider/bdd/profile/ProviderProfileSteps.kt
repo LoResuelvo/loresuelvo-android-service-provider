@@ -55,6 +55,18 @@ internal class ProviderProfileSteps {
     @And("desaparece el error")
     fun profileErrorDisappears() = world.assertErrorGone()
 
+    @Given("que mi sesión venció")
+    fun providerSessionExpired() = world.expireSessionAtAccountLookup()
+
+    @When("intento consultar Perfil")
+    fun providerConsultsExpiredProfile() = world.openProfile()
+
+    @Then("se me informa que debo volver a iniciar sesión")
+    fun providerMustSignInAgain() = world.assertReLoginRequired()
+
+    @And("mis datos privados dejan de estar visibles")
+    fun privateProfileDataDisappears() = world.assertPrivateDataGone()
+
     @After
     fun tearDown() = world.close()
 }

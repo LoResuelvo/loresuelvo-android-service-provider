@@ -85,6 +85,8 @@ class ProviderProfileViewModelTest {
 
         assertEquals(ProviderProfileUiState.Loading, viewModel.uiState.value)
         assertEquals(1, repository.calls)
+        repository.pending?.complete(CurrentAccountOutcome.Success(provider()))
+        advanceUntilIdle()
     }
 
     @Test

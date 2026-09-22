@@ -12,9 +12,11 @@ class ResolveProviderEntryUseCase @Inject constructor(
     private val currentAccountRepository: CurrentAccountRepository,
 ) {
     suspend operator fun invoke(): ProviderEntryOutcome {
-        if (sessionStore.getSession() == null) return ProviderEntryOutcome.Unauthenticated
+        val activeSession = sessionStore.getSession() ?: return ProviderEntryOutcome.Unauthenticated
+        val outcome = currentAccountRepository.getCurrentAccount()
+        if (sessionStore.getSession() != activeSession) return ProviderEntryOutcome.Unauthenticated
 
-        return when (val outcome = currentAccountRepository.getCurrentAccount()) {
+        return when (outcome) {
             is CurrentAccountOutcome.Success -> when (val account = outcome.account) {
                 is CurrentAccount.Provider -> ProviderEntryOutcome.Provider(account)
                 is CurrentAccount.Consumer -> ProviderEntryOutcome.AccountMismatch

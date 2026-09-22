@@ -40,7 +40,6 @@ Característica: Ver mi perfil y consultar mis conexiones
     Entonces veo mis datos actualizados
     Y desaparece el error
 
-  @wip
   Escenario: 04-PRF Volver a iniciar sesión cuando vence
     Dado que mi sesión venció
     Cuando intento consultar Perfil
