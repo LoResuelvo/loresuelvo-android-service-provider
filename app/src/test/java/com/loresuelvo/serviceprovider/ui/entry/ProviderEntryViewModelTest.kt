@@ -135,6 +135,15 @@ class ProviderEntryViewModelTest {
         assertEquals(0, currentAccountRepository.calls)
     }
 
+    @Test
+    fun can_replace_authenticated_shell_with_incomplete_profile_destination() = runTest(scheduler) {
+        val viewModel = newViewModel()
+
+        viewModel.showIncompleteProfile()
+
+        assertEquals(ProviderEntryUiState.CompleteProviderProfile, viewModel.uiState.value)
+    }
+
     private fun newViewModel() = ProviderEntryViewModel(
         sessionStore = sessionStore,
         resolveProviderEntry = ResolveProviderEntryUseCase(sessionStore, currentAccountRepository),

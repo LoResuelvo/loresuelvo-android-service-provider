@@ -44,6 +44,14 @@ class ProviderEntryViewModel @Inject constructor(
 
     fun refresh() = resolve()
 
+    fun showAccountMismatch() {
+        _uiState.value = ProviderEntryUiState.AccountMismatch
+    }
+
+    fun showIncompleteProfile() {
+        _uiState.value = ProviderEntryUiState.CompleteProviderProfile
+    }
+
     private fun resolve() {
         if (resolutionJob?.isActive == true) return
         if (sessionStore.getSession() == null) {

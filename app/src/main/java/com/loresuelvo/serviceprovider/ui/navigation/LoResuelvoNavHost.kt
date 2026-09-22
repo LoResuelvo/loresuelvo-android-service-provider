@@ -35,6 +35,7 @@ fun LoResuelvoNavHost(
     optionalIdentityVerification: @Composable () -> Unit,
     home: @Composable () -> Unit,
     messages: @Composable () -> Unit,
+    profile: @Composable () -> Unit,
     jobRequestDetail: @Composable (Int) -> Unit,
     conversation: @Composable (Int) -> Unit,
     mercadoPago: @Composable () -> Unit = { MercadoPagoPlaceholder() },
@@ -49,6 +50,7 @@ fun LoResuelvoNavHost(
             composable(Route.OptionalIdentityVerification.path) { optionalIdentityVerification() }
             composable(Route.Home.path) { home() }
             composable(Route.Messages.path) { messages() }
+            composable(Route.Profile.path) { profile() }
             composable(
                 route = Route.JobRequestDetail.path,
                 arguments = listOf(

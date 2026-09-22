@@ -9,7 +9,6 @@ Característica: Ver mi perfil y consultar mis conexiones
   Antecedentes:
     Dado que inicié sesión como prestador con mi perfil profesional completo
 
-  @wip
   Esquema del escenario: 01-PRF Ver mis datos desde la barra inferior
     Dado que estoy en "<Pestaña>"
     Cuando selecciono Perfil

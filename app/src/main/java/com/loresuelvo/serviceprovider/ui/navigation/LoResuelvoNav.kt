@@ -36,6 +36,7 @@ import com.loresuelvo.serviceprovider.ui.screens.messages.ProviderMessagesRoute
 import com.loresuelvo.serviceprovider.ui.screens.identity.OptionalIdentityVerificationRoute
 import com.loresuelvo.serviceprovider.ui.screens.paymentaccount.MercadoPagoConnectRoute
 import com.loresuelvo.serviceprovider.ui.screens.profile.CompleteProviderProfileRoute
+import com.loresuelvo.serviceprovider.ui.screens.profile.ProviderProfileRoute
 
 /**
  * Composition root for the provider app. Welcome is the initial destination
@@ -112,6 +113,18 @@ fun LoResuelvoNav(
                                             launchSingleTop = true
                                         }
                                     },
+                                )
+                            },
+                            profile = {
+                                ProviderProfileRoute(
+                                    onBack = {
+                                        navController.popBackStack(
+                                            Route.Home.path,
+                                            inclusive = false,
+                                        )
+                                    },
+                                    onIncompleteProfile = entryViewModel::showIncompleteProfile,
+                                    onAccountMismatch = entryViewModel::showAccountMismatch,
                                 )
                             },
                             jobRequestDetail = {

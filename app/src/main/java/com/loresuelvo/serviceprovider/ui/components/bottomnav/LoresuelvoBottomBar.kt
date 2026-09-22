@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -74,6 +76,7 @@ fun LoresuelvoBottomBar(
                         // visible square around the icon.
                         .clip(CircleShape)
                         .clickable(onClick = { onNavigate(destination) })
+                        .semantics { selected = isSelected }
                         .testTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + destination.route),
                     contentAlignment = Alignment.Center,
                 ) {

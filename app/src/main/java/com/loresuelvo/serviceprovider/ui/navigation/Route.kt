@@ -51,6 +51,9 @@ sealed class Route(val path: String) {
      */
     data object Messages : Route("messages")
 
+    /** Authenticated provider profile destination. */
+    data object Profile : Route("profile")
+
     /**
      * Read-only detail for one pending provider request. The id is restored by
      * Navigation after Activity recreation; request data stays in the domain

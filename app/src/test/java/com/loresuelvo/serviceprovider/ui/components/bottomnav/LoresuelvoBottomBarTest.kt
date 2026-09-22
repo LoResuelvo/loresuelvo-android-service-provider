@@ -1,11 +1,14 @@
 package com.loresuelvo.serviceprovider.ui.components.bottomnav
 
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import com.loresuelvo.serviceprovider.ui.navigation.Route
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -82,5 +85,27 @@ class LoresuelvoBottomBarTest {
                 .performClick()
             assertEquals(listOf(destination), captured)
         }
+    }
+
+    @Test
+    fun exposes_the_selected_tab_to_accessibility_services() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                LoresuelvoBottomBar(
+                    currentRoute = BottomDestination.Profile.route,
+                    onNavigate = {},
+                )
+            }
+        }
+
+        composeTestRule
+            .onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Profile.path)
+            .assertIsSelected()
+        composeTestRule
+            .onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Home.path)
+            .assertIsNotSelected()
+        composeTestRule
+            .onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path)
+            .assertIsNotSelected()
     }
 }

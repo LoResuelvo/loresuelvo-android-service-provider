@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Message
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.navigation.Route
@@ -56,12 +57,18 @@ data class BottomDestination(
             labelRes = R.string.provider_bottom_nav_messages,
         )
 
+        val Profile: BottomDestination = BottomDestination(
+            route = Route.Profile.path,
+            icon = Icons.Outlined.Person,
+            labelRes = R.string.provider_bottom_nav_profile,
+        )
+
         /**
          * Single source of truth for the bottom-bar order. The
          * capsule renders the items in the order declared here, so
          * re-ordering the tabs is a one-line edit.
          */
-        val all: List<BottomDestination> = listOf(Home, Messages)
+        val all: List<BottomDestination> = listOf(Home, Messages, Profile)
 
         /**
          * The bar is visible on any route that maps to a
@@ -76,7 +83,7 @@ data class BottomDestination(
          * test against `all.map { it.route }`.
          */
         fun shouldShow(currentRoute: String?): Boolean = when (currentRoute) {
-            Home.route, Messages.route -> true
+            Home.route, Messages.route, Profile.route -> true
             else -> false
         }
     }

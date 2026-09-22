@@ -19,4 +19,9 @@ class RouteTest {
     fun exposes_the_messages_destination_path() {
         assertEquals("messages", Route.Messages.path)
     }
+
+    @Test
+    fun exposes_the_profile_destination_path() {
+        assertEquals("profile", Route.Profile.path)
+    }
 }

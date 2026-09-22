@@ -65,6 +65,17 @@
     <string name="provider_messages_conversation_description">Conversación con %1$s. %2$s. %3$s.</string>
     <string name="provider_bottom_nav_home">Inicio</string>
     <string name="provider_bottom_nav_messages">Mensajes</string>
+    <string name="provider_bottom_nav_profile">Perfil</string>
+
+    <!-- Retrieved provider profile -->
+    <string name="provider_profile_view_title">Perfil</string>
+    <string name="provider_profile_back">Volver a Inicio</string>
+    <string name="provider_profile_view_unavailable">Tu perfil no está disponible en este momento.</string>
+    <string name="provider_profile_incomplete">Completá tu perfil profesional para continuar.</string>
+    <string name="provider_profile_account_mismatch">Esta cuenta no corresponde a un prestador.</string>
+    <string name="provider_profile_email_label">Correo</string>
+    <string name="provider_profile_photo_description">Foto de perfil de %1$s</string>
+    <string name="provider_profile_avatar_description">Avatar de %1$s</string>
 
     <!-- Provider job request detail -->
     <string name="provider_job_request_detail_title">Detalle de solicitud</string>

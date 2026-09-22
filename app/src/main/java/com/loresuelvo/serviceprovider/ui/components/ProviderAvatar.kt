@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -26,16 +28,14 @@ internal fun ProviderAvatar(
     modifier: Modifier = Modifier,
     size: Dp = 64.dp,
 ) {
-    val initials = listOf(name, surname)
-        .mapNotNull { it.trim().firstOrNull()?.uppercaseChar() }
-        .joinToString("")
-        .ifBlank { "?" }
+    val initials = providerInitials(name, surname)
 
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary),
+            .background(MaterialTheme.colorScheme.primary)
+            .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -47,7 +47,7 @@ internal fun ProviderAvatar(
         if (!profilePhotoUrl.isNullOrBlank()) {
             AsyncImage(
                 model = profilePhotoUrl,
-                contentDescription = contentDescription,
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
@@ -56,3 +56,9 @@ internal fun ProviderAvatar(
         }
     }
 }
+
+internal fun providerInitials(name: String, surname: String): String =
+    listOf(name, surname)
+        .mapNotNull { it.trim().firstOrNull()?.uppercaseChar() }
+        .joinToString("")
+        .ifBlank { "?" }
