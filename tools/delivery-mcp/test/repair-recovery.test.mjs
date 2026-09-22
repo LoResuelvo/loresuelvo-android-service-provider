@@ -199,8 +199,9 @@ test("two concurrent recovery calls serialize per repository and do not cross ro
   const rightProvider = failedCi(right.targetSha, right.expectedAuthorizationCommitSha);
   const [leftResults, rightResult] = await Promise.all([
     Promise.all([
-      recoverStaleRepairAuthorization({ ...left, ciProvider: leftProvider }),
-      recoverStaleRepairAuthorization({ ...left, ciProvider: leftProvider }),
+      // Allow serialized Git work to finish; this test does not exercise lock timeouts.
+      recoverStaleRepairAuthorization({ ...left, ciProvider: leftProvider, lockTimeoutMs: 5_000 }),
+      recoverStaleRepairAuthorization({ ...left, ciProvider: leftProvider, lockTimeoutMs: 5_000 }),
     ]),
     recoverStaleRepairAuthorization({ ...right, ciProvider: rightProvider }),
   ]);
