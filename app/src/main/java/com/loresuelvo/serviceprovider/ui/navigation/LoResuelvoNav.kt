@@ -125,6 +125,11 @@ fun LoResuelvoNav(
                                     },
                                     onIncompleteProfile = entryViewModel::showIncompleteProfile,
                                     onAccountMismatch = entryViewModel::showAccountMismatch,
+                                    onConnectMercadoPago = {
+                                        navController.navigate(Route.MercadoPagoConnect.path) {
+                                            launchSingleTop = true
+                                        }
+                                    },
                                 )
                             },
                             jobRequestDetail = {

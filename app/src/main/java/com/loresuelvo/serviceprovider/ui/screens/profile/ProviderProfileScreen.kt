@@ -33,6 +33,7 @@ import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
+import com.loresuelvo.serviceprovider.ui.profile.ProfilePaymentState
 import java.text.DateFormat
 import java.util.Date
 
@@ -42,6 +43,7 @@ fun ProviderProfileScreen(
     state: ProviderProfileUiState,
     onBack: () -> Unit,
     onRetry: () -> Unit = {},
+    onConnectMercadoPago: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -80,7 +82,11 @@ fun ProviderProfileScreen(
             ProviderProfileUiState.SessionExpired,
             ProviderProfileUiState.Unauthenticated,
             -> ProfileUnavailableState(contentPadding, R.string.welcome_auth_unauthorized_error)
-            is ProviderProfileUiState.Ready -> ProfileReadyState(contentPadding, state.provider)
+            is ProviderProfileUiState.Ready -> ProfileReadyState(
+                contentPadding,
+                state,
+                onConnectMercadoPago,
+            )
         }
     }
 }
@@ -129,8 +135,10 @@ private fun ProfileLoadingState(
 @Composable
 private fun ProfileReadyState(
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
-    provider: CurrentAccount.Provider,
+    state: ProviderProfileUiState.Ready,
+    onConnectMercadoPago: () -> Unit,
 ) {
+    val provider = state.provider
     val fullName = "${provider.name} ${provider.surname}".trim()
     val photoDescription = if (provider.profilePhotoUrl.isNullOrBlank()) {
         stringResource(R.string.provider_profile_avatar_description, fullName)
@@ -179,6 +187,29 @@ private fun ProfileReadyState(
                 ProfileDetail(R.string.provider_profile_identity_date_label, date)
             }
         }
+        Text(
+            text = stringResource(R.string.provider_profile_connections_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        ProfileDetail(
+            R.string.provider_profile_mercadopago_label,
+            stringResource(when (state.payment) {
+                ProfilePaymentState.Loading -> R.string.provider_profile_connection_loading
+                ProfilePaymentState.Pending -> R.string.provider_profile_connection_pending
+                ProfilePaymentState.Connected -> R.string.provider_profile_connection_connected
+                ProfilePaymentState.Unavailable -> R.string.provider_profile_connection_unavailable
+            }),
+        )
+        if (state.payment == ProfilePaymentState.Pending) {
+            Button(onClick = onConnectMercadoPago) {
+                Text(stringResource(R.string.mercadopago_connect_button))
+            }
+        }
+        ProfileDetail(
+            R.string.provider_profile_calendar_label,
+            stringResource(R.string.provider_profile_calendar_coming_soon),
+        )
     }
 }
 

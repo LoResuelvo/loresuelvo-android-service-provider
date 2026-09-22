@@ -82,6 +82,21 @@ internal class ProviderProfileSteps {
     @And("no hay una acción para iniciar o reintentar la identificación")
     fun profileHasNoIdentityAction() = world.assertNoIdentityAction()
 
+    @Given("que todavía no verifiqué mi identidad ni conecté Mercado Pago")
+    fun providerHasPendingConnections() = world.configurePendingConnections()
+
+    @Then("Mercado Pago aparece pendiente y puedo abrir su flujo de conexión")
+    fun profileShowsPendingPaymentConnection() = world.assertPendingPaymentConnection()
+
+    @And("Google Calendar aparece como {string} sin una acción de conexión")
+    fun calendarIsComingSoon(label: String) {
+        require(label == "Próximamente")
+        world.assertCalendarDoesNotBlockProfile()
+    }
+
+    @And("puedo seguir usando Inicio y Mensajes")
+    fun primaryTabsRemainAvailable() = world.assertPrimaryTabs()
+
     @After
     fun tearDown() = world.close()
 }

@@ -1,0 +1,10 @@
+<resources>
+    <string name="provider_profile_connections_title">Connections</string>
+    <string name="provider_profile_mercadopago_label">Mercado Pago</string>
+    <string name="provider_profile_connection_loading">Checking status…</string>
+    <string name="provider_profile_connection_pending">Pending</string>
+    <string name="provider_profile_connection_connected">Connected</string>
+    <string name="provider_profile_connection_unavailable">Status unavailable</string>
+    <string name="provider_profile_calendar_label">Google Calendar</string>
+    <string name="provider_profile_calendar_coming_soon">Coming soon</string>
+</resources>

@@ -8,6 +8,8 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -15,12 +17,16 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.loresuelvo.serviceprovider.MainActivity
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupCurrentAccountRepository
+import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupPaymentAccountRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupSessionStore
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_TAG
 import com.loresuelvo.serviceprovider.ui.navigation.Route
@@ -60,6 +66,9 @@ class ProviderProfileNavigationAcceptanceTest {
         sessionStore = entryPoint.sessionStore()
         currentAccountRepository = entryPoint.currentAccountRepository()
         currentAccountRepository.outcome = CurrentAccountOutcome.Success(provider())
+        entryPoint.paymentAccountRepository().outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.PENDING),
+        )
         sessionStore.saveSession(
             AuthSession(
                 user = User("auth0|provider-device", "provider@example.com"),
@@ -129,6 +138,29 @@ class ProviderProfileNavigationAcceptanceTest {
         ).assertIsDisplayed()
         composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
         composeTestRule.onAllNodesWithTag(PROVIDER_BOTTOM_BAR_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun pending_connection_opens_the_existing_mercado_pago_flow() {
+        composeTestRule.waitForIdle()
+        openProfileFrom(Route.Home)
+
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.provider_profile_connection_pending),
+        ).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.provider_profile_calendar_coming_soon),
+        ).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performTouchInput { swipeUp() }
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.mercadopago_connect_button),
+        ).assertIsDisplayed().performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithText(
+            composeTestRule.activity.getString(R.string.mercadopago_connect_title),
+        ).assertExists()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -221,4 +253,6 @@ interface ProviderProfileNavigationTestEntryPoint {
     fun sessionStore(): ProviderSignupSessionStore
 
     fun currentAccountRepository(): ProviderSignupCurrentAccountRepository
+
+    fun paymentAccountRepository(): ProviderSignupPaymentAccountRepository
 }

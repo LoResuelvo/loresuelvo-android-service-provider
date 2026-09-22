@@ -4,6 +4,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -13,6 +15,7 @@ import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
+import com.loresuelvo.serviceprovider.ui.profile.ProfilePaymentState
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import org.junit.Rule
 import org.junit.Test
@@ -142,6 +145,50 @@ class ProviderProfileScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_identity_date_label))
             .assertDoesNotExist()
         composeTestRule.onNodeWithText(context.getString(R.string.identity_verify_now))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun pending_payment_opens_existing_flow_and_calendar_has_no_action() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        var connectClicks = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(
+                    state = ProviderProfileUiState.Ready(provider(), ProfilePaymentState.Pending),
+                    onBack = {},
+                    onConnectMercadoPago = { connectClicks += 1 },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_connection_pending))
+            .performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_calendar_coming_soon))
+            .performScrollTo().assertIsDisplayed()
+        composeTestRule.onNode(
+            hasText(context.getString(R.string.provider_profile_calendar_label)) and hasClickAction(),
+        ).assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button))
+            .performScrollTo().performClick()
+        assertEquals(1, connectClicks)
+    }
+
+    @Test
+    fun connected_payment_does_not_offer_another_authorization() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(
+                    state = ProviderProfileUiState.Ready(provider(), ProfilePaymentState.Connected),
+                    onBack = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_connection_connected))
+            .performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button))
             .assertDoesNotExist()
     }
 

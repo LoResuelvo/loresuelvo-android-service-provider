@@ -7,7 +7,13 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.account.ResolveProviderEntryUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.GetPaymentAccountStatusUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,11 +36,15 @@ class ProviderProfileViewModelTest {
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
     private lateinit var repository: FakeCurrentAccountRepository
+    private lateinit var paymentRepository: FakePaymentAccountRepository
+    private lateinit var sessionStore: SessionStore
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         repository = FakeCurrentAccountRepository()
+        paymentRepository = FakePaymentAccountRepository()
+        sessionStore = SessionStore()
     }
 
     @After
@@ -49,7 +59,7 @@ class ProviderProfileViewModelTest {
         viewModel.refresh()
         advanceUntilIdle()
 
-        assertEquals(ProviderProfileUiState.Ready(provider), viewModel.uiState.value)
+        assertEquals(ProviderProfileUiState.Ready(provider, ProfilePaymentState.Pending), viewModel.uiState.value)
         assertEquals(1, repository.calls)
     }
 
@@ -119,13 +129,98 @@ class ProviderProfileViewModelTest {
         assertEquals(ProviderProfileUiState.Loading, viewModel.uiState.value)
         advanceUntilIdle()
 
-        assertEquals(ProviderProfileUiState.Ready(updated), viewModel.uiState.value)
+        assertEquals(ProviderProfileUiState.Ready(updated, ProfilePaymentState.Pending), viewModel.uiState.value)
         assertEquals(2, repository.calls)
     }
 
     private fun viewModel() = ProviderProfileViewModel(
-        ResolveProviderEntryUseCase(SessionStore(), repository),
+        ResolveProviderEntryUseCase(sessionStore, repository),
+        GetPaymentAccountStatusUseCase(paymentRepository),
+        sessionStore,
     )
+
+    @Test
+    fun account_is_visible_while_payment_status_is_pending() = runTest(scheduler) {
+        val provider = provider()
+        repository.outcome = CurrentAccountOutcome.Success(provider)
+        paymentRepository.pending = CompletableDeferred()
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertEquals(ProviderProfileUiState.Ready(provider), viewModel.uiState.value)
+        paymentRepository.pending?.complete(
+            PaymentAccountStatusOutcome.Success(PaymentAccountStatus(ConnectionStatus.PENDING)),
+        )
+        advanceUntilIdle()
+        assertEquals(ProviderProfileUiState.Ready(provider, ProfilePaymentState.Pending), viewModel.uiState.value)
+    }
+
+    @Test
+    fun connected_payment_status_disables_the_pending_action() = runTest(scheduler) {
+        repository.outcome = CurrentAccountOutcome.Success(provider())
+        paymentRepository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.CONNECTED),
+        )
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertEquals(ProfilePaymentState.Connected, (viewModel.uiState.value as ProviderProfileUiState.Ready).payment)
+    }
+
+    @Test
+    fun payment_failure_keeps_provider_data_visible() = runTest(scheduler) {
+        repository.outcome = CurrentAccountOutcome.Success(provider())
+        paymentRepository.outcome = PaymentAccountStatusOutcome.Failure.Network(
+            IllegalStateException("offline"),
+        )
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertEquals(
+            ProviderProfileUiState.Ready(provider(), ProfilePaymentState.Unavailable),
+            viewModel.uiState.value,
+        )
+    }
+
+    @Test
+    fun late_payment_result_cannot_restore_a_cleared_session() = runTest(scheduler) {
+        repository.outcome = CurrentAccountOutcome.Success(provider())
+        paymentRepository.pending = CompletableDeferred()
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+        sessionStore.clearSession()
+        paymentRepository.pending?.complete(
+            PaymentAccountStatusOutcome.Success(PaymentAccountStatus(ConnectionStatus.PENDING)),
+        )
+        advanceUntilIdle()
+
+        assertEquals(ProviderProfileUiState.SessionExpired, viewModel.uiState.value)
+    }
+
+    @Test
+    fun old_payment_unauthorized_response_cannot_clear_a_new_session() = runTest(scheduler) {
+        repository.outcome = CurrentAccountOutcome.Success(provider())
+        paymentRepository.pending = CompletableDeferred()
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+        val replacement = AuthSession(User("auth0|replacement", "new@example.com"), "new-token")
+        sessionStore.saveSession(replacement)
+        paymentRepository.pending?.complete(PaymentAccountStatusOutcome.Failure.Unauthorized)
+        advanceUntilIdle()
+
+        assertEquals(ProviderProfileUiState.SessionExpired, viewModel.uiState.value)
+        assertEquals(replacement, sessionStore.getSession())
+    }
 
     private fun provider() = CurrentAccount.Provider(
         id = 20,
@@ -145,6 +240,18 @@ class ProviderProfileViewModelTest {
             calls += 1
             return pending?.await() ?: outcome
         }
+    }
+
+    private class FakePaymentAccountRepository : PaymentAccountRepository {
+        var outcome: PaymentAccountStatusOutcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.PENDING),
+        )
+        var pending: CompletableDeferred<PaymentAccountStatusOutcome>? = null
+
+        override suspend fun getStatus(): PaymentAccountStatusOutcome = pending?.await() ?: outcome
+
+        override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome =
+            error("Profile must not request payment authorization")
     }
 
     private class SessionStore : AuthSessionStore {

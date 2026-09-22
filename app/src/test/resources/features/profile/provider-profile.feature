@@ -53,7 +53,6 @@ Característica: Ver mi perfil y consultar mis conexiones
     Y veo la fecha de aprobación si existe
     Y no hay una acción para iniciar o reintentar la identificación
 
-  @wip
   Escenario: 06-PRF Usar Perfil con conexiones pendientes
     Dado que todavía no verifiqué mi identidad ni conecté Mercado Pago
     Cuando consulto Perfil

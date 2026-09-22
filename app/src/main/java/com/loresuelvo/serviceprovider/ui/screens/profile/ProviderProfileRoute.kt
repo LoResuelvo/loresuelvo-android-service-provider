@@ -16,6 +16,7 @@ fun ProviderProfileRoute(
     onBack: () -> Unit,
     onIncompleteProfile: () -> Unit = {},
     onAccountMismatch: () -> Unit = {},
+    onConnectMercadoPago: () -> Unit = {},
     viewModel: ProviderProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -36,5 +37,6 @@ fun ProviderProfileRoute(
         state = state,
         onBack = onBack,
         onRetry = viewModel::refresh,
+        onConnectMercadoPago = onConnectMercadoPago,
     )
 }

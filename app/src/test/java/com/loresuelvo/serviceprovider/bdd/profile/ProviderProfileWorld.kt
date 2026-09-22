@@ -11,11 +11,18 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountAuthorizationOutcome
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountRepository
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.account.ResolveProviderEntryUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.paymentaccount.GetPaymentAccountStatusUseCase
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.BottomDestination
 import com.loresuelvo.serviceprovider.ui.components.providerInitials
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
+import com.loresuelvo.serviceprovider.ui.profile.ProfilePaymentState
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileViewModel
 import java.util.ArrayDeque
 import kotlinx.coroutines.CompletableDeferred
@@ -37,6 +44,7 @@ internal class ProviderProfileWorld : AutoCloseable {
     private val dispatcher = StandardTestDispatcher(scheduler)
     private val sessionStore = ProfileSessionStore()
     private val currentAccount = ProfileCurrentAccountRepository()
+    private val paymentAccount = ProfilePaymentAccountRepository()
     private val viewModelStore = ViewModelStore()
     private val viewModelFactory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -176,6 +184,27 @@ internal class ProviderProfileWorld : AutoCloseable {
         assertTrue(viewModel.uiState.value is ProviderProfileUiState.Ready)
     }
 
+    fun configurePendingConnections() {
+        currentAccount.defaultResponse = CurrentAccountOutcome.Success(
+            provider().copy(identityVerificationStatus = IdentityVerificationStatus.Unverified),
+        )
+        paymentAccount.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.PENDING),
+        )
+    }
+
+    fun assertPendingPaymentConnection() {
+        val ready = viewModel.uiState.value as ProviderProfileUiState.Ready
+        assertEquals(ProfilePaymentState.Pending, ready.payment)
+        assertEquals(1, paymentAccount.statusCalls)
+        assertEquals(0, paymentAccount.authorizationCalls)
+    }
+
+    fun assertCalendarDoesNotBlockProfile() {
+        assertTrue(viewModel.uiState.value is ProviderProfileUiState.Ready)
+        assertEquals(0, paymentAccount.authorizationCalls)
+    }
+
     fun openProfile() {
         viewModel = ViewModelProvider(viewModelStore, viewModelFactory)[
             "provider-profile",
@@ -198,6 +227,8 @@ internal class ProviderProfileWorld : AutoCloseable {
 
     private fun newViewModel() = ProviderProfileViewModel(
         ResolveProviderEntryUseCase(sessionStore, currentAccount),
+        GetPaymentAccountStatusUseCase(paymentAccount),
+        sessionStore,
     )
 
     private fun readyProvider(): CurrentAccount.Provider =
@@ -227,6 +258,24 @@ internal class ProviderProfileWorld : AutoCloseable {
             calls += 1
             return pending?.await()
                 ?: if (responses.isEmpty()) defaultResponse else responses.removeFirst()
+        }
+    }
+
+    private class ProfilePaymentAccountRepository : PaymentAccountRepository {
+        var outcome: PaymentAccountStatusOutcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.PENDING),
+        )
+        var statusCalls = 0
+        var authorizationCalls = 0
+
+        override suspend fun getStatus(): PaymentAccountStatusOutcome {
+            statusCalls += 1
+            return outcome
+        }
+
+        override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome {
+            authorizationCalls += 1
+            error("Profile must not start authorization")
         }
     }
 
