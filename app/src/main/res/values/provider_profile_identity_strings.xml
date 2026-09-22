@@ -1,0 +1,16 @@
+<resources>
+    <string name="provider_profile_identity_label">Verificación de identidad</string>
+    <string name="provider_profile_identity_date_label">Fecha de aprobación</string>
+    <string name="provider_profile_identity_unavailable">Estado no disponible</string>
+    <string name="provider_profile_identity_unverified">Sin verificar</string>
+    <string name="provider_profile_identity_not_started">No iniciada</string>
+    <string name="provider_profile_identity_in_progress">En curso</string>
+    <string name="provider_profile_identity_awaiting_user">Esperando tus datos</string>
+    <string name="provider_profile_identity_in_review">En revisión</string>
+    <string name="provider_profile_identity_approved">Aprobada</string>
+    <string name="provider_profile_identity_declined">Rechazada</string>
+    <string name="provider_profile_identity_resubmitted">Reenviada</string>
+    <string name="provider_profile_identity_abandoned">Abandonada</string>
+    <string name="provider_profile_identity_expired">Vencida</string>
+    <string name="provider_profile_identity_kyc_expired">Verificación vencida</string>
+</resources>

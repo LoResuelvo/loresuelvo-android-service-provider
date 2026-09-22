@@ -1,0 +1,16 @@
+<resources>
+    <string name="provider_profile_identity_label">Identity verification</string>
+    <string name="provider_profile_identity_date_label">Approval date</string>
+    <string name="provider_profile_identity_unavailable">Status unavailable</string>
+    <string name="provider_profile_identity_unverified">Unverified</string>
+    <string name="provider_profile_identity_not_started">Not started</string>
+    <string name="provider_profile_identity_in_progress">In progress</string>
+    <string name="provider_profile_identity_awaiting_user">Awaiting your details</string>
+    <string name="provider_profile_identity_in_review">In review</string>
+    <string name="provider_profile_identity_approved">Approved</string>
+    <string name="provider_profile_identity_declined">Declined</string>
+    <string name="provider_profile_identity_resubmitted">Resubmitted</string>
+    <string name="provider_profile_identity_abandoned">Abandoned</string>
+    <string name="provider_profile_identity_expired">Expired</string>
+    <string name="provider_profile_identity_kyc_expired">Verification expired</string>
+</resources>

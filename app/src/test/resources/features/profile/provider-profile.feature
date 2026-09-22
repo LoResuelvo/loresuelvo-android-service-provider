@@ -46,7 +46,6 @@ Característica: Ver mi perfil y consultar mis conexiones
     Entonces se me informa que debo volver a iniciar sesión
     Y mis datos privados dejan de estar visibles
 
-  @wip
   Escenario: 05-PRF Consultar mi verificación de identidad
     Dado que el servicio informa mi estado de identidad
     Cuando consulto Perfil

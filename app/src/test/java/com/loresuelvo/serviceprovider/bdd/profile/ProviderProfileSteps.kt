@@ -67,6 +67,21 @@ internal class ProviderProfileSteps {
     @And("mis datos privados dejan de estar visibles")
     fun privateProfileDataDisappears() = world.assertPrivateDataGone()
 
+    @Given("que el servicio informa mi estado de identidad")
+    fun serviceReportsIdentityStatus() = world.configureIdentityStatus()
+
+    @When("consulto Perfil")
+    fun providerConsultsProfile() = world.openProfile()
+
+    @Then("veo ese estado de identidad")
+    fun profileShowsIdentityStatus() = world.assertIdentityStatus()
+
+    @And("veo la fecha de aprobación si existe")
+    fun profileShowsApprovalDate() = world.assertIdentityApprovalDate()
+
+    @And("no hay una acción para iniciar o reintentar la identificación")
+    fun profileHasNoIdentityAction() = world.assertNoIdentityAction()
+
     @After
     fun tearDown() = world.close()
 }

@@ -12,6 +12,8 @@ data class CurrentAccountDto(
     @SerialName("role") val role: String,
     @SerialName("profile_photo") val profilePhoto: CurrentAccountProfilePhotoDto? = null,
     @SerialName("category") val category: CategoryDto? = null,
+    @SerialName("identity_verification_status") val identityVerificationStatus: String? = null,
+    @SerialName("identity_verified_on") val identityVerifiedOn: String? = null,
 )
 
 @Serializable

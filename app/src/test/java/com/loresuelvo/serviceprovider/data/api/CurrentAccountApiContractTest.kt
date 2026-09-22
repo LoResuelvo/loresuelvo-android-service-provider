@@ -67,6 +67,8 @@ class CurrentAccountApiContractTest {
         assertEquals("/me", request.path)
         assertEquals("Bearer synthetic-token", request.getHeader("Authorization"))
         assertProvider(dto)
+        assertEquals("unverified", dto.identityVerificationStatus)
+        assertEquals(null, dto.identityVerifiedOn)
     }
 
     @Test
@@ -94,6 +96,33 @@ class CurrentAccountApiContractTest {
         assertEquals("consumer", dto.role)
         assertEquals(null, dto.category)
         assertEquals(null, dto.profilePhoto)
+        assertEquals(null, dto.identityVerificationStatus)
+        assertEquals(null, dto.identityVerifiedOn)
+    }
+
+    @Test
+    fun decodes_approved_identity_fields_from_their_wire_names() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                {
+                  "id": 20,
+                  "name": "Juan",
+                  "surname": "Gómez",
+                  "email": "juan@example.com",
+                  "role": "provider",
+                  "category": {"id": 1, "name": "Plomería"},
+                  "identity_verification_status": "approved",
+                  "identity_verified_on": "2026-01-15T12:34:56.123Z"
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        val dto = api().getCurrentAccount()
+
+        assertEquals("approved", dto.identityVerificationStatus)
+        assertEquals("2026-01-15T12:34:56.123Z", dto.identityVerifiedOn)
     }
 
     private fun api(): BackendApi = Retrofit.Builder()

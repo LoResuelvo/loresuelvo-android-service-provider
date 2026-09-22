@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -29,8 +30,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
+import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
+import java.text.DateFormat
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -163,7 +167,34 @@ private fun ProfileReadyState(
         ProfileDetail(R.string.provider_profile_surname_label, provider.surname)
         ProfileDetail(R.string.provider_profile_email_label, provider.email)
         ProfileDetail(R.string.provider_profile_category_label, provider.category.name)
+        ProfileDetail(
+            R.string.provider_profile_identity_label,
+            stringResource(provider.identityVerificationStatus.labelResource()),
+        )
+        if (provider.identityVerificationStatus == IdentityVerificationStatus.Approved) {
+            provider.identityVerifiedOn?.let { verifiedOn ->
+                val locale = LocalConfiguration.current.locales[0]
+                val date = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
+                    .format(Date(verifiedOn))
+                ProfileDetail(R.string.provider_profile_identity_date_label, date)
+            }
+        }
     }
+}
+
+private fun IdentityVerificationStatus.labelResource(): Int = when (this) {
+    IdentityVerificationStatus.Unavailable -> R.string.provider_profile_identity_unavailable
+    IdentityVerificationStatus.Unverified -> R.string.provider_profile_identity_unverified
+    IdentityVerificationStatus.NotStarted -> R.string.provider_profile_identity_not_started
+    IdentityVerificationStatus.InProgress -> R.string.provider_profile_identity_in_progress
+    IdentityVerificationStatus.AwaitingUser -> R.string.provider_profile_identity_awaiting_user
+    IdentityVerificationStatus.InReview -> R.string.provider_profile_identity_in_review
+    IdentityVerificationStatus.Approved -> R.string.provider_profile_identity_approved
+    IdentityVerificationStatus.Declined -> R.string.provider_profile_identity_declined
+    IdentityVerificationStatus.Resubmitted -> R.string.provider_profile_identity_resubmitted
+    IdentityVerificationStatus.Abandoned -> R.string.provider_profile_identity_abandoned
+    IdentityVerificationStatus.Expired -> R.string.provider_profile_identity_expired
+    IdentityVerificationStatus.KycExpired -> R.string.provider_profile_identity_kyc_expired
 }
 
 @Composable

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelStore
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
+import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -152,6 +153,27 @@ internal class ProviderProfileWorld : AutoCloseable {
 
     fun assertPrivateDataGone() {
         assertTrue(viewModel.uiState.value !is ProviderProfileUiState.Ready)
+    }
+
+    fun configureIdentityStatus() {
+        currentAccount.defaultResponse = CurrentAccountOutcome.Success(
+            provider().copy(
+                identityVerificationStatus = IdentityVerificationStatus.Approved,
+                identityVerifiedOn = 1_768_480_496_000L,
+            ),
+        )
+    }
+
+    fun assertIdentityStatus() {
+        assertEquals(IdentityVerificationStatus.Approved, readyProvider().identityVerificationStatus)
+    }
+
+    fun assertIdentityApprovalDate() {
+        assertEquals(1_768_480_496_000L, readyProvider().identityVerifiedOn)
+    }
+
+    fun assertNoIdentityAction() {
+        assertTrue(viewModel.uiState.value is ProviderProfileUiState.Ready)
     }
 
     fun openProfile() {

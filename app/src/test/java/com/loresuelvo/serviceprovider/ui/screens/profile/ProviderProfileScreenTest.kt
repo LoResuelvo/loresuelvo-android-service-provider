@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import android.content.Context
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
+import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
@@ -19,6 +20,8 @@ import org.junit.Assert.assertEquals
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.text.DateFormat
+import java.util.Date
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -96,6 +99,50 @@ class ProviderProfileScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.welcome_auth_unauthorized_error))
             .assertIsDisplayed()
         composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun approved_identity_displays_status_and_local_date_without_verification_action() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val verifiedOn = 1_768_480_496_000L
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(
+                    state = ProviderProfileUiState.Ready(provider().copy(
+                        identityVerificationStatus = IdentityVerificationStatus.Approved,
+                        identityVerifiedOn = verifiedOn,
+                    )),
+                    onBack = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_identity_approved))
+            .performScrollTo().assertIsDisplayed()
+        val expectedDate = DateFormat.getDateInstance(
+            DateFormat.MEDIUM,
+            context.resources.configuration.locales[0],
+        ).format(Date(verifiedOn))
+        composeTestRule.onNodeWithText(expectedDate).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.identity_verify_now))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun unavailable_identity_does_not_show_approval_date_or_action() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(state = ProviderProfileUiState.Ready(provider()), onBack = {})
+            }
+        }
+
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_identity_unavailable))
+            .performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_identity_date_label))
+            .assertDoesNotExist()
+        composeTestRule.onNodeWithText(context.getString(R.string.identity_verify_now))
+            .assertDoesNotExist()
     }
 
     private fun provider() = CurrentAccount.Provider(

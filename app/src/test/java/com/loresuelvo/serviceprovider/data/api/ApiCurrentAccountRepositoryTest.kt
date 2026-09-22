@@ -5,6 +5,7 @@ import com.loresuelvo.serviceprovider.data.api.dto.CurrentAccountDto
 import com.loresuelvo.serviceprovider.data.api.dto.CurrentAccountProfilePhotoDto
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
+import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
@@ -17,6 +18,7 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 import java.io.IOException
+import java.time.Instant
 import kotlin.test.assertFailsWith
 
 class ApiCurrentAccountRepositoryTest {
@@ -35,6 +37,70 @@ class ApiCurrentAccountRepositoryTest {
         assertEquals("Juan Gómez", "${provider.name} ${provider.surname}")
         assertEquals(CategoryDto(1, "Plomería"), CategoryDto(provider.category.id, provider.category.name))
         assertEquals("https://cdn.example/profile.jpg", provider.profilePhotoUrl)
+        assertEquals(IdentityVerificationStatus.Unavailable, provider.identityVerificationStatus)
+        assertEquals(null, provider.identityVerifiedOn)
+    }
+
+    @Test
+    fun maps_every_known_identity_status_to_a_typed_value() = runTest {
+        val statuses = mapOf(
+            "unverified" to IdentityVerificationStatus.Unverified,
+            "not_started" to IdentityVerificationStatus.NotStarted,
+            "in_progress" to IdentityVerificationStatus.InProgress,
+            "awaiting_user" to IdentityVerificationStatus.AwaitingUser,
+            "in_review" to IdentityVerificationStatus.InReview,
+            "approved" to IdentityVerificationStatus.Approved,
+            "declined" to IdentityVerificationStatus.Declined,
+            "resubmitted" to IdentityVerificationStatus.Resubmitted,
+            "abandoned" to IdentityVerificationStatus.Abandoned,
+            "expired" to IdentityVerificationStatus.Expired,
+            "kyc_expired" to IdentityVerificationStatus.KycExpired,
+        )
+
+        statuses.forEach { (wireStatus, expected) ->
+            coEvery { backendApi.getCurrentAccount() } returns providerDto().copy(
+                identityVerificationStatus = wireStatus,
+            )
+            val account = (repository.getCurrentAccount() as CurrentAccountOutcome.Success)
+                .account as CurrentAccount.Provider
+            assertEquals(wireStatus, expected, account.identityVerificationStatus)
+        }
+    }
+
+    @Test
+    fun maps_rfc3339_approval_dates_and_ignores_invalid_values() = runTest {
+        val approved = providerDto().copy(identityVerificationStatus = "approved")
+        val expectedMillis = Instant.parse("2026-01-15T12:34:56.123Z").toEpochMilli()
+
+        for (wireDate in listOf("2026-01-15T12:34:56.123Z", "2026-01-15T09:34:56.123-03:00")) {
+            coEvery { backendApi.getCurrentAccount() } returns approved.copy(
+                identityVerifiedOn = wireDate,
+            )
+            val account = (repository.getCurrentAccount() as CurrentAccountOutcome.Success)
+                .account as CurrentAccount.Provider
+            assertEquals(expectedMillis, account.identityVerifiedOn)
+        }
+
+        for (wireDate in listOf("2026-02-30T12:34:56Z", "not-a-date")) {
+            coEvery { backendApi.getCurrentAccount() } returns approved.copy(
+                identityVerifiedOn = wireDate,
+            )
+            val account = (repository.getCurrentAccount() as CurrentAccountOutcome.Success)
+                .account as CurrentAccount.Provider
+            assertEquals(null, account.identityVerifiedOn)
+        }
+    }
+
+    @Test
+    fun unknown_identity_status_remains_unavailable() = runTest {
+        coEvery { backendApi.getCurrentAccount() } returns providerDto().copy(
+            identityVerificationStatus = "future_status",
+        )
+
+        val account = (repository.getCurrentAccount() as CurrentAccountOutcome.Success)
+            .account as CurrentAccount.Provider
+
+        assertEquals(IdentityVerificationStatus.Unavailable, account.identityVerificationStatus)
     }
 
     @Test
