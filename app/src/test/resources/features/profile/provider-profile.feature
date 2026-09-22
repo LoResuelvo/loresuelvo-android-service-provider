@@ -60,7 +60,6 @@ Característica: Ver mi perfil y consultar mis conexiones
     Y Google Calendar aparece como "Próximamente" sin una acción de conexión
     Y puedo seguir usando Inicio y Mensajes
 
-  @wip
   Escenario: 07-PRF Conectar Mercado Pago desde Perfil
     Dado que abrí el flujo de conexión de Mercado Pago desde Perfil
     Y mi cuenta de Mercado Pago todavía no está conectada

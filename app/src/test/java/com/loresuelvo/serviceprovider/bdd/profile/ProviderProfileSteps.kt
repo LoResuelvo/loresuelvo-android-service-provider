@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.bdd.profile
 
+import com.loresuelvo.serviceprovider.bdd.paymentaccount.ConnectMercadoPagoWorld
 import io.cucumber.java.After
 import io.cucumber.java.en.And
 import io.cucumber.java.en.Given
@@ -9,6 +10,7 @@ import io.cucumber.java.en.When
 internal class ProviderProfileSteps {
 
     private val world = ProviderProfileWorld()
+    private var paymentWorld: ConnectMercadoPagoWorld? = null
 
     @Given("que inicié sesión como prestador con mi perfil profesional completo")
     fun authenticatedProviderHasCompleteProfile() = world.configureAuthenticatedProvider()
@@ -97,6 +99,32 @@ internal class ProviderProfileSteps {
     @And("puedo seguir usando Inicio y Mensajes")
     fun primaryTabsRemainAvailable() = world.assertPrimaryTabs()
 
+    @Given("que abrí el flujo de conexión de Mercado Pago desde Perfil")
+    fun connectionFlowOpenedFromProfile() {
+        world.openProfile()
+        world.assertPendingPaymentConnection()
+        payment().arrangeProviderCanConnect()
+    }
+
+    @And("mi cuenta de Mercado Pago todavía no está conectada")
+    fun paymentAccountIsNotConnected() = payment().assertAccountStatusPendingDisplayed()
+
+    @When("selecciono Conectar con Mercado Pago")
+    fun providerStartsPaymentAuthorization() = payment().selectConnectMercadoPago()
+
+    @Then("se abre la autorización oficial en el navegador")
+    fun officialAuthorizationOpens() = payment().assertAuthorizationUrlOpenedInBrowser()
+
+    @And("la app no me solicita credenciales de Mercado Pago")
+    fun applicationDoesNotAskForPaymentCredentials() =
+        payment().assertNoCredentialsRequestedWithinApp()
+
     @After
-    fun tearDown() = world.close()
+    fun tearDown() {
+        paymentWorld?.close()
+        world.close()
+    }
+
+    private fun payment(): ConnectMercadoPagoWorld =
+        paymentWorld ?: ConnectMercadoPagoWorld().also { paymentWorld = it }
 }
