@@ -43,6 +43,7 @@ fun ProviderProfileScreen(
     state: ProviderProfileUiState,
     onBack: () -> Unit,
     onRetry: () -> Unit = {},
+    onRetryPaymentStatus: () -> Unit = {},
     onConnectMercadoPago: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -86,6 +87,7 @@ fun ProviderProfileScreen(
                 contentPadding,
                 state,
                 onConnectMercadoPago,
+                onRetryPaymentStatus,
             )
         }
     }
@@ -137,6 +139,7 @@ private fun ProfileReadyState(
     contentPadding: androidx.compose.foundation.layout.PaddingValues,
     state: ProviderProfileUiState.Ready,
     onConnectMercadoPago: () -> Unit,
+    onRetryPaymentStatus: () -> Unit,
 ) {
     val provider = state.provider
     val fullName = "${provider.name} ${provider.surname}".trim()
@@ -204,6 +207,10 @@ private fun ProfileReadyState(
         if (state.payment == ProfilePaymentState.Pending) {
             Button(onClick = onConnectMercadoPago) {
                 Text(stringResource(R.string.mercadopago_connect_button))
+            }
+        } else if (state.payment == ProfilePaymentState.Unavailable) {
+            Button(onClick = onRetryPaymentStatus) {
+                Text(stringResource(R.string.provider_profile_connection_retry))
             }
         }
         ProfileDetail(

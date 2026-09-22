@@ -89,7 +89,6 @@ Característica: Ver mi perfil y consultar mis conexiones
     Entonces Mercado Pago aparece conectado
     Y no puedo iniciar otra autorización
 
-  @wip
   Escenario: 10-PRF Conservar mi perfil si falla la consulta de Mercado Pago
     Dado que mis datos personales se cargaron correctamente
     Y no se puede consultar el estado de Mercado Pago

@@ -189,6 +189,28 @@ class ProviderProfileViewModelTest {
     }
 
     @Test
+    fun retrying_payment_status_keeps_profile_visible_without_reloading_account() = runTest(scheduler) {
+        repository.outcome = CurrentAccountOutcome.Success(provider())
+        paymentRepository.outcome = PaymentAccountStatusOutcome.Failure.Network(
+            IllegalStateException("offline"),
+        )
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        paymentRepository.outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.CONNECTED),
+        )
+        viewModel.retryPaymentStatus()
+        assertEquals(ProviderProfileUiState.Ready(provider()), viewModel.uiState.value)
+        advanceUntilIdle()
+
+        assertEquals(ProviderProfileUiState.Ready(provider(), ProfilePaymentState.Connected), viewModel.uiState.value)
+        assertEquals(1, repository.calls)
+        assertEquals(2, paymentRepository.calls)
+    }
+
+    @Test
     fun late_payment_result_cannot_restore_a_cleared_session() = runTest(scheduler) {
         repository.outcome = CurrentAccountOutcome.Success(provider())
         paymentRepository.pending = CompletableDeferred()
@@ -247,8 +269,12 @@ class ProviderProfileViewModelTest {
             PaymentAccountStatus(ConnectionStatus.PENDING),
         )
         var pending: CompletableDeferred<PaymentAccountStatusOutcome>? = null
+        var calls = 0
 
-        override suspend fun getStatus(): PaymentAccountStatusOutcome = pending?.await() ?: outcome
+        override suspend fun getStatus(): PaymentAccountStatusOutcome {
+            calls += 1
+            return pending?.await() ?: outcome
+        }
 
         override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome =
             error("Profile must not request payment authorization")

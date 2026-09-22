@@ -234,6 +234,23 @@ internal class ProviderProfileWorld : AutoCloseable {
         assertEquals(0, paymentAccount.authorizationCalls)
     }
 
+    fun configurePaymentStatusFailure() {
+        paymentAccount.outcome = PaymentAccountStatusOutcome.Failure.Network(
+            IllegalStateException("offline"),
+        )
+    }
+
+    fun assertPaymentStatusRetryable() {
+        assertEquals(ProfilePaymentState.Unavailable, (viewModel.uiState.value as ProviderProfileUiState.Ready).payment)
+        assertEquals(1, currentAccount.calls)
+        assertEquals(1, paymentAccount.statusCalls)
+    }
+
+    fun assertPaymentNotConnected() {
+        assertTrue((viewModel.uiState.value as ProviderProfileUiState.Ready).payment != ProfilePaymentState.Connected)
+        assertEquals(0, paymentAccount.authorizationCalls)
+    }
+
     fun openProfile() {
         viewModel = ViewModelProvider(viewModelStore, viewModelFactory)[
             "provider-profile",

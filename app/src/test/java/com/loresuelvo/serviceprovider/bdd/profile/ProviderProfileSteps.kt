@@ -165,6 +165,21 @@ internal class ProviderProfileSteps {
     @And("no puedo iniciar otra autorización")
     fun anotherAuthorizationIsUnavailable() = world.assertConnectedPaymentHasNoAuthorization()
 
+    @Given("que mis datos personales se cargaron correctamente")
+    fun personalProfileIsAvailable() = world.configureAuthenticatedProvider()
+
+    @And("no se puede consultar el estado de Mercado Pago")
+    fun paymentStatusRequestFails() = world.configurePaymentStatusFailure()
+
+    @Then("veo un error con una opción para reintentar esa consulta")
+    fun paymentStatusCanBeRetried() = world.assertPaymentStatusRetryable()
+
+    @And("mis datos personales siguen visibles")
+    fun personalProfileRemainsVisible() = world.assertProviderIdentity()
+
+    @And("no se anuncia una conexión exitosa")
+    fun paymentIsNotAnnouncedConnected() = world.assertPaymentNotConnected()
+
     @After
     fun tearDown() {
         paymentWorld?.close()

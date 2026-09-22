@@ -192,6 +192,28 @@ class ProviderProfileScreenTest {
             .assertDoesNotExist()
     }
 
+    @Test
+    fun payment_status_failure_keeps_profile_visible_and_offers_status_retry() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        var retries = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(
+                    state = ProviderProfileUiState.Ready(provider(), ProfilePaymentState.Unavailable),
+                    onBack = {},
+                    onRetryPaymentStatus = { retries += 1 },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Carlos Gómez").assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_connection_retry))
+            .performScrollTo().performClick()
+        assertEquals(1, retries)
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button))
+            .assertDoesNotExist()
+    }
+
     private fun provider() = CurrentAccount.Provider(
         id = 1,
         name = "Carlos",

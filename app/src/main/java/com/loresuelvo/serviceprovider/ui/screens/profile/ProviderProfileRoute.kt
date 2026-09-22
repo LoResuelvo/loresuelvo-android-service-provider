@@ -41,6 +41,7 @@ fun ProviderProfileRoute(
         state = state,
         onBack = onBack,
         onRetry = viewModel::refresh,
+        onRetryPaymentStatus = viewModel::retryPaymentStatus,
         onConnectMercadoPago = onConnectMercadoPago,
     )
 }
