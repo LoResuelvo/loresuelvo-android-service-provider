@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.profile
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -34,6 +35,19 @@ class ProviderProfileScreenTest {
     val composeTestRule = createComposeRule()
 
     @Test
+    fun profile_includes_a_non_interactive_sample_rating() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(state = ProviderProfileUiState.Ready(provider()), onBack = {})
+            }
+        }
+
+        composeTestRule.onNodeWithTag("provider-profile-rating-demo")
+            .performScrollTo().assertIsDisplayed().assertHasNoClickAction()
+        composeTestRule.onNodeWithTag("provider-profile-rating-demo-label").assertIsDisplayed()
+    }
+
+    @Test
     fun renders_authenticated_provider_identity_and_initials_fallback() {
         composeTestRule.setContent {
             LoresuelvoTheme {
@@ -63,6 +77,7 @@ class ProviderProfileScreenTest {
         composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_view_loading))
             .assertIsDisplayed()
         composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag("provider-profile-rating-demo").assertDoesNotExist()
         composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button))
             .assertDoesNotExist()
     }

@@ -3,7 +3,9 @@ package com.loresuelvo.serviceprovider.ui.screens.profile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,26 +20,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
-import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
-import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
-import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
-import com.loresuelvo.serviceprovider.ui.profile.ProfilePaymentState
-import java.text.DateFormat
-import java.util.Date
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProviderProfileScreen(
     state: ProviderProfileUiState,
@@ -51,22 +45,11 @@ fun ProviderProfileScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag(PROVIDER_PROFILE_SCREEN_TAG),
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.provider_profile_view_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(R.string.provider_profile_back),
-                        )
-                    }
-                },
-            )
-        },
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = { ProfileTopBar(onBack) },
     ) { contentPadding ->
         when (state) {
-            ProviderProfileUiState.Loading -> ProfileLoadingState(contentPadding, modifier)
+            ProviderProfileUiState.Loading -> ProfileLoadingState(contentPadding)
             ProviderProfileUiState.Unavailable -> ProfileUnavailableState(
                 contentPadding,
                 R.string.provider_profile_view_unavailable,
@@ -93,9 +76,28 @@ fun ProviderProfileScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileTopBar(onBack: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.provider_profile_my_profile)) },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background,
+        ),
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.provider_profile_back),
+                )
+            }
+        },
+    )
+}
+
 @Composable
 private fun ProfileUnavailableState(
-    contentPadding: androidx.compose.foundation.layout.PaddingValues,
+    contentPadding: PaddingValues,
     messageRes: Int,
     onRetry: (() -> Unit)? = null,
 ) {
@@ -118,11 +120,10 @@ private fun ProfileUnavailableState(
 
 @Composable
 private fun ProfileLoadingState(
-    contentPadding: androidx.compose.foundation.layout.PaddingValues,
-    modifier: Modifier,
+    contentPadding: PaddingValues,
 ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
             .testTag(PROVIDER_PROFILE_LOADING_TAG),
@@ -136,114 +137,36 @@ private fun ProfileLoadingState(
 
 @Composable
 private fun ProfileReadyState(
-    contentPadding: androidx.compose.foundation.layout.PaddingValues,
+    contentPadding: PaddingValues,
     state: ProviderProfileUiState.Ready,
     onConnectMercadoPago: () -> Unit,
     onRetryPaymentStatus: () -> Unit,
 ) {
-    val provider = state.provider
-    val fullName = "${provider.name} ${provider.surname}".trim()
-    val photoDescription = if (provider.profilePhotoUrl.isNullOrBlank()) {
-        stringResource(R.string.provider_profile_avatar_description, fullName)
-    } else {
-        stringResource(R.string.provider_profile_photo_description, fullName)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding)
-            .verticalScroll(rememberScrollState())
-            .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 96.dp)
-            .testTag(PROVIDER_PROFILE_DATA_TAG),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    Box(
+        modifier = Modifier.fillMaxSize().padding(contentPadding),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        ProviderAvatar(
-            name = provider.name,
-            surname = provider.surname,
-            profilePhotoUrl = provider.profilePhotoUrl,
-            contentDescription = photoDescription,
-            size = 96.dp,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
-        Text(
-            text = fullName,
-            style = MaterialTheme.typography.headlineSmall,
+        Column(
             modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .semantics { heading() }
-                .testTag(PROVIDER_PROFILE_NAME_TAG),
-        )
-        ProfileDetail(R.string.provider_profile_name_label, provider.name)
-        ProfileDetail(R.string.provider_profile_surname_label, provider.surname)
-        ProfileDetail(R.string.provider_profile_email_label, provider.email)
-        ProfileDetail(R.string.provider_profile_category_label, provider.category.name)
-        ProfileDetail(
-            R.string.provider_profile_identity_label,
-            stringResource(provider.identityVerificationStatus.labelResource()),
-        )
-        if (provider.identityVerificationStatus == IdentityVerificationStatus.Approved) {
-            provider.identityVerifiedOn?.let { verifiedOn ->
-                val locale = LocalConfiguration.current.locales[0]
-                val date = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
-                    .format(Date(verifiedOn))
-                ProfileDetail(R.string.provider_profile_identity_date_label, date)
-            }
+                .widthIn(max = 600.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp)
+                .testTag(PROVIDER_PROFILE_DATA_TAG),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            ProfileSummaryCard(state.provider)
+            ProfileAccountCard(state.provider)
+            ProfileIdentityCard(state.provider)
+            Text(
+                text = stringResource(R.string.provider_profile_connections_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.semantics { heading() },
+            )
+            ProfilePaymentCard(state.payment, onConnectMercadoPago, onRetryPaymentStatus)
+            ProfileCalendarCard()
         }
-        Text(
-            text = stringResource(R.string.provider_profile_connections_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() },
-        )
-        ProfileDetail(
-            R.string.provider_profile_mercadopago_label,
-            stringResource(when (state.payment) {
-                ProfilePaymentState.Loading -> R.string.provider_profile_connection_loading
-                ProfilePaymentState.Pending -> R.string.provider_profile_connection_pending
-                ProfilePaymentState.Connected -> R.string.provider_profile_connection_connected
-                ProfilePaymentState.Unavailable -> R.string.provider_profile_connection_unavailable
-            }),
-        )
-        if (state.payment == ProfilePaymentState.Pending) {
-            Button(onClick = onConnectMercadoPago) {
-                Text(stringResource(R.string.mercadopago_connect_button))
-            }
-        } else if (state.payment == ProfilePaymentState.Unavailable) {
-            Button(onClick = onRetryPaymentStatus) {
-                Text(stringResource(R.string.provider_profile_connection_retry))
-            }
-        }
-        ProfileDetail(
-            R.string.provider_profile_calendar_label,
-            stringResource(R.string.provider_profile_calendar_coming_soon),
-        )
-    }
-}
-
-private fun IdentityVerificationStatus.labelResource(): Int = when (this) {
-    IdentityVerificationStatus.Unavailable -> R.string.provider_profile_identity_unavailable
-    IdentityVerificationStatus.Unverified -> R.string.provider_profile_identity_unverified
-    IdentityVerificationStatus.NotStarted -> R.string.provider_profile_identity_not_started
-    IdentityVerificationStatus.InProgress -> R.string.provider_profile_identity_in_progress
-    IdentityVerificationStatus.AwaitingUser -> R.string.provider_profile_identity_awaiting_user
-    IdentityVerificationStatus.InReview -> R.string.provider_profile_identity_in_review
-    IdentityVerificationStatus.Approved -> R.string.provider_profile_identity_approved
-    IdentityVerificationStatus.Declined -> R.string.provider_profile_identity_declined
-    IdentityVerificationStatus.Resubmitted -> R.string.provider_profile_identity_resubmitted
-    IdentityVerificationStatus.Abandoned -> R.string.provider_profile_identity_abandoned
-    IdentityVerificationStatus.Expired -> R.string.provider_profile_identity_expired
-    IdentityVerificationStatus.KycExpired -> R.string.provider_profile_identity_kyc_expired
-}
-
-@Composable
-private fun ProfileDetail(labelRes: Int, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = stringResource(labelRes),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(text = value, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

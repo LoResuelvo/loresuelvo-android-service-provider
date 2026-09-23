@@ -1,0 +1,13 @@
+<resources>
+    <string name="provider_profile_my_profile">My profile</string>
+    <string name="provider_profile_account_title">Account details</string>
+    <string name="provider_profile_rating">%1$.1f / 5</string>
+    <string name="provider_profile_sample_rating">Sample rating</string>
+    <plurals name="provider_profile_reviews">
+        <item quantity="one">%d review</item>
+        <item quantity="other">%d reviews</item>
+    </plurals>
+    <string name="provider_profile_identity_description">The current status of your identity verification.</string>
+    <string name="provider_profile_payment_description">Check your connection status to receive payments through Mercado Pago.</string>
+    <string name="provider_profile_calendar_description">Appointment and availability synchronization.</string>
+</resources>
