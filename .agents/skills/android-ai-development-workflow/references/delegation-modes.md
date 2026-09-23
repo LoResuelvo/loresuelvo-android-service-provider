@@ -33,6 +33,9 @@ Governance:
 
 Next boundary:
 - Observable behavior:
+- Active scenario task: existing code to reuse, allowed files/symbols:
+- Required input/output interfaces and dependencies:
+- Focused proof and explicit exclusions:
 - Delivery intent and proposed commit message:
 - Minimum artifacts:
 
@@ -41,6 +44,7 @@ Ownership and close:
 - Shared-checkout exclusivity:
 - Open risks:
 - Batch close condition:
+- Next progress checkpoint and any running job ID:
 ```
 
 Do not put raw commands, copied logs, or manually calculated gates in the
@@ -90,6 +94,8 @@ empty commits to manufacture evidence.
 ## Compact handoff
 
 ```text
+Status: WORKING | BLOCKED | READY_FOR_REVIEW | DONE
+Active scenario/task and next checkpoint:
 GREEN scenarios:
 Relevant SHAs and receipts:
 Contract or decision changes:
@@ -98,6 +104,35 @@ Active causal diagnosis (if any):
 Tree state:
 Known CI state:
 Next permitted action:
+Blocking prerequisite and owner, or none:
+Running job ID, or none:
 ```
 
 Never include successful logs, raw stack traces, full diffs, or MCP payloads.
+
+## Small-task example
+
+For a Profile retry scenario, first arrange a failed account port and observe
+the real ViewModel's error state. Next prove that retry reloads the account,
+then wire the existing screen callback if needed. The same developer owns
+these steps and the final functional commit. Do not prebuild identity or
+payment behavior from later scenarios. Review the finished diff against the
+approved scenario, reuse opportunities, MVVM/navigation boundaries, and tests
+before preparing it; task count does not set commit count.
+
+## Progress and resources
+
+The developer acknowledges scope, owners, and the next task before editing.
+Report on task completion, before a long check, immediately on a blocker, and
+after each commit. Never end a delegated turn with only a promise to continue:
+resume the task or return an explicit handoff using the status fields above.
+
+The orchestrator tracks the active agent/task and reconciles its state after
+each bounded wait. If idle without a handoff, request the missing report; if
+blocked, resolve the prerequisite or narrow the task before redispatch. Keep
+the user informed at least once per minute during active work. No replacement
+worker may race the existing writer or a running gate.
+
+Run only one Gradle/device job at a time. Reuse an available physical device;
+report a missing device instead of starting an emulator unless authorized.
+Keep the plan and handoff in persistent local storage; never copy receipts.

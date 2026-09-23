@@ -42,13 +42,14 @@ For application-layer changes, review the available signals for:
 The expected architecture checks are zero-match checks, not suggestions:
 
 ```bash
-grep -RInE 'import (android\.|dagger|hilt|okhttp3|retrofit2|kotlinx\.serialization)' \
-  app/src/main/java/*/*/domain/ || true
-grep -RIn 'import .*\.data\.' app/src/main/java/*/*/ui/ || true
+rg -n 'import (com\.loresuelvo\.serviceprovider\.(data|ui)|android\.|dagger|hilt|okhttp3|retrofit2|kotlinx\.serialization)' \
+  app/src/main/java/com/loresuelvo/serviceprovider/domain/
+rg -n 'import com\.loresuelvo\.serviceprovider\.data\.' \
+  app/src/main/java/com/loresuelvo/serviceprovider/ui/
 ```
 
-Adapt package paths to the repository. Inspect every match; do not hide a
-violation by broadening an exclusion.
+Exit code 1 means no matches; code 2 is an execution error, not a pass. Inspect
+every match; do not hide a violation by broadening an exclusion.
 
 ## Findings and suppressions
 
@@ -77,4 +78,3 @@ Report the checks that ran, their result, checks that were unavailable or
 disabled, new suppressions, and residual quality gaps. A green compiler or
 lint run alone is not evidence that architecture and maintainability checks
 also ran.
-

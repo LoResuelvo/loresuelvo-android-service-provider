@@ -89,7 +89,7 @@ test("verifyHeadDelivery records Gate D without creating a commit, then finaliza
   const sha = await commitFeature(
     repoRoot,
     feature,
-    "Feature: Provider\n  Scenario: provider is ready\n    Given the service provider is authenticated\n",
+    "# No @wip scenarios remain\nFeature: Provider\n  Scenario: provider is ready\n    Given the service provider is authenticated\n",
     "test[33]: complete provider scenario",
   );
 

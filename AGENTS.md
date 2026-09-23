@@ -1,6 +1,6 @@
 # AGENTS.md — LoResuelvo Android Service Provider
 
-Last updated: 2026-09-10.
+Last updated: 2026-09-23.
 
 This is the canonical contract for agents working in this repository. Read it
 before loading a skill. Human setup belongs in [`README.md`](README.md), and
@@ -24,10 +24,10 @@ the operational delivery reference belongs in
 
 This application serves LoResuelvo providers. Its package is
 `com.loresuelvo.serviceprovider`; flavors are `Dev`, `Staging`, and `Prod`.
-The current walking skeleton contains the Welcome journey, Hilt, Retrofit,
-OkHttp, Auth0, Navigation Compose, and Cucumber JVM infrastructure. There is
-no image-upload workflow in this application; do not add an image-upload skill
-until that product flow exists.
+The application includes authentication/onboarding, provider profile and photo
+upload, identity verification, payment-account linking, job requests, and
+conversations with media. It uses Hilt, Retrofit, OkHttp, Auth0, Navigation
+Compose, and Cucumber JVM infrastructure.
 
 The stack is:
 
@@ -137,8 +137,9 @@ grep -RIn 'import com\.loresuelvo\.serviceprovider\.data\.' \
 ### Hilt and security
 
 - `LoresuelvoApp` is annotated with `@HiltAndroidApp`.
-- `MainActivity` is annotated with `@AndroidEntryPoint` and only hosts
-  `LoResuelvoNav`.
+- `MainActivity` is annotated with `@AndroidEntryPoint`; it hosts
+  `LoResuelvoNav` and forwards Android lifecycle/intent callbacks to the UI
+  boundary, without business or repository logic.
 - ViewModels use `@HiltViewModel` and constructor injection; routes use
   `hiltViewModel()`.
 - Process-wide Retrofit, OkHttp, repositories, and the encrypted session
@@ -202,6 +203,14 @@ Humans can use the matching `make delivery-*` targets. The executor uses
 `shell: false`, rejects arbitrary commands and environment assignments, and
 keeps generated evidence under `.delivery/runtime/`.
 
+For focused TDD only, `delivery_test(mode="unit", testFiles=[...])` also
+allows Dev JVM class filters derived from validated Kotlin test paths under
+`app/src/test/java/` or `app/src/test/kotlin/`. These run through
+`scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests <class>`
+with exact class names, no shell text or wildcards. Without test files, and
+for scenario/affected modes, the complete Dev JVM task runs. Focused results
+do not replace staged gate evidence.
+
 For a recoverable background job, humans use `make delivery-job-wait
 ARGS="--job-id <job-id>"` or `make delivery-job-cancel ARGS="--job-id
 <job-id>"`; agents use the corresponding MCP operations.
@@ -213,7 +222,7 @@ ARGS="--job-id <job-id>"` or `make delivery-job-cancel ARGS="--job-id
 | `NONE` | none                                                                                        | Documentation-only or empty diff                          |
 | `0`    | complete Dev JVM test task                                                                  | BDD feature/glue compatibility                            |
 | `A`    | Dev JVM tests; delivery tooling also runs delivery unit tests                               | Isolated domain Kotlin or delivery tooling                |
-| `B`    | complete Dev JVM test task                                                                  | Closing one BDD scenario                                  |
+| `B`    | complete Dev JVM test task                                                                  | Closing one low-risk BDD scenario                         |
 | `C`    | Dev lint, JVM tests, build, instrumented UI                                                 | Shared UI, DI, data, resource, manifest, or build changes |
 | `D`    | no `@wip`, Gate C checks, and post-push CI green                                            | Complete batch or User Story                              |
 | `R`    | delivery tests plus Staging lint, JVM tests, build, instrumented UI, and post-push CI green | One-time CI repair for `repairsSha`                       |
@@ -222,6 +231,21 @@ Gate selection is conservative. Ambiguous Kotlin or build changes select Gate
 C; missing analyzers never produce Gate `NONE`. Disabled dependency-impact,
 Cucumber-impact, and maintainability analyzers report `not_applicable` and are
 not imported or executed.
+
+Closing a scenario with Gate C trigger paths retains Gate C. Only `close_batch`
+and `close_us` select Gate D and require the declared feature files to have no
+pending `@wip` tags. Comments and doc strings mentioning `@wip` are not tags.
+
+### Orchestration
+
+Use one batch, one active scenario, and one implementation writer at a time.
+Split the active scenario into small outside-in tasks with explicit scope,
+interfaces, proof, and exclusions; a task does not imply a new agent or commit.
+Keep the developer through RED/GREEN and the coherent commit boundary. Read-only
+review follows a stable implementation. Use the canonical checkout for receipts
+and commits, one Gradle/device job, and persistent local plans. Do not start an
+emulator unless authorized. The detailed handoff and progress protocol lives in
+`android-ai-development-workflow`; local prompts must not define another policy.
 
 Gate C and Gate D require a reachable device/emulator for `make e2e`; a
 blocked environment must report the missing prerequisite instead of silently

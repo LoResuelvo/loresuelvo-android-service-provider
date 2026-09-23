@@ -134,6 +134,31 @@ test("resolveCheck rejects traversal before command authorization", () => {
   );
 });
 
+test("focused Android execution allows only wrapper, Dev task, and exact class pairs", async (t) => {
+  const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "android-focused-check-"));
+  t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
+  await fs.mkdir(path.join(repoRoot, "scripts"));
+  await fs.writeFile(path.join(repoRoot, "scripts/with-android-env.sh"), '#!/bin/sh\nprintf "%s\\n" "$@"\n', { mode: 0o755 });
+  const check = {
+    id: "jvm_test_dev_focused", kind: "command", command: "scripts/with-android-env.sh",
+    args: ["./gradlew", ":app:testDevDebugUnitTest", "--tests", "example.FirstTest", "--tests", "example.SecondTest"],
+    dynamicAllowlist: "focused_android_jvm_test", timeoutMs: 1000,
+  };
+  const result = await executeCheck({ check, repoRoot, logPath: "result.log" });
+  assert.equal(result.status, "passed");
+  assert.equal(result.rawOutput, check.args.join("\n") + "\n");
+  for (const args of [
+    ["./gradlew", ":app:testProdDebugUnitTest", "--tests", "example.FirstTest"],
+    ["./gradlew", ":app:testDevDebugUnitTest", "--tests", "*Test"],
+    ["./gradlew", ":app:testDevDebugUnitTest", "--init-script", "evil.gradle"],
+    ["./gradlew", ":app:testDevDebugUnitTest", "--tests", "example.FirstTest;id"],
+    ["./gradlew", ":app:testDevDebugUnitTest", "--tests"],
+  ]) {
+    await assert.rejects(executeCheck({ check: { ...check, args }, repoRoot, logPath: "rejected.log" }), /Unsafe or unauthorized/);
+  }
+  await assert.rejects(executeCheck({ check: { ...check, command: "sh" }, repoRoot, logPath: "rejected.log" }), /Unsafe or unauthorized/);
+});
+
 test("no_wip_in_scope checks only declared Android feature scope", async (t) => {
   const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "android-no-wip-"));
   t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
@@ -163,6 +188,20 @@ test("no_wip_in_scope checks only declared Android feature scope", async (t) => 
     featureFile + ":3: @wip remains in completed scope",
   ]);
   assert.deepEqual(result.locations, [featureFile + ":3"]);
+
+  await fs.writeFile(path.join(repoRoot, featureFile), [
+    "# Remove @wip after implementation",
+    "Feature: Mention @wip in documentation",
+    "  @wip-later @ready",
+    "  Scenario: Ready",
+    "    Given a description of @wip usage",
+    '      """',
+    "      @wip",
+    '      """',
+  ].join("\n"));
+  assert.equal((await executeCheck({ check, repoRoot, limits: {} })).status, "passed");
+  await fs.appendFile(path.join(repoRoot, featureFile), "\n  @ready @wip\n  Scenario: Pending\n");
+  assert.equal((await executeCheck({ check, repoRoot, limits: {} })).status, "failed");
 });
 
 test("command execution times out and records a bounded diagnostic", async () => {

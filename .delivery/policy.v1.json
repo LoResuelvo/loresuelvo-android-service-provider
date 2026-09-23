@@ -385,7 +385,7 @@
     },
     "B": {
       "id": "B",
-      "description": "Complete Dev JVM tests for one BDD scenario closure",
+      "description": "Complete Dev JVM tests for one low-risk BDD scenario closure",
       "priority": 3,
       "checkIds": [
         "jvm_test_dev"
@@ -394,7 +394,7 @@
     },
     "C": {
       "id": "C",
-      "description": "Shared Android architecture, UI, resources, build, and instrumented verification",
+      "description": "Shared Android architecture, UI, resources, build, and instrumented verification, including individual high-risk scenario closure",
       "priority": 4,
       "checkIds": [
         "lint_dev",

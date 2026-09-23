@@ -27,6 +27,11 @@ policy.v1.json is the Android provider policy. It keeps the first release conser
 - workflow edits are HUMAN_ONLY
 - unknown functional files fall back to Gate C
 
+`close_scenario` selects Gate B for low-risk changes or retains Gate C for
+Android integration changes. It does not require future scenarios in the same
+feature to be complete. Gate D is reserved for `close_batch` and `close_us`;
+only actual `@wip` tags, not comments or doc strings, block scope completion.
+
 The dependency-impact, Cucumber-impact, and maintainability analyzers are
 represented explicitly in the policy and disabled until Android-specific
 adapters exist. Disabled analyzers return `not_applicable` and are neither
@@ -76,6 +81,21 @@ make delivery-repair-recover ARGS="--target-sha <failed-sha> --expected-authoriz
 `make delivery-test ARGS="..."` delegates to that CLI test command for
 focused TDD modes. The policy's delivery-tooling Gate A check is the complete
 unit suite `npm --prefix tools/delivery-mcp test`.
+
+For Kotlin `mode=unit`, supplying `testFiles` selects exact JVM classes under
+`app/src/test/java/` or `app/src/test/kotlin/`; file/package/class names must
+match. The executor derives class names and permits only the fixed Android
+wrapper, Dev JVM task, and `--tests <class>` pairs. No shell text, wildcard
+filters, arbitrary Gradle flags, production files, or instrumented tests are
+accepted. Without files, or with `scenario`/`affected`, it runs the complete
+Dev JVM task. TDD cache identity includes changed source contents as well as
+tests and HEAD. None of these working-tree results replace a staged gate.
+
+Orchestration uses one batch and one implementation writer in the canonical
+checkout. Keep one Gradle/device operation active and retain one receipt ledger.
+Do not split commits/evidence between worker checkouts or store uncommitted
+implementation in temporary directories. See the
+[agent workflow](../.agents/skills/android-ai-development-workflow/SKILL.md).
 
 The repository's canonical GNU Make entry point is `Makefile`. Android
 targets (`build`, `lint`, `test`, `e2e`, `clean`, and `devices`) delegate

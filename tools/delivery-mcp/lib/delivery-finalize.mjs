@@ -14,6 +14,7 @@ import { loadDeliveryPolicy } from "./policy-loader.mjs";
 import { summarizeFailureOutput } from "./execute-check.mjs";
 import { redactSecrets } from "./redact-secrets.mjs";
 import { createDeliveryJob, spawnJobWorker, findActiveDeliveryJob } from "./jobs.mjs";
+import { wipTagLines } from "./gherkin-tags.mjs";
 
 const BATCH_PENDING_CI_STATUSES = new Set(["queued", "in_progress", "not_found"]);
 // A missing run is not in flight: polling it forever can turn a provider
@@ -231,9 +232,7 @@ export async function finalizeDelivery({
         message: `Committed feature scope file is unavailable at HEAD: ${feature}`,
       };
     }
-    content.split(/\r?\n/).forEach((line, index) => {
-      if (/(?:^|\s)@wip(?:\s|$)/.test(line)) wipViolations.push(`${feature}:${index + 1}`);
-    });
+    wipViolations.push(...wipTagLines(content).map((line) => `${feature}:${line}`));
   }
 
   if (wipViolations.length > 0) {

@@ -35,8 +35,8 @@ scope, or an invented story number.
 
 ## Atomicity
 
-- One commit represents one complete logical boundary. A scenario ordinarily
-  contains several such commits; batch granularity never sets their count.
+- One commit represents one complete logical boundary. A scenario may need
+  one or several commits; task size and batch granularity never set their count.
 - Each commit leaves the repository compilable and testable, includes the
   dependencies required by its boundary, and is independently reversible.
 - A commit may cross files and layers when that is necessary for a coherent
@@ -74,9 +74,11 @@ escalate; do not commit around it.
 
 For a human CI repair that delegates verification to remote CI, run
 `make delivery-context ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"`
-after the final `git add`. The context is accepted only for the exact parent,
-branch, staged tree, and valid commit message; the resulting commit remains
-`not_run` and is rejected when `DELIVERY_REQUIRE_EVIDENCE=1` is enabled.
+after the final `git add`. Hooks are advisory for runtime evidence regardless
+of `DELIVERY_REQUIRE_EVIDENCE`; ordinary human commits are not recorded as
+`not_run`. Context is consumed only when post-commit binds an exact prepared
+receipt. Agents still require passed preparation; use explicit delivery
+operations for repair authorization and remote-CI delegation.
 
 ## Pull requests
 

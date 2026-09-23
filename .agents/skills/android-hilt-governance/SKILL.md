@@ -15,7 +15,8 @@ change that does not change dependency construction.
 ## Production graph
 
 - `LoresuelvoApp` uses `@HiltAndroidApp`.
-- `MainActivity` uses `@AndroidEntryPoint` and only hosts Compose navigation.
+- `MainActivity` uses `@AndroidEntryPoint`, hosts Compose navigation, and
+  forwards Android lifecycle/intent callbacks without business logic.
 - ViewModels use `@HiltViewModel` and constructor injection.
 - Routes obtain ViewModels with `hiltViewModel()`.
 - Production code must not use `viewModelFactory { initializer { ... } }`.
@@ -55,7 +56,7 @@ class ExampleViewModel @Inject constructor(
 fun ExampleRoute(
     viewModel: ExampleViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     ExampleScreen(state = state, onEvent = viewModel::onEvent)
 }
 ```

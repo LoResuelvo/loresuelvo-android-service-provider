@@ -346,7 +346,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             type: "array",
             items: { type: "string" },
             maxItems: 20,
-            description: "Array of test files for mode: unit",
+            description: "Unit test files: Kotlin Test.kt paths under app/src/test/java or kotlin select exact Dev JVM classes; delivery .test.mjs files select Node tests. Omit to run the complete Dev JVM task.",
           },
           featureFile: {
             type: "string",
@@ -354,7 +354,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           scenarioName: {
             type: "string",
-            description: "Optional scenario name filter for mode: scenario",
+            description: "Optional scenario name recorded as context; scenario mode runs the complete Dev JVM task, not a scenario filter.",
           },
           checkId: {
             type: "string",

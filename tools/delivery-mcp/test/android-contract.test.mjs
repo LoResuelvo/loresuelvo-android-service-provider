@@ -86,6 +86,21 @@ test("gate selection is conservative and Android-specific", () => {
   assert.ok(batch.gate.postPushChecks.includes("ci_green"));
 });
 
+test("closing one Android scenario retains Gate C without closing future scenarios", () => {
+  const feature = "app/src/test/resources/features/profile/provider-profile.feature";
+  for (const area of ["ui", "data", "di"]) {
+    const result = selectGate({
+      policy,
+      intent: "close_scenario",
+      featureFile: feature,
+      snapshot: { stagedFiles: [`app/src/main/java/com/loresuelvo/serviceprovider/${area}/Profile.kt`, feature] },
+    });
+    assert.equal(result.gate.id, "C", area);
+    assert.deepEqual(result.gate.checkIds, ["lint_dev", "jvm_test_dev", "build_dev", "e2e_dev"]);
+    assert.deepEqual(result.gate.postPushChecks, []);
+  }
+});
+
 test("policy and executor accept only exact Android commands", () => {
   assert.equal(SAFE_COMMANDS.size, 9);
   for (const [checkId, definition] of Object.entries(policy.checkCatalog)) {

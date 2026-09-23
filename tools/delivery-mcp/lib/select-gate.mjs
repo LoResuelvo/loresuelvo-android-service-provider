@@ -124,7 +124,6 @@ export function selectGate({
     diagnostic(diagnostics, "HUMAN_ONLY_CHANGE", "Workflow files are HUMAN_ONLY and require human handling.");
   }
 
-  const closesHighRiskScenario = intent === "close_scenario" && classified.hasGateCTrigger;
   let gate;
   if (intent === "repair_ci") {
     gate = buildGate(policy, "R", ["INTENT_REPAIR_CI"], { repairsSha });
@@ -132,11 +131,9 @@ export function selectGate({
       if (status !== "blocked") status = "needs_input";
       diagnostic(diagnostics, "MISSING_REPAIRS_SHA", "intent 'repair_ci' requires repairsSha to be specified");
     }
-  } else if (intent === "close_batch" || intent === "close_us" || closesHighRiskScenario) {
+  } else if (intent === "close_batch" || intent === "close_us") {
     const scope = resolveFeatureScope({ featureFile, scopeFiles, snapshot });
-    const reason = closesHighRiskScenario
-      ? "INTENT_CLOSE_HIGH_RISK_SCENARIO"
-      : intent === "close_batch" ? "INTENT_CLOSE_BATCH" : "INTENT_CLOSE_US";
+    const reason = intent === "close_batch" ? "INTENT_CLOSE_BATCH" : "INTENT_CLOSE_US";
     gate = buildGate(policy, "D", [reason], { scopeFeatures: scope });
     if (!scope.length && status !== "blocked") {
       status = "needs_input";
@@ -192,4 +189,3 @@ export function selectGate({
     impact: disabledImpact(gate),
   };
 }
-

@@ -10,7 +10,7 @@ import { parsePorcelainStatus, runGit } from "./git-snapshot.mjs";
 import { createDeliveryJob, findActiveDeliveryJob, spawnJobWorker } from "./jobs.mjs";
 import { normalizePath } from "./classify-files.mjs";
 
-const ANDROID_TEST_EXTENSION = /Test\.kt$/;
+const ANDROID_TEST_EXTENSION = /^app\/src\/test\/(?:java|kotlin)\/(?:[A-Za-z_][A-Za-z0-9_]*\/)*[A-Za-z_][A-Za-z0-9_]*Test\.kt$/;
 const DELIVERY_TEST_EXTENSION = /\.test\.mjs$/;
 const FEATURE_PATH_REGEX = /^app\/src\/test\/resources\/features\/[A-Za-z0-9._/-]+\.feature$/;
 const SAFE_PATH_CHARS = /^[A-Za-z0-9._/-]+$/;
@@ -192,16 +192,19 @@ async function writeCache(repoRoot, cacheKey, value) {
 }
 
 async function inputFingerprint(repoRoot, paths = []) {
-  const entries = [];
-  for (const relative of [...new Set(paths)].sort()) {
-    entries.push({ path: relative, hash: computeFileHash(path.resolve(repoRoot, relative)) || "MISSING" });
-  }
   const status = await runGit(["status", "--porcelain", "-z", "--untracked-files=all"], repoRoot);
-  const rawStatus = status.error ? `ERROR:${status.error.message}` : status.stdout.toString("utf8");
   const head = await runGit(["rev-parse", "HEAD"], repoRoot);
+  // Never reuse evidence when the working-tree identity could not be read.
+  if (status.error || head.error) return crypto.randomUUID();
+  const parsed = parsePorcelainStatus(status.stdout);
+  const changed = [...parsed.staged, ...parsed.unstaged].map((entry) => entry.file).concat(parsed.untracked);
+  const entries = [...new Set([...paths, ...changed])].sort().map((relative) => ({
+    path: relative,
+    hash: computeFileHash(path.resolve(repoRoot, relative)) || "MISSING",
+  }));
   return computeTddCacheKey({
-    head: head.error ? "NO_GIT_HEAD" : head.stdout.toString("utf8").trim(),
-    status: crypto.createHash("sha256").update(rawStatus).digest("hex"),
+    head: head.stdout.toString("utf8").trim(),
+    status: crypto.createHash("sha256").update(status.stdout).digest("hex"),
     entries,
   });
 }
@@ -317,18 +320,24 @@ async function executeDeliveryCheck({ repoRoot, checkId, parameters = {}, execut
   return resultFromExecution({ mode, execResult: result, logPath, checkId });
 }
 
-async function executeNodeDeliveryTests({ repoRoot, testFiles, executeFn = null, timeoutMs, mode }) {
+async function executeFocusedTests({ repoRoot, testFiles, executeFn = null, timeoutMs, mode }) {
   const policy = await loadDeliveryPolicy({ repoRoot });
   const logId = crypto.randomUUID?.().slice(0, 8) || Date.now().toString(36);
-  const logPath = path.posix.join(TDD_RUNTIME_DIR, "logs", `${mode}-delivery-unit-${logId}.log`);
+  const kotlin = testFiles[0].endsWith(".kt");
+  const args = kotlin
+    ? ["./gradlew", ":app:testDevDebugUnitTest", ...testFiles.flatMap((file) => [
+      "--tests", file.replace(/^app\/src\/test\/(?:java|kotlin)\//, "").replace(/\.kt$/, "").replaceAll("/", "."),
+    ])]
+    : ["--test", ...testFiles];
+  const checkId = kotlin ? "jvm_test_dev_focused" : "delivery_unit";
+  const logPath = path.posix.join(TDD_RUNTIME_DIR, "logs", `${mode}-${checkId}-${logId}.log`);
   const check = {
-    id: "delivery_unit",
+    id: checkId,
     kind: "command",
-    label: "Focused delivery tooling tests",
-    command: "node",
-    args: ["--test", ...testFiles],
-    dynamicAllowlist: "focused_delivery_node_test",
-    display: `node --test ${testFiles.join(" ")}`,
+    label: kotlin ? "Focused Dev JVM tests" : "Focused delivery tooling tests",
+    command: kotlin ? "scripts/with-android-env.sh" : "node",
+    args,
+    dynamicAllowlist: kotlin ? "focused_android_jvm_test" : "focused_delivery_node_test",
     timeoutMs,
   };
   let result;
@@ -350,7 +359,7 @@ async function executeNodeDeliveryTests({ repoRoot, testFiles, executeFn = null,
       logPath: outcome.logPath || logPath,
     };
   }
-  return resultFromExecution({ mode, execResult: result, logPath, checkId: "delivery_unit" });
+  return resultFromExecution({ mode, execResult: result, logPath, checkId });
 }
 
 export async function testDelivery({
@@ -388,7 +397,7 @@ export async function testDelivery({
     if (deliveryFiles.length && kotlinFiles.length) {
       return emptyResult("unit", [{ code: "MIXED_TEST_RUNTIMES", message: "Kotlin and Node delivery tests must be run separately", retryable: false }]);
     }
-    const selectedCheck = deliveryFiles.length ? "node_test" : "jvm_test_dev";
+    const selectedCheck = deliveryFiles.length ? "node_test" : kotlinFiles.length ? "jvm_test_dev_focused" : "jvm_test_dev";
     const policy = await loadDeliveryPolicy({ repoRoot: root });
     const cacheKey = computeTddCacheKey({ mode, selectedCheck, files: validFiles, timeoutMs, policyHash: policy.sourceHash, fingerprint: await inputFingerprint(root, validFiles) });
     if (!force) {
@@ -398,8 +407,8 @@ export async function testDelivery({
     if (isAsync || shouldUseDeliveryTestJob({ mode, executionMode, workerJobId, executeDefault: !executeFn })) {
       return enqueue({ repoRoot: root, mode: "unit", executionMode, params: { mode: "unit", testFiles: validFiles, force, timeoutMs }, cacheKey });
     }
-    const result = deliveryFiles.length
-      ? await executeNodeDeliveryTests({ repoRoot: root, testFiles: deliveryFiles, executeFn, timeoutMs, mode: "unit" })
+    const result = validFiles.length
+      ? await executeFocusedTests({ repoRoot: root, testFiles: validFiles, executeFn, timeoutMs, mode: "unit" })
       : await executeDeliveryCheck({ repoRoot: root, checkId: selectedCheck, executeFn, timeoutMs, mode: "unit" });
     await writeCache(root, cacheKey, result);
     return result;

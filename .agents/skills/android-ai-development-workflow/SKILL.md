@@ -9,6 +9,8 @@ Use this skill when an orchestrator delegates an Android User Story or a
 bounded batch to another agent. BDD, gates, commits, architecture, and API
 rules live in their dedicated skills.
 
+Do not load this skill for an isolated edit or review with no delegation.
+
 ## Conduction and batch size
 
 Declare two independent choices:
@@ -33,6 +35,12 @@ deployable boundary required inside the approved scenarios.
 
 ## Agent lifecycle and tools
 
+Run one batch, one active scenario, and one implementation writer at a time.
+Use the canonical checkout for implementation, staging, receipts, and commits.
+The orchestrator must not edit the developer's files concurrently. A read-only
+reviewer may inspect a completed boundary; it does not start the next batch.
+Do not create temporary worktrees or per-worker MCP clients for this workflow.
+
 Keep one clean developer context per batch. The orchestrator retains the plan,
 decisions, and compact state; the developer owns only the assigned boundary.
 The same developer persists through the atomic commits of that batch and,
@@ -51,23 +59,47 @@ Developers do not poll CI or remain idle after a push. Long operations return a
 job ID; use bounded `delivery_job_wait`. Delivery evidence is tied to the
 exact staged snapshot and HEAD.
 
+## Small tasks inside a batch
+
+Before dispatch, break only the active scenario into the smallest useful
+behavioral tasks. For each task name the observable result, existing code to
+reuse, allowed files/symbols, required interfaces, focused proof, and exclusions.
+Start outside-in with the scenario and real ViewModel/use-case behavior. Add
+data or platform code only when that behavior requires it. Do not build all
+repositories, then all ViewModels, then all screens for future scenarios.
+
+Keep RED, GREEN, and a small refactor with the same developer. A task is not
+automatically a commit or a new subagent. Commit when its complete behavioral
+boundary is independently testable and reversible; one commit can be enough.
+The developer owns staging, preparation, commit, and authorized push unless
+the handoff explicitly assigns another owner. MICROSTEP never implies that
+commit ownership. Stop scope growth and report necessary contract changes.
+
+Use one covering review for spec compliance, simplicity, MVVM/navigation, and
+test quality before preparation. For material or uncertain changes, delegate
+that review read-only after the implementation writer stops. Reviewers report
+findings; the retained developer fixes them. Do not repeat unchanged tests or
+start open-ended refactors in a review loop.
+
+These task-brief and review practices borrow from Superpowers' writing-plans
+and subagent-driven-development; no installation or additional skill is required.
+The Android scenario, gate, and commit contracts remain authoritative.
+
 ## Handoff contract
 
 Use the [delegation contract](references/delegation-modes.md) when preparing a
 handoff. Transmit facts specific to the Android batch:
 
-- User Story, batch, conduction, and granularity;
-- HEAD, branch, working-tree state, known CI, and relevant receipts (not logs);
-- active and completed provider scenarios;
-- package paths, symbols, contracts, and material invariants;
-- allowed scope, strict prohibitions, escalation conditions, and required
-  skills;
-- observable next boundary, delivery intent, owners, and close condition.
+- scope, interfaces, exclusions, owners, and focused proof;
+- HEAD/tree/CI, active scenario/task, receipts, and any running job ID;
+- `WORKING`, `BLOCKED`, `READY_FOR_REVIEW`, or `DONE`, and next action.
 
-The next developer must not rediscover stable repository rules from a copied
-transcript. If another agent changes HEAD or staging in the shared checkout,
-pause, inspect again, preserve unrelated work, and regenerate preparation
-evidence.
+Follow that contract's progress/resource protocol, including immediate blocker
+reports and controller reconciliation of idle workers. Serialize Gradle/device
+jobs and do not launch an emulator without authorization.
+
+If HEAD or staging changes externally, inspect again, preserve unrelated work,
+and regenerate preparation evidence.
 
 ## Batch execution
 
@@ -95,9 +127,8 @@ For `MICROSTEP`, the developer stops after validation without staging,
 preparing, committing, or pushing; those owners remain with the orchestrator
 unless the contract says otherwise.
 
-Never target a commit count. Do not commit RED work, split by file or layer,
-leave a commit dependent on uncommitted code, combine unrelated boundaries, or
-create a tag-only/closure-only commit.
+Never target a commit count, commit RED work, split by layer, or create
+closure-only commits. Each boundary must stand without uncommitted code.
 
 ## Repair and escalation
 
@@ -114,7 +145,3 @@ When declared feature files are complete and contain no `@wip`, verify HEAD
 with the matching `close_batch` or `close_us` intent, then call
 `delivery_finalize`. A User Story is complete only when finalization returns
 `finalized: true` and `status: passed`; a pending CI state is not completion.
-
-The compact handoff reports GREEN scenarios, SHAs/receipts, changed paths,
-contract decisions, active diagnosis, tree and CI state, and the next action.
-It contains no raw logs, tracebacks, full diffs, or MCP transcripts.

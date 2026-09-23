@@ -5,6 +5,7 @@ import path from "node:path";
 import { redactSecrets } from "./redact-secrets.mjs";
 import { SAFE_COMMANDS } from "./policy-loader.mjs";
 import { assertSafeRepoPath } from "./repo-root.mjs";
+import { wipTagLines } from "./gherkin-tags.mjs";
 import {
   parseDiagnostics,
   extractLocations,
@@ -67,6 +68,18 @@ function assertCommandAllowed(command, args, dynamicAllowlist = null) {
     args.slice(1).every((argument) =>
       /^tools\/delivery-mcp\/test\/[A-Za-z0-9._-]+\.test\.mjs$/.test(argument)
     )
+  ) {
+    return;
+  }
+
+  if (
+    dynamicAllowlist === "focused_android_jvm_test" &&
+    command === "scripts/with-android-env.sh" &&
+    args[0] === "./gradlew" && args[1] === ":app:testDevDebugUnitTest" &&
+    args.length >= 4 && args.length % 2 === 0 &&
+    args.slice(2).every((argument, index) => index % 2 === 0
+      ? argument === "--tests"
+      : /^(?:[A-Za-z_][A-Za-z0-9_]*\.)*[A-Za-z_][A-Za-z0-9_]*Test$/.test(argument))
   ) {
     return;
   }
@@ -349,11 +362,7 @@ async function executeNoWipCheck({ check, repoRoot }) {
       };
     }
 
-    source.split(/\r?\n/).forEach((line, index) => {
-      if (/(?:^|\s)@wip(?:\s|$)/.test(line)) {
-        findings.push({ file: featureFile, line: index + 1 });
-      }
-    });
+    findings.push(...wipTagLines(source).map((line) => ({ file: featureFile, line })));
   }
 
   const summaryLines = findings.slice(0, 6).map(({ file, line }) => `${file}:${line}: @wip remains in completed scope`);

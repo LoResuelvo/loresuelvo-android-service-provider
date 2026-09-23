@@ -40,7 +40,7 @@ npm --prefix tools/delivery-mcp test
 | `NONE` | No executable checks for documentation-only or empty diffs |
 | `0` | Complete Dev JVM test task for feature/glue compatibility |
 | `A` | Dev JVM tests; delivery tooling also runs delivery unit tests |
-| `B` | Complete Dev JVM test task when closing one BDD scenario |
+| `B` | Complete Dev JVM test task when closing one low-risk BDD scenario |
 | `C` | Dev lint, JVM tests, build, and instrumented UI |
 | `D` | No `@wip`, all Gate C checks, and post-push CI green |
 | `R` | Delivery tests plus Staging lint, JVM tests, build, instrumented UI, and post-push CI green |
@@ -49,10 +49,19 @@ Gate C/D instrumented tests cannot be silently skipped. If no device or
 emulator is available, return a blocked diagnostic. Gate R needs real Staging
 credentials and the failed CI `repairsSha`; Dev is not CI parity.
 
+`close_scenario` retains Gate C when its paths trigger Gate C; it does not
+close future scenarios in the same feature. Gate D is for `close_batch` and
+`close_us` with completed feature scope. Only actual tag lines count as `@wip`.
+
+Use `delivery_test(mode="unit", testFiles=[...])` for exact Kotlin JVM test
+classes. Keep package paths aligned with their class names. No test files,
+scenario mode, and affected mode run the complete Dev JVM task. Focused TDD
+does not authorize skipping a gate. Serialize Gradle and device checks.
+
 ## Focused and full commands
 
 ```bash
-./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
+scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
 make lint FLAVOR=Dev
 make test FLAVOR=Dev
 make build FLAVOR=Dev
@@ -70,7 +79,7 @@ Keep `DELIVERY_REQUIRE_EVIDENCE` disabled while the delivery unit tests,
 smoke, classification matrix, and representative inspections are being
 validated. Receipts are cryptographically bound to HEAD, the staged snapshot,
 policy, intent, and scope; a changed snapshot invalidates them. Hooks check
-format, receipts, and the CI window but never run test suites.
+format and provide advisory evidence/CI diagnostics but never run test suites.
 
 ## CI failure repair
 
@@ -79,9 +88,11 @@ Stop ordinary pushes when CI fails. Inspect the exact SHA with
 agents call `delivery_prepare` with intent `repair_ci` and that exact
 `repairsSha` so Gate R issues a single-use repair receipt; humans may instead
 run `make delivery-context ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"`
-after the final `git add` to delegate verification to remote CI. The human
-commit remains `not_run` and is rejected when `DELIVERY_REQUIRE_EVIDENCE=1` is
-enabled. Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`. A cancelled run
+after the final `git add` to delegate verification to remote CI. Git hooks are
+advisory regardless of `DELIVERY_REQUIRE_EVIDENCE`; ordinary human commits
+are not recorded as `not_run`. Post-commit consumes context only when binding
+an exact prepared receipt. Agents still require passed preparation.
+Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`. A cancelled run
 is resolved only by a reachable descendant with passed CI.
 Workflow files and workflow-job failures are `HUMAN_ONLY` and must be
 escalated.
