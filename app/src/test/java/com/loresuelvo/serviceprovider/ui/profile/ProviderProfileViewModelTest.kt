@@ -137,6 +137,12 @@ class ProviderProfileViewModelTest {
         ResolveProviderEntryUseCase(sessionStore, repository),
         GetPaymentAccountStatusUseCase(paymentRepository),
         sessionStore,
+        com.loresuelvo.serviceprovider.domain.usecase.identity.StartIdentityVerificationUseCase(
+            object : com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationRepository {
+                override suspend fun start(): com.loresuelvo.serviceprovider.domain.identity.StartIdentityVerificationOutcome =
+                    error("This Profile test must not start identity verification")
+            },
+        ),
     )
 
     @Test

@@ -86,8 +86,8 @@ internal class ProviderProfileSteps {
     @And("veo la fecha de aprobación si existe")
     fun profileShowsApprovalDate() = world.assertIdentityApprovalDate()
 
-    @And("no hay una acción para iniciar o reintentar la identificación")
-    fun profileHasNoIdentityAction() = world.assertNoIdentityAction()
+    @And("la acción de identificación respeta el estado actual del perfil")
+    fun profileIdentityActionMatchesStatus() = world.assertIdentityActionMatchesStatus()
 
     @Given("que todavía no verifiqué mi identidad ni conecté Mercado Pago")
     fun providerHasPendingConnections() = world.configurePendingConnections()

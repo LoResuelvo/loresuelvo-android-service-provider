@@ -50,7 +50,7 @@ Característica: Ver mi perfil y consultar mis conexiones
     Cuando consulto Perfil
     Entonces veo ese estado de identidad
     Y veo la fecha de aprobación si existe
-    Y no hay una acción para iniciar o reintentar la identificación
+    Y la acción de identificación respeta el estado actual del perfil
 
   Escenario: 06-PRF Usar Perfil con conexiones pendientes
     Dado que todavía no verifiqué mi identidad ni conecté Mercado Pago

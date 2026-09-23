@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
+import com.loresuelvo.serviceprovider.ui.profile.ProfileIdentityUiState
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
 
 @Composable
@@ -40,6 +41,8 @@ fun ProviderProfileScreen(
     onRetryPaymentStatus: () -> Unit = {},
     onConnectMercadoPago: () -> Unit = {},
     modifier: Modifier = Modifier,
+    identityState: ProfileIdentityUiState = ProfileIdentityUiState(),
+    onVerifyIdentity: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier
@@ -71,6 +74,9 @@ fun ProviderProfileScreen(
                 state,
                 onConnectMercadoPago,
                 onRetryPaymentStatus,
+                identityState,
+                onVerifyIdentity,
+                onRetry,
             )
         }
     }
@@ -141,6 +147,9 @@ private fun ProfileReadyState(
     state: ProviderProfileUiState.Ready,
     onConnectMercadoPago: () -> Unit,
     onRetryPaymentStatus: () -> Unit,
+    identityState: ProfileIdentityUiState,
+    onVerifyIdentity: () -> Unit,
+    onReloadProfile: () -> Unit,
 ) {
     Box(
         modifier = Modifier.fillMaxSize().padding(contentPadding),
@@ -157,7 +166,7 @@ private fun ProfileReadyState(
         ) {
             ProfileSummaryCard(state.provider)
             ProfileAccountCard(state.provider)
-            ProfileIdentityCard(state.provider)
+            ProfileIdentityCard(state.provider, identityState, onVerifyIdentity, onReloadProfile)
             Text(
                 text = stringResource(R.string.provider_profile_connections_title),
                 style = MaterialTheme.typography.titleSmall,

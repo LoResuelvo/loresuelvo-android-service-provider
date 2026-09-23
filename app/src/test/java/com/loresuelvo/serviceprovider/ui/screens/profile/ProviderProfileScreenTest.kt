@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.profile
 
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -120,7 +121,7 @@ class ProviderProfileScreenTest {
     }
 
     @Test
-    fun approved_identity_displays_status_and_local_date_without_verification_action() {
+    fun approved_identity_displays_status_and_local_date_with_disabled_action() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val verifiedOn = 1_768_480_496_000L
         composeTestRule.setContent {
@@ -142,12 +143,12 @@ class ProviderProfileScreenTest {
             context.resources.configuration.locales[0],
         ).format(Date(verifiedOn))
         composeTestRule.onNodeWithText(expectedDate).performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText(context.getString(R.string.identity_verify_now))
-            .assertDoesNotExist()
+        composeTestRule.onNodeWithTag(PROFILE_IDENTITY_ACTION_TAG)
+            .performScrollTo().assertIsNotEnabled()
     }
 
     @Test
-    fun unavailable_identity_does_not_show_approval_date_or_action() {
+    fun unavailable_identity_disables_verification_and_offers_reload() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeTestRule.setContent {
             LoresuelvoTheme {
@@ -159,8 +160,8 @@ class ProviderProfileScreenTest {
             .performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_identity_date_label))
             .assertDoesNotExist()
-        composeTestRule.onNodeWithText(context.getString(R.string.identity_verify_now))
-            .assertDoesNotExist()
+        composeTestRule.onNodeWithTag(PROFILE_IDENTITY_ACTION_TAG)
+            .performScrollTo().assertIsNotEnabled()
     }
 
     @Test

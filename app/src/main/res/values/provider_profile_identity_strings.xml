@@ -13,4 +13,6 @@
     <string name="provider_profile_identity_abandoned">Abandonada</string>
     <string name="provider_profile_identity_expired">Vencida</string>
     <string name="provider_profile_identity_kyc_expired">Verificación vencida</string>
+    <string name="provider_profile_identity_verify">Verificar identidad</string>
+    <string name="provider_profile_identity_reload">Volver a cargar Perfil</string>
 </resources>

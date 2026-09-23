@@ -94,7 +94,7 @@ fun OptionalIdentityVerificationRoute(
     )
 }
 
-private tailrec fun Context.findActivity(): Activity = when (this) {
+internal tailrec fun Context.findActivity(): Activity = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> error("Identity verification requires an Activity context")

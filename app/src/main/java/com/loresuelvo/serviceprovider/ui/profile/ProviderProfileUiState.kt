@@ -1,6 +1,8 @@
 package com.loresuelvo.serviceprovider.ui.profile
 
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
+import com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationCredential
+import com.loresuelvo.serviceprovider.ui.identity.IdentityVerificationFeedback
 
 sealed interface ProviderProfileUiState {
     data object Loading : ProviderProfileUiState
@@ -21,3 +23,13 @@ sealed interface ProfilePaymentState {
     data object Connected : ProfilePaymentState
     data object Unavailable : ProfilePaymentState
 }
+
+data class ProfileIdentityUiState(
+    val loading: Boolean = false,
+    val feedback: IdentityVerificationFeedback? = null,
+)
+
+class ProfileIdentityLaunch(
+    val attemptId: Long,
+    val credential: IdentityVerificationCredential,
+)

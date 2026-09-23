@@ -148,6 +148,7 @@ fun LoResuelvoNav(
                             },
                             profile = {
                                 ProviderProfileRoute(
+                                    identityLauncher = identityVerificationLauncher,
                                     returnRefreshKey = profileReturnRefresh,
                                     onBack = {
                                         navController.popBackStack(

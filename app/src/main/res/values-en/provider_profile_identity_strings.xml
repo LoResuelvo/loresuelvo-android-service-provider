@@ -13,4 +13,6 @@
     <string name="provider_profile_identity_abandoned">Abandoned</string>
     <string name="provider_profile_identity_expired">Expired</string>
     <string name="provider_profile_identity_kyc_expired">Verification expired</string>
+    <string name="provider_profile_identity_verify">Verify identity</string>
+    <string name="provider_profile_identity_reload">Reload Profile</string>
 </resources>

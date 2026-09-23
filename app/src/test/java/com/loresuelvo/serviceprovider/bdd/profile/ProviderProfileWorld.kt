@@ -180,8 +180,8 @@ internal class ProviderProfileWorld : AutoCloseable {
         assertEquals(1_768_480_496_000L, readyProvider().identityVerifiedOn)
     }
 
-    fun assertNoIdentityAction() {
-        assertTrue(viewModel.uiState.value is ProviderProfileUiState.Ready)
+    fun assertIdentityActionMatchesStatus() {
+        org.junit.Assert.assertNull(readyProvider().identityVerificationStatus.availableAction)
     }
 
     fun configurePendingConnections() {
@@ -301,6 +301,12 @@ internal class ProviderProfileWorld : AutoCloseable {
         ResolveProviderEntryUseCase(sessionStore, currentAccount),
         GetPaymentAccountStatusUseCase(paymentAccount),
         sessionStore,
+        com.loresuelvo.serviceprovider.domain.usecase.identity.StartIdentityVerificationUseCase(
+            object : com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationRepository {
+                override suspend fun start(): com.loresuelvo.serviceprovider.domain.identity.StartIdentityVerificationOutcome =
+                    error("This Profile test must not start identity verification")
+            },
+        ),
     )
 
     private fun readyProvider(): CurrentAccount.Provider =

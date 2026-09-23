@@ -116,10 +116,14 @@ class ProviderSignupProviderRepository : ProviderRepository {
 }
 
 class ProviderSignupCurrentAccountRepository : CurrentAccountRepository {
+    var calls = 0
+        private set
     var outcome: CurrentAccountOutcome = CurrentAccountOutcome.Failure.NotFound
 
-    override suspend fun getCurrentAccount(): CurrentAccountOutcome =
-        outcome
+    override suspend fun getCurrentAccount(): CurrentAccountOutcome {
+        calls++
+        return outcome
+    }
 }
 
 class ProviderSignupJobRequestRepository : JobRequestRepository {

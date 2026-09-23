@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,13 +29,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
+import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationAction
 import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
+import com.loresuelvo.serviceprovider.ui.identity.IdentityVerificationFeedback
+import com.loresuelvo.serviceprovider.ui.profile.ProfileIdentityUiState
 import com.loresuelvo.serviceprovider.ui.profile.ProfilePaymentState
 import java.text.DateFormat
 import java.util.Date
@@ -75,7 +82,12 @@ internal fun ProfileAccountCard(provider: CurrentAccount.Provider) {
 }
 
 @Composable
-internal fun ProfileIdentityCard(provider: CurrentAccount.Provider) {
+internal fun ProfileIdentityCard(
+    provider: CurrentAccount.Provider,
+    identity: ProfileIdentityUiState,
+    onVerify: () -> Unit,
+    onReload: () -> Unit,
+) {
     ProfileSectionCard {
         ProfileSectionHeading(R.string.provider_profile_identity_label, Icons.Outlined.Shield)
         ProfileStatus(
@@ -94,6 +106,47 @@ internal fun ProfileIdentityCard(provider: CurrentAccount.Provider) {
                 ProfileDivider()
                 ProfileDetail(R.string.provider_profile_identity_date_label, date)
             }
+        }
+        ProfileIdentityActions(provider.identityVerificationStatus, identity, onVerify, onReload)
+    }
+}
+
+const val PROFILE_IDENTITY_ACTION_TAG = "profile-identity-action"
+
+@Composable
+private fun ProfileIdentityActions(
+    status: IdentityVerificationStatus,
+    identity: ProfileIdentityUiState,
+    onVerify: () -> Unit,
+    onReload: () -> Unit,
+) {
+    if (identity.loading) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            Text(stringResource(R.string.identity_starting_verification))
+        }
+    }
+    identity.feedback?.let {
+        Text(stringResource(when (it) {
+            IdentityVerificationFeedback.Cancelled -> R.string.identity_cancelled
+            IdentityVerificationFeedback.PermissionDenied -> R.string.identity_permission_denied
+            IdentityVerificationFeedback.Failed -> R.string.identity_sdk_error
+            IdentityVerificationFeedback.SessionStartFailed -> R.string.identity_session_error
+        }), color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+    }
+    Button(onClick = onVerify, enabled = !identity.loading && status.availableAction != null,
+        modifier = Modifier.fillMaxWidth().testTag(PROFILE_IDENTITY_ACTION_TAG),
+        shape = MaterialTheme.shapes.medium) {
+        Text(stringResource(if (status.availableAction == IdentityVerificationAction.Retry)
+            R.string.provider_profile_view_retry else R.string.provider_profile_identity_verify))
+    }
+    if (status == IdentityVerificationStatus.Unavailable) {
+        Button(onClick = onReload, enabled = !identity.loading, modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium) {
+            Text(stringResource(R.string.provider_profile_identity_reload))
         }
     }
 }
