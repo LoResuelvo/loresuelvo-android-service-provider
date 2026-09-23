@@ -125,15 +125,15 @@ private fun ProfileIdentityActions(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
             CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            Text(stringResource(R.string.identity_starting_verification))
+            Text(stringResource(R.string.provider_profile_identity_starting))
         }
     }
     identity.feedback?.let {
         Text(stringResource(when (it) {
-            IdentityVerificationFeedback.Cancelled -> R.string.identity_cancelled
-            IdentityVerificationFeedback.PermissionDenied -> R.string.identity_permission_denied
-            IdentityVerificationFeedback.Failed -> R.string.identity_sdk_error
-            IdentityVerificationFeedback.SessionStartFailed -> R.string.identity_session_error
+            IdentityVerificationFeedback.Cancelled -> R.string.provider_profile_identity_cancelled
+            IdentityVerificationFeedback.PermissionDenied -> R.string.provider_profile_identity_permission_denied
+            IdentityVerificationFeedback.Failed -> R.string.provider_profile_identity_failed
+            IdentityVerificationFeedback.SessionStartFailed -> R.string.provider_profile_identity_session_failed
         }), color = MaterialTheme.colorScheme.error,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
     }

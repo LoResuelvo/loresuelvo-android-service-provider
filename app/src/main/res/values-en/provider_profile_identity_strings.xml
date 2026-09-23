@@ -15,4 +15,9 @@
     <string name="provider_profile_identity_kyc_expired">Verification expired</string>
     <string name="provider_profile_identity_verify">Verify identity</string>
     <string name="provider_profile_identity_reload">Reload Profile</string>
+    <string name="provider_profile_identity_starting">Starting identity verification…</string>
+    <string name="provider_profile_identity_cancelled">Identity verification was cancelled.</string>
+    <string name="provider_profile_identity_permission_denied">Allow camera access to verify your identity.</string>
+    <string name="provider_profile_identity_failed">Identity verification could not be completed.</string>
+    <string name="provider_profile_identity_session_failed">Identity verification could not be started.</string>
 </resources>

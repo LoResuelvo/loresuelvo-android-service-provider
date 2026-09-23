@@ -74,7 +74,7 @@ class ProfileIdentityNavigationTest {
         compose.runOnUiThread { dependencies.launcher().finish(IdentityVerificationResult.Cancelled) }
         assertReturned()
         compose.onNodeWithTag(PROFILE_IDENTITY_ACTION_TAG).performScrollTo().assertIsEnabled()
-        compose.onNodeWithText(compose.activity.getString(R.string.identity_cancelled)).assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.provider_profile_identity_cancelled)).assertIsDisplayed()
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).assertIsSelected()
     }

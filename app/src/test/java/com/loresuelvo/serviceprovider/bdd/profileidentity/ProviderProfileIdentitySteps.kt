@@ -12,6 +12,8 @@ import org.junit.Assert.*
 
 internal class ProviderProfileIdentitySteps {
     private val fixture = ProfileIdentityFixture()
+    private var activeAttempt = 0L
+    private var callsBeforeReturn = 0
     private var expectedStatus: IdentityVerificationStatus = IdentityVerificationStatus.Unverified
 
     @Given("que inicié sesión como prestador con mi perfil profesional completo")
@@ -91,6 +93,78 @@ internal class ProviderProfileIdentitySteps {
         fixture.drain()
         assertTrue(fixture.viewModel.identityState.value.loading)
         assertEquals(1, fixture.startCalls)
+    }
+
+    @Given("que inicié Didit desde Perfil")
+    fun startedFromProfile() {
+        fixture.open()
+        activeAttempt = fixture.start().attemptId
+        callsBeforeReturn = fixture.accountCalls
+        fixture.viewModel.onProfilePaused()
+    }
+
+    @Given("la siguiente consulta de mi perfil devolverá {string}")
+    fun nextProfileStatus(value: String) = profileReturns(value)
+
+    @When("Didit devuelve {string}")
+    fun sdkReturns(value: String) {
+        val result = when (value) {
+            "completado" -> com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationResult.Completed
+            "cancelado" -> com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationResult.Cancelled
+            "error" -> com.loresuelvo.serviceprovider.domain.identity.IdentityVerificationResult.Failed
+            else -> error("Unsupported SDK result: $value")
+        }
+        fixture.viewModel.onIdentityResult(activeAttempt, result)
+        fixture.viewModel.onProfileResumed()
+        fixture.drain()
+    }
+
+    @Then("vuelvo a Perfil y sus datos se recargan una sola vez")
+    fun profileRefreshedOnce() {
+        assertEquals(callsBeforeReturn + 1, fixture.accountCalls)
+        assertEquals(expectedStatus, ready().provider.identityVerificationStatus)
+        assertEquals(1, fixture.startCalls)
+    }
+
+    @Then("la acción de identidad queda {string} según esa consulta")
+    fun actionFollowsRefreshedProfile(action: String) {
+        assertEquals(action == "habilitada", ready().provider.identityVerificationStatus.availableAction != null)
+        assertFalse(fixture.viewModel.identityState.value.loading)
+    }
+
+    @Then("puedo seguir usando Inicio y Mensajes sin esperar una aprobación")
+    fun identityDoesNotBlockAccount() {
+        // The same account/session remains usable; device tests prove the actual tab navigation.
+        assertNotNull(fixture.sessionStore.getSession())
+        assertEquals(fixture.provider.id, ready().provider.id)
+        assertFalse(fixture.viewModel.identityState.value.loading)
+    }
+
+    @Given("que mi perfil permite iniciar la identificación")
+    fun profileAllowsStarting() {
+        profilePermits("Verificar identidad")
+        callsBeforeReturn = fixture.accountCalls
+    }
+
+    @Given("la solicitud de inicio fallará por un problema de red")
+    fun sessionRequestWillFail() {
+        fixture.startResponse = { com.loresuelvo.serviceprovider.domain.identity.StartIdentityVerificationOutcome.Failure.Network }
+    }
+
+    @Then("sigo en Perfil y veo un mensaje de error")
+    fun profileShowsStartFailure() {
+        assertEquals(fixture.provider.id, ready().provider.id)
+        assertEquals(com.loresuelvo.serviceprovider.ui.identity.IdentityVerificationFeedback.SessionStartFailed,
+            fixture.viewModel.identityState.value.feedback)
+    }
+
+    @Then("Didit no se abre")
+    fun sdkDoesNotOpen() = assertTrue(fixture.launches.isEmpty())
+
+    @Then("mi perfil se recarga una sola vez y la acción queda deshabilitada")
+    fun refreshDisablesAction() {
+        profileRefreshedOnce()
+        actionFollowsRefreshedProfile("deshabilitada")
     }
 
     private fun ready() = fixture.viewModel.uiState.value as ProviderProfileUiState.Ready

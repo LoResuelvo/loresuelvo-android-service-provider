@@ -62,9 +62,9 @@ class ProfileIdentityCardTest {
             }
         }
         compose.onNodeWithTag(PROFILE_IDENTITY_ACTION_TAG).assertIsNotEnabled()
-        compose.onNodeWithText(context.getString(R.string.identity_starting_verification)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.provider_profile_identity_starting)).assertIsDisplayed()
         compose.runOnIdle { identity.value = ProfileIdentityUiState(feedback = IdentityVerificationFeedback.Failed) }
-        compose.onNodeWithText(context.getString(R.string.identity_sdk_error)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.provider_profile_identity_failed)).assertIsDisplayed()
         compose.onNodeWithTag(PROFILE_IDENTITY_ACTION_TAG).assertIsEnabled()
     }
 }

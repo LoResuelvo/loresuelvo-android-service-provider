@@ -8,7 +8,6 @@ Característica: Iniciar o reintentar la identificación desde Perfil
   Antecedentes:
     Dado que inicié sesión como prestador con mi perfil profesional completo
 
-  @wip
   Esquema del escenario: 01-PID Ofrecer la acción según el estado del perfil
     Dado que la consulta de mi perfil devuelve "<Estado>"
     Cuando abro Perfil
@@ -30,7 +29,6 @@ Característica: Iniciar o reintentar la identificación desde Perfil
       | approved      | Verificar identidad deshabilitada                          |
       | desconocido   | Verificar identidad deshabilitada con opción de recargar Perfil |
 
-  @wip
   Esquema del escenario: 02-PID Abrir un único intento permitido
     Dado que mi perfil permite "<Acción>"
     Y el servicio puede iniciar la identificación
@@ -44,7 +42,6 @@ Característica: Iniciar o reintentar la identificación desde Perfil
       | Verificar identidad |
       | Reintentar          |
 
-  @wip
   Esquema del escenario: 03-PID Volver a Perfil y usar su estado actualizado
     Dado que inicié Didit desde Perfil
     Y la siguiente consulta de mi perfil devolverá "<Estado>"
@@ -63,7 +60,6 @@ Característica: Iniciar o reintentar la identificación desde Perfil
       | error      | in_progress | deshabilitada |
       | error      | approved    | deshabilitada |
 
-  @wip
   Escenario: 04-PID Recuperarse de un error al iniciar la identificación
     Dado que mi perfil permite iniciar la identificación
     Y la solicitud de inicio fallará por un problema de red

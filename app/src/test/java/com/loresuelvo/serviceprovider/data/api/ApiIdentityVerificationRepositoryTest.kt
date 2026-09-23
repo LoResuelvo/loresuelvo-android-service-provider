@@ -3,6 +3,9 @@ package com.loresuelvo.serviceprovider.data.api
 import com.loresuelvo.serviceprovider.data.api.dto.IdentityVerificationSessionDto
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.identity.StartIdentityVerificationOutcome
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.User
+import io.mockk.every
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.verify
@@ -46,6 +49,18 @@ class ApiIdentityVerificationRepositoryTest {
 
         assertEquals(StartIdentityVerificationOutcome.Failure.Unauthorized, repository.start())
         verify(exactly = 1) { sessionStore.clearSession() }
+    }
+
+    @Test
+    fun `late unauthorized response cannot clear a replacement session`() = runTest {
+        val original = AuthSession(User("original", "original@example.com"), "original-token")
+        val replacement = AuthSession(User("replacement", "replacement@example.com"), "replacement-token")
+        every { sessionStore.getSession() } returnsMany listOf(original, replacement)
+        coEvery { api.startIdentityVerification() } throws httpError(401)
+
+        assertEquals(StartIdentityVerificationOutcome.Failure.Unauthorized, repository.start())
+
+        verify(exactly = 0) { sessionStore.clearSession() }
     }
 
     @Test

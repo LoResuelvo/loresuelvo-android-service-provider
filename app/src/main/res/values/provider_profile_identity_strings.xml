@@ -15,4 +15,9 @@
     <string name="provider_profile_identity_kyc_expired">Verificación vencida</string>
     <string name="provider_profile_identity_verify">Verificar identidad</string>
     <string name="provider_profile_identity_reload">Volver a cargar Perfil</string>
+    <string name="provider_profile_identity_starting">Iniciando identificación…</string>
+    <string name="provider_profile_identity_cancelled">La identificación fue cancelada.</string>
+    <string name="provider_profile_identity_permission_denied">Permití el acceso a la cámara para verificar tu identidad.</string>
+    <string name="provider_profile_identity_failed">No se pudo completar la identificación.</string>
+    <string name="provider_profile_identity_session_failed">No se pudo iniciar la identificación.</string>
 </resources>

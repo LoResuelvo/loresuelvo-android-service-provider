@@ -13,28 +13,31 @@ class ApiIdentityVerificationRepository @Inject constructor(
     private val backendApi: BackendApi,
     private val sessionStore: AuthSessionStore,
 ) : IdentityVerificationRepository {
-    override suspend fun start(): StartIdentityVerificationOutcome = try {
-        val response = backendApi.startIdentityVerification()
-        if (!response.isValid()) {
-            StartIdentityVerificationOutcome.Failure.InvalidResponse
-        } else {
-            StartIdentityVerificationOutcome.Success(
-                IdentityVerificationCredential(response.sessionToken),
-            )
-        }
-    } catch (throwable: Throwable) {
-        when (val error = throwable.toApiError()) {
-            is ApiError.Unauthorized -> {
-                sessionStore.clearSession()
-                StartIdentityVerificationOutcome.Failure.Unauthorized
+    override suspend fun start(): StartIdentityVerificationOutcome {
+        val requestSession = sessionStore.getSession()
+        return try {
+            val response = backendApi.startIdentityVerification()
+            if (!response.isValid()) {
+                StartIdentityVerificationOutcome.Failure.InvalidResponse
+            } else {
+                StartIdentityVerificationOutcome.Success(
+                    IdentityVerificationCredential(response.sessionToken),
+                )
             }
-            is ApiError.Network -> StartIdentityVerificationOutcome.Failure.Network
-            is ApiError.Server -> when (error.code) {
-                403 -> StartIdentityVerificationOutcome.Failure.Forbidden
-                409 -> StartIdentityVerificationOutcome.AlreadyApproved
-                else -> StartIdentityVerificationOutcome.Failure.Server(error.code)
+        } catch (throwable: Throwable) {
+            when (val error = throwable.toApiError()) {
+                is ApiError.Unauthorized -> {
+                    if (sessionStore.getSession() == requestSession) sessionStore.clearSession()
+                    StartIdentityVerificationOutcome.Failure.Unauthorized
+                }
+                is ApiError.Network -> StartIdentityVerificationOutcome.Failure.Network
+                is ApiError.Server -> when (error.code) {
+                    403 -> StartIdentityVerificationOutcome.Failure.Forbidden
+                    409 -> StartIdentityVerificationOutcome.AlreadyApproved
+                    else -> StartIdentityVerificationOutcome.Failure.Server(error.code)
+                }
+                is ApiError.Unknown -> StartIdentityVerificationOutcome.Failure.Unknown
             }
-            is ApiError.Unknown -> StartIdentityVerificationOutcome.Failure.Unknown
         }
     }
 
