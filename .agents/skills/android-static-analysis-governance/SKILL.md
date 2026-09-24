@@ -39,17 +39,9 @@ For application-layer changes, review the available signals for:
 - oversized files/functions and excessive branching when a configured
   analyzer can measure them.
 
-The expected architecture checks are zero-match checks, not suggestions:
-
-```bash
-rg -n 'import (com\.loresuelvo\.serviceprovider\.(data|ui)|android\.|dagger|hilt|okhttp3|retrofit2|kotlinx\.serialization)' \
-  app/src/main/java/com/loresuelvo/serviceprovider/domain/
-rg -n 'import com\.loresuelvo\.serviceprovider\.data\.' \
-  app/src/main/java/com/loresuelvo/serviceprovider/ui/
-```
-
-Exit code 1 means no matches; code 2 is an execution error, not a pass. Inspect
-every match; do not hide a violation by broadening an exclusion.
+Run the zero-match import checks in `android-clean-architecture`. Exit code 1 means
+no matches; code 2 is an execution error, not a pass. Inspect every match; do
+not hide a violation by broadening an exclusion or assume `rg` is installed.
 
 ## Findings and suppressions
 
@@ -67,10 +59,6 @@ For the service provider, use the MCP delivery operation and the gate selected
 by `.delivery/policy.v1.json`; do not calculate a gate manually or run an
 arbitrary replacement command. If a quality analyzer is disabled by policy,
 report that limitation in the handoff.
-
-For the consumer, use the repository's configured `make`, Gradle, and CI
-checks. Keep the same distinction between a check that ran green and a check
-that is not configured.
 
 ## Review output
 

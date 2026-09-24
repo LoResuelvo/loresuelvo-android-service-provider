@@ -13,6 +13,8 @@ async function runSmokeTest() {
     const inspectTool = toolsResult.tools.find((tool) => tool.name === "delivery_inspect");
     const prepareTool = toolsResult.tools.find((tool) => tool.name === "delivery_prepare");
     const ciTool = toolsResult.tools.find((tool) => tool.name === "delivery_ci_inspect");
+    const closurePreflightTool = toolsResult.tools.find((tool) => tool.name === "delivery_closure_preflight");
+    const ciWindowWaitTool = toolsResult.tools.find((tool) => tool.name === "delivery_ci_window_wait");
     const finalizeTool = toolsResult.tools.find((tool) => tool.name === "delivery_finalize");
     const waitTool = toolsResult.tools.find((tool) => tool.name === "delivery_job_wait");
     const cancelTool = toolsResult.tools.find((tool) => tool.name === "delivery_job_cancel");
@@ -21,6 +23,8 @@ async function runSmokeTest() {
     assert.ok(inspectTool, "delivery_inspect tool is registered");
     assert.ok(prepareTool, "delivery_prepare tool is registered");
     assert.ok(ciTool, "delivery_ci_inspect tool is registered");
+    assert.ok(closurePreflightTool, "delivery_closure_preflight tool is registered");
+    assert.ok(ciWindowWaitTool, "delivery_ci_window_wait tool is registered");
     assert.ok(finalizeTool, "delivery_finalize tool is registered");
     assert.ok(waitTool, "delivery_job_wait tool is registered");
     assert.ok(cancelTool, "delivery_job_cancel tool is registered");
@@ -31,7 +35,11 @@ async function runSmokeTest() {
 
     const testCallResult = await client.callTool({
       name: "delivery_test",
-      arguments: { mode: "affected", executionMode: "sync" },
+      arguments: {
+        mode: "unit",
+        testFiles: ["tools/delivery-mcp/test/android-contract.test.mjs"],
+        executionMode: "sync",
+      },
     });
     assert.ok(testCallResult.content?.[0]?.text, "delivery_test result text present");
     const parsedTest = JSON.parse(testCallResult.content[0].text);
@@ -39,7 +47,7 @@ async function runSmokeTest() {
       ["passed", "failed", "error", "blocked", "timed_out", "no_changes"].includes(parsedTest.status),
       `Invalid test status: ${parsedTest.status}`
     );
-    assert.strictEqual(parsedTest.mode, "affected");
+    assert.strictEqual(parsedTest.mode, "unit");
     assert.strictEqual(typeof parsedTest.cached, "boolean");
     assert.strictEqual(typeof parsedTest.durationMs, "number");
     assert.ok(parsedTest.counts && typeof parsedTest.counts.passed === "number");

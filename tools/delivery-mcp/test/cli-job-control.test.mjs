@@ -109,4 +109,8 @@ test("job control rejects unsafe identifiers and documents the Make targets", ()
   assert.match(makefile, /\$\(DELIVERY_CLI\) job-wait \$\(ARGS\)/);
   assert.match(makefile, /delivery-job-cancel:/);
   assert.match(makefile, /\$\(DELIVERY_CLI\) job-cancel \$\(ARGS\)/);
+  assert.match(makefile, /delivery-closure-preflight:/);
+  assert.match(makefile, /\$\(DELIVERY_CLI\) closure-preflight \$\(ARGS\)/);
+  assert.match(makefile, /delivery-ci-window-wait:/);
+  assert.match(makefile, /\$\(DELIVERY_CLI\) ci-window-wait \$\(ARGS\)/);
 });

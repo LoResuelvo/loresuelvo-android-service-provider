@@ -1,354 +1,126 @@
 # AGENTS.md — LoResuelvo Android Service Provider
 
-Last updated: 2026-09-23.
+Last updated: 2026-09-24.
 
-This is the canonical contract for agents working in this repository. Read it
-before loading a skill. Human setup belongs in [`README.md`](README.md), and
-the operational delivery reference belongs in
-[`.delivery/README.md`](.delivery/README.md).
+This is the repository-wide agent contract. Read it before work, then load only
+the skills relevant to the task. Use [`README.md`](README.md) for human setup,
+[`.delivery/README.md`](.delivery/README.md) for Delivery operations, and
+`.delivery/policy.v1.json` for deterministic classification and gates.
 
 ## Working agreement
 
-1. Read this file and load every skill directly relevant to the task; do not
-   load unrelated skills.
-2. Keep source code, tests, diagnostics, comments, skills, agent rules,
-   commit messages, and internal documentation in English. User-visible text
-   remains in localized Android resources.
-3. Inspect the working tree before editing. Preserve unrelated user changes.
-4. Do not use `--no-verify`, `DELIVERY_SKIP_CI_CHECK`, destructive Git
-   commands, or copied runtime evidence.
-5. The target repository is the only implementation workspace for this
-   migration. Do not modify sibling repositories.
+- Inspect the working tree before editing and preserve unrelated changes. This
+  repository is the only implementation workspace; do not modify siblings.
+- Keep code, tests, diagnostics, comments, skills, agent rules, commit messages,
+  and internal documentation in English. Put user-visible text in localized
+  Android resources.
+- Never use `--no-verify`, `DELIVERY_SKIP_CI_CHECK`, destructive Git commands,
+  copied runtime evidence, or committed `local.properties` and secrets.
+- Load a skill for the boundary being changed; do not load every skill by
+  default. Follow the skill routing below.
 
-## Repository scope and current baseline
+## Application boundaries
 
-This application serves LoResuelvo providers. Its package is
-`com.loresuelvo.serviceprovider`; flavors are `Dev`, `Staging`, and `Prod`.
-The application includes authentication/onboarding, provider profile and photo
-upload, identity verification, payment-account linking, job requests, and
-conversations with media. It uses Hilt, Retrofit, OkHttp, Auth0, Navigation
-Compose, and Cucumber JVM infrastructure.
-
-The stack is:
-
-- Kotlin 2.0.21, Android Gradle Plugin 8.13.2, and the Gradle wrapper.
-- Jetpack Compose, Material 3, Navigation Compose, and StateFlow/UDF.
-- Hilt with KAPT/KSP, Retrofit 2.11.0, OkHttp 4.12.0, and Auth0 SDK 2.11.0.
-- JUnit4, MockK, Turbine, Robolectric, MockWebServer, Cucumber JVM, and Hilt
-  Android testing.
-- Node.js 24 LTS for `tools/delivery-mcp`. Its package declares
-  `engines.node` as `>=24 <25`.
-
-Use JDK 17 to run Gradle. The Android module currently compiles against Java
-11 bytecode, while the CI and local toolchain requirement is JDK 17.
-
-The canonical GNU Make entry point is `Makefile`. Its Android targets route
-Gradle, ADB, and instrumented-test commands through
-`scripts/with-android-env.sh`, which is the shared boundary for Java and
-Android SDK environment setup. Keep machine-specific toolchain values in the
-shell or ignored `local.properties`; never encode them in Make targets or
-documentation.
-
-Delivery Make targets, repository Git hooks, and Codex delivery entry points
-route through `scripts/with-node-24.sh`. The wrapper honors `DELIVERY_NODE`,
-then discovers a repository-sibling `.toolchains` Node 24 installation or a
-Node 24 executable on `PATH`; it rejects other Node major versions.
-
-## Architecture
+The provider app uses package `com.loresuelvo.serviceprovider` and `Dev`,
+`Staging`, and `Prod` flavors. Android checks use JDK 17 through
+`scripts/with-android-env.sh`; Delivery uses Node 24 through
+`scripts/with-node-24.sh`. Use `Makefile` targets or the documented wrappers,
+and keep machine-specific paths in the environment or ignored
+`local.properties`; never hardcode them in Make targets or documentation.
 
 ```text
 ui → domain/usecase → domain
 data ───────────────→ domain
 ```
 
-`domain/` contains pure entities, ports, typed outcomes, and use cases.
-`domain/usecase/` orchestrates ports without infrastructure imports.
-`data/` owns adapters, HTTP, Auth0, Android storage, DTOs, and mappers.
-`ui/` owns composables, ViewModels, navigation, state, and events.
+Keep domain pure and infrastructure in data adapters. UI owns composables,
+ViewModels, state, events, and navigation; it must not depend directly on
+`data/`. DTOs and wire names stay in `data/api/`; mappers do not own business
+rules. Use typed outcomes, immutable `StateFlow` UI state, and injected
+dependencies rather than mutable global objects. The
+[clean-architecture skill](.agents/skills/android-clean-architecture/SKILL.md)
+owns the detailed dependency rules and import checks.
 
-Examples in the provider application are:
+Never log tokens, credentials, or request/response payloads. Secrets and
+flavor values come from `local.properties`, Gradle properties, or CI
+environment variables. Cleartext HTTP is limited
+to the Dev overlay; Staging and Prod require HTTPS. Use the API, Hilt, and
+Compose skills for their respective implementation boundaries.
 
-- `domain/category/CategoryRepository.kt` and
-  `domain/usecase/category/GetCategoriesUseCase.kt`;
-- `data/api/ApiCategoryRepository.kt`, `data/api/BackendApi.kt`, and
-  `data/api/mapper/CategoryMapper.kt`;
-- `ui/auth/WelcomeViewModel.kt` and
-  `ui/screens/auth/WelcomeScreen.kt`.
+## Testing and Delivery
 
-### Dependency rules
+JVM unit and Cucumber tests run without a device; instrumented Android tests
+require a device or emulator. Cucumber JVM scenarios are the acceptance
+specifications; device tests verify Android UI boundaries. Use the BDD and
+testability skills for test design, and the testing-gates skill for delivery
+validation.
 
-- Inner layers must not import `data`, `ui`, `android.*`, Dagger/Hilt,
-  OkHttp, Retrofit, or serialization.
-- DTOs belong only in `data/api/dto/`; backend `snake_case` must not leak into
-  domain or UI types.
-- Mappers only translate transport data. Business rules belong in domain or
-  use cases.
-- Each use case is a class with one `operator fun invoke(...)` and follows the
-  `VerbSubjectUseCase` naming convention.
-- Outcomes and failures are typed `sealed interface`s, never generic error
-  strings.
-- UI exposes immutable `StateFlow` state and handles events in ViewModels.
-- Do not add mutable global `object`s. Use Hilt injection instead.
+Delivery MCP selects checks from `.delivery/policy.v1.json`; do not infer a
+weaker gate or replace it with a focused test. Use `delivery_test` for focused
+RED/GREEN, `delivery_prepare` for the exact staged snapshot, and
+`delivery_verify_head` plus `delivery_finalize` for closure. See
+[the Delivery reference](.delivery/README.md) for the complete MCP surface,
+gate table, safe commands, jobs, receipts, CI, and recovery. A missing device,
+credential, or provider connection is a blocked prerequisite, never a pass.
+Disabled analyzers are `not_applicable`, not evidence of quality.
 
-### Maintainability and test architecture
-
-These are manual review conventions for new or touched code. They are not
-automated enforcement and do not require repository-wide cleanup. See
-[android-maintainability-governance](.agents/skills/android-maintainability-governance/SKILL.md)
-for the review procedure and
-[android-testability-governance](.agents/skills/android-testability-governance/SKILL.md)
-for test-layer guidance.
-
-- Ordinary functions should normally take 0–3 inputs; review a signature with
-  more than 4 and record an explicit cohesion exception above 6. Review a
-  class or ViewModel with more than 5 injected dependencies.
-- Review functions over 60 lines, classes or ViewModels over 250 lines, and
-  files over 300 lines. Prefer a cohesive seam or document why the code stays
-  together; do not split mechanically by line count.
-- Compose parameters and transport DTO fields are context-specific exceptions:
-  preserve a real visual state/event shape and required wire fields. Do not
-  evade a review trigger with a parameter bag, service locator, or untyped map.
-- BDD step bodies over 20 lines and scenario worlds over 250 lines need the
-  same review. A `Given` arranges one meaningful prerequisite, a `When`
-  invokes production behavior, and a `Then` observes the same production
-  instance or its observable effect. For example: Given configures a fake
-  repository response; When calls the real `GetCategoriesUseCase`; Then
-  observes its typed result.
-- Use real owned use cases and ViewModels; fake external ports. Reject empty
-  prerequisites, assertion-only disconnected mocks, sleeps, and assertions of
-  fixture constants. Make coroutine ownership, persistence ownership, and
-  test-world setup/teardown explicit; worlds own and close their test scopes,
-  dispatchers, and resources.
-
-When a review trigger is crossed, record the retained responsibility or the
-extraction seam and the focused proof. A disabled or absent analyzer is not a
-pass and does not turn these documented reviews into automated enforcement.
-
-Validate domain purity and UI boundaries with these checks (zero matches are
-expected):
-
-```bash
-grep -RInE 'import (com\.loresuelvo\.serviceprovider\.(data|ui)|android\.|dagger|hilt|okhttp3|retrofit2|kotlinx\.serialization)' \
-  app/src/main/java/com/loresuelvo/serviceprovider/domain/
-grep -RIn 'import com\.loresuelvo\.serviceprovider\.data\.' \
-  app/src/main/java/com/loresuelvo/serviceprovider/ui/
-```
-
-### Hilt and security
-
-- `LoresuelvoApp` is annotated with `@HiltAndroidApp`.
-- `MainActivity` is annotated with `@AndroidEntryPoint`; it hosts
-  `LoResuelvoNav` and forwards Android lifecycle/intent callbacks to the UI
-  boundary, without business or repository logic.
-- ViewModels use `@HiltViewModel` and constructor injection; routes use
-  `hiltViewModel()`.
-- Process-wide Retrofit, OkHttp, repositories, and the encrypted session
-  store belong in `SingletonComponent` modules.
-- Never log tokens, request/response payloads, or credentials.
-- Secrets and flavor values come from `local.properties`, Gradle properties,
-  or CI environment variables. Never commit `local.properties`.
-- Cleartext HTTP is limited to the Dev network-security overlay. Staging and
-  production are HTTPS-only.
-
-## Test topology
-
-Do not confuse the following layers:
-
-| Layer                     | Command                 | Scope                                                    |
-| ------------------------- | ----------------------- | -------------------------------------------------------- |
-| JVM unit and Cucumber JVM | `make test FLAVOR=Dev`  | `testDevDebugUnitTest`; no device                        |
-| Android Lint              | `make lint FLAVOR=Dev`  | `lintDevDebug`                                           |
-| Debug build               | `make build FLAVOR=Dev` | `assembleDevDebug`                                       |
-| Instrumented UI           | `make e2e FLAVOR=Dev`   | `connectedDevDebugAndroidTest`; device/emulator required |
-
-Gherkin files live under `app/src/test/resources/features/`. Cucumber glue
-and runners live under `app/src/test/java/com/loresuelvo/serviceprovider/bdd/`.
-The provider has no reliable feature-file-to-runner command, so delivery Gate
-0 and Gate B run the complete Dev JVM test task. Instrumented tests live under
-`app/src/androidTest/` and are not Cucumber scenarios.
-
-Useful focused checks are:
-
-```bash
-scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
-scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeCucumberTest'
-```
-
-Do not call instrumented tests acceptance scenarios: the JVM Cucumber layer
-contains acceptance specifications, while device tests verify Android UI
-boundaries.
-
-## Delivery workflow
-
-The delivery runtime is isolated in `tools/delivery-mcp/` and uses Node 24.
-The policy in `.delivery/policy.v1.json` is the single source of truth for
-classification and gates. Safe commands are exact allowlisted commands:
-
-```text
-npm --prefix tools/delivery-mcp test
-make test FLAVOR=Dev
-make lint FLAVOR=Dev
-make build FLAVOR=Dev
-make e2e FLAVOR=Dev
-make test FLAVOR=Staging
-make lint FLAVOR=Staging
-make build FLAVOR=Staging
-make e2e FLAVOR=Staging
-```
-
-Agents use the MCP operations `delivery_test`, `delivery_inspect`,
-`delivery_prepare`, `delivery_job_wait`, `delivery_job_cancel`,
-`delivery_verify_head`, `delivery_ci_inspect`, and `delivery_finalize`.
-Humans can use the matching `make delivery-*` targets. The executor uses
-`shell: false`, rejects arbitrary commands and environment assignments, and
-keeps generated evidence under `.delivery/runtime/`.
-
-For focused TDD only, `delivery_test(mode="unit", testFiles=[...])` also
-allows Dev JVM class filters derived from validated Kotlin test paths under
-`app/src/test/java/` or `app/src/test/kotlin/`. These run through
-`scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests <class>`
-with exact class names, no shell text or wildcards. Without test files, and
-for scenario/affected modes, the complete Dev JVM task runs. Focused results
-do not replace staged gate evidence.
-
-For a recoverable background job, humans use `make delivery-job-wait
-ARGS="--job-id <job-id>"` or `make delivery-job-cancel ARGS="--job-id
-<job-id>"`; agents use the corresponding MCP operations.
-
-### Gates
-
-| Gate   | Checks                                                                                      | Use                                                       |
-| ------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `NONE` | none                                                                                        | Documentation-only or empty diff                          |
-| `0`    | complete Dev JVM test task                                                                  | BDD feature/glue compatibility                            |
-| `A`    | Dev JVM tests; delivery tooling also runs delivery unit tests                               | Isolated domain Kotlin or delivery tooling                |
-| `B`    | complete Dev JVM test task                                                                  | Closing one low-risk BDD scenario                         |
-| `C`    | Dev lint, JVM tests, build, instrumented UI                                                 | Shared UI, DI, data, resource, manifest, or build changes |
-| `D`    | no `@wip`, Gate C checks, and post-push CI green                                            | Complete batch or User Story                              |
-| `R`    | delivery tests plus Staging lint, JVM tests, build, instrumented UI, and post-push CI green | One-time CI repair for `repairsSha`                       |
-
-Gate selection is conservative. Ambiguous Kotlin or build changes select Gate
-C; missing analyzers never produce Gate `NONE`. Disabled dependency-impact,
-Cucumber-impact, and maintainability analyzers report `not_applicable` and are
-not imported or executed.
-
-Closing a scenario with Gate C trigger paths retains Gate C. Only `close_batch`
-and `close_us` select Gate D and require the declared feature files to have no
-pending `@wip` tags. Comments and doc strings mentioning `@wip` are not tags.
-
-### Orchestration
-
-Use one batch, one active scenario, and one implementation writer at a time.
-Split the active scenario into small outside-in tasks with explicit scope,
-interfaces, proof, and exclusions; a task does not imply a new agent or commit.
-Keep the developer through RED/GREEN and the coherent commit boundary. Read-only
-review follows a stable implementation. Use the canonical checkout for receipts
-and commits, one Gradle/device job, and persistent local plans. Do not start an
-emulator unless authorized. The detailed handoff and progress protocol lives in
-`android-ai-development-workflow`; local prompts must not define another policy.
-
-Gate C and Gate D require a reachable device/emulator for `make e2e`; a
-blocked environment must report the missing prerequisite instead of silently
-skipping the check. Gate R requires real Staging credentials and must not
-substitute Dev for CI parity.
-
-### Shadow mode, hooks, and repair
-
-Keep `DELIVERY_REQUIRE_EVIDENCE` disabled during shadow validation. Run the
-delivery unit tests, smoke test, classification matrix, and representative
-shadow inspections before installing or enforcing hooks. Hooks are lightweight
-and advisory for delivery evidence, repair, and CI state: they never block a
-human commit or push on runtime state and never execute test suites. A valid
-prepared receipt may be bound by `post-commit`; ordinary human commits are not
-recorded as `not_run`. `commit-msg` is stateless and may still block only
-deterministic commit-message format.
-
-Do not bypass a failed CI check with `--no-verify` or
-`DELIVERY_SKIP_CI_CHECK`. For a failed remote SHA, inspect it with
-`delivery_ci_inspect`, stage the atomic repair, and prepare with intent
-`repair_ci` and that exact `repairsSha`. Gate R produces a single-use repair
-receipt for agents. A human who intentionally delegates verification to
-remote CI may inspect or clear delivery context; commit-message validation does
-not apply it, and post-commit consumes it only when an exact prepared receipt
-is bound. Use the explicit delivery prepare/inspect operations for a repair
-receipt and remote-CI delegation. A cancelled CI run is ignored only when a
-reachable descendant commit has passed CI. Workflow changes and workflow CI
-failures are `HUMAN_ONLY` and must be escalated.
+Before implementing a User Story, run `delivery_closure_preflight` with its
+numeric ID and any known feature-baseline SHA; resolve missing historical
+evidence before dispatch. Keep one active scenario, one implementation writer,
+one canonical checkout, and one Gradle/device job at a time. Do not start an
+emulator without authorization. Use
+[the orchestration skill](.agents/skills/android-ai-development-workflow/SKILL.md)
+for scoped outside-in tasks, developer handoffs, CI window handling, and
+progress. Local prompts must not define a competing policy.
 
 ## Commits and CI
 
-The canonical commit format is:
+Use `<type>[<us-number>]: imperative English description`, where the bracketed
+number comes from the User Story title rather than the GitHub issue number.
+Stage only the intended files and prepare that exact snapshot before committing;
+changing HEAD, stage, policy, intent, or scope invalidates its receipt.
 
-```text
-<type>[<us-number>]: imperative English description
-```
+Each commit must be coherent, compilable, testable, and independently
+reversible. Batch or scenario granularity does not set the commit count. Do
+not split mechanically by file or layer, and do not accumulate independent
+boundaries into a mega-commit. Intermediate commits may keep the active
+scenario `@wip`; remove it with the functional commit that makes the scenario
+GREEN, never in a closure-only commit. The
+[commit skill](.agents/skills/android-commit-governance/SKILL.md) owns boundary
+planning, allowed types, preparation, and PR details.
 
-Use the numeric User Story identifier in the issue title. For example, work
-for `US-35` uses `[35]` even when GitHub assigns the issue a different number.
-
-Use one of `feat`, `fix`, `refactor`, `test`, `chore`, `docs`, `build`, `ci`,
-`perf`, or `style`. Keep commits atomic, stage exact files, and prepare the
-staged snapshot before committing. A receipt is bound to the staged tree,
-policy, intent, scope, and HEAD; changing any of these invalidates it.
-
-Batch granularity does not determine commit count. A `SCENARIO` or
-`SCENARIO_GROUP` authorizes the atomic commits needed within its approved
-behavioral scope. Each commit must be coherent, compilable, testable, and
-independently reversible; do not split by file or layer, and do not combine
-unrelated boundaries to reduce commit count. Intermediate commits may keep the
-active scenario `@wip`. Remove `@wip` only in the final functional commit that
-makes that scenario GREEN, and never create an artificial closure-only commit.
-
-The checked-in CI uses Java 17, Staging credentials, and a prewarmed Pixel
-6/API 34 x86_64 emulator provided by `ReactiveCircus/android-emulator-runner`.
-The AVD cache is generated manually through
-`.github/workflows/avd-bootstrap.yml`; increment its `cache_version` input when
-the emulator configuration changes. The delivery CI window is limited by the
-policy (`maxInFlightCommits` is currently four). Do not manually poll runs.
+Continue permitted work while CI is pending. When the policy CI window is
+full, use bounded `delivery_ci_window_wait`; a failed SHA needs diagnosis and
+the `repair_ci` path before ordinary pushes. Do not manually poll. Workflow
+changes and workflow-job failures are `HUMAN_ONLY`; agents escalate them.
 
 ## Skill routing
 
-Load only the relevant skill:
+Load only the skills that match the current change:
 
-- [android-clean-architecture](.agents/skills/android-clean-architecture/SKILL.md) for
-  `domain/`, `data/`, `ui/`, or dependency-boundary changes.
-- [android-bdd-tdd-process](.agents/skills/android-bdd-tdd-process/SKILL.md) for
-  behavior, scenarios, step definitions, and tests.
-- [android-testing-gates](.agents/skills/android-testing-gates/SKILL.md) before a PR,
-  release, merge, or delivery-gate diagnosis.
-- [android-api-client-governance](.agents/skills/android-api-client-governance/SKILL.md)
-  for Retrofit, DTO, mapper, interceptor, or network changes.
-- [android-hilt-governance](.agents/skills/android-hilt-governance/SKILL.md) for Hilt
-  modules, bindings, ViewModels, or Hilt Android tests.
-- [android-commit-governance](.agents/skills/android-commit-governance/SKILL.md) for
-  commits, PRs, or history review.
-- [android-doc-governance](.agents/skills/android-doc-governance/SKILL.md) for this
-  contract, README, CLAUDE, skills, or documented commands.
-- [android-compose-quality-governance](.agents/skills/android-compose-quality-governance/SKILL.md)
-  for Compose screens, state collection, navigation, accessibility, or
-  adaptive UI.
-- [android-maintainability-governance](.agents/skills/android-maintainability-governance/SKILL.md)
-  for code review, refactors, complexity, coupling, or oversized files.
-- [android-static-analysis-governance](.agents/skills/android-static-analysis-governance/SKILL.md)
-  for lint, architecture guards, forbidden patterns, or configured quality
-  analyzers.
-- [android-testability-governance](.agents/skills/android-testability-governance/SKILL.md)
-  for deterministic test design, DI boundaries, state/effect coverage, or
-  testability reviews.
-- [android-us-delivery](.agents/skills/android-us-delivery/SKILL.md) for a complete
-  User Story delivery lifecycle.
-- [android-ai-development-workflow](.agents/skills/android-ai-development-workflow/SKILL.md)
-  when coordinating agent batches and handoffs.
+| Change | Skill |
+| --- | --- |
+| Domain, data, UI, or dependency direction | [android-clean-architecture](.agents/skills/android-clean-architecture/SKILL.md) |
+| Observable behavior, Gherkin, or tests | [android-bdd-tdd-process](.agents/skills/android-bdd-tdd-process/SKILL.md) |
+| Delivery gates, release, merge, or CI diagnosis | [android-testing-gates](.agents/skills/android-testing-gates/SKILL.md) |
+| HTTP, Retrofit, DTOs, or mappers | [android-api-client-governance](.agents/skills/android-api-client-governance/SKILL.md) |
+| Hilt graph, bindings, or Hilt tests | [android-hilt-governance](.agents/skills/android-hilt-governance/SKILL.md) |
+| Compose, navigation, or UI state | [android-compose-quality-governance](.agents/skills/android-compose-quality-governance/SKILL.md) |
+| Commits, PRs, or history review | [android-commit-governance](.agents/skills/android-commit-governance/SKILL.md) |
+| Agent contracts or documentation | [android-doc-governance](.agents/skills/android-doc-governance/SKILL.md) |
+| Complexity, coupling, or oversized code | [android-maintainability-governance](.agents/skills/android-maintainability-governance/SKILL.md) |
+| Configured analyzers or architecture guards | [android-static-analysis-governance](.agents/skills/android-static-analysis-governance/SKILL.md) |
+| Deterministic tests or DI/state seams | [android-testability-governance](.agents/skills/android-testability-governance/SKILL.md) |
+| Complete User Story lifecycle | [android-us-delivery](.agents/skills/android-us-delivery/SKILL.md) |
+| Agent batches and handoffs | [android-ai-development-workflow](.agents/skills/android-ai-development-workflow/SKILL.md) |
 
-## Agent and human boundaries
+## Handoff
 
-Agents must keep delivery evidence and commits attributable to the exact
-staged snapshot. Humans own workflow changes, unavailable credentials,
-environment repair, and any requested `HUMAN_ONLY` action. A clean
-documentation-only Gate `NONE` run is never sufficient proof that the Android
-workflow is ready for enforcement.
+Keep evidence and commits attributable to their exact staged snapshot.
+Humans own workflow changes, unavailable credentials, environment repair,
+and requested `HUMAN_ONLY` actions. Documentation-only Gate `NONE` evidence
+does not prove the Android workflow is ready for enforcement.
 
-Before handoff, report changed paths, checks run, checks blocked with their
-precise reason, hook/enforcement state, CI SHA state, disabled analyzers, and
-remaining human work. Do not include copied logs, tokens, or generated runtime
-state in the report.
+Report changed paths, checks run, blocked checks and causes, hook/enforcement
+state, CI state by SHA, disabled analyzers, and remaining human work. Do not
+copy logs, tokens, or generated runtime state into the report.

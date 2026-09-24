@@ -73,12 +73,11 @@ See `data/api/AuthInterceptor.kt`, `data/api/ApiErrorMapping.kt`,
 
 Use JVM tests for repositories, mappers, interceptors, and HTTP behavior.
 Use MockWebServer for request/response contracts and assert method, path,
-headers, body, status mapping, and failure behavior. Run:
-
-```bash
-make test FLAVOR=Dev
-./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
-```
+headers, body, status mapping, and failure behavior. In the TDD loop, use
+`delivery_test(mode="unit", testFiles=[...])` with the affected repository,
+mapper, or interceptor test (for example, `ApiCategoryRepositoryTest.kt`).
+The staged gate is selected by Delivery policy; it is not replaced by a
+focused test.
 
 For a boundary review, verify that domain code has no transport imports:
 

@@ -63,9 +63,9 @@ function samePaths(left = [], right = []) {
   return JSON.stringify(normalizedLeft) === JSON.stringify(normalizedRight);
 }
 
-async function relevantCommitShas(root, headSha, usId) {
+export async function relevantCommitShas(root, headSha, usId, { includeHead = true } = {}) {
   const normalizedUsId = normalizeUsId(usId);
-  if (!normalizedUsId) return [headSha];
+  if (!normalizedUsId) return includeHead ? [headSha] : [];
 
   const output = execFileSync("git", ["log", "-n", "200", "--format=%H%x00%s%x00", headSha], {
     cwd: root,
@@ -110,7 +110,7 @@ async function relevantCommitShas(root, headSha, usId) {
     }
   }
 
-  if (!matches.includes(headSha)) matches.unshift(headSha);
+  if (includeHead && !matches.includes(headSha)) matches.unshift(headSha);
   return [...new Set(matches)];
 }
 

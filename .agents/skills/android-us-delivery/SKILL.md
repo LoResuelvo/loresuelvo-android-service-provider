@@ -9,6 +9,11 @@ Use this skill for a complete provider User Story or feature. It defines the
 delivery lifecycle; architecture, BDD, testing, API, Hilt, and commit details
 remain in their dedicated skills.
 
+## Do not load
+
+Do not load it for an isolated scenario, small refactor, or documentation-only
+change. Use the skill for the specific boundary instead.
+
 ## Preparation
 
 1. Confirm `git status --short --branch`, the User Story scope, and the
@@ -24,58 +29,30 @@ remain in their dedicated skills.
 
 ## Development loop
 
-Work outside-in in an approved batch:
-
-1. Add the smallest Gherkin step and deterministic JVM fake in RED.
-2. Add focused tests for domain, repository, or `WelcomeViewModel` behavior.
-3. Implement the smallest production change and connect the Compose route only
-   at the integration boundary.
-4. Add or update an instrumented test when Activity, navigation, or device
-   behavior is involved.
-5. Run `delivery_test` for focused TDD. Gate 0 and Gate B use the complete Dev
-   JVM task because no reliable feature-file runner exists.
-6. At every coherent, compilable, independently testable boundary, stage the
-   exact change and call `delivery_prepare`; with `status: passed`, commit and
-   when authorized push before starting the next boundary. Do not target a
-   commit count.
-7. When the complete scenario is GREEN, remove its `@wip` tag in that final
-   functional change and prepare it with intent `close_scenario`.
-8. Commit only after preparation returns `status: passed`, using
-   `<type>[<us-number>]: imperative English description`, where the bracketed
-   value is the User Story identifier from the issue title rather than the
-   GitHub issue number. Push immediately when the batch contract
-   authorizes it.
-9. Continue to another scenario only inside an approved `SCENARIO_GROUP` after
-   the current scenario is GREEN; otherwise hand off and end the batch.
-
-Use `make test`, `make lint`, `make build`, and `make e2e` for human checks or
-focused diagnosis. The policy-selected MCP operation remains the authoritative
-pre-commit path; do not hand-calculate a gate or use arbitrary commands.
+Before implementation, run `delivery_closure_preflight` for the numeric US ID
+and known feature-baseline SHA. Resolve a missing ledger entry at this point.
+Then use `android-ai-development-workflow` for batch ownership, boundaries,
+handoffs, and CI window handling; use `android-bdd-tdd-process` for the actual
+RED/GREEN sequence. Complete one scenario before starting the next. Apply the
+architecture, API, Hilt, Compose, and testability skills only where the active
+change crosses their boundaries. Delivery selects every staged gate; focused
+TDD checks never replace it.
 
 ## Closing a batch or User Story
 
-Close a batch only when every feature file declared for it is complete and has
-no `@wip`. For a clean HEAD, record the final gate with
-`delivery_verify_head` using the matching `close_batch` or `close_us` intent.
-Then call `delivery_finalize` with that same intent. A User Story is complete
-only when it returns `finalized: true` and `status: passed`, including required
-CI evidence.
+Close a batch only when its declared feature scope has no `@wip`. For a clean
+HEAD, call `delivery_verify_head` and `delivery_finalize` with the same
+`close_batch` or `close_us` intent and exact scope. A batch may finish with
+`passed_pending_ci`; a User Story requires `finalized: true, status: passed`.
 
 If a feature still contains future `@wip` scenarios, report the completed
 scenario or batch and do not claim formal batch closure.
 
 ## Evidence, jobs, and repair
 
-- Receipts are bound to HEAD, the exact staged snapshot, policy, intent, and
-  scope. Any staged change invalidates a receipt.
-- Long Gate C/D/R runs and finalization may return a `jobId`; wait with
-  bounded `delivery_job_wait` and never busy-poll.
-- A failed CI SHA requires `delivery_ci_inspect`, an atomic fix, and
-  `delivery_prepare` with intent `repair_ci` plus that exact `repairsSha`.
-- Gate R is one-time authorization for the repair push. It requires Staging
-  credentials and must not substitute Dev.
-- Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`.
-- Workflow edits and workflow CI failures stop with `HUMAN_ONLY` escalation.
+Follow `.delivery/README.md` for receipt validity, jobs, and recovery, and
+`android-testing-gates` for CI diagnosis. Never bypass hooks or substitute a
+weaker check for an unavailable device or Staging credential.
 
 Before handoff, read the [quality checklist](references/checklist-quality.md)
 and [security checklist](references/checklist-security.md). Report scenarios,

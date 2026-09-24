@@ -36,11 +36,13 @@ scope, or an invented story number.
 ## Atomicity
 
 - One commit represents one complete logical boundary. A scenario may need
-  one or several commits; task size and batch granularity never set their count.
+  one or several commits; task size and batch granularity never set the count.
 - Each commit leaves the repository compilable and testable, includes the
   dependencies required by its boundary, and is independently reversible.
-- A commit may cross files and layers when that is necessary for a coherent
-  vertical boundary. Do not split by file, layer, or line count.
+- An independently testable Composable, use case, or adapter may form its own
+  boundary when the active behavior needs it. A coherent vertical boundary
+  may cross presentation, domain, data, and DI. Review broad commits for
+  separable behavior; do not split by file, layer, or line count.
 - Keep documentation/tooling changes separate from product behavior.
 - Stage only the intended files; never include secrets, `local.properties`,
   generated outputs, or `.delivery/runtime/`.
@@ -48,10 +50,23 @@ scope, or an invented story number.
 - Intermediate commits may keep the active scenario `@wip`. Its removal
   belongs in the final functional commit that makes the scenario GREEN.
 - Never create empty, tag-only, comment-only, or artificial closure commits.
-- Do not combine unrelated boundaries to reduce the number of commits or leave
-  a pushed commit dependent on files that are still uncommitted.
+- Do not combine unrelated boundaries to reduce commit count or leave a
+  pushed commit dependent on files that are still uncommitted.
 
 ## Before committing
+
+For scenario work, propose the likely commit boundaries before implementation:
+name each observable result, the dependencies it needs, its focused GREEN
+proof, and whether it is intermediate or closes the scenario. Revise the map
+as the code reveals coupling. Complete and commit each independent boundary
+before building the next; do not finish a large uncommitted scenario and then
+split its diff into commits that cannot stand alone.
+
+Before preparing a partial staged diff, compare it with the remaining
+unstaged changes. Delivery checks run in the checkout, so a passing gate can
+depend on code that the commit omits. Include every required dependency in the
+same boundary; if the proposed slices cannot stand alone, make one cohesive
+commit instead of manufacturing smaller ones afterward.
 
 ```bash
 git status --short --branch

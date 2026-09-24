@@ -1,6 +1,7 @@
 .PHONY: help up build lint test e2e test-all-once ci clean devices \
 	delivery-install delivery-mcp delivery-test delivery-smoke delivery-inspect \
-	delivery-prepare delivery-context delivery-ci delivery-finalize \
+	delivery-prepare delivery-context delivery-ci delivery-closure-preflight \
+	delivery-ci-window-wait delivery-finalize \
 	delivery-verify-head delivery-job-wait delivery-job-cancel \
 	delivery-repair-recover \
 	delivery-hooks-install delivery-hooks-status
@@ -41,6 +42,8 @@ help:
 	@echo "  make delivery-prepare ARGS=\"...\""
 	@echo "  make delivery-context ARGS=\"...\""
 	@echo "  make delivery-ci ARGS=\"...\""
+	@echo "  make delivery-closure-preflight ARGS=\"--us-id <id> [--required-sha <sha>]\""
+	@echo "  make delivery-ci-window-wait ARGS=\"[--timeout-ms <ms>]\""
 	@echo "  make delivery-finalize ARGS=\"...\""
 	@echo "  make delivery-verify-head ARGS=\"...\""
 	@echo "  make delivery-job-wait ARGS=\"--job-id <job-id> [--timeout-ms <ms>]\""
@@ -98,6 +101,12 @@ delivery-context:
 
 delivery-ci:
 	$(DELIVERY_CLI) ci $(ARGS)
+
+delivery-closure-preflight:
+	$(DELIVERY_CLI) closure-preflight $(ARGS)
+
+delivery-ci-window-wait:
+	$(DELIVERY_CLI) ci-window-wait $(ARGS)
 
 delivery-finalize:
 	$(DELIVERY_CLI) finalize $(ARGS)

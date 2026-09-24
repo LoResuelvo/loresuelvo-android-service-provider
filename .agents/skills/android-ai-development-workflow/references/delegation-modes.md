@@ -1,29 +1,36 @@
 # Android delegation contracts
 
-Use a bootstrap contract for every new developer or lost context. Use a delta
-contract only for the same developer continuing a `SCENARIO_GROUP`.
+Use a bootstrap contract for every new developer or lost context. A developer
+continuing with the full bootstrap in context needs only a brief update of
+changed facts, not another formal contract. Fill fields with observed facts,
+mark unknowns explicitly, and give the developer the approved scenario text
+it needs without requiring it to rediscover the whole User Story plan.
 
 ## Bootstrap contract
 
 ```text
 Identification and mode:
-- User Story and batch:
+- Numeric User Story ID, batch, and assigned scenario IDs:
+- Canonical plan key/status and approved batch scope:
 - Conduction: USER_GUIDED | AGENT_ORCHESTRATED
 - Granularity: MICROSTEP | SCENARIO | SCENARIO_GROUP
 
 Base state:
-- HEAD and branch:
-- Working-tree state:
-- Known CI state:
-- Relevant receipts and SHAs (no logs):
+- Verified HEAD SHA, branch, and upstream:
+- Staged/unstaged tree state and owner of existing changes:
+- Known CI state by SHA, pending window count, or unknown:
+- Relevant receipts, feature-baseline SHA, and closure-preflight result:
 
 Scenarios:
-- Active provider scenarios and observable criteria:
-- Completed scenarios:
+- Feature path, runner, and exact approved Gherkin for assigned scenarios:
+- Active scenario ID, @wip state, and prior GREEN scenario IDs:
 
 Android context:
-- Package, paths, symbols, and material invariants:
-- Feature/glue, domain, data, UI, and test boundaries:
+- Relevant package paths, symbols, navigation destinations, and resources:
+- Compose state/events, domain ports/use-case interfaces, and test seams:
+- API endpoint/DTO/mapper and DI contracts only when this scope needs them:
+- Verified device/UI lesson and reproducible interaction recipe, or none:
+- Structural graph evidence and coverage/fallback, if discovery mattered:
 
 Governance:
 - Allowed scope:
@@ -33,11 +40,13 @@ Governance:
 
 Next boundary:
 - Observable behavior:
+- Ordered outside-in checkpoints for the active scenario, each with proof:
+- Tentative commit boundaries: result, required files/dependencies, focused
+  GREEN proof, Delivery intent, and proposed subject for each:
 - Active scenario task: existing code to reuse, allowed files/symbols:
 - Required input/output interfaces and dependencies:
-- Focused proof and explicit exclusions:
-- Delivery intent and proposed commit message:
-- Minimum artifacts:
+- Focused RED test and expected failure; GREEN proof and exclusions:
+- Expected artifacts and review checkpoint:
 
 Ownership and close:
 - Editing, staging, commit, and push owners:
@@ -48,48 +57,41 @@ Ownership and close:
 ```
 
 Do not put raw commands, copied logs, or manually calculated gates in the
-contract. The policy and Delivery MCP choose the gate.
+contract. The policy and Delivery MCP choose the gate. Copy only the approved
+Gherkin within the assigned scope; do not paste the entire plan or invent
+clean-tree, green-CI, or device facts. For `MICROSTEP`, name the owner of any
+later staging/commit/push and mark its commit map "none" because the developer
+stops after validation.
+Order active-scenario checkpoints by evidence: a runnable behavior RED, the
+smallest needed UI/domain/data seam with focused GREEN proof, then
+ViewModel/platform wiring and full scenario GREEN. Omit layers the behavior
+does not need; a checkpoint is not automatically a commit.
+Draft the commit boundaries before editing, then revise them when dependencies
+become clear. Finish, prepare, and commit each independently GREEN boundary
+before building the next independent one. Combine a slice with its required
+dependency when it cannot compile or pass its focused tests alone; split a
+newly discovered independent concern. Do not build the whole scenario and
+divide its uncommitted diff retrospectively. A boundary map is a forecast, not
+a commit quota or permission for layer-only commits.
 
-## Delta contract
+When graph evidence informs the task, include its project and generation,
+evidence tier and bounded scope, queries/pagination, qualified symbols and
+paths, material call traces, coverage ranges/reasons, exact source fallback,
+and unresolved questions. Do not send a raw graph transcript.
 
-```text
-Inherited HEAD, tree, and known CI:
-Scenarios closed since the last handoff:
-Active batch and scenarios:
-Current granularity:
-Material scope, prohibition, or invariant changes:
-New required skills:
-New evidence or risks:
-Next atomic boundary and delivery intent:
-Commit message proposal:
-Owner or shared-checkout changes:
-New continuation, escalation, or close conditions:
-```
+## Same-developer continuation
 
-## Granularity rules
+When the bootstrap remains in context, send a short update only for changed
+HEAD/tree/CI facts, closed scenarios, revised commit boundaries, new risks or
+device lessons, and the next action. New scope or a lost bootstrap requires a
+fresh bootstrap, even for the same developer.
 
-- `MICROSTEP`: one observable behavior; no commit or push by the developer.
-- `SCENARIO`: one approved scenario; authorize every atomic commit required to
-  reach GREEN rather than a predetermined count; stop at GREEN or escalation.
-- `SCENARIO_GROUP`: two or three related scenarios; each must be GREEN before
-  continuation, each may contain several atomic commits, and the group degrades
-  to `SCENARIO` when coupling or ambiguity appears.
+## Execution reference
 
-An intermediate atomic commit must be coherent, compilable, testable, and
-independently reversible. It may leave the active scenario `@wip`. The final
-functional commit that makes the scenario GREEN removes `@wip`; never create a
-separate tag-only or closure-only commit.
-
-## Delivery and closure
-
-Use `delivery_test` during RED/GREEN. At every atomic commit boundary, stage
-exactly and call `delivery_prepare`; wait for a returned job ID with bounded
-`delivery_job_wait`, then commit and, when authorized, push before starting the
-next boundary. Use `prepare_commit` for intermediate boundaries and
-`close_scenario` for the final functional boundary that makes a scenario
-GREEN. For a completed HEAD, call `delivery_verify_head` with `close_batch` or
-`close_us`, then use the same intent in `delivery_finalize`. Do not create
-empty commits to manufacture evidence.
+The parent workflow skill defines granularity, ownership, and continuation;
+`android-bdd-tdd-process` defines RED/GREEN and `@wip` closure. Delivery
+intent, receipts, jobs, and CI recovery follow `.delivery/README.md` and
+`android-testing-gates`. Keep this contract limited to facts for one handoff.
 
 ## Compact handoff
 
@@ -101,8 +103,9 @@ Relevant SHAs and receipts:
 Contract or decision changes:
 Material paths changed:
 Active causal diagnosis (if any):
+Verified device/UI lesson and interaction recipe for the next developer:
 Tree state:
-Known CI state:
+Known CI state by SHA and pending window count:
 Next permitted action:
 Blocking prerequisite and owner, or none:
 Running job ID, or none:
@@ -112,13 +115,13 @@ Never include successful logs, raw stack traces, full diffs, or MCP payloads.
 
 ## Small-task example
 
-For a Profile retry scenario, first arrange a failed account port and observe
-the real ViewModel's error state. Next prove that retry reloads the account,
-then wire the existing screen callback if needed. The same developer owns
-these steps and the final functional commit. Do not prebuild identity or
-payment behavior from later scenarios. Review the finished diff against the
-approved scenario, reuse opportunities, MVVM/navigation boundaries, and tests
-before preparing it; task count does not set commit count.
+For a Profile retry scenario, a tentative map might be: `test[35]` for
+compilable step glue and a fake after Gate 0 passes; `feat[35]` for retry
+behavior with a focused ViewModel test; then `feat[35]` for the screen callback
+and `@wip` removal when the full scenario runs GREEN. If the ViewModel slice
+needs the callback to be testable, combine those boundaries. Do not prebuild
+later identity or payment behavior; review each finished boundary before
+preparing it. This example does not set a commit count.
 
 ## Progress and resources
 

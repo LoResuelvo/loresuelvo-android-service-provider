@@ -2,7 +2,9 @@
 
 Aplicación Android para **prestadores** de LoResuelvo. Construida con Kotlin + Jetpack Compose.
 
-> Para reglas de arquitectura, convenciones, comandos y skills, ver [`AGENTS.md`](./AGENTS.md). Este README es solo para humanos que arrancan.
+> Para reglas generales y selección de skills, ver [`AGENTS.md`](./AGENTS.md).
+> Para comandos y gates de Delivery, ver [`.delivery/README.md`](./.delivery/README.md).
+> Este README es solo para humanos que arrancan.
 
 ---
 

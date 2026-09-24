@@ -6,6 +6,8 @@ import {
   DeliveryPrepareInputSchema,
   DeliveryContextInputSchema,
   DeliveryCiInputSchema,
+  DeliveryClosurePreflightInputSchema,
+  DeliveryCiWindowWaitInputSchema,
   DeliveryFinalizeInputSchema,
   DeliveryVerifyHeadInputSchema,
   DeliveryTestInputSchema,
@@ -36,6 +38,8 @@ import { findRepoRoot } from "./lib/repo-root.mjs";
 import { redactSecrets } from "./lib/redact-secrets.mjs";
 import { waitForJob, cancelDeliveryJob } from "./lib/jobs.mjs";
 import { recoverStaleRepairAuthorization } from "./lib/repair-recovery.mjs";
+import { inspectClosureReadiness } from "./lib/closure-preflight.mjs";
+import { waitForCiWindow } from "./lib/ci-window-wait.mjs";
 
 function usage() {
   return `Usage:
@@ -43,6 +47,8 @@ function usage() {
   make delivery-prepare ARGS="[options]"
   make delivery-context ARGS="[options]"
   make delivery-ci ARGS="--sha <commit-sha>"
+  make delivery-closure-preflight ARGS="--us-id <id> [--required-sha <sha>]"
+  make delivery-ci-window-wait ARGS="[--timeout-ms <ms>]"
   make delivery-finalize ARGS="--intent <close_us|close_batch> [options]"
   make delivery-verify-head ARGS="[--intent close_us] [--us-id 33] [--scope-files ...]"
   make delivery-test ARGS="[options]"
@@ -73,7 +79,7 @@ Options for test:
   --test-file <path>                             Unit test file (repeatable)
   --test-files <comma-separated paths>           Comma-separated test files
   --feature <app/src/test/resources/features/...feature> Feature file path
-  --scenario <scenario name>                     Scenario name filter
+  --scenario <scenario name>                     Context only; does not filter JVM execution
   --check <checkId>                              Catalog check identifier
   --check-id <checkId>                           Alias for --check
   --force                                        Re-run checks instead of reusing cached evidence
@@ -106,6 +112,14 @@ Options for delivery:verify-head:
   --scope-files <comma-separated feature files>
   --force                                        Re-run checks instead of reusing cached evidence
 
+Options for delivery:closure-preflight:
+  --us-id <numeric-id>                          Required User Story identifier
+  --required-sha <sha>                          Additional known ancestor (repeatable)
+
+Options for delivery:ci-window-wait:
+  --timeout-ms <ms>                             Bounded wait: 100-45000 (default 30000)
+  --poll-interval-ms <ms>                       Internal interval: 50-15000 (default 5000)
+
 Options for delivery-job-wait:
   --job-id <job-id>                              Required recoverable job identifier
   --timeout-ms <ms>                              Bounded wait: 100-180000 (default 60000)
@@ -127,7 +141,7 @@ function parseArguments(argv) {
   let subAction = "";
   let hookArgs = [];
 
-  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel", "repair-recover", "recover-repair"].includes(args[0])) {
+  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "closure-preflight", "ci-window-wait", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel", "repair-recover", "recover-repair"].includes(args[0])) {
     command = args.shift();
     if (command === "verify_head") command = "verify-head";
     if (command === "recover-repair") command = "repair-recover";
@@ -245,6 +259,10 @@ function parseArguments(argv) {
     else if (option === "--scenario") input.scenarioName = value;
     else if (option === "--us-id") input.usId = value;
     else if (option === "--sha") input.sha = value;
+    else if (option === "--required-sha") {
+      input.requiredShas = input.requiredShas || [];
+      input.requiredShas.push(value);
+    }
     else if (option === "--repairs-sha") input.repairsSha = value;
     else if (option === "--scope") input.scopeFiles.push(value);
     else if (option === "--timeout-ms") input.timeoutMs = Number.parseInt(value, 10);
@@ -455,6 +473,24 @@ async function main() {
     const res = await inspectCi({ sha: parsed.data.sha, repoRoot: root });
     writeJson(res, options.pretty);
     process.exitCode = res.status === "passed" ? 0 : ["failed", "timed_out", "provider_error"].includes(res.status) ? 3 : 2;
+    return;
+  }
+
+  if (options.command === "closure-preflight") {
+    const parsed = DeliveryClosurePreflightInputSchema.safeParse(options.input);
+    if (!parsed.success) throw new Error(formatInputIssues(parsed.error));
+    const result = await inspectClosureReadiness({ repoRoot: root, ...parsed.data });
+    writeJson(result, options.pretty);
+    process.exitCode = result.status === "ready" ? 0 : 2;
+    return;
+  }
+
+  if (options.command === "ci-window-wait") {
+    const parsed = DeliveryCiWindowWaitInputSchema.safeParse(options.input);
+    if (!parsed.success) throw new Error(formatInputIssues(parsed.error));
+    const result = await waitForCiWindow({ repoRoot: root, ...parsed.data });
+    writeJson(result, options.pretty);
+    process.exitCode = result.status === "ready" ? 0 : 2;
     return;
   }
 

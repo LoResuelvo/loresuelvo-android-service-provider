@@ -8,6 +8,7 @@ import { execFileSync } from "node:child_process";
 import { evaluateCiWindow, recordCommitEvidence } from "../lib/delivery-ledger.mjs";
 import { MockCiProvider } from "../lib/ci-provider.mjs";
 import { runPostCommitHook, runPrePushHook } from "../lib/git-hooks.mjs";
+import { waitForCiWindow } from "../lib/ci-window-wait.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -22,6 +23,8 @@ async function createLedgerRoot(t) {
     path.join(ROOT, ".delivery", "schemas", "ci-inspection-result.schema.json"),
     path.join(root, ".delivery", "schemas", "ci-inspection-result.schema.json"),
   );
+  await fs.copyFile(path.join(ROOT, ".delivery", "schemas", "policy.schema.json"), path.join(root, ".delivery", "schemas", "policy.schema.json"));
+  await fs.copyFile(path.join(ROOT, ".delivery", "policy.v1.json"), path.join(root, ".delivery", "policy.v1.json"));
   return root;
 }
 
@@ -103,6 +106,51 @@ test("CI window allows fewer than four pending commits and blocks a full window"
   const reopened = await evaluateCiWindow({ repoRoot: root, policy, ciProvider: provider });
   assert.equal(reopened.allowed, true);
   assert.equal(reopened.pendingCount, 3);
+});
+
+test("bounded CI window wait resumes after a pending SHA passes", async (t) => {
+  const root = await createLedgerRoot(t);
+  const shas = Array.from({ length: 4 }, (_, index) => `${index + 1}${"d".repeat(39)}`);
+  for (const sha of shas) await addNotRun(root, sha);
+  const provider = new MockCiProvider(Object.fromEntries(shas.map((sha) => [sha, { status: "queued" }])));
+  let now = 0;
+  const result = await waitForCiWindow({
+    repoRoot: root,
+    ciProvider: provider,
+    timeoutMs: 10000,
+    pollIntervalMs: 1000,
+    nowFn: () => now,
+    sleepFn: async (ms) => {
+      now += ms;
+      provider.setFixture(shas[0], { status: "passed" });
+    },
+  });
+  assert.equal(result.status, "ready");
+  assert.equal(result.pendingCount, 3);
+});
+
+test("bounded CI window wait times out and stops immediately on failure", async (t) => {
+  const root = await createLedgerRoot(t);
+  const shas = Array.from({ length: 4 }, (_, index) => `${index + 1}${"e".repeat(39)}`);
+  for (const sha of shas) await addNotRun(root, sha);
+  const provider = new MockCiProvider(Object.fromEntries(shas.map((sha) => [sha, { status: "queued" }])));
+  let now = 0;
+  const options = {
+    repoRoot: root,
+    ciProvider: provider,
+    timeoutMs: 1500,
+    pollIntervalMs: 1000,
+    nowFn: () => now,
+    sleepFn: async (ms) => { now += ms; },
+  };
+  const timedOut = await waitForCiWindow(options);
+  assert.equal(timedOut.status, "timed_out");
+  assert.equal(timedOut.pendingCount, 4);
+  provider.setFixture(shas[0], { status: "failed" });
+  const blocked = await waitForCiWindow(options);
+  assert.equal(blocked.status, "blocked");
+  assert.equal(blocked.reason, "PRIOR_COMMIT_CI_FAILED");
+  assert.equal(blocked.failedSha, shas[0]);
 });
 
 test("CI window accounts for the commit currently being prepared", async (t) => {

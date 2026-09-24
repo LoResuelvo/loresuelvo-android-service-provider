@@ -14,8 +14,9 @@ commands, agent contracts, or skills.
 
 ## Source ownership
 
-- `AGENTS.md` is the canonical agent contract: architecture, security, naming,
-  testing policy, delivery workflow, and repository rules.
+- `AGENTS.md` is the concise repository-wide contract: invariant boundaries,
+  safety rules, Delivery ownership, and contextual skill routing. Keep
+  task-specific commands and procedures in their owning docs or skills.
 - `CLAUDE.md` is a short compatibility pointer; do not duplicate `AGENTS.md`.
 - `README.md` is for human setup, commands, CI prerequisites, and
   troubleshooting.
@@ -26,16 +27,19 @@ commands, agent contracts, or skills.
 
 ## Skill format
 
-Every skill contains when to load it, when not to load it, concise operational
-rules, useful commands or a checklist, and current provider examples. Write
-skills in English, keep exact paths and identifiers, and target fewer than 150
-lines per skill. Do not document speculative phases or unavailable tools.
+Give each skill a clear trigger and only the constraints or procedures that
+change decisions for its task. Add exclusions, commands, checklists, and
+provider examples when they prevent a likely mistake; do not require all of
+them in every skill. Keep entrypoints concise and move conditional detail to
+linked references. Review a skill above 150 lines for a useful split, without
+treating that count as an enforced limit. Write in English, keep exact paths
+and identifiers, and do not document speculative phases or unavailable tools.
 
 ## Update rules
 
-Update `AGENTS.md` when architecture, security, commands, conventions, or the
-skill index changes. Update `README.md` only for human-facing setup and command
-changes. Update the affected skill when its trigger or procedure changes. Keep
+Update `AGENTS.md` when a repository-wide invariant or skill route changes.
+Update `README.md` only for human-facing setup and command changes. Update the
+affected skill when its trigger or procedure changes. Keep
 deterministic classification and gate rules in `.delivery/policy.v1.json` and
 delivery code, not duplicated in every skill.
 
@@ -45,8 +49,7 @@ delivery code, not duplicated in every skill.
 git diff --check
 ```
 
-Verify every Markdown link resolves, every documented command exists, and
-examples such as `WelcomeViewModel`, `provider-welcome.feature`,
-`ApiCategoryRepository`, and `make e2e FLAVOR=Dev` still exist. Confirm the
-docs agree with CI's Pixel 6/API 34 emulator and its checked-in AVD bootstrap
-workflow. Do not mention unavailable packages, paths, or commands.
+Verify changed Markdown links, commands, and provider examples against the
+repository. When changing CI documentation, confirm it agrees with the
+checked-in emulator and AVD bootstrap workflows. Do not mention unavailable
+packages, paths, or commands.

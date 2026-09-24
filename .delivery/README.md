@@ -12,6 +12,8 @@ these tools:
 - `delivery_test` for focused TDD checks;
 - `delivery_job_wait` and `delivery_job_cancel` for recoverable jobs;
 - `delivery_ci_inspect` for one SHA's GitHub Actions status;
+- `delivery_closure_preflight` for read-only historical evidence checks;
+- `delivery_ci_window_wait` for a bounded wait on a full CI window;
 - `delivery_verify_head` for Gate D evidence on an existing HEAD;
 - `delivery_finalize` for batch and User Story closure.
 
@@ -19,8 +21,8 @@ these tools:
 
 policy.v1.json is the Android provider policy. It keeps the first release conservative:
 
-- production Kotlin changes use the Android A gate
-- domain Kotlin changes use the A gate
+- isolated domain Kotlin and other production Kotlin outside Gate C categories
+  use Gate A
 - Android data, dependency-injection, UI, resources, manifests, build infrastructure, and instrumented tests use Gate C
 - JVM tests and BDD feature files use Gate 0
 - delivery tooling uses Gate A plus the `delivery_unit` check
@@ -36,6 +38,19 @@ The dependency-impact, Cucumber-impact, and maintainability analyzers are
 represented explicitly in the policy and disabled until Android-specific
 adapters exist. Disabled analyzers return `not_applicable` and are neither
 imported nor executed.
+
+| Gate | Checks | Typical scope |
+| --- | --- | --- |
+| `NONE` | None | Documentation-only or empty diff |
+| `0` | Complete Dev JVM task | BDD feature/glue compatibility |
+| `A` | Dev JVM task; delivery tooling also runs its unit tests | Isolated domain Kotlin or delivery tooling |
+| `B` | Complete Dev JVM task | Closing a low-risk scenario |
+| `C` | Dev lint, JVM tests, build, and instrumented UI | UI, DI, data, resources, manifest, or build changes |
+| `D` | No `@wip`, Gate C checks, and post-push CI green | Complete batch or User Story |
+| `R` | Delivery tests, Staging lint/JVM/build/instrumented UI, and post-push CI green | One-time repair of `repairsSha` |
+
+This table explains the current policy; `policy.v1.json` and Delivery MCP
+select the actual gate. Unknown functional paths fall back to Gate C.
 
 ## Safe checks
 
@@ -57,8 +72,10 @@ make delivery-mcp
 The CLI entry point is `tools/delivery-mcp/cli.mjs`; use the repository Make
 targets (`make delivery-inspect ARGS="..."`, `make delivery-prepare
 ARGS="..."`, `make delivery-context ARGS="..."`, `make delivery-ci
-ARGS="--sha <commit-sha>"`, `make delivery-finalize ARGS="..."`,
-`make delivery-verify-head ARGS="..."`, and the hook targets). The package scripts are
+ARGS="--sha <commit-sha>"`, `make delivery-closure-preflight
+ARGS="--us-id <id>"`, `make delivery-ci-window-wait ARGS="--timeout-ms
+<ms>"`, `make delivery-finalize ARGS="..."`, `make delivery-verify-head
+ARGS="..."`, and the hook targets). The package scripts are
 `test`, `smoke`, `mcp`, and `cli`; its package-local CLI is equivalent, for
 example:
 
@@ -118,6 +135,20 @@ make build FLAVOR=Staging
 make e2e FLAVOR=Staging
 ```
 
+`make test FLAVOR=Dev` runs JVM unit and Cucumber tests without a device;
+`make lint FLAVOR=Dev` runs Android Lint; `make build FLAVOR=Dev` assembles the
+debug app; `make e2e FLAVOR=Dev` runs instrumented UI tests on a device or
+emulator. Gherkin features live under `app/src/test/resources/features/`, JVM
+glue and runners under `app/src/test/java/com/loresuelvo/serviceprovider/bdd/`,
+and device tests under `app/src/androidTest/`. There is no reliable
+feature-file-to-runner command, so Gate 0/B run the complete Dev JVM task.
+If processed Delivery output cannot diagnose a failure, a focused JVM class
+can be run through the Android wrapper:
+
+```bash
+scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
+```
+
 The Android wrapper discovers Java 17 and the Android SDK from explicit
 environment values, `local.properties`, standard locations, or a
 repository-sibling `.toolchains` directory. The instrumented check still
@@ -154,12 +185,23 @@ takes precedence, then `GITHUB_REPOSITORY`, then a GitHub `origin` remote. A
 missing repository or provider failure is reported as `provider_error`, never
 as a green result. The policy delivery window limits concurrent commits and
 in-flight work; a full window is a retryable blocked condition. Delivery only
-inspects the requested SHA and does not manually poll unrelated runs.
+inspects the requested SHA for `delivery_ci_inspect`. For a full window,
+`delivery_ci_window_wait` checks the policy window internally for at most 45
+seconds and stops on a failed SHA or provider error. It does not return a job
+ID; `delivery_job_wait` applies only to existing jobs.
 
 `delivery_verify_head` validates current HEAD against its ledger entry,
 receipt digest, parent, and tree. `delivery_finalize` records a batch or User
 Story result only after the selected gate and post-push checks are complete;
 finalization cannot turn missing or stale evidence into a pass.
+`delivery_closure_preflight` checks existing commits selected by the same US
+history rule as finalization (recent US messages/ledger entries and repair
+targets). It includes HEAD when HEAD belongs to the US. Supply a known feature
+baseline in `requiredShas` when needed. `NO_EXISTING_US_COMMITS` means no
+historical gap was found for a new story; it does not prove a future closure.
+Preflight never creates historical evidence. A batch may finalize with
+`status: passed_pending_ci`; a User Story requires `status: passed`.
+Preflight cannot certify commits that have not been created or predict CI.
 
 ## Evidence and recovery
 

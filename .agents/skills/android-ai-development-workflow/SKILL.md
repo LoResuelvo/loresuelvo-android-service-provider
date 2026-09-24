@@ -35,6 +35,14 @@ deployable boundary required inside the approved scenarios.
 
 ## Agent lifecycle and tools
 
+For a planned User Story, resolve its exact
+`.agents/local/plans/ANDROID-US-<ID>.md` path and require an `approved` or
+`active` plan. Check its base against current HEAD history and reconcile
+intervening changes, approved scenarios, external contracts, and open
+questions. Resolve material drift before dispatch; a changed functional
+contract needs renewed approval.
+Keep the plan history current as scenarios and decisions change.
+
 Run one batch, one active scenario, and one implementation writer at a time.
 Use the canonical checkout for implementation, staging, receipts, and commits.
 The orchestrator must not edit the developer's files concurrently. A read-only
@@ -49,50 +57,48 @@ when the batch is GREEN or at an escalation; an exceptional rotation may occur
 at another deployable commit. Never rotate in the middle of a gate or to reset
 a CI diagnosis.
 
-Before delegation, confirm access to the complete Delivery MCP surface:
-`delivery_test`, `delivery_inspect`, `delivery_prepare`, `delivery_job_wait`,
-`delivery_job_cancel`, `delivery_verify_head`, `delivery_ci_inspect`, and
-`delivery_finalize`. An agent without the required surface must stop rather
-than invent a raw-command substitute.
+Before delegation, confirm the Delivery MCP surface listed in `.delivery/README.md` is
+available. Run `delivery_closure_preflight` with the numeric US ID and known
+feature-baseline SHA. Resolve or escalate each reported evidence gap before
+implementation; context notes cannot create historical receipts.
 
-Developers do not poll CI or remain idle after a push. Long operations return a
-job ID; use bounded `delivery_job_wait`. Delivery evidence is tied to the
-exact staged snapshot and HEAD.
-
-## Small tasks inside a batch
+## Small tasks and outside-in boundaries inside a batch
 
 Before dispatch, break only the active scenario into the smallest useful
 behavioral tasks. For each task name the observable result, existing code to
-reuse, allowed files/symbols, required interfaces, focused proof, and exclusions.
-Start outside-in with the scenario and real ViewModel/use-case behavior. Add
-data or platform code only when that behavior requires it. Do not build all
-repositories, then all ViewModels, then all screens for future scenarios.
+reuse, allowed files/symbols, required interfaces, focused proof, and
+exclusions. Use the outside-in sequence and test boundaries in
+`android-bdd-tdd-process`; assign only work the active scenario needs. Propose
+commit boundaries for that scenario before implementation, each with its
+result, required dependencies, focused GREEN proof, Delivery intent, and
+subject. Revisit the map when the implementation reveals a dependency.
 
-Keep RED, GREEN, and a small refactor with the same developer. A task is not
-automatically a commit or a new subagent. Commit when its complete behavioral
-boundary is independently testable and reversible; one commit can be enough.
-The developer owns staging, preparation, commit, and authorized push unless
-the handoff explicitly assigns another owner. MICROSTEP never implies that
-commit ownership. Stop scope growth and report necessary contract changes.
+Keep RED, GREEN, and a small refactor with the same developer. A task or layer
+is not automatically a commit. Commit when its complete logical boundary is
+coherent, compilable, testable, and independently reversible; a scenario may
+need one or several commits. Do not accumulate separable boundaries into an
+unreviewable commit or split a necessary vertical boundary into broken
+layer-only commits. The developer owns staging, preparation, commit, and
+authorized push unless the handoff assigns another owner. Finish each
+independently GREEN boundary before starting the next; do not implement the
+whole scenario and attempt to split it into commits afterward. Stop scope
+growth and report necessary contract changes.
 
-Use one covering review for spec compliance, simplicity, MVVM/navigation, and
-test quality before preparation. For material or uncertain changes, delegate
-that review read-only after the implementation writer stops. Reviewers report
-findings; the retained developer fixes them. Do not repeat unchanged tests or
-start open-ended refactors in a review loop.
-
-These task-brief and review practices borrow from Superpowers' writing-plans
-and subagent-driven-development; no installation or additional skill is required.
-The Android scenario, gate, and commit contracts remain authoritative.
+Carry verified device/UI lessons between batches, including IME dismissal,
+BottomBar touch targets, and native picker behavior when relevant. Use one
+covering review for spec compliance, simplicity, MVVM/navigation, and test
+quality before preparation. For material or uncertain changes, delegate that
+review read-only after the implementation writer stops. The retained developer
+fixes findings. Do not repeat unchanged tests or start open-ended refactors.
 
 ## Handoff contract
 
-Use the [delegation contract](references/delegation-modes.md) when preparing a
-handoff. Transmit facts specific to the Android batch:
-
-- scope, interfaces, exclusions, owners, and focused proof;
-- HEAD/tree/CI, active scenario/task, receipts, and any running job ID;
-- `WORKING`, `BLOCKED`, `READY_FOR_REVIEW`, or `DONE`, and next action.
+Use the [delegation contract](references/delegation-modes.md) for bootstrap,
+same-developer updates, and compact handoff fields. Give every new developer a
+filled bootstrap with the exact approved Gherkin, active outside-in
+checkpoints, and tentative commit boundaries. Do not ask them to reconstruct
+the full plan. Include verified device/UI lessons, the active causal diagnosis,
+and the next permitted action.
 
 Follow that contract's progress/resource protocol, including immediate blocker
 reports and controller reconciliation of idle workers. Serialize Gradle/device
@@ -103,45 +109,30 @@ and regenerate preparation evidence.
 
 ## Batch execution
 
-For `SCENARIO` and `SCENARIO_GROUP`, the developer works one scenario and one
-atomic boundary at a time:
+For `SCENARIO` and `SCENARIO_GROUP`, follow `android-bdd-tdd-process` for
+intermediate and final functional boundaries, and `android-commit-governance`
+for preparation and commits. Advance to another scenario only inside an
+approved `SCENARIO_GROUP`.
 
-1. follows the Android BDD/TDD loop with `delivery_test` for the active
-   boundary;
-2. applies the relevant architecture, API, Hilt, and testing skills;
-3. when the boundary is coherent, compilable, and GREEN at its own test layer,
-   stages it exactly and calls `delivery_prepare` with `prepare_commit`;
-4. with `status: passed`, commits and, when authorized, pushes that boundary
-   before starting the next one; intermediate commits may leave the outer
-   scenario `@wip`;
-5. in the final functional boundary, makes the complete scenario GREEN,
-   removes its `@wip`, and prepares with `close_scenario`;
-6. commits with
-   `<type>[<us-number>]: imperative English description`, using the User Story
-   identifier from the issue title, only after `status: passed`, then pushes when
-   authorized;
-7. advances to the next scenario only inside an approved `SCENARIO_GROUP`;
-   otherwise emits the compact handoff and ends the batch.
+Continue permitted work while CI is pending. If preparation reports
+`CI_WINDOW_FULL`, call bounded `delivery_ci_window_wait` and retry preparation
+only when it returns `ready`. On a failed SHA, stop ordinary pushes and follow
+the repair path. `delivery_job_wait` applies only to a returned job ID.
 
 For `MICROSTEP`, the developer stops after validation without staging,
 preparing, committing, or pushing; those owners remain with the orchestrator
 unless the contract says otherwise.
 
-Never target a commit count, commit RED work, split by layer, or create
-closure-only commits. Each boundary must stand without uncommitted code.
-
 ## Repair and escalation
 
-When CI fails, stop ordinary pushes. Inspect the exact failed SHA with
-`delivery_ci_inspect`, prepare one atomic fix using intent `repair_ci` and the
-same `repairsSha`, and use Gate R's one-time receipt. Do not use `--no-verify`
-or `DELIVERY_SKIP_CI_CHECK`. Workflow changes and workflow-job failures are
-`HUMAN_ONLY`; stop and escalate them. Follow the diagnostic protocol in
-`android-testing-gates` and preserve the causal signature across handoffs.
+For failed CI, use the exact SHA and `repair_ci` path in
+`android-testing-gates`. Preserve the causal diagnosis across handoffs;
+workflow changes and workflow-job failures are `HUMAN_ONLY`.
 
 ## Closing
 
-When declared feature files are complete and contain no `@wip`, verify HEAD
-with the matching `close_batch` or `close_us` intent, then call
-`delivery_finalize`. A User Story is complete only when finalization returns
-`finalized: true` and `status: passed`; a pending CI state is not completion.
+For a clean completed HEAD, use matching `close_batch` or `close_us` intents
+in `delivery_verify_head` and `delivery_finalize`. A batch may return
+`finalized: true, status: passed_pending_ci`; User Story closure requires
+`finalized: true, status: passed`. Mark the plan complete only after that
+User Story result.

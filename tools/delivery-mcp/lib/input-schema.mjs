@@ -56,6 +56,16 @@ export const DeliveryCiInputSchema = z.object({
   sha: z.string().min(7).max(40),
 });
 
+export const DeliveryClosurePreflightInputSchema = z.object({
+  usId: NumericUsIdSchema,
+  requiredShas: z.array(z.string().regex(/^[a-f0-9]{7,40}$/i)).max(20).default([]),
+});
+
+export const DeliveryCiWindowWaitInputSchema = z.object({
+  timeoutMs: z.number().int().min(100).max(45000).default(30000),
+  pollIntervalMs: z.number().int().min(50).max(15000).default(5000),
+});
+
 export const DeliveryFinalizeInputSchema = z.object({
   intent: z.enum(["close_us", "close_batch"]).default("close_us"),
   usId: NumericUsIdSchema.optional(),

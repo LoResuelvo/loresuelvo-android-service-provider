@@ -11,6 +11,8 @@ import {
   DeliveryInspectInputSchema,
   DeliveryPrepareInputSchema,
   DeliveryCiInputSchema,
+  DeliveryClosurePreflightInputSchema,
+  DeliveryCiWindowWaitInputSchema,
   DeliveryFinalizeInputSchema,
   DeliveryVerifyHeadInputSchema,
   DeliveryTestInputSchema,
@@ -23,6 +25,8 @@ import { finalizeDelivery, verifyHeadDelivery } from "./lib/delivery-finalize.mj
 import { testDelivery } from "./lib/test-delivery.mjs";
 import { redactSecrets } from "./lib/redact-secrets.mjs";
 import { waitForJob, cancelDeliveryJob } from "./lib/jobs.mjs";
+import { inspectClosureReadiness } from "./lib/closure-preflight.mjs";
+import { waitForCiWindow } from "./lib/ci-window-wait.mjs";
 
 const intentProperty = {
   type: "string",
@@ -169,6 +173,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         idempotentHint: true,
         openWorldHint: true,
       },
+    },
+    {
+      name: "delivery_closure_preflight",
+      description: "Checks existing User Story commits and required SHAs for exact ledger evidence before implementation, without running a gate or changing evidence.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          usId: { type: "string", description: "Numeric User Story identifier" },
+          requiredShas: {
+            type: "array",
+            items: { type: "string" },
+            maxItems: 20,
+            description: "Additional known ancestor commits, such as the approved feature baseline",
+          },
+        },
+        required: ["usId"],
+      },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    {
+      name: "delivery_ci_window_wait",
+      description: "Waits up to 45 seconds for the policy-defined CI commit window to reopen; stops immediately on a CI failure or provider error.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          timeoutMs: { type: "integer", description: "Bounded wait in milliseconds (100 to 45000; default 30000)" },
+          pollIntervalMs: { type: "integer", description: "Internal check interval in milliseconds (50 to 15000; default 5000)" },
+        },
+      },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     {
       name: "delivery_finalize",
@@ -442,6 +476,25 @@ function toolResponse(result, isError = false) {
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const name = request.params.name;
+
+  if (name === "delivery_closure_preflight" || name === "delivery_ci_window_wait") {
+    const schema = name === "delivery_closure_preflight"
+      ? DeliveryClosurePreflightInputSchema
+      : DeliveryCiWindowWaitInputSchema;
+    const parsed = schema.safeParse(request.params.arguments || {});
+    if (!parsed.success) {
+      return toolResponse({ status: "blocked", reason: "INVALID_ARGUMENTS", message: formatInputIssues(parsed.error) }, true);
+    }
+    try {
+      const result = name === "delivery_closure_preflight"
+        ? await inspectClosureReadiness(parsed.data)
+        : await waitForCiWindow(parsed.data);
+      return toolResponse(result, result.status === "blocked");
+    } catch (error) {
+      const message = redactSecrets(String(error.message || "Delivery read-only operation failed")).split("\n")[0];
+      return toolResponse({ status: "blocked", reason: "INTERNAL_ERROR", message }, true);
+    }
+  }
 
   if (name === "delivery_job_wait") {
     const parsed = DeliveryJobWaitInputSchema.safeParse(request.params.arguments || {});

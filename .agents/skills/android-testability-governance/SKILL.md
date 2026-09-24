@@ -6,8 +6,8 @@ description: Apply when designing tests, changing DI or state boundaries, or rev
 
 Load this skill when adding behavior, changing ViewModel state, changing Hilt
 bindings, adding a repository, or reviewing test coverage and determinism.
-The canonical maintainability and test-architecture convention is in
-[AGENTS.md](../../../AGENTS.md).
+Use `android-maintainability-governance` when the change also crosses a size
+or responsibility review trigger.
 
 ## Do not load
 
@@ -41,8 +41,9 @@ permission, lifecycle, or real Android service boundary.
   time. Give each test explicit ownership of its coroutine scope, dispatcher,
   persistent state, and teardown. Do not use `Thread.sleep` or arbitrary
   polling.
-- Test success, loading, empty, network, server, unauthorized, cancellation,
-  retry, and duplicate-submit branches where they are observable.
+- Test the success, loading, empty, failure, cancellation, retry, and
+  duplicate-submit branches that this behavior exposes; do not add fixture-only
+  tests for states the contract cannot reach.
 - Close MockWebServer, WebSockets, players, recorders, and other resources in
   teardown.
 - Do not use empty prerequisites, fixture-constant assertions, or disconnected
@@ -50,14 +51,10 @@ permission, lifecycle, or real Android service boundary.
 
 ## Hilt and session tests
 
-- An instrumented test that launches `MainActivity` declares
-  `@HiltAndroidTest`, `HiltAndroidRule` at order 0, then the Compose rule.
-- Call `hiltRule.inject()` before launching or asserting the Activity.
-- Use `@TestInstallIn` for suite-wide fakes and `@UninstallModules` for a
-  class-local replacement.
-- When mutating a session observed by production navigation, obtain the same
-  SingletonComponent binding through an `@EntryPoint`; do not construct a
-  second session store locally.
+Use `android-hilt-governance` for Hilt rule ordering, injection, launch timing,
+and test module replacement. In a session/navigation test, obtain the same
+SingletonComponent binding through an `@EntryPoint` and mutate the instance
+observed by production navigation; do not construct a second session store.
 
 ## Acceptance and UI assertions
 

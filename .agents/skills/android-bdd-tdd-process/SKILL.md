@@ -5,8 +5,9 @@ description: Apply when adding observable behavior, changing a provider journey,
 # android-bdd-tdd-process
 
 Load this skill when adding behavior, changing a provider journey, or adding
-a BDD scenario and its tests. The canonical maintainability and test
-architecture convention is in [AGENTS.md](../../../AGENTS.md).
+a BDD scenario and its tests. Use `android-testability-governance` for
+test-layer ownership and `android-maintainability-governance` for size or
+responsibility reviews.
 
 ## Do not load
 
@@ -23,35 +24,54 @@ and merge validation.
 - Instrumented UI tests live under `app/src/androidTest/` and require a device
   or emulator. Do not call these Cucumber scenarios.
 
-The current journey is `features/auth/provider-welcome.feature`, with glue in
+One provider example is `features/auth/provider-welcome.feature`, with glue in
 `bdd/auth/welcome/` and the `WelcomeCucumberTest` runner.
 
-## Required loop
+## Required outside-in loop
 
-1. Write every Gherkin acceptance scenario before production code, present the
-   scenarios for functional approval, and mark approved pending scenarios
-   `@wip`.
-2. Add the smallest step definitions needed to fail for the right reason.
-3. Add or update JVM unit tests for the behavior and error branches.
-4. Implement the smallest production change.
-5. Refactor while the focused tests remain green.
-6. Add an instrumented UI test when the change crosses Activity, navigation,
-   or real Android boundaries.
+1. Write Gherkin acceptance scenarios before production code, present them
+   for functional approval, and mark approved pending scenarios `@wip`.
+2. Add the smallest step definitions and test doubles that exercise the real
+   owned use case or ViewModel. Observe a relevant RED through a runnable
+   focused test before production code. With `@wip` present, Cucumber skips
+   that scenario. `delivery_test(mode="scenario", featureFile=<feature path>)`
+   runs the full Dev JVM task and cannot by itself prove its RED. To observe
+   Cucumber RED, temporarily remove `@wip` in the working tree and restore it
+   before an intermediate commit. A coherent glue-only boundary may be
+   committed after its staged `delivery_prepare(intent="prepare_commit")`
+   passes Gate 0.
+3. Add focused JVM tests for behavior and error branches; implement the
+   smallest production change. Use a stateless Composable, pure use case,
+   repository adapter, or ViewModel as needed. Test each relevant boundary
+   with Robolectric/Compose, JUnit4, MockWebServer, or Turbine.
+4. Refactor while focused tests stay GREEN. Add an instrumented UI test when
+   the change crosses Activity, navigation, or real Android boundaries.
+5. For the final functional boundary, remove `@wip` in the working tree so
+   the active Cucumber scenario runs. Verify the complete Dev JVM task GREEN
+   with `delivery_test(mode="scenario", featureFile=<feature path>)`. Confirm
+   a runner includes the feature and inspect the Cucumber report or test log
+   to see that the active scenario executed; a green suite with a filtered or
+   missing scenario is insufficient. Stage the functional change and tag
+   removal together, then call `delivery_prepare(intent="close_scenario")`.
+   Commit only after `status: passed`; push when authorized.
 
 After approval, scenario wording is immutable: do not rewrite, remove, or
 weaken `Given`, `When`, or `Then` without renewed functional approval. Complete
 one scenario in GREEN before starting the next, including inside a
 `SCENARIO_GROUP`.
 
-Use `delivery_test` for the interactive RED/GREEN loop. A RED result never
-authorizes a commit. A scenario may advance through several committed internal
-boundaries while its outer Gherkin remains `@wip`; each boundary must be
-coherent, compilable, and GREEN at its own test layer. On the final functional
-boundary, make the complete scenario GREEN, remove `@wip`, stage that exact
-change, and call `delivery_prepare` with `close_scenario`.
+Use `delivery_test(mode="unit", testFiles=[...])` for exact focused JVM classes
+when available. Use `delivery_test` for RED/GREEN. A RED result never
+authorizes a commit. A scenario may advance through one or several committed
+internal boundaries while its outer Gherkin remains `@wip`; each boundary
+must be coherent, compilable, independently reversible, and GREEN at its own
+test layer. Focused TDD results do not replace the staged policy gate. Use
+the numeric User Story ID, not the scenario ID, in commit messages.
 
 Each scenario has a stable ID such as `01-PWB`, one action per step, and one
 `When`. Keep scenario state in a world/context, never in mutable globals.
+The world owns and closes its test scopes, dispatchers, persistence, and other
+resources during setup and teardown.
 Steps over 20 lines and worlds over 250 lines need a cohesion review. `Given`
 arranges one meaningful prerequisite, `When` invokes the real owned use case
 or ViewModel, and `Then` observes that same production instance or its
@@ -63,50 +83,10 @@ Existing Gherkin files use the feature's declared language for product-facing
 steps. Keep code, glue, test names, diagnostics, and supporting documentation
 in English.
 
-## Test boundaries
-
-| Behavior | Location | Main tools |
-| --- | --- | --- |
-| Domain/use case | `app/src/test/.../domain/` | JUnit4, fakes, MockK |
-| Repository/HTTP | `app/src/test/.../data/api/` | MockWebServer, OkHttp |
-| ViewModel | `app/src/test/.../ui/` | `runTest`, Turbine |
-| Composable without Activity | `app/src/test/.../ui/` | Robolectric/Compose |
-| Activity/navigation/device | `app/src/androidTest/` | Compose test, Espresso, Hilt |
-
-Assert typed outcomes and observable effects in JVM tests, not localized UI
-strings. Resolve localized strings through the Activity in instrumented tests
-when locale-dependent UI is under test.
-
-## Human or focused diagnostic commands
-
-Focused JVM checks:
-
-```bash
-./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
-./gradlew :app:testDevDebugUnitTest --tests '*WelcomeCucumberTest'
-```
-
-Full provider validation:
-
-```bash
-make test FLAVOR=Dev
-make e2e FLAVOR=Dev
-make build FLAVOR=Dev
-```
-
-`make e2e` runs `connectedDevDebugAndroidTest` and needs an available device.
-Delivery Gate 0 and Gate B intentionally run the complete Dev JVM task because
-there is no reliable feature-file-to-runner command.
-
-Agents use these raw commands only for focused diagnosis when the processed
-Delivery MCP result is insufficient; they are not the ordinary TDD loop.
-
-## Anti-patterns
-
-- Testing JVM behavior on a device or against a real backend.
-- Asserting localized strings in JVM BDD tests.
-- Sharing mutable state between scenarios.
-- Adding a scenario without a deterministic fake or test backend.
-- Empty prerequisites, disconnected assertion-only mocks, or assertions that
-  merely repeat fixture constants.
-- Silently replacing a blocked instrumented run with a JVM run.
+Test-layer ownership is defined in `android-testability-governance`. Assert
+typed outcomes and observable effects in JVM tests, not localized UI strings;
+resolve locale-dependent strings through the Activity in instrumented tests.
+Use focused Gradle diagnostics through the Android wrapper only when processed
+Delivery output is insufficient; see `.delivery/README.md` for the test
+topology. Gate 0/B run the complete Dev JVM task, not one Cucumber feature or
+scenario.

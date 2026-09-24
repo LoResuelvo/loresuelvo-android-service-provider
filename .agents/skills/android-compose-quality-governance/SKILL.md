@@ -71,3 +71,7 @@ navigation/back behavior. Add a focused JVM Compose test for a stateless
 component and an instrumented test for Activity, Hilt, navigation, permission,
 or device-bound behavior. Use the repository's existing delivery/testing
 workflow for the final gate; this skill does not replace it.
+
+For device interactions, check the actual tappable node and viewport after
+IME changes, scrolling, system pickers, and BottomBar overlap. Keep a stable
+interaction recipe in the batch handoff when a device quirk is discovered.

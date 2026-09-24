@@ -8,16 +8,6 @@ Load this skill before a pull request, release, merge to `main`, or when
 diagnosing delivery-gate execution. Use `android-bdd-tdd-process` for a small
 local behavior iteration.
 
-## Test layers
-
-- `make test FLAVOR=Dev`: JVM unit tests and Cucumber JVM; no device.
-- `make lint FLAVOR=Dev`: Android Lint.
-- `make build FLAVOR=Dev`: debug APK compilation and generated-code checks.
-- `make e2e FLAVOR=Dev`: instrumented UI tests under `androidTest`; a device
-  or emulator is required.
-- `make test-all-once FLAVOR=Dev`: JVM plus instrumented tests.
-- `make ci FLAVOR=Dev`: build, lint, JVM, and instrumented checks.
-
 ## Canonical delivery execution
 
 Agents use `delivery_test` for focused TDD and `delivery_prepare` for a staged
@@ -27,23 +17,9 @@ shell text. Long checks return a job ID and are awaited with bounded
 `delivery_job_wait`; use `delivery_job_cancel` only for an explicit,
 auditable cancellation.
 
-The isolated delivery package itself is checked with:
-
-```bash
-npm --prefix tools/delivery-mcp test
-```
-
-## Required gates
-
-| Gate | Checks |
-| --- | --- |
-| `NONE` | No executable checks for documentation-only or empty diffs |
-| `0` | Complete Dev JVM test task for feature/glue compatibility |
-| `A` | Dev JVM tests; delivery tooling also runs delivery unit tests |
-| `B` | Complete Dev JVM test task when closing one low-risk BDD scenario |
-| `C` | Dev lint, JVM tests, build, and instrumented UI |
-| `D` | No `@wip`, all Gate C checks, and post-push CI green |
-| `R` | Delivery tests plus Staging lint, JVM tests, build, instrumented UI, and post-push CI green |
+The test topology and gate table live in `.delivery/README.md`; the
+deterministic classification and check catalog live in
+`.delivery/policy.v1.json`.
 
 Gate C/D instrumented tests cannot be silently skipped. If no device or
 emulator is available, return a blocked diagnostic. Gate R needs real Staging
@@ -58,20 +34,11 @@ classes. Keep package paths aligned with their class names. No test files,
 scenario mode, and affected mode run the complete Dev JVM task. Focused TDD
 does not authorize skipping a gate. Serialize Gradle and device checks.
 
-## Focused and full commands
-
-```bash
-scripts/with-android-env.sh ./gradlew :app:testDevDebugUnitTest --tests '*WelcomeViewModelTest*'
-make lint FLAVOR=Dev
-make test FLAVOR=Dev
-make build FLAVOR=Dev
-make e2e FLAVOR=Dev
-```
-
 The current CI workflow uses Java 17 and a prewarmed Pixel 6/API 34 x86_64
 emulator. Regenerate its cache through the checked-in
-`.github/workflows/avd-bootstrap.yml` workflow when the emulator configuration
-changes. Do not document or assume a device-management target.
+`.github/workflows/avd-bootstrap.yml` workflow and increment its
+`cache_version` input when the emulator configuration changes. Do not document
+or assume a device-management target.
 
 ## Shadow rollout and evidence
 
@@ -84,24 +51,17 @@ format and provide advisory evidence/CI diagnostics but never run test suites.
 ## CI failure repair
 
 Stop ordinary pushes when CI fails. Inspect the exact SHA with
-`delivery_ci_inspect`, make one atomic fix, and choose an auditable path:
-agents call `delivery_prepare` with intent `repair_ci` and that exact
-`repairsSha` so Gate R issues a single-use repair receipt; humans may instead
-run `make delivery-context ARGS="--intent repair_ci --repairs-sha <failed-sha> [--us-id <id>]"`
-after the final `git add` to delegate verification to remote CI. Git hooks are
-advisory regardless of `DELIVERY_REQUIRE_EVIDENCE`; ordinary human commits
-are not recorded as `not_run`. Post-commit consumes context only when binding
-an exact prepared receipt. Agents still require passed preparation.
-Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`. A cancelled run
-is resolved only by a reachable descendant with passed CI.
-Workflow files and workflow-job failures are `HUMAN_ONLY` and must be
-escalated.
+`delivery_ci_inspect`. Its short excerpt is a lead, not a complete log: if
+inconclusive, open that failed run/job once and inspect its terminal operation
+and causal output. Emulator boot or ADB warnings alone do not establish an
+infrastructure failure; an Espresso assertion identifies an application/test
+failure. Distinguish runner provisioning from workflow failures before
+escalating, and preserve the diagnosis in handoffs.
 
-## Review checklist
-
-- JVM tests do not depend on a device or real backend.
-- Instrumented tests use deterministic fakes for UI wiring.
-- No secrets or token/payload logging appears in the diff.
-- No generated files, debug artifacts, or `.delivery/runtime/` are committed.
-- A blocked prerequisite is reported rather than replaced with a weaker check.
-- `git diff --check` is clean.
+Make one atomic fix. Agents call `delivery_prepare(intent="repair_ci",
+repairsSha=<failed SHA>)` for Gate R's single-use receipt; the human path is
+documented in `.delivery/README.md`. Agents still require passed preparation.
+Never use `--no-verify` or `DELIVERY_SKIP_CI_CHECK`. A cancelled run is
+resolved only by a reachable descendant with passed CI. Workflow files and
+workflow-job failures are `HUMAN_ONLY`; escalate runner provisioning failures
+that require environment repair.

@@ -84,6 +84,12 @@ class ExampleInstrumentedTest {
 }
 ```
 
+`createAndroidComposeRule<MainActivity>()` launches the Activity automatically,
+before `@Before` can initialize test fields. If a fake binding or session must
+be configured before Activity creation, use `createEmptyComposeRule()`, call
+`hiltRule.inject()`, then launch `MainActivity` with `ActivityScenario` and
+close that scenario in teardown.
+
 The custom runner is
 `app/src/androidTest/java/com/loresuelvo/serviceprovider/HiltTestRunner.kt`.
 Use `@TestInstallIn(..., replaces = [...])` for suite-wide fakes and
