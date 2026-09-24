@@ -2,6 +2,10 @@ package com.loresuelvo.serviceprovider.ui.screens.conversation
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -15,6 +19,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.runtime.mutableStateOf
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
+import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -150,5 +155,37 @@ class ProviderProposalScreenTest {
         compose.onNodeWithText("Zona horaria: Australia/Lord_Howe").assertExists()
         compose.onNodeWithTag("${PROPOSAL_OFFSET_TAG_PREFIX}660").performScrollTo().performClick().assertIsSelected()
         assertEquals(660, form.value.selectedOffsetMinutes)
+    }
+
+    @Test fun reviewDisplaysVisitDetailsWithoutEnabledSend() {
+        val review = ProposalUiState.Reviewing(
+            ProposalUiState.Form(42, 7, "Ana Pérez", date = "2026-10-01", time = "10:00", zoneId = "UTC"),
+            ValidatedServiceProposal(7, "100.5", 0L, 0, "Inspect sink", 45),
+        )
+        compose.setContent { LoresuelvoTheme { ProviderProposalConfirmationDialog(review, {}) } }
+        compose.onNodeWithTag(PROPOSAL_CONFIRMATION_TAG).assertExists()
+        listOf("Consumidor: Ana Pérez", "Monto: ARS 100.5", "Visita: 2026-10-01 a las 10:00 (UTC, UTC+00:00)",
+            "45 minutos", "Inspect sink").forEach { compose.onNodeWithText(it).assertExists() }
+        compose.onNodeWithText("Confirmar envío").assertIsNotEnabled()
+    }
+
+    @Test
+    @Config(qualifiers = "es-rAR-w400dp-h400dp")
+    fun longReviewScrollsAtLargeFontWithActionsReachable() {
+        var returnedToEditing = false
+        val reason = "Inspect every sink and pipe. ".repeat(50)
+        val review = ProposalUiState.Reviewing(
+            ProposalUiState.Form(42, 7, "Ana Pérez", date = "2026-10-01", time = "10:00"),
+            ValidatedServiceProposal(7, "100", 0L, 0, reason, 45),
+        )
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f)) {
+                LoresuelvoTheme { ProviderProposalConfirmationDialog(review, { returnedToEditing = true }) }
+            }
+        }
+        compose.onNodeWithText(reason).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Volver a editar").assertIsDisplayed().performClick()
+        assertTrue(returnedToEditing)
+        compose.onNodeWithText("Confirmar envío").assertIsNotEnabled()
     }
 }

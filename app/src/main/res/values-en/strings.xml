@@ -126,7 +126,7 @@
     <string name="provider_proposal_duration_minutes">%1$d minutes</string>
     <string name="provider_proposal_duration_custom">Custom</string>
     <string name="provider_proposal_duration_minutes_label">Minutes</string>
-    <string name="provider_proposal_continue">Continue to confirmation</string>
+    <string name="provider_proposal_continue">Send proposal</string>
     <string name="provider_proposal_amount_error">Enter a positive peso amount with up to two decimals and no grouping separators.</string>
     <string name="provider_proposal_date_error">Choose a valid date.</string>
     <string name="provider_proposal_time_error">Choose a valid time for that date.</string>
@@ -134,6 +134,11 @@
     <string name="provider_proposal_ambiguous_time_error">This time occurs twice. Choose the visit offset.</string>
     <string name="provider_proposal_offset_choice">Time %1$s</string>
     <string name="provider_proposal_zone">Time zone: %1$s</string>
+    <string name="provider_proposal_review_title">Confirm proposal</string>
+    <string name="provider_proposal_review_amount">Amount: ARS %1$s</string>
+    <string name="provider_proposal_review_schedule">Visit: %1$s at %2$s (%3$s, %4$s)</string>
+    <string name="provider_proposal_confirm_send">Confirm send</string>
+    <string name="provider_proposal_cancel_review">Back to editing</string>
     <string name="provider_proposal_reason_error">Explain the visit reason.</string>
     <string name="provider_proposal_duration_error">Choose a whole duration from 15 to 1440 minutes.</string>
     <string name="provider_conversation_clear_media_content_description">Remove attached image</string>

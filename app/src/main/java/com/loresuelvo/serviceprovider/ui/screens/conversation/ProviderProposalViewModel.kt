@@ -7,6 +7,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalDraft
+import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.ValidateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,10 @@ sealed interface ProposalUiState {
         val zoneId: String = "UTC",
         val selectedOffsetMinutes: Int? = null,
         val errors: Set<ProposalValidationError> = emptySet(),
+    ) : ProposalUiState
+    data class Reviewing(
+        val form: Form,
+        val proposal: ValidatedServiceProposal,
     ) : ProposalUiState
 }
 
@@ -92,7 +97,7 @@ class ProviderProposalViewModel @Inject constructor(
                 false
             }
             is ProposalValidationOutcome.Valid -> {
-                state.value = form.copy(errors = emptySet())
+                state.value = ProposalUiState.Reviewing(form.copy(errors = emptySet()), result.proposal)
                 true
             }
         }
@@ -100,6 +105,11 @@ class ProviderProposalViewModel @Inject constructor(
 
     fun close() {
         state.value = ProposalUiState.Closed
+    }
+
+    fun cancelReview() {
+        val reviewing = state.value as? ProposalUiState.Reviewing ?: return
+        state.value = reviewing.form
     }
 
     private fun update(key: String, value: String, change: ProposalUiState.Form.() -> ProposalUiState.Form) {

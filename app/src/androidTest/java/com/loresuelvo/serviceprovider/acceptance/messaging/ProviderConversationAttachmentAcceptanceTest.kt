@@ -6,7 +6,30 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.test.espresso.Espresso.onView
+import android.view.KeyEvent
+import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
+import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
+import androidx.test.espresso.matcher.ViewMatchers.withId
+import androidx.test.espresso.matcher.RootMatchers.withDecorView
+import androidx.test.espresso.matcher.ViewMatchers.hasDescendant
+import androidx.test.espresso.ViewAction
+import androidx.test.espresso.UiController
+import android.view.View
+import android.widget.DatePicker
+import android.widget.TimePicker
+import java.util.Calendar
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.loresuelvo.serviceprovider.MainActivity
@@ -34,6 +57,11 @@ import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.screens.conversation.PROVIDER_CONVERSATION_BACK_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.PROVIDER_CONVERSATION_MESSAGES_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_FORM_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_DATE_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_TIME_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_DURATION_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_CONTINUE_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_CONFIRMATION_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_ATTACH_BUTTON_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CREATE_PROPOSAL_ROW_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG
@@ -48,6 +76,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.Assert.assertFalse
 
 /**
  * Acceptance smoke for the provider conversation detail surface
@@ -64,6 +93,9 @@ import org.junit.runner.RunWith
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class ProviderConversationAttachmentAcceptanceTest {
+
+    private val datePickerRoot = withDecorView(hasDescendant(isAssignableFrom(DatePicker::class.java)))
+    private val timePickerRoot = withDecorView(hasDescendant(isAssignableFrom(TimePicker::class.java)))
 
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
@@ -211,6 +243,66 @@ class ProviderConversationAttachmentAcceptanceTest {
         val context = composeTestRule.activity
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_consumer, "Ana Pérez")).assertIsDisplayed()
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount)).assertIsDisplayed()
+    }
+
+    @Test
+    fun valid_form_opens_review_on_same_conversation_without_sending() {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + 42).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).performClick()
+        val context = composeTestRule.activity
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount)).performTextInput("100,50")
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_reason)).performTextInput("Inspect sink")
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
+        assertFalse(composeTestRule.activity.window.decorView.rootWindowInsets
+            ?.isVisible(android.view.WindowInsets.Type.ime()) ?: false)
+
+        val visit = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 3); set(Calendar.HOUR_OF_DAY, 11); set(Calendar.MINUTE, 0) }
+        composeTestRule.onNodeWithTag(PROPOSAL_DATE_TAG).performClick()
+        onView(isAssignableFrom(DatePicker::class.java)).inRoot(datePickerRoot).perform(pickerAction("select visit date") { view ->
+            (view as DatePicker).updateDate(visit.get(Calendar.YEAR), visit.get(Calendar.MONTH), visit.get(Calendar.DAY_OF_MONTH))
+        })
+        onView(withId(android.R.id.button1)).inRoot(datePickerRoot).perform(click())
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        onView(isAssignableFrom(DatePicker::class.java)).check(doesNotExist())
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROPOSAL_TIME_TAG).performClick()
+        onView(isAssignableFrom(TimePicker::class.java)).inRoot(timePickerRoot).perform(pickerAction("select visit time") { view ->
+            (view as TimePicker).apply { hour = 11; minute = 0 }
+        })
+        // Physical Samsung touch injection leaves this dialog open; invoke its native positive callback.
+        onView(withId(android.R.id.button1)).inRoot(timePickerRoot)
+            .perform(pickerAction("confirm visit time") { it.performClick() })
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_time) + ": 11:00").assertExists()
+        onView(isAssignableFrom(TimePicker::class.java)).check(doesNotExist())
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(PROPOSAL_DURATION_TAG).performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_duration_minutes, 45))
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.onNodeWithTag(PROPOSAL_CONTINUE_TAG).performScrollTo().performClick()
+        composeTestRule.onNodeWithTag(PROPOSAL_CONFIRMATION_TAG).assertIsDisplayed()
+        val insideConfirmation = hasAnyAncestor(hasTestTag(PROPOSAL_CONFIRMATION_TAG))
+        composeTestRule.onNode(hasText(context.getString(R.string.provider_proposal_consumer, "Ana Pérez"))
+            .and(insideConfirmation)).assertIsDisplayed()
+        composeTestRule.onNode(hasText(context.getString(R.string.provider_proposal_review_amount, "100.5"))
+            .and(insideConfirmation)).assertIsDisplayed()
+        composeTestRule.onNode(hasText("Inspect sink").and(insideConfirmation)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_confirm_send)).assertIsNotEnabled()
+    }
+
+    private fun pickerAction(description: String, change: (View) -> Unit): ViewAction = object : ViewAction {
+        override fun getConstraints() = org.hamcrest.Matchers.any(View::class.java)
+        override fun getDescription() = description
+        override fun perform(uiController: UiController, view: View) {
+            change(view)
+            uiController.loopMainThreadUntilIdle()
+        }
     }
 }
 

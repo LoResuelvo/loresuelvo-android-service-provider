@@ -30,6 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -220,6 +222,36 @@ private fun formatOffset(minutes: Int): String =
     String.format(Locale.ROOT, "UTC%s%02d:%02d", if (minutes < 0) "-" else "+",
         kotlin.math.abs(minutes) / 60, kotlin.math.abs(minutes) % 60)
 
+@Composable
+fun ProviderProposalConfirmationDialog(reviewing: ProposalUiState.Reviewing, onCancel: () -> Unit) {
+    val form = reviewing.form
+    val proposal = reviewing.proposal
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(stringResource(R.string.provider_proposal_review_title)) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.provider_proposal_consumer, form.consumerName))
+                Text(stringResource(R.string.provider_proposal_review_amount, proposal.amountPesos))
+                Text(stringResource(R.string.provider_proposal_review_schedule,
+                    form.date, form.time, form.zoneId, formatOffset(proposal.offsetMinutes)))
+                Text(stringResource(R.string.provider_proposal_duration_minutes, proposal.durationMinutes))
+                Text(proposal.reason)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {}, enabled = false) {
+                Text(stringResource(R.string.provider_proposal_confirm_send))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) { Text(stringResource(R.string.provider_proposal_cancel_review)) }
+        },
+        modifier = Modifier.testTag(PROPOSAL_CONFIRMATION_TAG),
+    )
+}
+
 const val PROPOSAL_FORM_TAG = "provider-proposal-form"
 const val PROPOSAL_FIELDS_TAG = "provider-proposal-fields"
 const val PROPOSAL_DURATION_TAG = "provider-proposal-duration"
@@ -228,3 +260,4 @@ const val PROPOSAL_TIME_TAG = "provider-proposal-time"
 const val PROPOSAL_CUSTOM_DURATION_TAG = "provider-proposal-custom-duration"
 const val PROPOSAL_CONTINUE_TAG = "provider-proposal-continue"
 const val PROPOSAL_OFFSET_TAG_PREFIX = "provider-proposal-offset-"
+const val PROPOSAL_CONFIRMATION_TAG = "provider-proposal-confirmation"

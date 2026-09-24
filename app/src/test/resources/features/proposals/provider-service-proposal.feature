@@ -17,7 +17,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     Then ese campo explica qué debo corregir
     And no se envía ninguna propuesta
 
-  @wip
   Scenario: 04-PSP Revisar antes de enviar
     Given que mi propuesta contiene datos válidos de la visita
     When elijo Enviar propuesta

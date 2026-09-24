@@ -93,7 +93,7 @@ class ProviderProposalViewModelTest {
         viewModel.updateAmount("100,50")
         assertTrue(viewModel.continueToConfirmation())
         assertEquals(emptySet<ProposalValidationError>(),
-            (viewModel.uiState.value as ProposalUiState.Form).errors)
+            (viewModel.uiState.value as ProposalUiState.Reviewing).form.errors)
     }
 
     @Test fun `captured draft zone survives source zone change and reopening`() {
@@ -111,6 +111,26 @@ class ProviderProposalViewModelTest {
         viewModel.open(chat)
         assertEquals("America/New_York", (viewModel.uiState.value as ProposalUiState.Form).zoneId)
         assertEquals("America/New_York", handle.get<String>("proposal_zone_id"))
+    }
+
+    @Test fun `valid draft opens review with normalized details before any send`() {
+        val viewModel = ProviderProposalViewModel(
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock)
+        viewModel.open(detail(42, 7, ConversationStatus.Active))
+        viewModel.updateAmount("100,50")
+        viewModel.updateDate("2026-10-01")
+        viewModel.updateTime("10:00")
+        viewModel.updateReason("  Inspect sink  ")
+        viewModel.selectDuration(45)
+
+        assertTrue(viewModel.continueToConfirmation())
+        val review = viewModel.uiState.value as ProposalUiState.Reviewing
+        assertEquals("Ana Pérez", review.form.consumerName)
+        assertEquals(7, review.proposal.consumerId)
+        assertEquals("100.5", review.proposal.amountPesos)
+        assertEquals("Inspect sink", review.proposal.reason)
+        assertEquals(45, review.proposal.durationMinutes)
+        assertEquals("UTC", review.form.zoneId)
     }
 
     private fun detail(conversationId: Int, consumerId: Int, status: ConversationStatus) =

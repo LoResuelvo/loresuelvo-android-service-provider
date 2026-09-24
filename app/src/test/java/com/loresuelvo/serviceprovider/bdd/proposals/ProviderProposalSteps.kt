@@ -125,4 +125,35 @@ class ProviderProposalSteps {
         // The only reachable production state is the editing form; submission is not available here.
         assertTrue(viewModel.uiState.value is ProposalUiState.Form)
     }
+
+    @Given("que mi propuesta contiene datos válidos de la visita")
+    fun validVisitDraft() {
+        activeConsumerChat()
+        assertTrue(viewModel.open(activeChat))
+        viewModel.updateAmount("100,50")
+        viewModel.updateDate("2026-10-01")
+        viewModel.updateTime("10:00")
+        viewModel.updateReason("  Inspect sink  ")
+        viewModel.selectDuration(45)
+    }
+
+    @When("elijo Enviar propuesta")
+    fun chooseSendProposal() {
+        assertTrue(viewModel.continueToConfirmation())
+    }
+
+    @Then("se me pide confirmar la propuesta")
+    fun confirmationRequested() {
+        val review = viewModel.uiState.value as ProposalUiState.Reviewing
+        assertEquals(activeChat.counterpart.id, review.proposal.consumerId)
+        assertEquals("Ana Pérez", review.form.consumerName)
+        assertEquals("100.5", review.proposal.amountPesos)
+        assertEquals("Inspect sink", review.proposal.reason)
+        assertEquals(45, review.proposal.durationMinutes)
+    }
+
+    @And("todavía no se ha enviado ninguna propuesta")
+    fun notSentBeforeConfirmation() {
+        assertTrue(viewModel.uiState.value is ProposalUiState.Reviewing)
+    }
 }

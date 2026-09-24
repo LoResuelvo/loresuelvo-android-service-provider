@@ -127,7 +127,8 @@ fun ProviderConversationRoute(
         onClose = { navController.popBackStack() },
     )
 
-    val form = proposalState as? ProposalUiState.Form
+    val reviewing = proposalState as? ProposalUiState.Reviewing
+    val form = (proposalState as? ProposalUiState.Form) ?: reviewing?.form
     if (form != null) {
         Dialog(
             onDismissRequest = proposalViewModel::close,
@@ -145,6 +146,9 @@ fun ProviderConversationRoute(
                 onContinue = { proposalViewModel.continueToConfirmation() },
                 onOffsetSelect = proposalViewModel::selectOffset,
             )
+        }
+        if (reviewing != null) {
+            ProviderProposalConfirmationDialog(reviewing, proposalViewModel::cancelReview)
         }
     }
 }
