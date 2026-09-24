@@ -23,7 +23,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     Then se me pide confirmar la propuesta
     And todavía no se ha enviado ninguna propuesta
 
-  @wip
   Scenario: 05-PSP Volver de la confirmación a la edición
     Given que estoy revisando la confirmación de una propuesta
     When cancelo la confirmación

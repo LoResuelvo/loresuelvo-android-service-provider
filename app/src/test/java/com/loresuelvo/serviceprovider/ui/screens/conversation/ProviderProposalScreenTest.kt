@@ -188,4 +188,19 @@ class ProviderProposalScreenTest {
         assertTrue(returnedToEditing)
         compose.onNodeWithText("Confirmar envío").assertIsNotEnabled()
     }
+
+    @Test fun cancelButtonAndBackInvokeReviewCancellation() {
+        var cancellations = 0
+        val review = ProposalUiState.Reviewing(
+            ProposalUiState.Form(42, 7, "Ana Pérez"),
+            ValidatedServiceProposal(7, "100", 0L, 0, "Inspect sink", 45),
+        )
+        compose.setContent {
+            LoresuelvoTheme { ProviderProposalConfirmationDialog(review) { cancellations++ } }
+        }
+        compose.onNodeWithText("Volver a editar").performClick()
+        assertEquals(1, cancellations)
+        ShadowDialog.getLatestDialog().onBackPressed()
+        assertEquals(2, cancellations)
+    }
 }

@@ -33,6 +33,7 @@ class ProviderProposalSteps {
     private lateinit var activeChat: ConversationDetail
     private lateinit var nonActiveStates: List<ProviderConversationUiState>
     private lateinit var proposalActionsAvailable: List<Boolean>
+    private lateinit var draftBeforeReview: ProposalUiState.Form
 
     @Given("que estoy en un chat activo con un consumidor")
     fun activeConsumerChat() {
@@ -155,5 +156,25 @@ class ProviderProposalSteps {
     @And("todavía no se ha enviado ninguna propuesta")
     fun notSentBeforeConfirmation() {
         assertTrue(viewModel.uiState.value is ProposalUiState.Reviewing)
+    }
+
+    @Given("que estoy revisando la confirmación de una propuesta")
+    fun reviewingConfirmation() {
+        validVisitDraft()
+        viewModel.selectDuration(null)
+        viewModel.updateCustomDuration("75")
+        viewModel.selectOffset(0)
+        assertTrue(viewModel.continueToConfirmation())
+        draftBeforeReview = (viewModel.uiState.value as ProposalUiState.Reviewing).form
+    }
+
+    @When("cancelo la confirmación")
+    fun cancelConfirmation() {
+        viewModel.cancelReview()
+    }
+
+    @Then("puedo seguir editando la misma propuesta")
+    fun sameDraftRemainsEditable() {
+        assertEquals(draftBeforeReview, viewModel.uiState.value)
     }
 }

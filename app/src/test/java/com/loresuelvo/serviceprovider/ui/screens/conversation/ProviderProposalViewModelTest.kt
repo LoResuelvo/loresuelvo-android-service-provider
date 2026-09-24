@@ -133,6 +133,28 @@ class ProviderProposalViewModelTest {
         assertEquals("UTC", review.form.zoneId)
     }
 
+    @Test fun `cancel review preserves custom draft and allows further editing`() {
+        val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+        val viewModel = ProviderProposalViewModel(handle, validator, clock)
+        viewModel.open(detail(42, 7, ConversationStatus.Active))
+        viewModel.updateAmount("100,50")
+        viewModel.updateDate("2026-10-01")
+        viewModel.updateTime("10:00")
+        viewModel.updateReason("Inspect sink")
+        viewModel.selectDuration(null)
+        viewModel.updateCustomDuration("75")
+        viewModel.selectOffset(0)
+        assertTrue(viewModel.continueToConfirmation())
+        val original = (viewModel.uiState.value as ProposalUiState.Reviewing).form
+
+        viewModel.cancelReview()
+        assertEquals(original, viewModel.uiState.value)
+        viewModel.updateReason("Repair sink")
+        assertEquals(original.copy(reason = "Repair sink"), viewModel.uiState.value)
+        assertEquals("75", handle.get<String>("proposal_duration"))
+        assertEquals(0, handle.get<Int>("proposal_offset_minutes"))
+    }
+
     private fun detail(conversationId: Int, consumerId: Int, status: ConversationStatus) =
         ConversationDetail(
             id = conversationId,
