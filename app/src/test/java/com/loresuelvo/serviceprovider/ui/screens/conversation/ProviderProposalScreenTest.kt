@@ -207,6 +207,26 @@ class ProviderProposalScreenTest {
         assertTrue(openedProfile)
     }
 
+    @Test fun rejectedProposalShowsLocalizedExplanationAndBlocksConfirmation() {
+        var confirmations = 0
+        val review = ProposalUiState.Reviewing(
+            ProposalUiState.Form(42, 7, "Ana Pérez", amount = "100", reason = "Inspect sink"),
+            ValidatedServiceProposal(7, "100", 0L, 0, "Inspect sink", 45),
+            failure = CreateServiceProposalOutcome.Failure.Rejected,
+        )
+        compose.setContent {
+            LoresuelvoTheme {
+                ProviderProposalConfirmationDialog(review, onConfirm = { confirmations++ }, onCancel = {})
+            }
+        }
+        compose.onNodeWithText("No se pudo crear la propuesta. Revisá los datos antes de volver a intentar.")
+            .assertIsDisplayed()
+        compose.onNodeWithText("Consumidor: Ana Pérez").assertExists()
+        compose.onNodeWithText("Inspect sink").assertExists()
+        compose.onNodeWithText("Confirmar envío").assertIsNotEnabled()
+        assertEquals(0, confirmations)
+    }
+
     @Test
     @Config(qualifiers = "es-rAR-w400dp-h400dp")
     fun longReviewScrollsAtLargeFontWithActionsReachable() {

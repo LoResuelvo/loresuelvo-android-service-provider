@@ -82,6 +82,9 @@ class ApiServiceProposalRepositoryTest {
     @Test fun `known field and payment errors are typed but unknown conflict stays generic`() = runTest {
         val cases = listOf(
             Triple(400, "Amount must be greater than 0", CreateServiceProposalOutcome.Failure.Invalid(setOf(ProposalValidationError.Amount))),
+            Triple(400, "unexpected private backend detail", CreateServiceProposalOutcome.Failure.Rejected),
+            Triple(403, "provider blocked", CreateServiceProposalOutcome.Failure.ProviderIneligible),
+            Triple(404, "consumer missing", CreateServiceProposalOutcome.Failure.ConsumerUnavailable),
             Triple(409, "A connected payment account is required before creating a service proposal", CreateServiceProposalOutcome.Failure.PaymentRequired),
             Triple(409, "other", CreateServiceProposalOutcome.Failure.Conflict),
         )

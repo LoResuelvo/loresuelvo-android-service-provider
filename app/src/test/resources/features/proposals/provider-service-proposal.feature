@@ -58,7 +58,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     Then puedo abrir el flujo existente de conexión con Mercado Pago desde Perfil
     And los datos de mi propuesta siguen disponibles sin reenvío automático
 
-  @wip
   Scenario: 11-PSP Explicar el rechazo de una propuesta
     Given que la API rechazará mi propuesta válida
     When confirmo el envío

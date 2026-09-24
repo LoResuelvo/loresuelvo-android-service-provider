@@ -355,4 +355,27 @@ class ProviderProposalSteps {
         testScope.testScheduler.runCurrent()
         assertEquals(1, created.size)
     }
+
+    @Given("que la API rechazará mi propuesta válida")
+    fun apiRejectsValidProposal() {
+        validProposalAwaitsConfirmation()
+        createResult = CreateServiceProposalOutcome.Failure.Rejected
+        draftBeforeReview = (viewModel.uiState.value as ProposalUiState.Reviewing).form
+    }
+
+    @Then("veo una explicación en el idioma de la app y conservo los datos de mi propuesta")
+    fun rejectionPreservesProposal() {
+        val review = viewModel.uiState.value as ProposalUiState.Reviewing
+        assertEquals(CreateServiceProposalOutcome.Failure.Rejected, review.failure)
+        assertEquals(draftBeforeReview, review.form)
+        assertEquals(activeChat.counterpart.id, review.proposal.consumerId)
+        assertEquals(1, created.size)
+    }
+
+    @And("debo resolver el motivo del rechazo antes de volver a enviarla explícitamente")
+    fun rejectionRequiresEditAndNewConfirmation() {
+        assertEquals(CreateServiceProposalOutcome.Failure.Rejected,
+            (viewModel.uiState.value as ProposalUiState.Reviewing).failure)
+        assertEquals(1, created.size)
+    }
 }

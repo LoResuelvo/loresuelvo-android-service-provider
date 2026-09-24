@@ -284,6 +284,91 @@ class ProviderProposalViewModelTest {
         } finally { viewModelStore.clear(); Dispatchers.resetMain() }
     }
 
+    @Test fun `rejected proposal needs a changed value and a new confirmation before another POST`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val calls = mutableListOf<ValidatedServiceProposal>()
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                    calls += proposal
+                    return CreateServiceProposalOutcome.Failure.Rejected
+                }
+            }
+            val viewModel = filledViewModel(CreateServiceProposalUseCase(repository))
+            assertTrue(viewModel.continueToConfirmation())
+            val original = (viewModel.uiState.value as ProposalUiState.Reviewing).form
+            viewModel.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, calls.size)
+            assertEquals(original, (viewModel.uiState.value as ProposalUiState.Reviewing).form)
+
+            viewModel.cancelReview()
+            viewModel.updateReason(original.reason)
+            viewModel.selectDuration(45)
+            assertTrue(viewModel.continueToConfirmation())
+            viewModel.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, calls.size)
+            assertEquals(CreateServiceProposalOutcome.Failure.Rejected,
+                (viewModel.uiState.value as ProposalUiState.Reviewing).failure)
+
+            viewModel.cancelReview()
+            viewModel.selectDuration(60)
+            assertEquals(1, calls.size)
+            assertTrue(viewModel.continueToConfirmation())
+            assertEquals(null, (viewModel.uiState.value as ProposalUiState.Reviewing).failure)
+            assertEquals(1, calls.size)
+            viewModel.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(2, calls.size)
+            assertEquals(60, calls.last().durationMinutes)
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun `restored rejection stays blocked until a real edit and explicit confirmation`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var calls = 0
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                    calls++
+                    return CreateServiceProposalOutcome.Failure.Rejected
+                }
+            }
+            val create = CreateServiceProposalUseCase(repository)
+            val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+            val first = filledViewModel(create, handle = handle)
+            assertTrue(first.continueToConfirmation())
+            first.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, calls)
+            viewModelStore.clear()
+
+            val restored = ProviderProposalViewModel(handle, validator, clock, create, sessionStore)
+                .also { viewModelStore.put("restored", it) }
+            assertTrue(restored.restore(detail(42, 7, ConversationStatus.Active)))
+            assertEquals(CreateServiceProposalOutcome.Failure.Rejected,
+                (restored.uiState.value as ProposalUiState.Reviewing).failure)
+            restored.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, calls)
+            restored.cancelReview()
+            restored.updateReason("Inspect sink")
+            assertTrue(restored.continueToConfirmation())
+            restored.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, calls)
+            restored.cancelReview()
+            restored.updateReason("Inspect sink and pipes")
+            assertEquals(1, calls)
+            assertTrue(restored.continueToConfirmation())
+            assertEquals(null, (restored.uiState.value as ProposalUiState.Reviewing).failure)
+            restored.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(2, calls)
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
     private fun filledViewModel(
         create: CreateServiceProposalUseCase,
         source: ProposalTimeSource = clock,

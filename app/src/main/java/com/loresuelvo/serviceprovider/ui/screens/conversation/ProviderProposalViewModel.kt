@@ -61,7 +61,9 @@ class ProviderProposalViewModel @Inject constructor(
 ) : ViewModel() {
     private val conversationId = checkNotNull(savedStateHandle.get<Int>(Route.Conversation.argument))
     private val state = kotlinx.coroutines.flow.MutableStateFlow<ProposalUiState>(ProposalUiState.Closed)
-    private var blockedFailure: CreateServiceProposalOutcome.Failure? = null
+    private var blockedFailure: CreateServiceProposalOutcome.Failure? =
+        if (savedStateHandle.get<Boolean>("proposal_rejected") == true)
+            CreateServiceProposalOutcome.Failure.Rejected else null
     private var sendJob: Job? = null
     val uiState: StateFlow<ProposalUiState> = state.asStateFlow()
     private val successPending = MutableStateFlow(false)
@@ -138,6 +140,8 @@ class ProviderProposalViewModel @Inject constructor(
     fun updateReason(value: String) = update("proposal_reason", value) { copy(reason = value) }
     fun selectDuration(minutes: Int?) {
         val form = state.value as? ProposalUiState.Form ?: return
+        if (form.duration != (minutes?.toString() ?: "") || form.customDuration != (minutes == null))
+            clearRejection()
         savedStateHandle["proposal_custom_duration"] = minutes == null
         savedStateHandle["proposal_duration"] = minutes?.toString() ?: ""
         state.value = form.copy(duration = minutes?.toString() ?: "", customDuration = minutes == null)
@@ -147,6 +151,7 @@ class ProviderProposalViewModel @Inject constructor(
 
     fun selectOffset(minutes: Int) {
         val form = state.value as? ProposalUiState.Form ?: return
+        if (form.selectedOffsetMinutes != minutes) clearRejection()
         savedStateHandle["proposal_offset_minutes"] = minutes
         state.value = form.copy(selectedOffsetMinutes = minutes)
     }
@@ -211,6 +216,7 @@ class ProviderProposalViewModel @Inject constructor(
                     if (outcome != CreateServiceProposalOutcome.Failure.Uncertain &&
                         outcome !is CreateServiceProposalOutcome.Failure.Invalid) {
                         blockedFailure = outcome
+                        savedStateHandle["proposal_rejected"] = outcome == CreateServiceProposalOutcome.Failure.Rejected
                     }
                     state.value = reviewing.copy(failure = outcome, duplicateRiskAcknowledged = false)
                 }
@@ -243,17 +249,27 @@ class ProviderProposalViewModel @Inject constructor(
 
     private fun update(key: String, value: String, change: ProposalUiState.Form.() -> ProposalUiState.Form) {
         val form = state.value as? ProposalUiState.Form ?: return
-        if (blockedFailure == CreateServiceProposalOutcome.Failure.Rejected) blockedFailure = null
+        val changed = form.change()
+        if (changed == form) return
+        clearRejection()
         savedStateHandle[key] = value
         if (key == "proposal_date" || key == "proposal_time") savedStateHandle["proposal_offset_minutes"] = null
-        state.value = form.change().copy(errors = emptySet())
+        state.value = changed.copy(errors = emptySet())
+    }
+
+    private fun clearRejection() {
+        if (blockedFailure == CreateServiceProposalOutcome.Failure.Rejected) {
+            blockedFailure = null
+            savedStateHandle["proposal_rejected"] = false
+        }
     }
 
     private fun clearDraft() {
+        blockedFailure = null
         listOf("proposal_amount", "proposal_date", "proposal_time", "proposal_reason",
             "proposal_duration", "proposal_custom_duration", "proposal_zone_id",
             "proposal_offset_minutes", "proposal_send_uncertain", "proposal_visible",
-            "proposal_reviewing", "proposal_consumer_id", "proposal_owner_id")
+            "proposal_reviewing", "proposal_consumer_id", "proposal_owner_id", "proposal_rejected")
             .forEach { savedStateHandle.remove<Any>(it) }
     }
 }
