@@ -199,8 +199,7 @@ fun ProviderConversationScreen(
             onPickFromGallery = onPickFromGallery,
             onCaptureFromCamera = onCaptureFromCamera,
             onDismiss = { attachSheetVisible = false },
-            onCreateProposal = ((state as? ProviderConversationUiState.Ready)?.detail
-                ?.takeIf { it.status == ConversationStatus.Active })?.let { onCreateProposal },
+            onCreateProposal = onCreateProposal.takeIf { state.canCreateProposal() },
         )
     }
 
@@ -209,6 +208,9 @@ fun ProviderConversationScreen(
     // tests exercise the screen with the defaults).
     @Suppress("UnusedParameter") val keepOnAttach = onAttachClick
 }
+
+internal fun ProviderConversationUiState.canCreateProposal(): Boolean =
+    (this as? ProviderConversationUiState.Ready)?.detail?.status == ConversationStatus.Active
 
 @Composable
 private fun LoadingState(modifier: Modifier = Modifier) {

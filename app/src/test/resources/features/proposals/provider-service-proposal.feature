@@ -6,7 +6,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     Then el formulario de propuesta identifica a ese consumidor
     And ofrece monto, fecha, hora, motivo de la visita y duración estimada
 
-  @wip
   Scenario: 02-PSP Ocultar la creación de propuestas en un chat que no está activo
     Given que el chat con el consumidor no está activo
     When abro las acciones del chat

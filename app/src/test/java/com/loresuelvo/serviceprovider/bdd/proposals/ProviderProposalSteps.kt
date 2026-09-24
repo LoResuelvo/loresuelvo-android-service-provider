@@ -3,15 +3,19 @@ package com.loresuelvo.serviceprovider.bdd.proposals
 import androidx.lifecycle.SavedStateHandle
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProposalUiState
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderProposalViewModel
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationUiState
+import com.loresuelvo.serviceprovider.ui.screens.conversation.canCreateProposal
 import io.cucumber.java.en.And
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 
 class ProviderProposalSteps {
@@ -19,6 +23,8 @@ class ProviderProposalSteps {
         SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
     )
     private lateinit var activeChat: ConversationDetail
+    private lateinit var nonActiveStates: List<ProviderConversationUiState>
+    private lateinit var proposalActionsAvailable: List<Boolean>
 
     @Given("que estoy en un chat activo con un consumidor")
     fun activeConsumerChat() {
@@ -53,5 +59,35 @@ class ProviderProposalSteps {
         assertEquals("", form.reason)
         assertEquals("", form.duration)
         assertEquals(false, form.customDuration)
+    }
+
+    @Given("que el chat con el consumidor no está activo")
+    fun nonActiveConsumerChat() {
+        activeConsumerChat()
+        nonActiveStates = listOf(
+            ConversationStatus.Pending,
+            ConversationStatus.Rejected,
+            ConversationStatus.Unsupported("other"),
+        ).map { status ->
+            ProviderConversationUiState.Ready(
+                detail = activeChat.copy(status = status), items = emptyList(),
+                promptInput = "", sending = false,
+            )
+        } + listOf(
+            ProviderConversationUiState.Loading,
+            ProviderConversationUiState.Error(
+                ConversationDetailOutcome.Failure.Network(RuntimeException("offline")),
+            ),
+        )
+    }
+
+    @When("abro las acciones del chat")
+    fun openChatActions() {
+        proposalActionsAvailable = nonActiveStates.map { it.canCreateProposal() }
+    }
+
+    @Then("Crear propuesta de servicio no está disponible")
+    fun proposalActionIsUnavailable() {
+        proposalActionsAvailable.forEach { assertFalse(it) }
     }
 }

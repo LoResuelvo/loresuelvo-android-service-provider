@@ -7,8 +7,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.runtime.mutableStateOf
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_ATTACH_BUTTON_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CREATE_PROPOSAL_ROW_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
@@ -46,6 +49,36 @@ class ProviderConversationScreenTest {
         composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).assertIsDisplayed()
     }
 
+    @Test
+    fun nonactive_chats_keep_media_actions_without_proposal_action() {
+        val base = readyState("")
+        val state = mutableStateOf<ProviderConversationUiState>(
+            base.copy(detail = base.detail.copy(status = ConversationStatus.Pending)),
+        )
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = state.value, onPromptChange = {}, onSendClick = {},
+                    onRetrySendFailedBubble = {}, onRetryLoad = {}, onMediaPicked = {},
+                    onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
+        listOf(
+            ConversationStatus.Pending,
+            ConversationStatus.Rejected,
+            ConversationStatus.Unsupported("other"),
+        ).forEach { status ->
+            composeTestRule.runOnIdle {
+                state.value = base.copy(detail = base.detail.copy(status = status))
+            }
+            composeTestRule.onNodeWithTag(PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG).assertIsDisplayed()
+            composeTestRule.onNodeWithTag(PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG).assertIsDisplayed()
+            composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).assertDoesNotExist()
+        }
+    }
+
 
     @Test
     fun renders_the_loading_indicator_when_state_is_Loading() {
@@ -67,6 +100,7 @@ class ProviderConversationScreenTest {
         composeTestRule
             .onNodeWithTag(PROVIDER_CONVERSATION_LOADING_TAG)
             .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -94,6 +128,7 @@ class ProviderConversationScreenTest {
         composeTestRule
             .onNodeWithTag(PROVIDER_CONVERSATION_ERROR_TAG)
             .assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).assertDoesNotExist()
         composeTestRule
             .onNodeWithTag(PROVIDER_CONVERSATION_RETRY_LOAD_TAG)
             .assertIsDisplayed()
