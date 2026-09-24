@@ -346,6 +346,7 @@ fun MediaAttachSheet(
     onPickFromGallery: () -> Unit,
     onCaptureFromCamera: () -> Unit,
     onDismiss: () -> Unit,
+    onCreateProposal: (() -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(
@@ -373,6 +374,13 @@ fun MediaAttachSheet(
                 },
                 testTag = PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG,
             )
+            if (onCreateProposal != null) {
+                MediaAttachRow(
+                    labelRes = R.string.provider_proposal_create,
+                    onClick = { onCreateProposal(); onDismiss() },
+                    testTag = PROVIDER_CREATE_PROPOSAL_ROW_TAG,
+                )
+            }
         }
     }
 }
@@ -415,3 +423,4 @@ const val PROVIDER_CHAT_RECORDING_TIMER_TAG: String = "provider-chat-recording-t
 const val PROVIDER_CHAT_RECORDING_STOP_BUTTON_TAG: String = "provider-chat-recording-stop-button"
 const val PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG: String = "provider-media-attach-gallery-row"
 const val PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG: String = "provider-media-attach-camera-row"
+const val PROVIDER_CREATE_PROPOSAL_ROW_TAG: String = "provider-create-proposal-row"

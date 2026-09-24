@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.ChatInputBar
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MediaAttachSheet
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MessageBubble
@@ -90,6 +91,7 @@ fun ProviderConversationScreen(
     onAttachClick: () -> Unit = {},
     onPickFromGallery: () -> Unit = {},
     onCaptureFromCamera: () -> Unit = {},
+    onCreateProposal: () -> Unit = {},
     onMicClick: () -> Unit = {},
     onStopRecording: () -> Unit = {},
     onPlayAudio: (String, String) -> Unit = { _, _ -> },
@@ -197,6 +199,8 @@ fun ProviderConversationScreen(
             onPickFromGallery = onPickFromGallery,
             onCaptureFromCamera = onCaptureFromCamera,
             onDismiss = { attachSheetVisible = false },
+            onCreateProposal = ((state as? ProviderConversationUiState.Ready)?.detail
+                ?.takeIf { it.status == ConversationStatus.Active })?.let { onCreateProposal },
         )
     }
 

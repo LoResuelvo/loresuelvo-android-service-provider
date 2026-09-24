@@ -11,6 +11,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -46,6 +48,8 @@ fun ProviderConversationRoute(
 ) {
     val viewModel: ProviderConversationViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val proposalViewModel: ProviderProposalViewModel = hiltViewModel()
+    val proposalState by proposalViewModel.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val outputUriFactory = remember {
@@ -93,6 +97,9 @@ fun ProviderConversationRoute(
         onRetryLoad = viewModel::onRetryLoad,
         onMediaPicked = viewModel::onMediaPicked,
         onClearStagedMedia = viewModel::onClearStagedMedia,
+        onCreateProposal = {
+            (state as? ProviderConversationUiState.Ready)?.detail?.let(proposalViewModel::open)
+        },
         onPickFromGallery = {
             galleryLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
@@ -119,6 +126,25 @@ fun ProviderConversationRoute(
         onPauseAudio = viewModel::onPauseAudio,
         onClose = { navController.popBackStack() },
     )
+
+    val form = proposalState as? ProposalUiState.Form
+    if (form != null) {
+        Dialog(
+            onDismissRequest = proposalViewModel::close,
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            ProviderProposalScreen(
+                form = form,
+                onAmountChange = proposalViewModel::updateAmount,
+                onDateChange = proposalViewModel::updateDate,
+                onTimeChange = proposalViewModel::updateTime,
+                onReasonChange = proposalViewModel::updateReason,
+                onDurationSelect = proposalViewModel::selectDuration,
+                onCustomDurationChange = proposalViewModel::updateCustomDuration,
+                onClose = proposalViewModel::close,
+            )
+        }
+    }
 }
 
 @dagger.hilt.EntryPoint

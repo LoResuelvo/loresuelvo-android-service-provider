@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.loresuelvo.serviceprovider.MainActivity
+import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupConversationRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupCurrentAccountRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupSessionStore
@@ -32,7 +33,9 @@ import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BA
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.screens.conversation.PROVIDER_CONVERSATION_BACK_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.PROVIDER_CONVERSATION_MESSAGES_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_FORM_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_ATTACH_BUTTON_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CREATE_PROPOSAL_ROW_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG
 import com.loresuelvo.serviceprovider.ui.screens.messages.components.PROVIDER_MESSAGES_ROW_TAG_PREFIX
 import dagger.hilt.EntryPoint
@@ -194,6 +197,20 @@ class ProviderConversationAttachmentAcceptanceTest {
         composeTestRule
             .onNodeWithTag(PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG)
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun active_chat_action_opens_form_for_the_consumer() {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + 42).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).performClick()
+
+        composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
+        val context = composeTestRule.activity
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_consumer, "Ana Pérez")).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount)).assertIsDisplayed()
     }
 }
 

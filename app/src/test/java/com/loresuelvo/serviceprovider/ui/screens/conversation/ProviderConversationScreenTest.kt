@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_ATTACH_BUTTON_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CREATE_PROPOSAL_ROW_TAG
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
@@ -28,6 +30,22 @@ class ProviderConversationScreenTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test
+    fun active_chat_offers_proposal_after_media_actions() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(""), onPromptChange = {}, onSendClick = {},
+                    onRetrySendFailedBubble = {}, onRetryLoad = {}, onMediaPicked = {},
+                    onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).assertIsDisplayed()
+    }
+
 
     @Test
     fun renders_the_loading_indicator_when_state_is_Loading() {

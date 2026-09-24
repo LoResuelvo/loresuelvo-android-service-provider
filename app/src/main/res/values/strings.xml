@@ -114,6 +114,18 @@
     <string name="provider_conversation_attach_content_description">Adjuntar imagen</string>
     <string name="provider_conversation_attach_gallery">Elegir de la galería</string>
     <string name="provider_conversation_attach_camera">Tomar foto</string>
+    <string name="provider_proposal_create">Crear propuesta de servicio</string>
+    <string name="provider_proposal_title">Propuesta de servicio</string>
+    <string name="provider_proposal_close">Volver al chat</string>
+    <string name="provider_proposal_consumer">Consumidor: %1$s</string>
+    <string name="provider_proposal_amount">Monto</string>
+    <string name="provider_proposal_date">Fecha</string>
+    <string name="provider_proposal_time">Hora</string>
+    <string name="provider_proposal_reason">Motivo de la visita</string>
+    <string name="provider_proposal_duration">Duración estimada</string>
+    <string name="provider_proposal_duration_minutes">%1$d minutos</string>
+    <string name="provider_proposal_duration_custom">Personalizada</string>
+    <string name="provider_proposal_duration_minutes_label">Minutos</string>
     <string name="provider_conversation_clear_media_content_description">Quitar imagen adjunta</string>
 
     <!-- Provider conversation detail (US-C: audio attachments) -->

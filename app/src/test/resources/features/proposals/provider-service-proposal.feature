@@ -1,6 +1,5 @@
 Feature: Enviar una propuesta de servicio desde el chat
 
-  @wip
   Scenario: 01-PSP Abrir una propuesta desde un chat activo
     Given que estoy en un chat activo con un consumidor
     When elijo Crear propuesta de servicio entre las acciones del chat
