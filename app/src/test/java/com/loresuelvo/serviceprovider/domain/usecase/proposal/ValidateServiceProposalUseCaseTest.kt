@@ -43,6 +43,9 @@ class ValidateServiceProposalUseCaseTest {
             .forEach { assertTrue("amount=$it", ProposalValidationError.Amount in errors(base.copy(amount = it))) }
         val maximum = validate(base.copy(amount = "92233720368547758,07"), now, utc)
             as ProposalValidationOutcome.Valid
+        val minimum = validate(base.copy(amount = "0,01"), now, utc)
+            as ProposalValidationOutcome.Valid
+        assertEquals("0.01", minimum.proposal.amountPesos)
         assertEquals("92233720368547758.07", maximum.proposal.amountPesos)
         assertTrue(ProposalValidationError.Amount in errors(base.copy(amount = "92233720368547758.08")))
     }

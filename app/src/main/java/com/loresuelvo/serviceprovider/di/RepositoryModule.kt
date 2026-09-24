@@ -16,6 +16,8 @@ import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.data.api.ApiServiceProposalRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -66,6 +68,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindProviderRepository(impl: ApiProviderRepository): ProviderRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindServiceProposalRepository(impl: ApiServiceProposalRepository): ServiceProposalRepository
 
     @Binds
     @Singleton

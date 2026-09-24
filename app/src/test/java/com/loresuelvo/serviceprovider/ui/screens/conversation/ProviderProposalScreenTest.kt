@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.screens.conversation
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
@@ -33,6 +34,23 @@ import org.robolectric.shadows.ShadowDialog
 @Config(qualifiers = "es-rAR", sdk = [34])
 class ProviderProposalScreenTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test fun sendingDisablesFormEditingAndDismissal() {
+        val form = ProposalUiState.Form(42, 7, "Ana Pérez", customDuration = true, duration = "45")
+        val review = ProposalUiState.Reviewing(form, ValidatedServiceProposal(7, "100", 0L, 0, "Inspect", 45))
+        compose.setContent {
+            LoresuelvoTheme {
+                ProviderProposalScreen(form, {}, {}, {}, {}, {}, {}, {}, enabled = false)
+                ProviderProposalConfirmationDialog(review, sending = true, onCancel = {})
+            }
+        }
+        listOf(PROPOSAL_DATE_TAG, PROPOSAL_TIME_TAG, PROPOSAL_DURATION_TAG,
+            PROPOSAL_CUSTOM_DURATION_TAG, PROPOSAL_CONTINUE_TAG).forEach {
+            compose.onNodeWithTag(it).assertIsNotEnabled()
+        }
+        compose.onNodeWithText("Enviando…").assertIsNotEnabled()
+        compose.onNodeWithText("Volver a editar").assertIsNotEnabled()
+    }
 
     @Test fun formShowsConsumerAndEditableFields() {
         compose.setContent {
@@ -157,16 +175,16 @@ class ProviderProposalScreenTest {
         assertEquals(660, form.value.selectedOffsetMinutes)
     }
 
-    @Test fun reviewDisplaysVisitDetailsWithoutEnabledSend() {
+    @Test fun reviewDisplaysVisitDetailsWithSendAction() {
         val review = ProposalUiState.Reviewing(
             ProposalUiState.Form(42, 7, "Ana Pérez", date = "2026-10-01", time = "10:00", zoneId = "UTC"),
             ValidatedServiceProposal(7, "100.5", 0L, 0, "Inspect sink", 45),
         )
-        compose.setContent { LoresuelvoTheme { ProviderProposalConfirmationDialog(review, {}) } }
+        compose.setContent { LoresuelvoTheme { ProviderProposalConfirmationDialog(review, onCancel = {}) } }
         compose.onNodeWithTag(PROPOSAL_CONFIRMATION_TAG).assertExists()
         listOf("Consumidor: Ana Pérez", "Monto: ARS 100.5", "Visita: 2026-10-01 a las 10:00 (UTC, UTC+00:00)",
             "45 minutos", "Inspect sink").forEach { compose.onNodeWithText(it).assertExists() }
-        compose.onNodeWithText("Confirmar envío").assertIsNotEnabled()
+        compose.onNodeWithText("Confirmar envío").assertIsEnabled()
     }
 
     @Test
@@ -180,13 +198,13 @@ class ProviderProposalScreenTest {
         )
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f)) {
-                LoresuelvoTheme { ProviderProposalConfirmationDialog(review, { returnedToEditing = true }) }
+                LoresuelvoTheme { ProviderProposalConfirmationDialog(review, onCancel = { returnedToEditing = true }) }
             }
         }
         compose.onNodeWithText(reason).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Volver a editar").assertIsDisplayed().performClick()
         assertTrue(returnedToEditing)
-        compose.onNodeWithText("Confirmar envío").assertIsNotEnabled()
+        compose.onNodeWithText("Confirmar envío").assertIsEnabled()
     }
 
     @Test fun cancelButtonAndBackInvokeReviewCancellation() {

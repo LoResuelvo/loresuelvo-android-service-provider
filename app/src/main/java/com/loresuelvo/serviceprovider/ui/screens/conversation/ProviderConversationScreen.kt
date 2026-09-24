@@ -97,10 +97,11 @@ fun ProviderConversationScreen(
     onPlayAudio: (String, String) -> Unit = { _, _ -> },
     onPauseAudio: () -> Unit = {},
     onDismissMediaError: () -> Unit = {},
+    proposalSnackbarHostState: SnackbarHostState? = null,
     modifier: Modifier = Modifier,
 ) {
     var attachSheetVisible by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = proposalSnackbarHostState ?: remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(state) {

@@ -34,7 +34,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     When cierro el formulario
     Then vuelvo al mismo chat sin enviar una propuesta
 
-  @wip
   Scenario: 07-PSP Enviar una propuesta correctamente
     Given que una propuesta válida espera mi confirmación
     And el servicio confirmará su creación

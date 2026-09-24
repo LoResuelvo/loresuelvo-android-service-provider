@@ -5,6 +5,7 @@ import com.loresuelvo.serviceprovider.BuildConfig
 import com.loresuelvo.serviceprovider.data.api.ApiConfig
 import com.loresuelvo.serviceprovider.data.api.AuthInterceptor
 import com.loresuelvo.serviceprovider.data.api.BackendApi
+import com.loresuelvo.serviceprovider.data.api.ServiceProposalApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,6 +15,9 @@ import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody
+import okhttp3.MediaType
+import okio.BufferedSink
 import retrofit2.Retrofit
 import java.util.concurrent.TimeUnit
 
@@ -78,4 +82,31 @@ object NetworkModule {
     @Singleton
     fun provideBackendApi(retrofit: Retrofit): BackendApi =
         retrofit.create(BackendApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideServiceProposalApi(client: OkHttpClient, json: Json): ServiceProposalApi =
+        createServiceProposalApi(BuildConfig.API_URL, client, json)
+
+    internal fun createServiceProposalApi(baseUrl: String, client: OkHttpClient, json: Json): ServiceProposalApi {
+        val proposalClient = client.newBuilder()
+            .retryOnConnectionFailure(false)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                val body = checkNotNull(request.body)
+                val oneShot = object : RequestBody() {
+                    override fun contentType(): MediaType? = body.contentType()
+                    override fun contentLength(): Long = body.contentLength()
+                    override fun writeTo(sink: BufferedSink) = body.writeTo(sink)
+                    override fun isOneShot(): Boolean = true
+                }
+                chain.proceed(request.newBuilder().method(request.method, oneShot).build())
+            }
+            .build()
+        return Retrofit.Builder().baseUrl(baseUrl).client(proposalClient)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build().create(ServiceProposalApi::class.java)
+    }
 }

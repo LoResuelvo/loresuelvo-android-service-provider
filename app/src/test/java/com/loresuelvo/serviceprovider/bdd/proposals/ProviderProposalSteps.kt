@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.bdd.proposals
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
@@ -10,6 +11,10 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.ProposalUiState
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderProposalViewModel
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProposalTimeSource
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
+import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.CreateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.ValidateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationUiState
 import com.loresuelvo.serviceprovider.ui.screens.conversation.canCreateProposal
@@ -17,23 +22,57 @@ import io.cucumber.java.en.And
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.When
+import io.cucumber.java.Before
+import io.cucumber.java.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.cancel
 
 class ProviderProposalSteps {
+    private val savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+    private val testScope = TestScope(StandardTestDispatcher())
+    private val viewModelStore = ViewModelStore()
+    private val created = mutableListOf<ValidatedServiceProposal>()
+    private var createResult: CreateServiceProposalOutcome = CreateServiceProposalOutcome.Created(9)
+    private val creation = CreateServiceProposalUseCase(object : ServiceProposalRepository {
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+            created += proposal
+            return createResult
+        }
+    })
     private val viewModel = ProviderProposalViewModel(
-        SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
+        savedStateHandle,
         ValidateServiceProposalUseCase(),
         object : ProposalTimeSource() {
             override fun nowMillis() = 1_780_000_000_000L
             override fun zone() = java.util.TimeZone.getTimeZone("UTC")
         },
+        creation,
     )
     private lateinit var activeChat: ConversationDetail
     private lateinit var nonActiveStates: List<ProviderConversationUiState>
     private lateinit var proposalActionsAvailable: List<Boolean>
     private lateinit var draftBeforeReview: ProposalUiState.Form
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(StandardTestDispatcher(testScope.testScheduler))
+        viewModelStore.put("proposal", viewModel)
+    }
+
+    @After
+    fun tearDown() {
+        viewModelStore.clear()
+        testScope.cancel()
+        Dispatchers.resetMain()
+    }
 
     @Given("que estoy en un chat activo con un consumidor")
     fun activeConsumerChat() {
@@ -123,8 +162,7 @@ class ProviderProposalSteps {
 
     @And("no se envía ninguna propuesta")
     fun noProposalIsSent() {
-        // The only reachable production state is the editing form; submission is not available here.
-        assertTrue(viewModel.uiState.value is ProposalUiState.Form)
+        assertEquals(0, created.size)
     }
 
     @Given("que mi propuesta contiene datos válidos de la visita")
@@ -155,7 +193,7 @@ class ProviderProposalSteps {
 
     @And("todavía no se ha enviado ninguna propuesta")
     fun notSentBeforeConfirmation() {
-        assertTrue(viewModel.uiState.value is ProposalUiState.Reviewing)
+        assertEquals(0, created.size)
     }
 
     @Given("que estoy revisando la confirmación de una propuesta")
@@ -194,5 +232,38 @@ class ProviderProposalSteps {
     @Then("vuelvo al mismo chat sin enviar una propuesta")
     fun sameChatRemainsWithoutProposal() {
         assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
+        assertEquals(0, created.size)
+    }
+
+    @Given("que una propuesta válida espera mi confirmación")
+    fun validProposalAwaitsConfirmation() {
+        validVisitDraft()
+        assertTrue(viewModel.continueToConfirmation())
+    }
+
+    @And("el servicio confirmará su creación")
+    fun serviceConfirmsCreation() {
+        createResult = CreateServiceProposalOutcome.Created(9)
+    }
+
+    @When("confirmo el envío")
+    fun confirmProposalSend() {
+        viewModel.confirmSend()
+        testScope.testScheduler.advanceUntilIdle()
+    }
+
+    @Then("vuelvo al chat con la confirmación Propuesta enviada")
+    fun returnToChatWithConfirmation() {
+        assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
+        assertTrue(viewModel.hasSuccess.value)
+        assertEquals(1, created.size)
+    }
+
+    @And("el formulario se limpia después de crear una propuesta pendiente")
+    fun formIsClearedAfterPendingCreation() {
+        listOf("proposal_amount", "proposal_date", "proposal_time", "proposal_reason",
+            "proposal_duration", "proposal_send_uncertain").forEach {
+            assertFalse(savedStateHandle.contains(it))
+        }
     }
 }

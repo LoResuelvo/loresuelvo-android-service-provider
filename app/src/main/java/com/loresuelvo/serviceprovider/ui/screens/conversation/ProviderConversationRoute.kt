@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,6 +20,12 @@ import androidx.navigation.NavHostController
 import com.loresuelvo.serviceprovider.data.media.MediaOutputUriFactory
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.SnackbarHostState
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.collect
+import com.loresuelvo.serviceprovider.R
 
 /**
  * Route composable for `Route.Conversation` on the provider side.
@@ -52,6 +59,17 @@ fun ProviderConversationRoute(
     val proposalState by proposalViewModel.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val proposalSnackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(proposalViewModel, lifecycleOwner, proposalSnackbarHostState) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            proposalViewModel.hasSuccess.collect { pending ->
+                if (pending && proposalViewModel.consumeSuccess()) {
+                    proposalSnackbarHostState.showSnackbar(context.getString(R.string.provider_proposal_sent))
+                }
+            }
+        }
+    }
     val outputUriFactory = remember {
         EntryPointAccessors.fromApplication(
             context.applicationContext,
@@ -91,6 +109,7 @@ fun ProviderConversationRoute(
 
     ProviderConversationScreen(
         state = state,
+        proposalSnackbarHostState = proposalSnackbarHostState,
         onPromptChange = viewModel::onPromptChange,
         onSendClick = viewModel::onSendClick,
         onRetrySendFailedBubble = viewModel::onRetrySendFailedBubble,
@@ -127,7 +146,8 @@ fun ProviderConversationRoute(
         onClose = { navController.popBackStack() },
     )
 
-    val reviewing = proposalState as? ProposalUiState.Reviewing
+    val sending = proposalState as? ProposalUiState.Sending
+    val reviewing = (proposalState as? ProposalUiState.Reviewing) ?: sending?.reviewing
     val form = (proposalState as? ProposalUiState.Form) ?: reviewing?.form
     if (form != null) {
         Dialog(
@@ -145,10 +165,17 @@ fun ProviderConversationRoute(
                 onClose = proposalViewModel::close,
                 onContinue = { proposalViewModel.continueToConfirmation() },
                 onOffsetSelect = proposalViewModel::selectOffset,
+                enabled = sending == null,
             )
         }
         if (reviewing != null) {
-            ProviderProposalConfirmationDialog(reviewing, proposalViewModel::cancelReview)
+            ProviderProposalConfirmationDialog(
+                reviewing = reviewing,
+                onConfirm = proposalViewModel::confirmSend,
+                onAcknowledgeRisk = proposalViewModel::acknowledgeDuplicateRisk,
+                sending = sending != null,
+                onCancel = proposalViewModel::cancelReview,
+            )
         }
     }
 }

@@ -141,6 +141,17 @@
     <string name="provider_proposal_cancel_review">Back to editing</string>
     <string name="provider_proposal_reason_error">Explain the visit reason.</string>
     <string name="provider_proposal_duration_error">Choose a whole duration from 15 to 1440 minutes.</string>
+    <string name="provider_proposal_sent">Proposal sent</string>
+    <string name="provider_proposal_sending">Sending…</string>
+    <string name="provider_proposal_rejected">The proposal could not be created. Review the details before trying again.</string>
+    <string name="provider_proposal_session_expired">Your session expired. Sign in again before sending the proposal.</string>
+    <string name="provider_proposal_provider_ineligible">Your account cannot create this proposal right now.</string>
+    <string name="provider_proposal_consumer_unavailable">The consumer is no longer available for this proposal.</string>
+    <string name="provider_proposal_payment_required">Connect your payment account from Profile before sending the proposal.</string>
+    <string name="provider_proposal_inactive_conversation">The conversation is no longer active. Check the chat before creating another proposal.</string>
+    <string name="provider_proposal_conflict">A conflict prevented this proposal. Check the chat before trying again.</string>
+    <string name="provider_proposal_uncertain">We cannot tell whether the proposal was created. Check the chat before sending again; it could duplicate.</string>
+    <string name="provider_proposal_acknowledge_risk">I understand it could duplicate</string>
     <string name="provider_conversation_clear_media_content_description">Remove attached image</string>
 
     <!-- Provider conversation detail (US-C: audio attachments) -->

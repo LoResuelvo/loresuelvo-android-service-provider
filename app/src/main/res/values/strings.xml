@@ -141,6 +141,17 @@
     <string name="provider_proposal_cancel_review">Volver a editar</string>
     <string name="provider_proposal_reason_error">Explicá el motivo de la visita.</string>
     <string name="provider_proposal_duration_error">Elegí una duración de 15 a 1440 minutos enteros.</string>
+    <string name="provider_proposal_sent">Propuesta enviada</string>
+    <string name="provider_proposal_sending">Enviando…</string>
+    <string name="provider_proposal_rejected">No se pudo crear la propuesta. Revisá los datos antes de volver a intentar.</string>
+    <string name="provider_proposal_session_expired">Tu sesión expiró. Volvé a iniciar sesión antes de enviar la propuesta.</string>
+    <string name="provider_proposal_provider_ineligible">Tu cuenta no puede crear esta propuesta por ahora.</string>
+    <string name="provider_proposal_consumer_unavailable">El consumidor ya no está disponible para esta propuesta.</string>
+    <string name="provider_proposal_payment_required">Conectá tu cuenta de pagos desde Perfil antes de enviar la propuesta.</string>
+    <string name="provider_proposal_inactive_conversation">La conversación ya no está activa. Revisá el chat antes de crear otra propuesta.</string>
+    <string name="provider_proposal_conflict">No se pudo crear la propuesta por un conflicto. Revisá el chat antes de volver a intentar.</string>
+    <string name="provider_proposal_uncertain">No sabemos si se creó la propuesta. Revisá el chat antes de volver a enviarla: podría duplicarse.</string>
+    <string name="provider_proposal_acknowledge_risk">Entiendo el riesgo de duplicarla</string>
     <string name="provider_conversation_clear_media_content_description">Quitar imagen adjunta</string>
 
     <!-- Provider conversation detail (US-C: audio attachments) -->

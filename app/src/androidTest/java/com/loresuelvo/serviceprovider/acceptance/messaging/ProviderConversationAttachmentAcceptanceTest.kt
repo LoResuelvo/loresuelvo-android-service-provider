@@ -16,7 +16,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.test.espresso.Espresso.onView
 import android.view.KeyEvent
 import androidx.test.espresso.action.ViewActions.click
@@ -39,6 +39,7 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupConversationRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupCurrentAccountRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupSessionStore
+import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupServiceProposalRepository
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
@@ -109,6 +110,7 @@ class ProviderConversationAttachmentAcceptanceTest {
     private lateinit var sessionStore: ProviderSignupSessionStore
     private lateinit var currentAccountRepository: ProviderSignupCurrentAccountRepository
     private lateinit var conversationRepository: ProviderSignupConversationRepository
+    private lateinit var proposalRepository: ProviderSignupServiceProposalRepository
 
     @Before
     fun setUp() {
@@ -120,6 +122,8 @@ class ProviderConversationAttachmentAcceptanceTest {
         sessionStore = entryPoint.sessionStore()
         currentAccountRepository = entryPoint.currentAccountRepository()
         conversationRepository = entryPoint.conversationRepository()
+        proposalRepository = entryPoint.proposalRepository()
+        proposalRepository.created.clear()
 
         currentAccountRepository.outcome = CurrentAccountOutcome.Success(
             CurrentAccount.Provider(
@@ -283,6 +287,41 @@ class ProviderConversationAttachmentAcceptanceTest {
 
     @Test
     fun valid_form_opens_review_on_same_conversation_without_sending() {
+        openValidProposalReview()
+        val context = composeTestRule.activity
+        val insideConfirmation = hasAnyAncestor(hasTestTag(PROPOSAL_CONFIRMATION_TAG))
+        composeTestRule.onNode(hasText(context.getString(R.string.provider_proposal_consumer, "Ana Pérez"))
+            .and(insideConfirmation)).assertIsDisplayed()
+        composeTestRule.onNode(hasText(context.getString(R.string.provider_proposal_review_amount, "100.5"))
+            .and(insideConfirmation)).assertIsDisplayed()
+        composeTestRule.onNode(hasText("Inspect sink").and(insideConfirmation)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_confirm_send)).assertIsEnabled()
+    }
+
+    @Test
+    fun confirmed_proposal_returns_to_chat_and_clears_form() {
+        openValidProposalReview()
+        val context = composeTestRule.activity
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_confirm_send)).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithTag(PROPOSAL_FORM_TAG).assertCountEquals(0)
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_sent)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Ana Pérez").assertIsDisplayed()
+        org.junit.Assert.assertEquals(1, proposalRepository.created.size)
+        org.junit.Assert.assertEquals(7, proposalRepository.created.single().consumerId)
+        org.junit.Assert.assertEquals("100.5", proposalRepository.created.single().amountPesos)
+        composeTestRule.activityRule.scenario.recreate()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_sent)).assertDoesNotExist()
+        org.junit.Assert.assertEquals(1, proposalRepository.created.size)
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).performClick()
+        composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithText("100,50").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Inspect sink").assertDoesNotExist()
+    }
+
+    private fun openValidProposalReview() {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
         composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + 42).performClick()
@@ -323,13 +362,6 @@ class ProviderConversationAttachmentAcceptanceTest {
             .performSemanticsAction(SemanticsActions.OnClick)
         composeTestRule.onNodeWithTag(PROPOSAL_CONTINUE_TAG).performScrollTo().performClick()
         composeTestRule.onNodeWithTag(PROPOSAL_CONFIRMATION_TAG).assertIsDisplayed()
-        val insideConfirmation = hasAnyAncestor(hasTestTag(PROPOSAL_CONFIRMATION_TAG))
-        composeTestRule.onNode(hasText(context.getString(R.string.provider_proposal_consumer, "Ana Pérez"))
-            .and(insideConfirmation)).assertIsDisplayed()
-        composeTestRule.onNode(hasText(context.getString(R.string.provider_proposal_review_amount, "100.5"))
-            .and(insideConfirmation)).assertIsDisplayed()
-        composeTestRule.onNode(hasText("Inspect sink").and(insideConfirmation)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_confirm_send)).assertIsNotEnabled()
     }
 
     private fun pickerAction(description: String, change: (View) -> Unit): ViewAction = object : ViewAction {
@@ -351,4 +383,6 @@ interface ProviderConversationAttachmentTestEntryPoint {
     fun currentAccountRepository(): ProviderSignupCurrentAccountRepository
 
     fun conversationRepository(): ProviderSignupConversationRepository
+
+    fun proposalRepository(): ProviderSignupServiceProposalRepository
 }

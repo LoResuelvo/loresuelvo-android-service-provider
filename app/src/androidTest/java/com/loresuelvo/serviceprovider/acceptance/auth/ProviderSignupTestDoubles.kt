@@ -37,6 +37,9 @@ import com.loresuelvo.serviceprovider.domain.provider.GetProviderProfileOutcome
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRegistrationCommand
 import com.loresuelvo.serviceprovider.domain.provider.ProviderRepository
 import com.loresuelvo.serviceprovider.domain.provider.RegistrationOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
@@ -169,6 +172,16 @@ class ProviderSignupConversationRepository : ConversationRepository {
         TODO("Not exercised by the signup acceptance test.")
 }
 
+class ProviderSignupServiceProposalRepository : ServiceProposalRepository {
+    val created = mutableListOf<ValidatedServiceProposal>()
+    var outcome: CreateServiceProposalOutcome = CreateServiceProposalOutcome.Created(9)
+
+    override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+        created += proposal
+        return outcome
+    }
+}
+
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
@@ -272,6 +285,17 @@ object ProviderSignupRepositoryTestModule {
     fun provideConversationRepositoryBinding(
         implementation: ProviderSignupConversationRepository,
     ): ConversationRepository = implementation
+
+    @Provides
+    @Singleton
+    fun provideServiceProposalRepository(): ProviderSignupServiceProposalRepository =
+        ProviderSignupServiceProposalRepository()
+
+    @Provides
+    @Singleton
+    fun provideServiceProposalRepositoryBinding(
+        implementation: ProviderSignupServiceProposalRepository,
+    ): ServiceProposalRepository = implementation
 
     @Provides
     @Singleton

@@ -1,28 +1,199 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.ValidateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
+import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.CreateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.After
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 
 class ProviderProposalViewModelTest {
+    private val viewModelStore = ViewModelStore()
+    @After fun tearDown() { viewModelStore.clear() }
     private val validator = ValidateServiceProposalUseCase()
     private val clock = object : ProposalTimeSource() {
         override fun nowMillis() = 1_780_000_000_000L
         override fun zone() = java.util.TimeZone.getTimeZone("UTC")
     }
+    @Test fun `confirmed pending creation clears draft and emits success once`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+        val calls = mutableListOf<ValidatedServiceProposal>()
+        val repository = object : ServiceProposalRepository {
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                calls += proposal
+                return CreateServiceProposalOutcome.Created(9)
+            }
+        }
+        val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+        val viewModel = ProviderProposalViewModel(handle, validator, clock, CreateServiceProposalUseCase(repository))
+            .also { viewModelStore.put("proposal", it) }
+        viewModel.open(detail(42, 7, ConversationStatus.Active))
+        viewModel.updateAmount("100,50")
+        viewModel.updateDate("2026-10-01")
+        viewModel.updateTime("10:00")
+        viewModel.updateReason("Inspect sink")
+        viewModel.selectDuration(45)
+        assertTrue(viewModel.continueToConfirmation())
+
+        viewModel.confirmSend()
+        viewModel.confirmSend()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, calls.size)
+        assertEquals(7, calls.single().consumerId)
+        assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
+        assertTrue(viewModel.consumeSuccess())
+        assertFalse(viewModel.consumeSuccess())
+        assertTrue(viewModel.open(detail(42, 7, ConversationStatus.Active)))
+        assertEquals("", (viewModel.uiState.value as ProposalUiState.Form).amount)
+        assertEquals(null, handle.get<String>("proposal_amount"))
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun `sending blocks duplicate confirmation and dismissal`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val result = CompletableDeferred<CreateServiceProposalOutcome>()
+            var calls = 0
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                    calls++
+                    return result.await()
+                }
+            }
+            val viewModel = filledViewModel(CreateServiceProposalUseCase(repository))
+            assertTrue(viewModel.continueToConfirmation())
+            viewModel.confirmSend()
+            viewModel.confirmSend()
+            viewModel.close()
+            assertFalse(viewModel.open(detail(42, 7, ConversationStatus.Active)))
+            testScheduler.runCurrent()
+            assertEquals(1, calls)
+            assertTrue(viewModel.uiState.value is ProposalUiState.Sending)
+            result.complete(CreateServiceProposalOutcome.Created(9))
+            testScheduler.advanceUntilIdle()
+            assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun `final confirmation revalidates time before any POST`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var now = clock.nowMillis()
+            var calls = 0
+            val source = object : ProposalTimeSource() {
+                override fun nowMillis() = now
+                override fun zone() = java.util.TimeZone.getTimeZone("UTC")
+            }
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                    calls++
+                    return CreateServiceProposalOutcome.Created(9)
+                }
+            }
+            val viewModel = filledViewModel(CreateServiceProposalUseCase(repository), source)
+            assertTrue(viewModel.continueToConfirmation())
+            now = 1_791_000_000_000L
+            viewModel.confirmSend()
+            assertEquals(0, calls)
+            assertTrue(ProposalValidationError.LeadTime in (viewModel.uiState.value as ProposalUiState.Form).errors)
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun `uncertain result retains draft and requires explicit duplicate risk acknowledgement`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var calls = 0
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                    calls++
+                    return CreateServiceProposalOutcome.Failure.Uncertain
+                }
+            }
+            val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+            val viewModel = filledViewModel(CreateServiceProposalUseCase(repository), handle = handle)
+            assertTrue(viewModel.continueToConfirmation())
+            viewModel.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, calls)
+            assertEquals(true, handle.get<Boolean>("proposal_send_uncertain"))
+            viewModel.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, calls)
+            viewModel.acknowledgeDuplicateRisk()
+            viewModel.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(2, calls)
+            assertEquals("100", (viewModel.uiState.value as ProposalUiState.Reviewing).form.amount)
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun `inactive conversation rejection blocks blind resend in the same entry`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var calls = 0
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                    calls++
+                    return CreateServiceProposalOutcome.Failure.InactiveConversation
+                }
+            }
+            val viewModel = filledViewModel(CreateServiceProposalUseCase(repository))
+            assertTrue(viewModel.continueToConfirmation())
+            viewModel.confirmSend()
+            testScheduler.advanceUntilIdle()
+            viewModel.cancelReview()
+            assertTrue(viewModel.continueToConfirmation())
+            viewModel.confirmSend()
+            testScheduler.advanceUntilIdle()
+            assertEquals(1, calls)
+            assertEquals(CreateServiceProposalOutcome.Failure.InactiveConversation,
+                (viewModel.uiState.value as ProposalUiState.Reviewing).failure)
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    private fun filledViewModel(
+        create: CreateServiceProposalUseCase,
+        source: ProposalTimeSource = clock,
+        handle: SavedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
+    ): ProviderProposalViewModel = ProviderProposalViewModel(handle, validator, source, create).also {
+        viewModelStore.put("proposal", it)
+    }.apply {
+        open(detail(42, 7, ConversationStatus.Active))
+        updateAmount("100")
+        updateDate("2026-10-01")
+        updateTime("10:00")
+        updateReason("Inspect sink")
+        selectDuration(45)
+    }
+    private val createUseCase = CreateServiceProposalUseCase(object : ServiceProposalRepository {
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+            error("Unexpected proposal creation")
+    })
+
     @Test
     fun `active chat opens a form for its consumer without confusing the IDs`() {
         val viewModel = ProviderProposalViewModel(
             SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
-            validator, clock,
+            validator, clock, createUseCase,
         )
         viewModel.open(detail(42, 7, ConversationStatus.Active))
 
@@ -41,7 +212,7 @@ class ProviderProposalViewModelTest {
     fun `rejects a detail from another chat and nonactive states`() {
         val viewModel = ProviderProposalViewModel(
             SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
-            validator, clock,
+            validator, clock, createUseCase,
         )
         assertFalse(viewModel.open(detail(43, 7, ConversationStatus.Active)))
         assertFalse(viewModel.open(detail(42, 7, ConversationStatus.Pending)))
@@ -53,7 +224,7 @@ class ProviderProposalViewModelTest {
     @Test
     fun `editing persists across close and duration can switch between preset and custom`() {
         val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
-        val viewModel = ProviderProposalViewModel(handle, validator, clock)
+        val viewModel = ProviderProposalViewModel(handle, validator, clock, createUseCase)
         val chat = detail(42, 7, ConversationStatus.Active)
         viewModel.open(chat)
         viewModel.updateAmount("100")
@@ -84,20 +255,20 @@ class ProviderProposalViewModelTest {
 
     @Test fun `leaving the chat creates a fresh proposal entry`() {
         val first = ProviderProposalViewModel(
-            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock)
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase)
         first.open(detail(42, 7, ConversationStatus.Active))
         first.updateAmount("100")
         first.close()
 
         val next = ProviderProposalViewModel(
-            SavedStateHandle(mapOf(Route.Conversation.argument to 43)), validator, clock)
+            SavedStateHandle(mapOf(Route.Conversation.argument to 43)), validator, clock, createUseCase)
         assertTrue(next.open(detail(43, 8, ConversationStatus.Active)))
         assertEquals("", (next.uiState.value as ProposalUiState.Form).amount)
     }
 
     @Test fun `invalid amount stays in form until corrected`() {
         val viewModel = ProviderProposalViewModel(
-            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock)
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase)
         viewModel.open(detail(42, 7, ConversationStatus.Active))
         viewModel.updateAmount("0")
         viewModel.updateDate("2026-10-01")
@@ -121,7 +292,7 @@ class ProviderProposalViewModelTest {
             override fun zone() = currentZone
         }
         val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
-        val viewModel = ProviderProposalViewModel(handle, validator, source)
+        val viewModel = ProviderProposalViewModel(handle, validator, source, createUseCase)
         val chat = detail(42, 7, ConversationStatus.Active)
         viewModel.open(chat)
         currentZone = java.util.TimeZone.getTimeZone("UTC")
@@ -133,7 +304,7 @@ class ProviderProposalViewModelTest {
 
     @Test fun `valid draft opens review with normalized details before any send`() {
         val viewModel = ProviderProposalViewModel(
-            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock)
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase)
         viewModel.open(detail(42, 7, ConversationStatus.Active))
         viewModel.updateAmount("100,50")
         viewModel.updateDate("2026-10-01")
@@ -153,7 +324,7 @@ class ProviderProposalViewModelTest {
 
     @Test fun `cancel review preserves custom draft and allows further editing`() {
         val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
-        val viewModel = ProviderProposalViewModel(handle, validator, clock)
+        val viewModel = ProviderProposalViewModel(handle, validator, clock, createUseCase)
         viewModel.open(detail(42, 7, ConversationStatus.Active))
         viewModel.updateAmount("100,50")
         viewModel.updateDate("2026-10-01")
