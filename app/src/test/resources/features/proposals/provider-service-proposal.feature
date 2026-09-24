@@ -41,7 +41,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     Then vuelvo al chat con la confirmación Propuesta enviada
     And el formulario se limpia después de crear una propuesta pendiente
 
-  @wip
   Scenario: 08-PSP Evitar envíos duplicados
     Given que mi propuesta confirmada todavía se está enviando
     When intento enviarla otra vez

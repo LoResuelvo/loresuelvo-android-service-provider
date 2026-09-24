@@ -34,6 +34,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CompletableDeferred
 
 class ProviderProposalSteps {
     private val savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
@@ -41,10 +42,11 @@ class ProviderProposalSteps {
     private val viewModelStore = ViewModelStore()
     private val created = mutableListOf<ValidatedServiceProposal>()
     private var createResult: CreateServiceProposalOutcome = CreateServiceProposalOutcome.Created(9)
+    private var pendingCreation: CompletableDeferred<CreateServiceProposalOutcome>? = null
     private val creation = CreateServiceProposalUseCase(object : ServiceProposalRepository {
         override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
             created += proposal
-            return createResult
+            return pendingCreation?.await() ?: createResult
         }
     })
     private val viewModel = ProviderProposalViewModel(
@@ -69,6 +71,7 @@ class ProviderProposalSteps {
 
     @After
     fun tearDown() {
+        pendingCreation?.cancel()
         viewModelStore.clear()
         testScope.cancel()
         Dispatchers.resetMain()
@@ -265,5 +268,27 @@ class ProviderProposalSteps {
             "proposal_duration", "proposal_send_uncertain").forEach {
             assertFalse(savedStateHandle.contains(it))
         }
+    }
+
+    @Given("que mi propuesta confirmada todavía se está enviando")
+    fun confirmedProposalIsStillSending() {
+        validProposalAwaitsConfirmation()
+        pendingCreation = CompletableDeferred()
+        viewModel.confirmSend()
+        testScope.testScheduler.runCurrent()
+        assertEquals(1, created.size)
+        assertTrue(viewModel.uiState.value is ProposalUiState.Sending)
+    }
+
+    @When("intento enviarla otra vez")
+    fun tryToSendAgain() {
+        viewModel.confirmSend()
+        testScope.testScheduler.runCurrent()
+    }
+
+    @Then("el envío sigue en curso con una sola solicitud")
+    fun sendingContinuesWithOneRequest() {
+        assertTrue(viewModel.uiState.value is ProposalUiState.Sending)
+        assertEquals(1, created.size)
     }
 }
