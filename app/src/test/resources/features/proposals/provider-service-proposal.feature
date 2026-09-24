@@ -52,7 +52,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     Then los datos de la propuesta y el estado del envío se conservan de forma segura
     And no se inicia un nuevo envío automáticamente
 
-  @wip
   Scenario: 10-PSP Explicar el requisito de conectar la cuenta de pagos
     Given que la API requiere una cuenta de pagos conectada para mi propuesta
     When confirmo el envío

@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.collect
 import com.loresuelvo.serviceprovider.R
+import com.loresuelvo.serviceprovider.ui.navigation.Route
 
 /**
  * Route composable for `Route.Conversation` on the provider side.
@@ -177,6 +178,12 @@ fun ProviderConversationRoute(
                 reviewing = reviewing,
                 onConfirm = proposalViewModel::confirmSend,
                 onAcknowledgeRisk = proposalViewModel::acknowledgeDuplicateRisk,
+                onOpenProfile = {
+                    proposalViewModel.pauseForPaymentProfile()
+                    navController.navigate(Route.Profile.path)
+                    navController.getBackStackEntry(Route.Profile.path)
+                        .savedStateHandle[Route.Profile.proposalPaymentOrigin] = true
+                },
                 sending = sending != null,
                 onCancel = proposalViewModel::cancelReview,
             )

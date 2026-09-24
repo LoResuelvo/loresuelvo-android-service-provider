@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.runtime.mutableStateOf
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
+import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -185,6 +186,25 @@ class ProviderProposalScreenTest {
         listOf("Consumidor: Ana Pérez", "Monto: ARS 100.5", "Visita: 2026-10-01 a las 10:00 (UTC, UTC+00:00)",
             "45 minutos", "Inspect sink").forEach { compose.onNodeWithText(it).assertExists() }
         compose.onNodeWithText("Confirmar envío").assertIsEnabled()
+    }
+
+    @Test fun paymentRequiredOffersProfileAction() {
+        var openedProfile = false
+        val review = ProposalUiState.Reviewing(
+            ProposalUiState.Form(42, 7, "Ana Pérez"),
+            ValidatedServiceProposal(7, "100", 0L, 0, "Inspect sink", 45),
+            failure = CreateServiceProposalOutcome.Failure.PaymentRequired,
+        )
+        compose.setContent {
+            LoresuelvoTheme {
+                ProviderProposalConfirmationDialog(review,
+                    onOpenProfile = { openedProfile = true }, onCancel = {})
+            }
+        }
+        compose.onNodeWithText("Conectá tu cuenta de pagos desde Perfil antes de enviar la propuesta.")
+            .assertIsDisplayed()
+        compose.onNodeWithText("Abrir Perfil").assertIsEnabled().performClick()
+        assertTrue(openedProfile)
     }
 
     @Test

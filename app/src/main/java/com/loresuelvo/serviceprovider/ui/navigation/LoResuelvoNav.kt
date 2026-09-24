@@ -151,10 +151,13 @@ fun LoResuelvoNav(
                                     identityLauncher = identityVerificationLauncher,
                                     returnRefreshKey = profileReturnRefresh,
                                     onBack = {
-                                        navController.popBackStack(
-                                            Route.Home.path,
-                                            inclusive = false,
-                                        )
+                                        val fromProposal = navController.currentBackStackEntry
+                                            ?.savedStateHandle?.remove<Boolean>(Route.Profile.proposalPaymentOrigin) == true
+                                        if (fromProposal) {
+                                            navController.popBackStack()
+                                        } else {
+                                            navController.popBackStack(Route.Home.path, inclusive = false)
+                                        }
                                     },
                                     onIncompleteProfile = entryViewModel::showIncompleteProfile,
                                     onAccountMismatch = entryViewModel::showAccountMismatch,

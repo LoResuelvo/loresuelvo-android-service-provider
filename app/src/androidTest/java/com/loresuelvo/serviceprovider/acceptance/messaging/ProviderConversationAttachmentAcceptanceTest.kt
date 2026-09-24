@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasAnyAncestor
@@ -40,6 +42,7 @@ import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupConversation
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupCurrentAccountRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupSessionStore
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupServiceProposalRepository
+import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupPaymentAccountRepository
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
@@ -68,6 +71,7 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_CONFIRMAT
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_ATTACH_BUTTON_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_INPUT_FIELD_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CREATE_PROPOSAL_ROW_TAG
+import com.loresuelvo.serviceprovider.ui.screens.profile.PROVIDER_PROFILE_DATA_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG
 import com.loresuelvo.serviceprovider.ui.screens.messages.components.PROVIDER_MESSAGES_ROW_TAG_PREFIX
 import dagger.hilt.EntryPoint
@@ -86,6 +90,9 @@ import org.junit.Assert.assertEquals
 import kotlinx.coroutines.CompletableDeferred
 import androidx.lifecycle.Lifecycle
 import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 
 /**
  * Acceptance smoke for the provider conversation detail surface
@@ -376,6 +383,38 @@ class ProviderConversationAttachmentAcceptanceTest {
         assertEquals(1, proposalRepository.created.size)
     }
 
+    @Test
+    fun payment_required_opens_profile_and_returns_to_same_draft_without_resending() {
+        proposalRepository.outcome = CreateServiceProposalOutcome.Failure.PaymentRequired
+        val paymentRepository = EntryPointAccessors.fromApplication(
+            ApplicationProvider.getApplicationContext(),
+            ProviderConversationAttachmentTestEntryPoint::class.java,
+        ).paymentAccountRepository()
+        paymentRepository.outcome = PaymentAccountStatusOutcome.Success(PaymentAccountStatus(ConnectionStatus.PENDING))
+        openValidProposalReview()
+        val context = composeTestRule.activity
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_confirm_send)).performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_payment_required)).assertIsDisplayed()
+        assertEquals(1, proposalRepository.created.size)
+
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_open_profile)).performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button))
+            .performScrollTo()
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performTouchInput { swipeUp() }
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button)).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_title)).assertExists()
+        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_return_profile)).performClick()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.provider_profile_back)).performClick()
+
+        composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount))
+            .assertTextContains("100,50", substring = false)
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_reason))
+            .assertTextContains("Inspect sink", substring = false)
+        assertEquals(1, proposalRepository.created.size)
+    }
+
     private fun openValidProposalReview() {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
@@ -438,4 +477,6 @@ interface ProviderConversationAttachmentTestEntryPoint {
     fun conversationRepository(): ProviderSignupConversationRepository
 
     fun proposalRepository(): ProviderSignupServiceProposalRepository
+
+    fun paymentAccountRepository(): ProviderSignupPaymentAccountRepository
 }

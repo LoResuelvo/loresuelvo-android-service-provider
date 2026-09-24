@@ -334,4 +334,25 @@ class ProviderProposalSteps {
         testScope.testScheduler.runCurrent()
         assertEquals(0, created.size)
     }
+
+    @Given("que la API requiere una cuenta de pagos conectada para mi propuesta")
+    fun paymentAccountRequired() {
+        validProposalAwaitsConfirmation()
+        createResult = CreateServiceProposalOutcome.Failure.PaymentRequired
+        draftBeforeReview = (viewModel.uiState.value as ProposalUiState.Reviewing).form
+    }
+
+    @Then("puedo abrir el flujo existente de conexión con Mercado Pago desde Perfil")
+    fun profileConnectionIsAvailable() {
+        val review = viewModel.uiState.value as ProposalUiState.Reviewing
+        assertEquals(CreateServiceProposalOutcome.Failure.PaymentRequired, review.failure)
+    }
+
+    @And("los datos de mi propuesta siguen disponibles sin reenvío automático")
+    fun draftRemainsAfterPaymentProfile() {
+        assertEquals(draftBeforeReview, (viewModel.uiState.value as ProposalUiState.Reviewing).form)
+        assertEquals(1, created.size)
+        testScope.testScheduler.runCurrent()
+        assertEquals(1, created.size)
+    }
 }

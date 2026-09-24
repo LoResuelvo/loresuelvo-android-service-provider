@@ -225,6 +225,13 @@ class ProviderProposalViewModel @Inject constructor(
         state.value = ProposalUiState.Closed
     }
 
+    fun pauseForPaymentProfile() {
+        val reviewing = state.value as? ProposalUiState.Reviewing ?: return
+        if (reviewing.failure != CreateServiceProposalOutcome.Failure.PaymentRequired) return
+        savedStateHandle["proposal_reviewing"] = false
+        state.value = ProposalUiState.Closed
+    }
+
     fun cancelReview() {
         val reviewing = state.value as? ProposalUiState.Reviewing ?: return
         savedStateHandle["proposal_reviewing"] = false

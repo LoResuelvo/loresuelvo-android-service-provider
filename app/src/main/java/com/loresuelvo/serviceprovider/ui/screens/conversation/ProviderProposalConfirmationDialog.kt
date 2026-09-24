@@ -20,6 +20,7 @@ fun ProviderProposalConfirmationDialog(
     reviewing: ProposalUiState.Reviewing,
     onConfirm: () -> Unit = {},
     onAcknowledgeRisk: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
     sending: Boolean = false,
     onCancel: () -> Unit,
 ) {
@@ -55,11 +56,17 @@ fun ProviderProposalConfirmationDialog(
         confirmButton = {
             val uncertain = reviewing.failure == CreateServiceProposalOutcome.Failure.Uncertain
             TextButton(
-                onClick = if (uncertain && !reviewing.duplicateRiskAcknowledged) onAcknowledgeRisk else onConfirm,
-                enabled = !sending && (reviewing.failure == null || uncertain),
+                onClick = when {
+                    reviewing.failure == CreateServiceProposalOutcome.Failure.PaymentRequired -> onOpenProfile
+                    uncertain && !reviewing.duplicateRiskAcknowledged -> onAcknowledgeRisk
+                    else -> onConfirm
+                },
+                enabled = !sending && (reviewing.failure == null || uncertain ||
+                    reviewing.failure == CreateServiceProposalOutcome.Failure.PaymentRequired),
             ) {
                 Text(stringResource(when {
                     sending -> R.string.provider_proposal_sending
+                    reviewing.failure == CreateServiceProposalOutcome.Failure.PaymentRequired -> R.string.provider_proposal_open_profile
                     uncertain && !reviewing.duplicateRiskAcknowledged -> R.string.provider_proposal_acknowledge_risk
                     else -> R.string.provider_proposal_confirm_send
                 }))
