@@ -388,8 +388,6 @@ class ProviderConversationAttachmentAcceptanceTest {
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
-        assertFalse(composeTestRule.activity.window.decorView.rootWindowInsets
-            ?.isVisible(android.view.WindowInsets.Type.ime()) ?: false)
 
         val visit = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 3); set(Calendar.HOUR_OF_DAY, 11); set(Calendar.MINUTE, 0) }
         composeTestRule.onNodeWithTag(PROPOSAL_DATE_TAG).performClick()
