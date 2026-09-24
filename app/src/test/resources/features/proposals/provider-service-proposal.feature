@@ -29,7 +29,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     Then puedo seguir editando la misma propuesta
     And no se envía ninguna propuesta
 
-  @wip
   Scenario: 06-PSP Cerrar sin enviar
     Given que estoy editando una propuesta sin enviar
     When cierro el formulario

@@ -177,4 +177,22 @@ class ProviderProposalSteps {
     fun sameDraftRemainsEditable() {
         assertEquals(draftBeforeReview, viewModel.uiState.value)
     }
+
+    @Given("que estoy editando una propuesta sin enviar")
+    fun editingUnsentProposal() {
+        activeConsumerChat()
+        assertTrue(viewModel.open(activeChat))
+        viewModel.updateAmount("100,50")
+        viewModel.updateReason("Inspect sink")
+    }
+
+    @When("cierro el formulario")
+    fun closeProposalForm() {
+        viewModel.close()
+    }
+
+    @Then("vuelvo al mismo chat sin enviar una propuesta")
+    fun sameChatRemainsWithoutProposal() {
+        assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
+    }
 }

@@ -64,7 +64,10 @@ class ProviderProposalViewModelTest {
         assertEquals("45", (viewModel.uiState.value as ProposalUiState.Form).duration)
         viewModel.selectDuration(null)
         viewModel.updateCustomDuration("75")
+        viewModel.selectOffset(0)
         viewModel.close()
+        assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
+        assertFalse(viewModel.open(detail(43, 8, ConversationStatus.Active)))
         assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
         viewModel.open(chat)
         val form = viewModel.uiState.value as ProposalUiState.Form
@@ -74,7 +77,22 @@ class ProviderProposalViewModelTest {
         assertEquals("Inspect the sink", form.reason)
         assertEquals("75", form.duration)
         assertTrue(form.customDuration)
+        assertEquals("UTC", form.zoneId)
+        assertEquals(0, form.selectedOffsetMinutes)
         assertEquals("75", handle.get<String>("proposal_duration"))
+    }
+
+    @Test fun `leaving the chat creates a fresh proposal entry`() {
+        val first = ProviderProposalViewModel(
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock)
+        first.open(detail(42, 7, ConversationStatus.Active))
+        first.updateAmount("100")
+        first.close()
+
+        val next = ProviderProposalViewModel(
+            SavedStateHandle(mapOf(Route.Conversation.argument to 43)), validator, clock)
+        assertTrue(next.open(detail(43, 8, ConversationStatus.Active)))
+        assertEquals("", (next.uiState.value as ProposalUiState.Form).amount)
     }
 
     @Test fun `invalid amount stays in form until corrected`() {

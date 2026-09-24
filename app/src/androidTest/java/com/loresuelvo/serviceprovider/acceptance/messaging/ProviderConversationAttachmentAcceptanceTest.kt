@@ -2,10 +2,12 @@ package com.loresuelvo.serviceprovider.acceptance.messaging
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -63,6 +65,7 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_DURATION_
 import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_CONTINUE_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.PROPOSAL_CONFIRMATION_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_ATTACH_BUTTON_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_INPUT_FIELD_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CREATE_PROPOSAL_ROW_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG
 import com.loresuelvo.serviceprovider.ui.screens.messages.components.PROVIDER_MESSAGES_ROW_TAG_PREFIX
@@ -243,6 +246,39 @@ class ProviderConversationAttachmentAcceptanceTest {
         val context = composeTestRule.activity
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_consumer, "Ana Pérez")).assertIsDisplayed()
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount)).assertIsDisplayed()
+    }
+
+    @Test
+    fun closing_unsent_proposal_returns_to_same_chat_and_keeps_both_drafts() {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + 42).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).performTextInput("Chat draft")
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).performClick()
+        val context = composeTestRule.activity
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount)).performTextInput("100,50")
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_reason)).performTextInput("Inspect sink")
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
+        assertFalse(composeTestRule.activity.window.decorView.rootWindowInsets
+            ?.isVisible(android.view.WindowInsets.Type.ime()) ?: false)
+
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.provider_proposal_close)).performClick()
+        composeTestRule.onAllNodesWithTag(PROPOSAL_FORM_TAG).assertCountEquals(0)
+        composeTestRule.onNodeWithText("Ana Pérez").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).assertTextContains("Chat draft", substring = false)
+
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).performClick()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount)).assertTextContains("100,50", substring = false)
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_reason)).assertTextContains("Inspect sink", substring = false)
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithTag(PROPOSAL_FORM_TAG).assertCountEquals(0)
+        composeTestRule.onNodeWithText("Ana Pérez").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).assertTextContains("Chat draft", substring = false)
     }
 
     @Test
