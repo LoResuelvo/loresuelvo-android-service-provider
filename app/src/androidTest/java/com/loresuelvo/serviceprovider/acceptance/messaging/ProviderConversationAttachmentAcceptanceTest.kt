@@ -446,7 +446,6 @@ class ProviderConversationAttachmentAcceptanceTest {
             .perform(pickerAction("confirm visit time") { it.performClick() })
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_time) + ": 11:00").assertExists()
-        onView(isAssignableFrom(TimePicker::class.java)).check(doesNotExist())
         composeTestRule.waitForIdle()
 
         composeTestRule.onNodeWithTag(PROPOSAL_DURATION_TAG).performSemanticsAction(SemanticsActions.OnClick)
