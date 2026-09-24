@@ -378,4 +378,22 @@ class ProviderProposalSteps {
             (viewModel.uiState.value as ProposalUiState.Reviewing).failure)
         assertEquals(1, created.size)
     }
+
+    @Given("que la conexión se interrumpe después de solicitar la creación de mi propuesta válida")
+    fun connectionInterruptsProposalCreation() {
+        validProposalAwaitsConfirmation()
+        createResult = CreateServiceProposalOutcome.Failure.Uncertain
+        draftBeforeReview = (viewModel.uiState.value as ProposalUiState.Reviewing).form
+    }
+
+    @When("confirmo el envío de una propuesta válida")
+    fun confirmValidProposalSend() = confirmProposalSend()
+
+    @Then("se me informa que la propuesta puede haberse creado")
+    fun uncertainCreationIsReported() {
+        val review = viewModel.uiState.value as ProposalUiState.Reviewing
+        assertEquals(CreateServiceProposalOutcome.Failure.Uncertain, review.failure)
+        assertFalse(review.duplicateRiskAcknowledged)
+        assertEquals(1, created.size)
+    }
 }

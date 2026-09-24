@@ -227,6 +227,29 @@ class ProviderProposalScreenTest {
         assertEquals(0, confirmations)
     }
 
+    @Test fun uncertainProposalShowsLocalizedDuplicateRiskBeforeExplicitConfirmation() {
+        var confirmations = 0
+        val review = mutableStateOf(ProposalUiState.Reviewing(
+            ProposalUiState.Form(42, 7, "Ana Pérez", amount = "100", reason = "Inspect sink"),
+            ValidatedServiceProposal(7, "100", 0L, 0, "Inspect sink", 45),
+            failure = CreateServiceProposalOutcome.Failure.Uncertain,
+        ))
+        compose.setContent {
+            LoresuelvoTheme {
+                ProviderProposalConfirmationDialog(review.value,
+                    onConfirm = { confirmations++ },
+                    onAcknowledgeRisk = { review.value = review.value.copy(duplicateRiskAcknowledged = true) },
+                    onCancel = {})
+            }
+        }
+        compose.onNodeWithText("No sabemos si se creó la propuesta. Revisá el chat antes de volver a enviarla: podría duplicarse.")
+            .assertIsDisplayed()
+        compose.onNodeWithText("Entiendo el riesgo de duplicarla").performClick()
+        assertEquals(0, confirmations)
+        compose.onNodeWithText("Confirmar envío").assertIsEnabled().performClick()
+        assertEquals(1, confirmations)
+    }
+
     @Test
     @Config(qualifiers = "es-rAR-w400dp-h400dp")
     fun longReviewScrollsAtLargeFontWithActionsReachable() {

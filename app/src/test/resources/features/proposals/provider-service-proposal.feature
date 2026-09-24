@@ -64,9 +64,8 @@ Feature: Enviar una propuesta de servicio desde el chat
     Then veo una explicación en el idioma de la app y conservo los datos de mi propuesta
     And debo resolver el motivo del rechazo antes de volver a enviarla explícitamente
 
-  @wip
   Scenario: 12-PSP Explicar un resultado de envío incierto
-    Given que el servicio no devolverá un resultado confiable sobre la creación
+    Given que la conexión se interrumpe después de solicitar la creación de mi propuesta válida
     When confirmo el envío de una propuesta válida
     Then se me informa que la propuesta puede haberse creado
     And los datos de mi propuesta siguen disponibles sin reenvío automático
