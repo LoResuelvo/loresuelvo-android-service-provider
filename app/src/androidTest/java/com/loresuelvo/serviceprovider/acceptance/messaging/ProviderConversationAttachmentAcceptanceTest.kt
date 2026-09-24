@@ -77,10 +77,15 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import org.junit.Before
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import kotlinx.coroutines.CompletableDeferred
+import androidx.lifecycle.Lifecycle
+import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
 
 /**
  * Acceptance smoke for the provider conversation detail surface
@@ -124,6 +129,7 @@ class ProviderConversationAttachmentAcceptanceTest {
         conversationRepository = entryPoint.conversationRepository()
         proposalRepository = entryPoint.proposalRepository()
         proposalRepository.created.clear()
+        proposalRepository.pending = null
 
         currentAccountRepository.outcome = CurrentAccountOutcome.Success(
             CurrentAccount.Provider(
@@ -184,6 +190,12 @@ class ProviderConversationAttachmentAcceptanceTest {
                 accessToken = "device-access-token",
             ),
         )
+    }
+
+    @After
+    fun tearDown() {
+        proposalRepository.pending?.cancel()
+        proposalRepository.pending = null
     }
 
     @Test
@@ -319,6 +331,49 @@ class ProviderConversationAttachmentAcceptanceTest {
         composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithText("100,50").assertDoesNotExist()
         composeTestRule.onNodeWithText("Inspect sink").assertDoesNotExist()
+    }
+
+    @Test
+    fun proposal_form_survives_background_and_activity_recreation() {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + 42).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).performClick()
+        val context = composeTestRule.activity
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount)).performTextInput("100,50")
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_reason)).performTextInput("Inspect sink")
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        composeTestRule.waitForIdle()
+
+        composeTestRule.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        composeTestRule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        composeTestRule.activityRule.scenario.recreate()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount))
+            .assertTextContains("100,50", substring = false)
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_reason))
+            .assertTextContains("Inspect sink", substring = false)
+        assertEquals(0, proposalRepository.created.size)
+    }
+
+    @Test
+    fun pending_proposal_send_survives_activity_recreation_without_another_request() {
+        openValidProposalReview()
+        proposalRepository.pending = CompletableDeferred()
+        val context = composeTestRule.activity
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_confirm_send)).performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(1, proposalRepository.created.size)
+        composeTestRule.activityRule.scenario.recreate()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_sending)).assertIsDisplayed()
+        assertEquals(1, proposalRepository.created.size)
+        proposalRepository.pending?.complete(CreateServiceProposalOutcome.Created(9))
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithTag(PROPOSAL_FORM_TAG).assertCountEquals(0)
+        assertEquals(1, proposalRepository.created.size)
     }
 
     private fun openValidProposalReview() {

@@ -57,6 +57,10 @@ fun ProviderConversationRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val proposalViewModel: ProviderProposalViewModel = hiltViewModel()
     val proposalState by proposalViewModel.uiState.collectAsStateWithLifecycle()
+    val readyConversation = (state as? ProviderConversationUiState.Ready)?.detail
+    LaunchedEffect(proposalViewModel, readyConversation) {
+        readyConversation?.let(proposalViewModel::restore)
+    }
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current

@@ -175,10 +175,11 @@ class ProviderSignupConversationRepository : ConversationRepository {
 class ProviderSignupServiceProposalRepository : ServiceProposalRepository {
     val created = mutableListOf<ValidatedServiceProposal>()
     var outcome: CreateServiceProposalOutcome = CreateServiceProposalOutcome.Created(9)
+    var pending: kotlinx.coroutines.CompletableDeferred<CreateServiceProposalOutcome>? = null
 
     override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
         created += proposal
-        return outcome
+        return pending?.await() ?: outcome
     }
 }
 

@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModelStore
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.ValidateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
@@ -17,17 +20,26 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.After
+import org.junit.Before
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class ProviderProposalViewModelTest {
     private val viewModelStore = ViewModelStore()
-    @After fun tearDown() { viewModelStore.clear() }
+    @Before fun setUp() { Dispatchers.setMain(StandardTestDispatcher()) }
+    @After fun tearDown() { viewModelStore.clear(); Dispatchers.resetMain() }
     private val validator = ValidateServiceProposalUseCase()
+    private val sessionStore = object : AuthSessionStore {
+        override val sessionFlow = MutableStateFlow<AuthSession?>(AuthSession(User("provider-1", "provider@example.com"), "token"))
+        override fun getSession() = sessionFlow.value
+        override fun saveSession(session: AuthSession) { sessionFlow.value = session }
+        override fun clearSession() { sessionFlow.value = null }
+    }
     private val clock = object : ProposalTimeSource() {
         override fun nowMillis() = 1_780_000_000_000L
         override fun zone() = java.util.TimeZone.getTimeZone("UTC")
@@ -43,7 +55,7 @@ class ProviderProposalViewModelTest {
             }
         }
         val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
-        val viewModel = ProviderProposalViewModel(handle, validator, clock, CreateServiceProposalUseCase(repository))
+        val viewModel = ProviderProposalViewModel(handle, validator, clock, CreateServiceProposalUseCase(repository), sessionStore)
             .also { viewModelStore.put("proposal", it) }
         viewModel.open(detail(42, 7, ConversationStatus.Active))
         viewModel.updateAmount("100,50")
@@ -91,6 +103,108 @@ class ProviderProposalViewModelTest {
             result.complete(CreateServiceProposalOutcome.Created(9))
             testScheduler.advanceUntilIdle()
             assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun `restored draft keeps its form and consumer without sending`() {
+        val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+        val first = filledViewModel(createUseCase, handle = handle)
+        first.selectDuration(null)
+        first.updateCustomDuration("75")
+        first.selectOffset(0)
+        val original = first.uiState.value
+        viewModelStore.clear()
+
+        val restored = ProviderProposalViewModel(handle, validator, clock, createUseCase, sessionStore)
+        assertFalse(restored.open(detail(43, 8, ConversationStatus.Active)))
+        assertTrue(restored.restore(detail(42, 7, ConversationStatus.Active)))
+        assertEquals(original, restored.uiState.value)
+    }
+
+    @Test fun `closed review reopens and restores as an editable form`() {
+        val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+        val chat = detail(42, 7, ConversationStatus.Active)
+        val first = filledViewModel(createUseCase, handle = handle)
+        assertTrue(first.continueToConfirmation())
+        first.close()
+        assertTrue(first.open(chat))
+        val reopened = first.uiState.value as ProposalUiState.Form
+        viewModelStore.clear()
+
+        val restored = ProviderProposalViewModel(handle, validator, clock, createUseCase, sessionStore)
+        assertTrue(restored.restore(chat))
+        assertEquals(reopened, restored.uiState.value)
+    }
+
+    @Test fun `restored interrupted send requires acknowledgement and never posts automatically`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+            val pending = CompletableDeferred<CreateServiceProposalOutcome>()
+            var calls = 0
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                    calls++
+                    return pending.await()
+                }
+            }
+            val create = CreateServiceProposalUseCase(repository)
+            val first = filledViewModel(create, handle = handle)
+            assertTrue(first.continueToConfirmation())
+            first.confirmSend()
+            testScheduler.runCurrent()
+            assertEquals(1, calls)
+            viewModelStore.clear()
+
+            val restored = ProviderProposalViewModel(handle, validator, clock, create, sessionStore)
+            assertTrue(restored.restore(detail(42, 7, ConversationStatus.Active)))
+            val review = restored.uiState.value as ProposalUiState.Reviewing
+            assertEquals(CreateServiceProposalOutcome.Failure.Uncertain, review.failure)
+            assertEquals("100", review.form.amount)
+            testScheduler.runCurrent()
+            restored.confirmSend()
+            testScheduler.runCurrent()
+            assertEquals(1, calls)
+            pending.cancel()
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun `retained ViewModel keeps one pending send across background and rotation`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val pending = CompletableDeferred<CreateServiceProposalOutcome>()
+            var calls = 0
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                    calls++
+                    return pending.await()
+                }
+            }
+            val viewModel = filledViewModel(CreateServiceProposalUseCase(repository))
+            assertTrue(viewModel.continueToConfirmation())
+            viewModel.confirmSend()
+            testScheduler.runCurrent()
+            val retained = viewModelStore["proposal"] as ProviderProposalViewModel
+            assertTrue(retained.uiState.value is ProposalUiState.Sending)
+            retained.confirmSend()
+            testScheduler.runCurrent()
+            assertEquals(1, calls)
+            pending.complete(CreateServiceProposalOutcome.Created(9))
+            testScheduler.advanceUntilIdle()
+            assertTrue(retained.uiState.value is ProposalUiState.Closed)
+        } finally { viewModelStore.clear(); Dispatchers.resetMain() }
+    }
+
+    @Test fun `session change discards visible draft`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+            val viewModel = filledViewModel(createUseCase, handle = handle)
+            sessionStore.saveSession(AuthSession(User("provider-2", "other@example.com"), "other-token"))
+            testScheduler.runCurrent()
+            assertTrue(viewModel.uiState.value is ProposalUiState.Closed)
+            assertFalse(handle.contains("proposal_amount"))
+            assertFalse(viewModel.restore(detail(42, 7, ConversationStatus.Active)))
         } finally { viewModelStore.clear(); Dispatchers.resetMain() }
     }
 
@@ -174,7 +288,7 @@ class ProviderProposalViewModelTest {
         create: CreateServiceProposalUseCase,
         source: ProposalTimeSource = clock,
         handle: SavedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
-    ): ProviderProposalViewModel = ProviderProposalViewModel(handle, validator, source, create).also {
+    ): ProviderProposalViewModel = ProviderProposalViewModel(handle, validator, source, create, sessionStore).also {
         viewModelStore.put("proposal", it)
     }.apply {
         open(detail(42, 7, ConversationStatus.Active))
@@ -193,7 +307,7 @@ class ProviderProposalViewModelTest {
     fun `active chat opens a form for its consumer without confusing the IDs`() {
         val viewModel = ProviderProposalViewModel(
             SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
-            validator, clock, createUseCase,
+            validator, clock, createUseCase, sessionStore,
         )
         viewModel.open(detail(42, 7, ConversationStatus.Active))
 
@@ -212,7 +326,7 @@ class ProviderProposalViewModelTest {
     fun `rejects a detail from another chat and nonactive states`() {
         val viewModel = ProviderProposalViewModel(
             SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
-            validator, clock, createUseCase,
+            validator, clock, createUseCase, sessionStore,
         )
         assertFalse(viewModel.open(detail(43, 7, ConversationStatus.Active)))
         assertFalse(viewModel.open(detail(42, 7, ConversationStatus.Pending)))
@@ -224,7 +338,7 @@ class ProviderProposalViewModelTest {
     @Test
     fun `editing persists across close and duration can switch between preset and custom`() {
         val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
-        val viewModel = ProviderProposalViewModel(handle, validator, clock, createUseCase)
+        val viewModel = ProviderProposalViewModel(handle, validator, clock, createUseCase, sessionStore)
         val chat = detail(42, 7, ConversationStatus.Active)
         viewModel.open(chat)
         viewModel.updateAmount("100")
@@ -255,20 +369,20 @@ class ProviderProposalViewModelTest {
 
     @Test fun `leaving the chat creates a fresh proposal entry`() {
         val first = ProviderProposalViewModel(
-            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase)
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase, sessionStore)
         first.open(detail(42, 7, ConversationStatus.Active))
         first.updateAmount("100")
         first.close()
 
         val next = ProviderProposalViewModel(
-            SavedStateHandle(mapOf(Route.Conversation.argument to 43)), validator, clock, createUseCase)
+            SavedStateHandle(mapOf(Route.Conversation.argument to 43)), validator, clock, createUseCase, sessionStore)
         assertTrue(next.open(detail(43, 8, ConversationStatus.Active)))
         assertEquals("", (next.uiState.value as ProposalUiState.Form).amount)
     }
 
     @Test fun `invalid amount stays in form until corrected`() {
         val viewModel = ProviderProposalViewModel(
-            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase)
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase, sessionStore)
         viewModel.open(detail(42, 7, ConversationStatus.Active))
         viewModel.updateAmount("0")
         viewModel.updateDate("2026-10-01")
@@ -292,7 +406,7 @@ class ProviderProposalViewModelTest {
             override fun zone() = currentZone
         }
         val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
-        val viewModel = ProviderProposalViewModel(handle, validator, source, createUseCase)
+        val viewModel = ProviderProposalViewModel(handle, validator, source, createUseCase, sessionStore)
         val chat = detail(42, 7, ConversationStatus.Active)
         viewModel.open(chat)
         currentZone = java.util.TimeZone.getTimeZone("UTC")
@@ -304,7 +418,7 @@ class ProviderProposalViewModelTest {
 
     @Test fun `valid draft opens review with normalized details before any send`() {
         val viewModel = ProviderProposalViewModel(
-            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase)
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock, createUseCase, sessionStore)
         viewModel.open(detail(42, 7, ConversationStatus.Active))
         viewModel.updateAmount("100,50")
         viewModel.updateDate("2026-10-01")
@@ -324,7 +438,7 @@ class ProviderProposalViewModelTest {
 
     @Test fun `cancel review preserves custom draft and allows further editing`() {
         val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
-        val viewModel = ProviderProposalViewModel(handle, validator, clock, createUseCase)
+        val viewModel = ProviderProposalViewModel(handle, validator, clock, createUseCase, sessionStore)
         viewModel.open(detail(42, 7, ConversationStatus.Active))
         viewModel.updateAmount("100,50")
         viewModel.updateDate("2026-10-01")

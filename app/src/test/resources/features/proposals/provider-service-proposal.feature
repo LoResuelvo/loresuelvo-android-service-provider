@@ -46,7 +46,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     When intento enviarla otra vez
     Then el envío sigue en curso con una sola solicitud
 
-  @wip
   Scenario: 09-PSP Conservar el formulario ante una interrupción
     Given que tengo abierto el formulario de una propuesta
     When vuelvo después de una recreación de la Activity o de pasar la app a segundo plano

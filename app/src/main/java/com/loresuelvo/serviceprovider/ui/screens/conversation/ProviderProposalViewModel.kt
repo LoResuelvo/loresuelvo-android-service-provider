@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 import java.util.TimeZone
 
@@ -36,6 +39,7 @@ sealed interface ProposalUiState {
         val customDuration: Boolean = false,
         val zoneId: String = "UTC",
         val selectedOffsetMinutes: Int? = null,
+        val submissionUncertain: Boolean = false,
         val errors: Set<ProposalValidationError> = emptySet(),
     ) : ProposalUiState
     data class Reviewing(
@@ -53,13 +57,29 @@ class ProviderProposalViewModel @Inject constructor(
     private val validateProposal: ValidateServiceProposalUseCase,
     private val timeSource: ProposalTimeSource,
     private val createProposal: CreateServiceProposalUseCase,
+    private val sessionStore: AuthSessionStore,
 ) : ViewModel() {
     private val conversationId = checkNotNull(savedStateHandle.get<Int>(Route.Conversation.argument))
     private val state = kotlinx.coroutines.flow.MutableStateFlow<ProposalUiState>(ProposalUiState.Closed)
     private var blockedFailure: CreateServiceProposalOutcome.Failure? = null
+    private var sendJob: Job? = null
     val uiState: StateFlow<ProposalUiState> = state.asStateFlow()
     private val successPending = MutableStateFlow(false)
     val hasSuccess: StateFlow<Boolean> = successPending.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            sessionStore.sessionFlow.collect { session ->
+                val owner = savedStateHandle.get<String>("proposal_owner_id")
+                if (owner != null && owner != session?.user?.id) {
+                    sendJob?.cancel()
+                    clearDraft()
+                    state.value = ProposalUiState.Closed
+                    successPending.value = false
+                }
+            }
+        }
+    }
 
     fun consumeSuccess(): Boolean {
         if (!successPending.value) return false
@@ -70,6 +90,13 @@ class ProviderProposalViewModel @Inject constructor(
     fun open(detail: ConversationDetail): Boolean {
         if (state.value is ProposalUiState.Sending) return false
         if (detail.id != conversationId || detail.status != ConversationStatus.Active) return false
+        val owner = sessionStore.getSession()?.user?.id ?: return false
+        if (savedStateHandle.get<String>("proposal_owner_id") != owner ||
+            (savedStateHandle.contains("proposal_consumer_id") &&
+                savedStateHandle.get<Int>("proposal_consumer_id") != detail.counterpart.id)) clearDraft()
+        savedStateHandle["proposal_owner_id"] = owner
+        savedStateHandle["proposal_visible"] = true
+        savedStateHandle["proposal_consumer_id"] = detail.counterpart.id
         state.value = ProposalUiState.Form(
             conversationId = detail.id,
             consumerId = detail.counterpart.id,
@@ -84,7 +111,24 @@ class ProviderProposalViewModel @Inject constructor(
                 savedStateHandle["proposal_zone_id"] = it
             },
             selectedOffsetMinutes = savedStateHandle["proposal_offset_minutes"],
+            submissionUncertain = savedStateHandle["proposal_send_uncertain"] ?: false,
         )
+        return true
+    }
+
+    fun restore(detail: ConversationDetail): Boolean {
+        if (state.value !is ProposalUiState.Closed || savedStateHandle.get<Boolean>("proposal_visible") != true) return false
+        if (detail.id != conversationId || detail.status != ConversationStatus.Active ||
+            detail.counterpart.id != savedStateHandle.get<Int>("proposal_consumer_id") ||
+            savedStateHandle.get<String>("proposal_owner_id") != sessionStore.getSession()?.user?.id) {
+            clearDraft()
+            return false
+        }
+        if (!open(detail)) return false
+        if (savedStateHandle.get<Boolean>("proposal_reviewing") == true ||
+            savedStateHandle.get<Boolean>("proposal_send_uncertain") == true) {
+            continueToConfirmation()
+        }
         return true
     }
 
@@ -117,6 +161,7 @@ class ProviderProposalViewModel @Inject constructor(
                 false
             }
             is ProposalValidationOutcome.Valid -> {
+                savedStateHandle["proposal_reviewing"] = true
                 state.value = ProposalUiState.Reviewing(
                     form.copy(errors = emptySet()), result.proposal,
                     failure = if (savedStateHandle.get<Boolean>("proposal_send_uncertain") == true)
@@ -150,7 +195,7 @@ class ProviderProposalViewModel @Inject constructor(
         val proposal = (validated as ProposalValidationOutcome.Valid).proposal
         state.value = ProposalUiState.Sending(reviewing)
         savedStateHandle["proposal_send_uncertain"] = true
-        viewModelScope.launch {
+        sendJob = viewModelScope.launch {
             val outcome = try { createProposal(proposal) } catch (e: CancellationException) { throw e }
             when (outcome) {
                 is CreateServiceProposalOutcome.Created -> {
@@ -175,12 +220,16 @@ class ProviderProposalViewModel @Inject constructor(
 
     fun close() {
         if (state.value is ProposalUiState.Sending) return
+        savedStateHandle["proposal_visible"] = false
+        savedStateHandle["proposal_reviewing"] = false
         state.value = ProposalUiState.Closed
     }
 
     fun cancelReview() {
         val reviewing = state.value as? ProposalUiState.Reviewing ?: return
+        savedStateHandle["proposal_reviewing"] = false
         state.value = reviewing.form.copy(
+            submissionUncertain = savedStateHandle["proposal_send_uncertain"] ?: false,
             errors = (reviewing.failure as? CreateServiceProposalOutcome.Failure.Invalid)?.errors ?: emptySet(),
         )
     }
@@ -196,7 +245,9 @@ class ProviderProposalViewModel @Inject constructor(
     private fun clearDraft() {
         listOf("proposal_amount", "proposal_date", "proposal_time", "proposal_reason",
             "proposal_duration", "proposal_custom_duration", "proposal_zone_id",
-            "proposal_offset_minutes", "proposal_send_uncertain").forEach { savedStateHandle.remove<Any>(it) }
+            "proposal_offset_minutes", "proposal_send_uncertain", "proposal_visible",
+            "proposal_reviewing", "proposal_consumer_id", "proposal_owner_id")
+            .forEach { savedStateHandle.remove<Any>(it) }
     }
 }
 

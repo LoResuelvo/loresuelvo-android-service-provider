@@ -98,6 +98,7 @@ fun ProviderProposalScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(stringResource(R.string.provider_proposal_consumer, form.consumerName))
+                        if (form.submissionUncertain) Text(stringResource(R.string.provider_proposal_uncertain))
                         OutlinedTextField(
                             value = form.amount,
                             onValueChange = onAmountChange,
