@@ -3,14 +3,18 @@ package com.loresuelvo.serviceprovider.ui.screens.conversation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -24,6 +28,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.RadioButton
+import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
@@ -35,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -58,6 +66,8 @@ fun ProviderProposalScreen(
     onDurationSelect: (Int?) -> Unit,
     onCustomDurationChange: (String) -> Unit,
     onClose: () -> Unit,
+    onContinue: () -> Unit = {},
+    onOffsetSelect: (Int) -> Unit = {},
 ) {
     var durationExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -92,6 +102,8 @@ fun ProviderProposalScreen(
                             onValueChange = onAmountChange,
                             label = { Text(stringResource(R.string.provider_proposal_amount)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            isError = ProposalValidationError.Amount in form.errors,
+                            supportingText = { FieldError(form.errors, ProposalValidationError.Amount, R.string.provider_proposal_amount_error) },
                             modifier = Modifier.fillMaxWidth(),
                         )
                         OutlinedButton(
@@ -107,6 +119,7 @@ fun ProviderProposalScreen(
                             },
                             modifier = Modifier.fillMaxWidth().testTag(PROPOSAL_DATE_TAG),
                         ) { Text(stringResource(R.string.provider_proposal_date) + ": " + form.date) }
+                        FieldError(form.errors, ProposalValidationError.Date, R.string.provider_proposal_date_error)
                         OutlinedButton(
                             onClick = {
                                 val now = Calendar.getInstance()
@@ -120,12 +133,40 @@ fun ProviderProposalScreen(
                             },
                             modifier = Modifier.fillMaxWidth().testTag(PROPOSAL_TIME_TAG),
                         ) { Text(stringResource(R.string.provider_proposal_time) + ": " + form.time) }
+                        FieldError(form.errors, ProposalValidationError.Time, R.string.provider_proposal_time_error)
+                        FieldError(form.errors, ProposalValidationError.LeadTime, R.string.provider_proposal_lead_time_error)
+                        val ambiguity = form.errors.filterIsInstance<ProposalValidationError.AmbiguousTime>().firstOrNull()
+                        if (ambiguity != null) {
+                            Text(stringResource(R.string.provider_proposal_ambiguous_time_error))
+                            Text(stringResource(R.string.provider_proposal_zone, form.zoneId))
+                            Column(modifier = Modifier.selectableGroup()) {
+                                ambiguity.offsetsMinutes.forEach { minutes ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                                            .selectable(
+                                                selected = form.selectedOffsetMinutes == minutes,
+                                                onClick = { onOffsetSelect(minutes) },
+                                                role = Role.RadioButton,
+                                            ).testTag("$PROPOSAL_OFFSET_TAG_PREFIX$minutes"),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        RadioButton(
+                                            selected = form.selectedOffsetMinutes == minutes,
+                                            onClick = null,
+                                        )
+                                        Text(stringResource(R.string.provider_proposal_offset_choice, formatOffset(minutes)))
+                                    }
+                                }
+                            }
+                        }
                         OutlinedTextField(
                             value = form.reason,
                             onValueChange = onReasonChange,
                             label = { Text(stringResource(R.string.provider_proposal_reason)) },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 3,
+                            isError = ProposalValidationError.Reason in form.errors,
+                            supportingText = { FieldError(form.errors, ProposalValidationError.Reason, R.string.provider_proposal_reason_error) },
                         )
                         ExposedDropdownMenuBox(expanded = durationExpanded, onExpandedChange = { durationExpanded = it }) {
                             OutlinedTextField(
@@ -134,6 +175,8 @@ fun ProviderProposalScreen(
                                 readOnly = true,
                                 label = { Text(stringResource(R.string.provider_proposal_duration)) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = durationExpanded) },
+                                isError = ProposalValidationError.Duration in form.errors,
+                                supportingText = { FieldError(form.errors, ProposalValidationError.Duration, R.string.provider_proposal_duration_error) },
                                 modifier = Modifier.fillMaxWidth().menuAnchor().testTag(PROPOSAL_DURATION_TAG),
                             )
                             ExposedDropdownMenu(expanded = durationExpanded, onDismissRequest = { durationExpanded = false }) {
@@ -158,6 +201,9 @@ fun ProviderProposalScreen(
                                 modifier = Modifier.fillMaxWidth().testTag(PROPOSAL_CUSTOM_DURATION_TAG),
                             )
                         }
+                        Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().testTag(PROPOSAL_CONTINUE_TAG)) {
+                            Text(stringResource(R.string.provider_proposal_continue))
+                        }
                     }
                 }
             }
@@ -165,9 +211,20 @@ fun ProviderProposalScreen(
     }
 }
 
+@Composable
+private fun FieldError(errors: Set<ProposalValidationError>, error: ProposalValidationError, message: Int) {
+    if (error in errors) Text(stringResource(message))
+}
+
+private fun formatOffset(minutes: Int): String =
+    String.format(Locale.ROOT, "UTC%s%02d:%02d", if (minutes < 0) "-" else "+",
+        kotlin.math.abs(minutes) / 60, kotlin.math.abs(minutes) % 60)
+
 const val PROPOSAL_FORM_TAG = "provider-proposal-form"
 const val PROPOSAL_FIELDS_TAG = "provider-proposal-fields"
 const val PROPOSAL_DURATION_TAG = "provider-proposal-duration"
 const val PROPOSAL_DATE_TAG = "provider-proposal-date"
 const val PROPOSAL_TIME_TAG = "provider-proposal-time"
 const val PROPOSAL_CUSTOM_DURATION_TAG = "provider-proposal-custom-duration"
+const val PROPOSAL_CONTINUE_TAG = "provider-proposal-continue"
+const val PROPOSAL_OFFSET_TAG_PREFIX = "provider-proposal-offset-"

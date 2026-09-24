@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -13,6 +14,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.runtime.mutableStateOf
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
+import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -111,5 +113,42 @@ class ProviderProposalScreenTest {
         compose.onNodeWithTag(PROPOSAL_TIME_TAG).performClick()
         assertTrue(ShadowDialog.getLatestDialog() is android.app.TimePickerDialog)
         ShadowDialog.getLatestDialog().dismiss()
+    }
+
+    @Test fun invalidAmountShowsLocalizedCorrectionAndContinueAction() {
+        var continued = false
+        val form = mutableStateOf(ProposalUiState.Form(42, 7, "Ana Pérez",
+            errors = setOf(ProposalValidationError.Amount)))
+        compose.setContent {
+            LoresuelvoTheme {
+                ProviderProposalScreen(
+                    form.value,
+                    { form.value = form.value.copy(amount = it, errors = emptySet()) },
+                    {}, {}, {}, {}, {}, {}, onContinue = { continued = true },
+                )
+            }
+        }
+        compose.onNodeWithText("Ingresá un monto positivo en pesos, con hasta dos decimales y sin separadores de miles.")
+            .assertExists()
+        compose.onNodeWithText("Monto").performTextInput("100")
+        compose.onNodeWithText("Ingresá un monto positivo en pesos, con hasta dos decimales y sin separadores de miles.")
+            .assertDoesNotExist()
+        compose.onNodeWithTag(PROPOSAL_CONTINUE_TAG).performScrollTo().performClick()
+        assertTrue(continued)
+    }
+
+    @Test fun ambiguousTimeShowsZoneAndSelectedOffset() {
+        val form = mutableStateOf(ProposalUiState.Form(42, 7, "Ana Pérez",
+            zoneId = "Australia/Lord_Howe",
+            errors = setOf(ProposalValidationError.AmbiguousTime(listOf(630, 660)))))
+        compose.setContent {
+            LoresuelvoTheme {
+                ProviderProposalScreen(form.value, {}, {}, {}, {}, {}, {}, {},
+                    onOffsetSelect = { form.value = form.value.copy(selectedOffsetMinutes = it) })
+            }
+        }
+        compose.onNodeWithText("Zona horaria: Australia/Lord_Howe").assertExists()
+        compose.onNodeWithTag("${PROPOSAL_OFFSET_TAG_PREFIX}660").performScrollTo().performClick().assertIsSelected()
+        assertEquals(660, form.value.selectedOffsetMinutes)
     }
 }

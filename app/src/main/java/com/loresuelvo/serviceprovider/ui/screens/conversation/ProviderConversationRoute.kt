@@ -142,6 +142,8 @@ fun ProviderConversationRoute(
                 onDurationSelect = proposalViewModel::selectDuration,
                 onCustomDurationChange = proposalViewModel::updateCustomDuration,
                 onClose = proposalViewModel::close,
+                onContinue = { proposalViewModel.continueToConfirmation() },
+                onOffsetSelect = proposalViewModel::selectOffset,
             )
         }
     }

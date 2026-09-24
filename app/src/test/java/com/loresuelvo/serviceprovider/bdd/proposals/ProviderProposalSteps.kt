@@ -8,6 +8,9 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProposalUiState
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderProposalViewModel
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProposalTimeSource
+import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.ValidateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationUiState
 import com.loresuelvo.serviceprovider.ui.screens.conversation.canCreateProposal
 import io.cucumber.java.en.And
@@ -21,6 +24,11 @@ import org.junit.Assert.assertTrue
 class ProviderProposalSteps {
     private val viewModel = ProviderProposalViewModel(
         SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
+        ValidateServiceProposalUseCase(),
+        object : ProposalTimeSource() {
+            override fun nowMillis() = 1_780_000_000_000L
+            override fun zone() = java.util.TimeZone.getTimeZone("UTC")
+        },
     )
     private lateinit var activeChat: ConversationDetail
     private lateinit var nonActiveStates: List<ProviderConversationUiState>
@@ -89,5 +97,32 @@ class ProviderProposalSteps {
     @Then("Crear propuesta de servicio no está disponible")
     fun proposalActionIsUnavailable() {
         proposalActionsAvailable.forEach { assertFalse(it) }
+    }
+
+    @Given("que mi propuesta contiene un campo obligatorio inválido")
+    fun invalidRequiredField() {
+        activeConsumerChat()
+        assertTrue(viewModel.open(activeChat))
+        viewModel.updateAmount("0")
+        viewModel.updateDate("2026-06-01")
+        viewModel.updateTime("10:00")
+        viewModel.updateReason("Inspect the sink")
+        viewModel.selectDuration(45)
+    }
+
+    @When("intento continuar a la confirmación")
+    fun attemptConfirmation() {
+        assertFalse(viewModel.continueToConfirmation())
+    }
+
+    @Then("ese campo explica qué debo corregir")
+    fun fieldExplainsCorrection() {
+        assertTrue(ProposalValidationError.Amount in (viewModel.uiState.value as ProposalUiState.Form).errors)
+    }
+
+    @And("no se envía ninguna propuesta")
+    fun noProposalIsSent() {
+        // The only reachable production state is the editing form; submission is not available here.
+        assertTrue(viewModel.uiState.value is ProposalUiState.Form)
     }
 }

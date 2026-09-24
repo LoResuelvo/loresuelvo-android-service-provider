@@ -11,7 +11,6 @@ Feature: Enviar una propuesta de servicio desde el chat
     When abro las acciones del chat
     Then Crear propuesta de servicio no está disponible
 
-  @wip
   Scenario: 03-PSP Explicar los campos inválidos de la propuesta
     Given que mi propuesta contiene un campo obligatorio inválido
     When intento continuar a la confirmación

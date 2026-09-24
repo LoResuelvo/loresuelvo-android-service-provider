@@ -126,6 +126,16 @@
     <string name="provider_proposal_duration_minutes">%1$d minutos</string>
     <string name="provider_proposal_duration_custom">Personalizada</string>
     <string name="provider_proposal_duration_minutes_label">Minutos</string>
+    <string name="provider_proposal_continue">Continuar a la confirmación</string>
+    <string name="provider_proposal_amount_error">Ingresá un monto positivo en pesos, con hasta dos decimales y sin separadores de miles.</string>
+    <string name="provider_proposal_date_error">Elegí una fecha válida.</string>
+    <string name="provider_proposal_time_error">Elegí una hora válida para esa fecha.</string>
+    <string name="provider_proposal_lead_time_error">Elegí una visita a más de 24 horas desde ahora.</string>
+    <string name="provider_proposal_ambiguous_time_error">Esta hora ocurre dos veces. Elegí el horario de la visita.</string>
+    <string name="provider_proposal_offset_choice">Horario %1$s</string>
+    <string name="provider_proposal_zone">Zona horaria: %1$s</string>
+    <string name="provider_proposal_reason_error">Explicá el motivo de la visita.</string>
+    <string name="provider_proposal_duration_error">Elegí una duración de 15 a 1440 minutos enteros.</string>
     <string name="provider_conversation_clear_media_content_description">Quitar imagen adjunta</string>
 
     <!-- Provider conversation detail (US-C: audio attachments) -->

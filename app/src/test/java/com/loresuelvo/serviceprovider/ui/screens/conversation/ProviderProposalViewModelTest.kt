@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.ValidateServiceProposalUseCase
+import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,10 +13,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProviderProposalViewModelTest {
+    private val validator = ValidateServiceProposalUseCase()
+    private val clock = object : ProposalTimeSource() {
+        override fun nowMillis() = 1_780_000_000_000L
+        override fun zone() = java.util.TimeZone.getTimeZone("UTC")
+    }
     @Test
     fun `active chat opens a form for its consumer without confusing the IDs`() {
         val viewModel = ProviderProposalViewModel(
             SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
+            validator, clock,
         )
         viewModel.open(detail(42, 7, ConversationStatus.Active))
 
@@ -33,6 +41,7 @@ class ProviderProposalViewModelTest {
     fun `rejects a detail from another chat and nonactive states`() {
         val viewModel = ProviderProposalViewModel(
             SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
+            validator, clock,
         )
         assertFalse(viewModel.open(detail(43, 7, ConversationStatus.Active)))
         assertFalse(viewModel.open(detail(42, 7, ConversationStatus.Pending)))
@@ -44,7 +53,7 @@ class ProviderProposalViewModelTest {
     @Test
     fun `editing persists across close and duration can switch between preset and custom`() {
         val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
-        val viewModel = ProviderProposalViewModel(handle)
+        val viewModel = ProviderProposalViewModel(handle, validator, clock)
         val chat = detail(42, 7, ConversationStatus.Active)
         viewModel.open(chat)
         viewModel.updateAmount("100")
@@ -66,6 +75,42 @@ class ProviderProposalViewModelTest {
         assertEquals("75", form.duration)
         assertTrue(form.customDuration)
         assertEquals("75", handle.get<String>("proposal_duration"))
+    }
+
+    @Test fun `invalid amount stays in form until corrected`() {
+        val viewModel = ProviderProposalViewModel(
+            SavedStateHandle(mapOf(Route.Conversation.argument to 42)), validator, clock)
+        viewModel.open(detail(42, 7, ConversationStatus.Active))
+        viewModel.updateAmount("0")
+        viewModel.updateDate("2026-10-01")
+        viewModel.updateTime("10:00")
+        viewModel.updateReason("Inspect sink")
+        viewModel.selectDuration(45)
+
+        assertFalse(viewModel.continueToConfirmation())
+        assertEquals(setOf(ProposalValidationError.Amount),
+            (viewModel.uiState.value as ProposalUiState.Form).errors)
+        viewModel.updateAmount("100,50")
+        assertTrue(viewModel.continueToConfirmation())
+        assertEquals(emptySet<ProposalValidationError>(),
+            (viewModel.uiState.value as ProposalUiState.Form).errors)
+    }
+
+    @Test fun `captured draft zone survives source zone change and reopening`() {
+        var currentZone = java.util.TimeZone.getTimeZone("America/New_York")
+        val source = object : ProposalTimeSource() {
+            override fun nowMillis() = clock.nowMillis()
+            override fun zone() = currentZone
+        }
+        val handle = SavedStateHandle(mapOf(Route.Conversation.argument to 42))
+        val viewModel = ProviderProposalViewModel(handle, validator, source)
+        val chat = detail(42, 7, ConversationStatus.Active)
+        viewModel.open(chat)
+        currentZone = java.util.TimeZone.getTimeZone("UTC")
+        viewModel.close()
+        viewModel.open(chat)
+        assertEquals("America/New_York", (viewModel.uiState.value as ProposalUiState.Form).zoneId)
+        assertEquals("America/New_York", handle.get<String>("proposal_zone_id"))
     }
 
     private fun detail(conversationId: Int, consumerId: Int, status: ConversationStatus) =
