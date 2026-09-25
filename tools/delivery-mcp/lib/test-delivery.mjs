@@ -17,6 +17,7 @@ const SAFE_PATH_CHARS = /^[A-Za-z0-9._/-]+$/;
 const DEFAULT_TEST_TIMEOUT_MS = 900000;
 const TDD_RUNTIME_DIR = ".delivery/runtime/tdd";
 const EXECUTION_MODES = new Set(["sync", "job", "auto"]);
+const BDD_RUNNER_DIR = "app/src/test/java/com/loresuelvo/serviceprovider/bdd";
 
 export function getTestExtension(filePath) {
   const normalized = normalizePath(filePath);
@@ -73,6 +74,52 @@ export function validateFeatureFilePath(repoRoot, filePath) {
     throw pathError("INVALID_FEATURE_FILE", `Feature path must be under app/src/test/resources/features/: ${filePath}`);
   }
   return assertRegularRepoFile(repoRoot, normalized, "Feature file path", "FEATURE_FILE_NOT_FOUND");
+}
+
+// Only exact one-feature Cucumber runners can scope an inner-loop JVM run.
+export function findFeatureRunner(repoRoot, featureFile) {
+  const expected = featureFile.replace(/^app\/src\/test\/resources\//, "classpath:");
+  const root = path.resolve(repoRoot, BDD_RUNNER_DIR);
+  if (!fs.existsSync(root)) return null;
+  const matches = [];
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(absolute);
+        continue;
+      }
+      if (!entry.isFile() || !entry.name.endsWith("CucumberTest.kt")) continue;
+      const relative = path.relative(repoRoot, absolute).replaceAll(path.sep, "/");
+      const source = fs.readFileSync(absolute, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\/\/[^\r\n]*/g, "");
+      const declarations = source.match(/\bfeatures\s*=\s*\[\s*"classpath:features\/[A-Za-z0-9._/-]+\.feature"\s*,?\s*\]/g) || [];
+      if (declarations.length !== 1 || (source.match(/\bfeatures\s*=/g) || []).length !== 1) continue;
+      if (!declarations[0].includes(`"${expected}"`)) continue;
+      if (!/@RunWith\(Cucumber::class\)/.test(source) || !/@CucumberOptions\s*\(/.test(source)) continue;
+      const className = path.basename(relative, ".kt");
+      const packageName = relative.replace(/^app\/src\/test\/java\//, "").split("/").slice(0, -1).join(".");
+      if (!source.match(new RegExp(`^package\\s+${packageName.replaceAll(".", "\\.")}\\s*$`, "m"))) continue;
+      if (!source.match(new RegExp(`^class\\s+${className}\\b`, "m"))) continue;
+      matches.push(relative);
+    }
+  };
+  visit(root);
+  return matches.length === 1 ? validateTestFilePath(repoRoot, matches[0]) : null;
+}
+
+function hasConventionalJvmTestClass(repoRoot, testFile) {
+  const relative = testFile.replace(/^app\/src\/test\/(?:java|kotlin)\//, "");
+  const expectedPackage = relative.split("/").slice(0, -1).join(".");
+  const expectedClass = path.basename(relative, ".kt");
+  const source = fs.readFileSync(path.resolve(repoRoot, testFile), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/[^\r\n]*/g, "");
+  const declaredPackage = source.match(/^package\s+([A-Za-z0-9_.]+)\s*$/m)?.[1];
+  const topLevelClasses = [...source.matchAll(/^class\s+([A-Za-z_][A-Za-z0-9_]*)\b/gm)];
+  return declaredPackage === expectedPackage &&
+    topLevelClasses.length === 1 && topLevelClasses[0][1] === expectedClass;
 }
 
 export function scenarioHasWipTag(repoRoot, featureFile, scenarioName) {
@@ -231,10 +278,11 @@ function emptyResult(mode, diagnostics = [], extra = {}) {
 function resultFromExecution({ mode, execResult, logPath, checkId = null }) {
   const passed = Boolean(execResult?.passed);
   const counts = execResult?.counts || parseTestCounts(execResult?.rawOutput).counts;
+  const emptySelection = !passed && /No tests found for given includes:/i.test(execResult?.rawOutput || "");
   const message = passed ? "" : redactSecrets(execResult?.message || execResult?.summaryLines?.[0] || `${mode} execution failed`);
   const failure = passed ? null : {
     signature: computeFailureSignature({ checkId: checkId || mode, exitCode: execResult?.exitCode, message, locations: execResult?.locations || [] }),
-    code: execResult?.code || (execResult?.timedOut ? "CHECK_TIMEOUT" : "TEST_FAILED"),
+    code: emptySelection ? "NO_TESTS_FOUND" : execResult?.code || (execResult?.timedOut ? "CHECK_TIMEOUT" : "TEST_FAILED"),
     checkId: checkId || mode,
     message,
     summaryLines: (execResult?.summaryLines || [message]).slice(0, 6),
@@ -424,7 +472,8 @@ export async function testDelivery({
       return emptyResult("scenario", [{ code: error.code || "INVALID_FEATURE_FILE", message: redactSecrets(error.message), retryable: false }]);
     }
     const policy = await loadDeliveryPolicy({ repoRoot: root });
-    const cacheKey = computeTddCacheKey({ mode, featureFile: feature, scenarioName: scenarioName || null, timeoutMs, policyHash: policy.sourceHash, fingerprint: await inputFingerprint(root, [feature]) });
+    const runner = findFeatureRunner(root, feature);
+    const cacheKey = computeTddCacheKey({ mode, featureFile: feature, scenarioName: scenarioName || null, runner, timeoutMs, policyHash: policy.sourceHash, fingerprint: await inputFingerprint(root, runner ? [feature, runner] : [feature]) });
     if (!force) {
       const cached = await readCache(root, cacheKey);
       if (cached) return { ...cached, mode: "scenario" };
@@ -432,8 +481,14 @@ export async function testDelivery({
     if (isAsync || shouldUseDeliveryTestJob({ mode, executionMode, workerJobId, executeDefault: !executeFn })) {
       return enqueue({ repoRoot: root, mode, executionMode, params: { mode, featureFile: feature, scenarioName: scenarioName || "", force, timeoutMs }, cacheKey });
     }
-    // Focused Cucumber JVM execution is intentionally unavailable; run full Dev JVM task.
-    const result = await executeDeliveryCheck({ repoRoot: root, checkId: "jvm_test_dev", executeFn, timeoutMs, mode });
+    let result = runner
+      ? await executeFocusedTests({ repoRoot: root, testFiles: [runner], executeFn, timeoutMs, mode })
+      : await executeDeliveryCheck({ repoRoot: root, checkId: "jvm_test_dev", executeFn, timeoutMs, mode });
+    const emptyRunner = runner && result.failure?.code === "NO_TESTS_FOUND";
+    if (emptyRunner) result = await executeDeliveryCheck({ repoRoot: root, checkId: "jvm_test_dev", executeFn, timeoutMs, mode });
+    result.selection = runner && !emptyRunner
+      ? { scope: "feature", runner, scenarioNameFiltered: false }
+      : { scope: "full_jvm", runner: runner || null, scenarioNameFiltered: false };
     await writeCache(root, cacheKey, result);
     return result;
   }
@@ -470,7 +525,16 @@ export async function testDelivery({
   if (!changed.length) return { status: "passed", mode: "affected", cached: false, durationMs: 0, counts: { passed: 0, failed: 0, skipped: 0 }, diagnostics: [{ code: "NO_CHANGES", message: "Working tree has no changes to test", retryable: false }] };
 
   const policy = await loadDeliveryPolicy({ repoRoot: root });
-  const cacheKey = computeTddCacheKey({ mode: "affected", changed: changed.sort(), policyHash: policy.sourceHash, fingerprint: await inputFingerprint(root, changed) });
+  let focusFiles = null;
+  if (changed.every((file) => getTestExtension(file) === ".kt" && !file.endsWith("CucumberTest.kt"))) {
+    try {
+      focusFiles = changed.map((file) => validateTestFilePath(root, file)).sort();
+      if (!focusFiles.every((file) => hasConventionalJvmTestClass(root, file))) focusFiles = null;
+    } catch {
+      // A deleted or otherwise unavailable test cannot be run by class name.
+    }
+  }
+  const cacheKey = computeTddCacheKey({ mode: "affected", changed: changed.sort(), focusFiles, policyHash: policy.sourceHash, fingerprint: await inputFingerprint(root, changed) });
   if (!force) {
     const cached = await readCache(root, cacheKey);
     if (cached) return { ...cached, mode: "affected" };
@@ -478,7 +542,10 @@ export async function testDelivery({
   if (isAsync || shouldUseDeliveryTestJob({ mode: "affected", executionMode, workerJobId, executeDefault: !executeFn })) {
     return enqueue({ repoRoot: root, mode: "affected", executionMode, params: { mode: "affected", force, timeoutMs }, cacheKey });
   }
-  const result = await executeDeliveryCheck({ repoRoot: root, checkId: "jvm_test_dev", executeFn, timeoutMs, mode: "affected" });
+  const result = focusFiles
+    ? await executeFocusedTests({ repoRoot: root, testFiles: focusFiles, executeFn, timeoutMs, mode: "affected" })
+    : await executeDeliveryCheck({ repoRoot: root, checkId: "jvm_test_dev", executeFn, timeoutMs, mode: "affected" });
+  result.selection = focusFiles ? { scope: "changed_jvm_tests", testFiles: focusFiles } : { scope: "full_jvm" };
   await writeCache(root, cacheKey, result);
   return result;
 }

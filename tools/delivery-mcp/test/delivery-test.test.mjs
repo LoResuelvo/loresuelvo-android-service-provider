@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   testDelivery,
+  findFeatureRunner,
   validateTestFilePath,
   validateFeatureFilePath,
   parseTestCounts,
@@ -16,6 +17,7 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const kotlinTest = "app/src/test/java/com/loresuelvo/serviceprovider/ui/auth/WelcomeViewModelTest.kt";
 const feature = "app/src/test/resources/features/auth/provider-welcome.feature";
+const proposalFeature = "app/src/test/resources/features/proposals/provider-service-proposal.feature";
 const passingExecutor = async ({ command, args, logPath }) => ({
   passed: true,
   durationMs: 1,
@@ -42,7 +44,7 @@ test("delivery_test parses JVM/Node counts", () => {
   assert.deepEqual(parseTestCounts("ℹ pass 4\nℹ fail 0"), { found: true, counts: { passed: 4, failed: 0, skipped: 0 } });
 });
 
-test("delivery_test filters Kotlin unit classes but keeps scenario validation complete", async () => {
+test("delivery_test focuses a uniquely mapped Cucumber feature", async () => {
   const commands = [];
   const executeFn = async (request) => {
     commands.push([request.command, ...request.args]);
@@ -66,18 +68,104 @@ test("delivery_test filters Kotlin unit classes but keeps scenario validation co
   const scenario = await testDelivery({
     repoRoot: ROOT,
     mode: "scenario",
-    featureFile: feature,
-    scenarioName: "Provider sees the welcome screen",
+    featureFile: proposalFeature,
+    scenarioName: "01-PSP Abrir una propuesta desde un chat activo",
     executionMode: "sync",
     force: true,
     executeFn,
   });
   assert.equal(scenario.status, "passed");
   assert.equal(scenario.mode, "scenario");
-  assert.deepEqual(commands[1], ["make", "test", "FLAVOR=Dev"]);
+  assert.deepEqual(commands[1], [
+    "scripts/with-android-env.sh", "./gradlew", ":app:testDevDebugUnitTest",
+    "--tests", "com.loresuelvo.serviceprovider.bdd.proposals.ProviderProposalCucumberTest",
+  ]);
+  assert.equal(scenario.selection.scope, "feature");
+  assert.equal(scenario.selection.scenarioNameFiltered, false);
 
   await testDelivery({ repoRoot: ROOT, mode: "unit", executionMode: "sync", force: true, executeFn });
   assert.deepEqual(commands[2], ["make", "test", "FLAVOR=Dev"]);
+});
+
+test("scenario mode falls back only for an empty runner, not a failing scenario", async () => {
+  const commands = [];
+  const emptyRunner = async (request) => {
+    commands.push([request.command, ...request.args]);
+    if (commands.length === 1) return { passed: false, exitCode: 1, message: "Gradle test failed", rawOutput: "No tests found for given includes: [WelcomeCucumberTest](--tests filter)" };
+    return passingExecutor(request);
+  };
+  const options = { repoRoot: ROOT, mode: "scenario", featureFile: feature, executionMode: "sync", force: true };
+  const fallback = await testDelivery({ ...options, executeFn: emptyRunner });
+  assert.equal(fallback.status, "passed");
+  assert.equal(fallback.selection.scope, "full_jvm");
+  assert.equal(commands.length, 2);
+  assert.deepEqual(commands[1], ["make", "test", "FLAVOR=Dev"]);
+
+  const failed = await testDelivery({ ...options, executeFn: async (request) => ({
+    passed: false, exitCode: 1, message: "Assertion failed: unexpected screen", rawOutput: "Assertion failed: unexpected screen",
+  }) });
+  assert.equal(failed.status, "failed");
+  assert.equal(failed.selection.scope, "feature");
+});
+
+test("runner mapping requires a unique exact feature declaration", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "android-runner-map-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const runnerDir = path.join(root, "app/src/test/java/com/loresuelvo/serviceprovider/bdd/example");
+  await fs.mkdir(runnerDir, { recursive: true });
+  const runner = (name, target) => `package com.loresuelvo.serviceprovider.bdd.example\n@RunWith(Cucumber::class)\n@CucumberOptions(features = ["classpath:features/${target}"])\nclass ${name}\n`;
+  const first = path.join(runnerDir, "ExampleCucumberTest.kt");
+  await fs.writeFile(first, `${runner("ExampleCucumberTest", "example/example.feature")}// features = ["classpath:features/example/decoy.feature"]\n`);
+  const requested = "app/src/test/resources/features/example/example.feature";
+  assert.equal(findFeatureRunner(root, requested), "app/src/test/java/com/loresuelvo/serviceprovider/bdd/example/ExampleCucumberTest.kt");
+  await fs.writeFile(path.join(runnerDir, "OtherCucumberTest.kt"), runner("OtherCucumberTest", "example/example.feature"));
+  assert.equal(findFeatureRunner(root, requested), null);
+  assert.equal(findFeatureRunner(root, "app/src/test/resources/features/example/missing.feature"), null);
+});
+
+test("affected mode focuses only when every changed path is a runnable JVM test", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "android-affected-test-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const git = (...args) => execFileSync("git", args, { cwd: root, stdio: "ignore" });
+  git("init");
+  git("config", "user.name", "Delivery Tests");
+  git("config", "user.email", "delivery-tests@example.com");
+  git("config", "commit.gpgsign", "false");
+  await fs.cp(path.join(ROOT, ".delivery/schemas"), path.join(root, ".delivery/schemas"), { recursive: true });
+  await fs.copyFile(path.join(ROOT, ".delivery/policy.v1.json"), path.join(root, ".delivery/policy.v1.json"));
+  await fs.writeFile(path.join(root, ".gitignore"), ".delivery/runtime/\n");
+  const file = "app/src/test/java/example/ExampleTest.kt";
+  const cucumberRunner = "app/src/test/java/example/ExampleCucumberTest.kt";
+  await fs.mkdir(path.dirname(path.join(root, file)), { recursive: true });
+  await fs.writeFile(path.join(root, file), "package example\nclass ExampleTest\n");
+  await fs.writeFile(path.join(root, cucumberRunner), "package example\nclass ExampleCucumberTest\n");
+  await fs.writeFile(path.join(root, "Production.kt"), "val value = 0\n");
+  git("add", ".");
+  git("commit", "-m", "Initial fixture");
+  const commands = [];
+  const executeFn = async (request) => {
+    commands.push([request.command, ...request.args]);
+    return passingExecutor(request);
+  };
+  await fs.writeFile(path.join(root, file), "package example\nclass ExampleTest // changed\n");
+  const focused = await testDelivery({ repoRoot: root, mode: "affected", executionMode: "sync", force: true, executeFn });
+  assert.equal(focused.selection.scope, "changed_jvm_tests");
+  assert.deepEqual(commands[0], ["scripts/with-android-env.sh", "./gradlew", ":app:testDevDebugUnitTest", "--tests", "example.ExampleTest"]);
+
+  await fs.writeFile(path.join(root, file), "package example\nclass OtherTest // filename differs\n");
+  const mismatchedClass = await testDelivery({ repoRoot: root, mode: "affected", executionMode: "sync", force: true, executeFn });
+  assert.equal(mismatchedClass.selection.scope, "full_jvm");
+  assert.deepEqual(commands[1], ["make", "test", "FLAVOR=Dev"]);
+
+  await fs.writeFile(path.join(root, cucumberRunner), "package example\nclass ExampleCucumberTest // changed\n");
+  const cucumber = await testDelivery({ repoRoot: root, mode: "affected", executionMode: "sync", force: true, executeFn });
+  assert.equal(cucumber.selection.scope, "full_jvm");
+  assert.deepEqual(commands[2], ["make", "test", "FLAVOR=Dev"]);
+
+  await fs.writeFile(path.join(root, "Production.kt"), "val value = 1\n");
+  const broad = await testDelivery({ repoRoot: root, mode: "affected", executionMode: "sync", force: true, executeFn });
+  assert.equal(broad.selection.scope, "full_jvm");
+  assert.deepEqual(commands[3], ["make", "test", "FLAVOR=Dev"]);
 });
 
 test("TDD cache invalidates when an already-dirty production file changes", async (t) => {

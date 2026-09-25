@@ -1821,7 +1821,9 @@ export async function validateRepairLineage({
   targetSha = null,
   ciProvider = null,
   supersededSet = null,
+  signal = null,
 } = {}) {
+  signal?.throwIfAborted();
   const root = findRepoRoot(repoRoot);
   const cleanRepairSha = assertCommitSha(repairSha);
 
@@ -1913,7 +1915,7 @@ export async function validateRepairLineage({
       fullTargetSha = targetEvidence.commitSha.toLowerCase();
     } else {
       try {
-        const ci = await inspectCi({ sha: rawTargetSha, repoRoot: root, provider: ciProvider });
+        const ci = await inspectCi({ sha: rawTargetSha, repoRoot: root, provider: ciProvider, signal });
         if (ci && ci.status !== "provider_error" && ci.status !== "not_found") {
           fullTargetSha = rawTargetSha.toLowerCase();
         }
@@ -2184,7 +2186,9 @@ export async function resolveRepairChain({
   repoRoot,
   commits = null,
   ciProvider = null,
+  signal = null,
 } = {}) {
+  signal?.throwIfAborted();
   const root = findRepoRoot(repoRoot);
 
   let candidateShas = [];
@@ -2207,6 +2211,7 @@ export async function resolveRepairChain({
 
   const entriesBySha = new Map();
   for (const sha of candidateShas) {
+    signal?.throwIfAborted();
     try {
       const entry = await getCommitEvidence({ repoRoot: root, commitSha: sha });
       if (entry) {
@@ -2234,6 +2239,7 @@ export async function resolveRepairChain({
   const repairChainMap = new Map();
 
   for (const repairSha of sortedRepairShas) {
+    signal?.throwIfAborted();
     const entry = entriesBySha.get(repairSha);
     const rawRepairsSha = String(entry.repairsSha).trim();
 
@@ -2242,7 +2248,9 @@ export async function resolveRepairChain({
       repairSha,
       ciProvider,
       supersededSet: supersededFailures,
+      signal,
     });
+    signal?.throwIfAborted();
 
     if (!validation.valid) {
       invalidRepairs.push({
@@ -2259,10 +2267,11 @@ export async function resolveRepairChain({
     // Inspect CI of the repair commit itself
     let repairCi;
     try {
-      repairCi = await inspectCi({ sha: repairSha, repoRoot: root, provider: ciProvider });
+      repairCi = await inspectCi({ sha: repairSha, repoRoot: root, provider: ciProvider, signal });
     } catch {
       repairCi = { status: "provider_error" };
     }
+    signal?.throwIfAborted();
 
     if (repairCi.status === "passed") {
       validatedRepairs.push(repairSha);
@@ -2284,12 +2293,14 @@ export async function resolveRepairChain({
         supersededFailures.add(s);
       }
 
-      await updateCommitRepairStatus({
-        repoRoot: root,
-        commitSha: repairSha,
-        repairStatus: "validated",
-        supersedes: [...supersedesForThis],
-      });
+      if (!signal) {
+        await updateCommitRepairStatus({
+          repoRoot: root,
+          commitSha: repairSha,
+          repairStatus: "validated",
+          supersedes: [...supersedesForThis],
+        });
+      }
     } else if (["failed", "cancelled", "timed_out"].includes(repairCi.status)) {
       failedRepairs.push(repairSha);
 
@@ -2301,11 +2312,13 @@ export async function resolveRepairChain({
       }
       repairChainMap.set(repairSha, supersedesForThis);
 
-      await updateCommitRepairStatus({
-        repoRoot: root,
-        commitSha: repairSha,
-        repairStatus: "failed",
-      });
+      if (!signal) {
+        await updateCommitRepairStatus({
+          repoRoot: root,
+          commitSha: repairSha,
+          repairStatus: "failed",
+        });
+      }
     }
   }
 
@@ -2329,10 +2342,15 @@ export async function getActiveCiIncidents({
   ciProvider = null,
   excludeShas = [],
   historyHeadSha = "HEAD",
+  ledgerEntries = null,
+  repairResolution = null,
+  signal = null,
 } = {}) {
+  signal?.throwIfAborted();
   const root = findRepoRoot(repoRoot);
-  const ledgerEntries = await listCommitEvidence({ repoRoot: root });
-  const rawEntries = filterEntriesReachableFrom(root, ledgerEntries, historyHeadSha);
+  const entriesFromLedger = ledgerEntries || await listCommitEvidence({ repoRoot: root });
+  signal?.throwIfAborted();
+  const rawEntries = filterEntriesReachableFrom(root, entriesFromLedger, historyHeadSha);
   const excludeSet = new Set(
     Array.from(excludeShas || []).map((s) => String(s).trim().toLowerCase())
   );
@@ -2346,28 +2364,30 @@ export async function getActiveCiIncidents({
     return empty;
   }
 
-  const repairResolution = await resolveRepairChain({ repoRoot: root, commits: rawEntries, ciProvider });
+  const resolvedRepairs = repairResolution || await resolveRepairChain({ repoRoot: root, commits: rawEntries, ciProvider, signal });
+  signal?.throwIfAborted();
   const supersededFailures = new Set(
-    (repairResolution.supersededFailures || []).map((s) => s.toLowerCase())
+    (resolvedRepairs.supersededFailures || []).map((s) => s.toLowerCase())
   );
   // Only lineage-validated repairs are allowed to resolve an incident. A
   // repair receipt that merely exists in the ledger (even with green CI) is
   // untrusted until validateRepairLineage accepted its target, branch, US,
   // ancestry and Gate R evidence.
   const validatedRepairSet = new Set(
-    (repairResolution.validatedRepairs || []).map((s) => s.toLowerCase())
+    (resolvedRepairs.validatedRepairs || []).map((s) => s.toLowerCase())
   );
   const invalidRepairSet = new Set(
-    (repairResolution.invalidRepairs || []).map((repair) => String(repair.repairSha).toLowerCase())
+    (resolvedRepairs.invalidRepairs || []).map((repair) => String(repair.repairSha).toLowerCase())
   );
 
   // Mark historical failures in completed user stories whose close_us commit passed CI as superseded
   for (const entry of rawEntries || []) {
+    signal?.throwIfAborted();
     if (entry.intent === "close_us" && entry.usId) {
       const closeSha = entry.commitSha.toLowerCase();
       let closeCi;
       try {
-        closeCi = await inspectCi({ sha: closeSha, repoRoot: root, provider: ciProvider });
+        closeCi = await inspectCi({ sha: closeSha, repoRoot: root, provider: ciProvider, signal });
       } catch {
         closeCi = null;
       }
@@ -2422,15 +2442,18 @@ export async function getActiveCiIncidents({
 
   const ciBySha = new Map();
   async function inspectCached(sha) {
+    signal?.throwIfAborted();
     const normalizedSha = String(sha).trim().toLowerCase();
     if (ciBySha.has(normalizedSha)) return ciBySha.get(normalizedSha);
-    const ci = await inspectCi({ sha: normalizedSha, repoRoot: root, provider: ciProvider });
+    const ci = await inspectCi({ sha: normalizedSha, repoRoot: root, provider: ciProvider, signal });
+    signal?.throwIfAborted();
     ciBySha.set(normalizedSha, ci);
     return ci;
   }
 
   async function hasGreenDescendant(ancestorSha) {
     for (const candidate of entries) {
+      signal?.throwIfAborted();
       const candidateSha = candidate.commitSha.toLowerCase();
       if (candidateSha === ancestorSha) continue;
       try {
@@ -2447,10 +2470,27 @@ export async function getActiveCiIncidents({
     return false;
   }
 
+  // CI inspection is network-bound. Fetch independent commits in a small
+  // bounded pool, then let the incident logic consume the same results in
+  // ledger order. This changes latency without changing incident precedence.
+  const shasToInspect = [...new Set(entries
+    .map((entry) => entry.commitSha.toLowerCase())
+    .filter((sha) => !supersededFailures.has(sha)))];
+  let nextInspection = 0;
+  await Promise.all(Array.from({ length: Math.min(4, shasToInspect.length) }, async () => {
+    while (nextInspection < shasToInspect.length) {
+      signal?.throwIfAborted();
+      const sha = shasToInspect[nextInspection++];
+      await inspectCached(sha);
+    }
+  }));
+  signal?.throwIfAborted();
+
   const allIncidents = [];
   const activeCiIncidents = [];
 
   for (const entry of entries) {
+    signal?.throwIfAborted();
     const sha = entry.commitSha.toLowerCase();
     const usId = entry.usId || null;
     const branch = entry.branch || null;
@@ -2562,13 +2602,18 @@ export async function getActiveCiIncidents({
     }
   }
 
-  try {
-    await writeJsonAtomic(root, ".delivery/runtime/active-incidents.json", {
-      updatedAt: new Date().toISOString(),
-      activeCiIncidents,
-    });
-  } catch {
-    // best-effort
+  signal?.throwIfAborted();
+  // A bounded wait is read-only and may time out while this evaluation is
+  // finishing. Only unbounded evaluations publish the diagnostic snapshot.
+  if (!signal) {
+    try {
+      await writeJsonAtomic(root, ".delivery/runtime/active-incidents.json", {
+        updatedAt: new Date().toISOString(),
+        activeCiIncidents,
+      });
+    } catch {
+      // best-effort
+    }
   }
 
   activeCiIncidents.activeCiIncidents = activeCiIncidents;
@@ -2580,6 +2625,7 @@ export async function evaluateCiWindow({
   repoRoot,
   policy = null,
   ciProvider = null,
+  signal = null,
   targetSha = null,
   intent = "prepare_commit",
   repairsSha = null,
@@ -2587,14 +2633,32 @@ export async function evaluateCiWindow({
   commitCount = 0,
   historyHeadSha = "HEAD",
 } = {}) {
+  signal?.throwIfAborted();
   const root = findRepoRoot(repoRoot);
   const effectivePolicy = policy || (await loadDeliveryPolicy({ repoRoot: root }));
   const maxInFlightCommits = effectivePolicy?.ci?.maxInFlightCommits ?? 4;
   const effectiveProvider = ciProvider || getCiProvider();
+  // A single evaluation may inspect the same SHA while validating repairs,
+  // finding incidents, and counting the window. Reuse that remote result only
+  // within this evaluation so the next poll can observe a changed CI state.
+  const ciInspections = new Map();
+  const providerForEvaluation = {
+    inspectCommit(sha, options) {
+      const normalizedSha = String(sha).trim().toLowerCase();
+      if (!ciInspections.has(normalizedSha)) {
+        ciInspections.set(
+          normalizedSha,
+          Promise.resolve().then(() => effectiveProvider.inspectCommit(normalizedSha, options)),
+        );
+      }
+      return ciInspections.get(normalizedSha);
+    },
+  };
 
   let rawEntries = [];
   try {
     rawEntries = await listCommitEvidence({ repoRoot: root });
+    signal?.throwIfAborted();
   } catch (error) {
     if (
       error?.code === "LEDGER_CORRUPT" ||
@@ -2630,16 +2694,23 @@ export async function evaluateCiWindow({
     repairResolution = await resolveRepairChain({
       repoRoot: root,
       commits: historyEntries,
-      ciProvider: effectiveProvider,
+      ciProvider: providerForEvaluation,
+      signal,
     });
+    signal?.throwIfAborted();
     supersededSet = new Set((repairResolution.supersededFailures || []).map((s) => s.toLowerCase()));
     activeIncidents = await getActiveCiIncidents({
       repoRoot: root,
-      ciProvider: effectiveProvider,
+      ciProvider: providerForEvaluation,
       excludeShas: excludeSet,
       historyHeadSha,
+      ledgerEntries: rawEntries,
+      repairResolution,
+      signal,
     });
+    signal?.throwIfAborted();
   } catch (error) {
+    if (signal?.aborted) throw error;
     if (
       error?.code === "LEDGER_CORRUPT" ||
       error?.code === "LEDGER_INCONSISTENT" ||
@@ -2767,6 +2838,7 @@ export async function evaluateCiWindow({
   }
 
   for (const priorSha of recentPriorShas) {
+    signal?.throwIfAborted();
     const inc = incidentsBySha.get(priorSha.toLowerCase());
     if (inc) {
       if (inc.status === "provider_error") {
@@ -2785,8 +2857,9 @@ export async function evaluateCiWindow({
     } else {
       let ci;
       try {
-        ci = await inspectCi({ sha: priorSha, repoRoot: root, provider: effectiveProvider });
+        ci = await inspectCi({ sha: priorSha, repoRoot: root, provider: providerForEvaluation, signal });
       } catch {
+        signal?.throwIfAborted();
         return {
           allowed: false,
           status: "blocked",

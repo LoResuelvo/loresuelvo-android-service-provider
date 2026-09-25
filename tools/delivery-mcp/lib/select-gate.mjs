@@ -17,7 +17,12 @@ function substituteDisplay(display, parameters = {}) {
 
 function buildGate(policy, gateId, reasonCodes, parameters = {}, extraCheckIds = []) {
   const definition = policyGate(policy, gateId);
-  const checkIds = [...new Set([...(definition.checkIds || []), ...extraCheckIds])];
+  const configuredChecks = definition.checkIds || [];
+  const checkIds = [...new Set([
+    ...configuredChecks.filter((id) => id === "no_wip_in_scope"),
+    ...extraCheckIds,
+    ...configuredChecks,
+  ])];
   const checks = checkIds.map((checkId) => {
     const definitionForCheck = policy.checkCatalog?.[checkId];
     if (!definitionForCheck) throw new Error(`Delivery policy does not define check ${checkId}`);
@@ -172,6 +177,10 @@ export function selectGate({
     // Unknown Android paths fail closed to Gate C. This includes unclassified
     // Kotlin/build-system changes and avoids false high-confidence NONE.
     gate = buildGate(policy, "C", ["UNKNOWN_FUNCTIONAL_ANDROID_CHANGE"]);
+  }
+
+  if (classified.hasDeliveryTooling && !gate.checkIds.includes("delivery_unit")) {
+    gate = buildGate(policy, gate.id, [...gate.reasonCodes, "DELIVERY_TOOLING_CHANGED"], gate.parameters, ["delivery_unit"]);
   }
 
   if (maintainability?.operationalDiagnostic) {

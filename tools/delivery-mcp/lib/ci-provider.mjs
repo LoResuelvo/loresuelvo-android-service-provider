@@ -10,6 +10,12 @@ import { summarizeFailureOutput } from "./execute-check.mjs";
 const execFileAsync = promisify(execFile);
 
 export const CI_RUNTIME_DIR = ".delivery/runtime/ci";
+const CI_API_TIMEOUT_MS = 10000;
+
+function apiSignal(signal) {
+  const timeout = AbortSignal.timeout(CI_API_TIMEOUT_MS);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
 
 function repositoryFromRemote(repoRoot) {
   try {
@@ -94,8 +100,9 @@ export class GitHubActionsProvider extends CiProvider {
     this.token = token || process.env.GITHUB_TOKEN || process.env.GH_TOKEN || null;
   }
 
-  async inspectCommit(sha, { repoRoot } = {}) {
+  async inspectCommit(sha, { repoRoot, signal = null } = {}) {
     const root = findRepoRoot(repoRoot);
+    signal?.throwIfAborted();
     if (!this.repo) {
       return this.providerErrorResult(sha, this.repoError, root);
     }
@@ -103,10 +110,11 @@ export class GitHubActionsProvider extends CiProvider {
     // Try gh CLI first
     let ghResult = null;
     try {
-      ghResult = await this.queryViaGhCli(sha, root);
+      ghResult = await this.queryViaGhCli(sha, root, signal);
     } catch {
       // Fall back to the API when gh is unavailable or unauthenticated.
     }
+    signal?.throwIfAborted();
     if (ghResult) {
       validateCiInspectionResult(ghResult, root);
       return ghResult;
@@ -115,7 +123,7 @@ export class GitHubActionsProvider extends CiProvider {
     // Try GitHub API via fetch if token available
     if (this.token) {
       try {
-        const apiResult = await this.queryViaApi(sha, root);
+        const apiResult = await this.queryViaApi(sha, root, signal);
         if (apiResult) {
           validateCiInspectionResult(apiResult, root);
           return apiResult;
@@ -133,7 +141,7 @@ export class GitHubActionsProvider extends CiProvider {
     );
   }
 
-  async queryViaGhCli(sha, repoRoot) {
+  async queryViaGhCli(sha, repoRoot, signal = null) {
     const args = [
       "run",
       "list",
@@ -149,6 +157,7 @@ export class GitHubActionsProvider extends CiProvider {
       cwd: repoRoot,
       encoding: "utf8",
       timeout: 10000,
+      ...(signal ? { signal } : {}),
     });
 
     const parsed = JSON.parse(stdout || "[]");
@@ -168,14 +177,15 @@ export class GitHubActionsProvider extends CiProvider {
     const run = parsed[0];
     const result = this.normalizeRun(sha, run, repoRoot);
     if (["failed", "timed_out"].includes(result.status)) {
-      return this.enrichFailureViaGh(result, repoRoot);
+      return this.enrichFailureViaGh(result, repoRoot, signal);
     }
     return result;
   }
 
-  async queryViaApi(sha, repoRoot) {
+  async queryViaApi(sha, repoRoot, signal = null) {
     const url = `https://api.github.com/repos/${this.repo}/actions/runs?head_sha=${sha}&per_page=1`;
     const response = await fetch(url, {
+      signal: apiSignal(signal),
       headers: {
         Authorization: `token ${this.token}`,
         Accept: "application/vnd.github.v3+json",
@@ -214,7 +224,7 @@ export class GitHubActionsProvider extends CiProvider {
       repoRoot
     );
     if (["failed", "timed_out"].includes(result.status)) {
-      return this.enrichFailureViaApi(result, repoRoot);
+      return this.enrichFailureViaApi(result, repoRoot, signal);
     }
     return result;
   }
@@ -250,13 +260,14 @@ export class GitHubActionsProvider extends CiProvider {
     };
   }
 
-  async enrichFailureViaGh(result, repoRoot) {
+  async enrichFailureViaGh(result, repoRoot, signal = null) {
     try {
       const runId = String(result.workflow.id);
       const { stdout } = await execFileAsync("gh", ["run", "view", runId, "--json", "jobs"], {
         cwd: repoRoot,
         encoding: "utf8",
         timeout: 10000,
+        ...(signal ? { signal } : {}),
         maxBuffer: 2 * 1024 * 1024,
       });
       const details = this.failureFromJobs(JSON.parse(stdout || "{}").jobs || []);
@@ -272,6 +283,7 @@ export class GitHubActionsProvider extends CiProvider {
               cwd: repoRoot,
               encoding: "utf8",
               timeout: 15000,
+              ...(signal ? { signal } : {}),
               maxBuffer: 2 * 1024 * 1024,
             }
           );
@@ -287,6 +299,7 @@ export class GitHubActionsProvider extends CiProvider {
         failedJobs: details.failedJobs,
         failure: { ...details.failure, excerpt: redactSecrets(excerpt) },
       };
+      signal?.throwIfAborted();
       await saveCiExcerpt({ repoRoot, sha: result.sha, excerpt: enriched.failure.excerpt });
       return enriched;
     } catch {
@@ -294,10 +307,11 @@ export class GitHubActionsProvider extends CiProvider {
     }
   }
 
-  async enrichFailureViaApi(result, repoRoot) {
+  async enrichFailureViaApi(result, repoRoot, signal = null) {
     try {
       const jobsUrl = `https://api.github.com/repos/${this.repo}/actions/runs/${result.workflow.id}/jobs?filter=latest&per_page=100`;
       const jobsResponse = await fetch(jobsUrl, {
+        signal: apiSignal(signal),
         headers: {
           Authorization: `token ${this.token}`,
           Accept: "application/vnd.github.v3+json",
@@ -312,6 +326,7 @@ export class GitHubActionsProvider extends CiProvider {
       if (details.firstJobId) {
         const annotationsUrl = `https://api.github.com/repos/${this.repo}/check-runs/${details.firstJobId}/annotations?per_page=10`;
         const annotationsResponse = await fetch(annotationsUrl, {
+          signal: apiSignal(signal),
           headers: {
             Authorization: `token ${this.token}`,
             Accept: "application/vnd.github.v3+json",
@@ -335,6 +350,7 @@ export class GitHubActionsProvider extends CiProvider {
         failedJobs: details.failedJobs,
         failure: { ...details.failure, excerpt: redactSecrets(excerpt) },
       };
+      signal?.throwIfAborted();
       await saveCiExcerpt({ repoRoot, sha: result.sha, excerpt: enriched.failure.excerpt });
       return enriched;
     } catch {
@@ -436,12 +452,13 @@ export function getCiProvider({ repoRoot = null } = {}) {
   return new GitHubActionsProvider({ repoRoot });
 }
 
-export async function inspectCi({ sha, repoRoot, provider = null } = {}) {
+export async function inspectCi({ sha, repoRoot, provider = null, signal = null } = {}) {
   const root = findRepoRoot(repoRoot);
+  signal?.throwIfAborted();
   if (!sha || typeof sha !== "string") {
     throw new Error("Missing required commit SHA for CI inspection");
   }
 
   const ciProvider = provider || getCiProvider({ repoRoot: root });
-  return ciProvider.inspectCommit(sha.trim().toLowerCase(), { repoRoot: root });
+  return ciProvider.inspectCommit(sha.trim().toLowerCase(), { repoRoot: root, signal });
 }

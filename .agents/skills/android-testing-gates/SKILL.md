@@ -30,9 +30,12 @@ close future scenarios in the same feature. Gate D is for `close_batch` and
 `close_us` with completed feature scope. Only actual tag lines count as `@wip`.
 
 Use `delivery_test(mode="unit", testFiles=[...])` for exact Kotlin JVM test
-classes. Keep package paths aligned with their class names. No test files,
-scenario mode, and affected mode run the complete Dev JVM task. Focused TDD
-does not authorize skipping a gate. Serialize Gradle and device checks.
+classes. Keep package paths aligned with their class names. Scenario mode may
+run a unique runner for its feature; `scenarioName` does not filter individual
+scenarios. Affected mode focuses only when every changed path is a runnable JVM
+test class. Other cases run the complete Dev JVM task. Check the returned
+`selection` before treating a result as focused proof. Focused TDD does not
+authorize skipping a gate. Serialize Gradle and device checks.
 
 The current CI workflow uses Java 17 and a prewarmed Pixel 6/API 34 x86_64
 emulator. Regenerate its cache through the checked-in

@@ -108,6 +108,33 @@ test("CI window allows fewer than four pending commits and blocks a full window"
   assert.equal(reopened.pendingCount, 3);
 });
 
+test("CI window inspects independent commits with bounded concurrency", async (t) => {
+  const root = await createLedgerRoot(t);
+  const shas = Array.from({ length: 5 }, (_, index) => `${index + 1}${"c".repeat(39)}`);
+  for (const sha of shas) await addNotRun(root, sha);
+  const mock = new MockCiProvider(Object.fromEntries(shas.map((sha) => [sha, { status: "queued" }])));
+  let active = 0;
+  let peak = 0;
+  const provider = {
+    async inspectCommit(sha, options) {
+      active += 1;
+      peak = Math.max(peak, active);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return mock.inspectCommit(sha, options);
+      } finally {
+        active -= 1;
+      }
+    },
+  };
+
+  const result = await evaluateCiWindow({ repoRoot: root, policy, ciProvider: provider });
+  assert.equal(result.reason, "CI_WINDOW_FULL");
+  assert.equal(result.pendingCount, 5);
+  assert.ok(peak > 1);
+  assert.ok(peak <= 4);
+});
+
 test("bounded CI window wait resumes after a pending SHA passes", async (t) => {
   const root = await createLedgerRoot(t);
   const shas = Array.from({ length: 4 }, (_, index) => `${index + 1}${"d".repeat(39)}`);
@@ -151,6 +178,33 @@ test("bounded CI window wait times out and stops immediately on failure", async 
   assert.equal(blocked.status, "blocked");
   assert.equal(blocked.reason, "PRIOR_COMMIT_CI_FAILED");
   assert.equal(blocked.failedSha, shas[0]);
+});
+
+test("CI window wait bounds a stalled remote evaluation", async (t) => {
+  const root = await createLedgerRoot(t);
+  await addNotRun(root, `9${"f".repeat(39)}`);
+  let inspectionSignal = null;
+  const provider = {
+    inspectCommit: (_sha, { signal }) => {
+      inspectionSignal = signal;
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      });
+    },
+  };
+  const startedAt = Date.now();
+  const result = await waitForCiWindow({
+    repoRoot: root,
+    ciProvider: provider,
+    timeoutMs: 40,
+    pollIntervalMs: 10,
+  });
+  assert.equal(result.status, "timed_out");
+  assert.equal(result.reason, "CI_WINDOW_EVALUATION_TIMEOUT");
+  assert.ok(Date.now() - startedAt < 2000);
+  assert.equal(inspectionSignal?.aborted, true);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(await fs.stat(path.join(root, ".delivery/runtime/active-incidents.json")).catch(() => null), null);
 });
 
 test("CI window accounts for the commit currently being prepared", async (t) => {
@@ -243,10 +297,18 @@ test("a cancelled CI run is superseded only by a green git descendant", async (t
   const current = await commitWindowFixture(root, "current.txt", "current\n", "chore: current delivery");
   provider.setFixture(current.commitSha, { status: "not_found" });
 
+  const inspections = new Map();
+  const countingProvider = {
+    async inspectCommit(sha, options) {
+      inspections.set(sha, (inspections.get(sha) || 0) + 1);
+      return provider.inspectCommit(sha, options);
+    },
+  };
+
   const result = await evaluateCiWindow({
     repoRoot: root,
     policy,
-    ciProvider: provider,
+    ciProvider: countingProvider,
     historyHeadSha: current.commitSha,
   });
 
@@ -256,6 +318,7 @@ test("a cancelled CI run is superseded only by a green git descendant", async (t
     result.activeIncidents.allIncidents.find((incident) => incident.failedSha === cancelled.commitSha).status,
     "superseded",
   );
+  assert.equal(inspections.get(green.commitSha), 1);
 });
 
 test("a cancelled CI run without a green descendant remains an active repair incident", async (t) => {

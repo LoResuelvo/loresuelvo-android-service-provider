@@ -101,6 +101,36 @@ test("closing one Android scenario retains Gate C without closing future scenari
   }
 });
 
+test("mixed Delivery tooling snapshots check tooling before their Android gate", () => {
+  const feature = "app/src/test/resources/features/profile/provider-profile.feature";
+  const tooling = "tools/delivery-mcp/lib/select-gate.mjs";
+  const ui = "app/src/main/java/com/loresuelvo/serviceprovider/ui/Profile.kt";
+  const selected = (intent, stagedFiles, extra = {}) => selectGate({
+    policy,
+    intent,
+    snapshot: { stagedFiles },
+    ...extra,
+  }).gate;
+
+  const shared = selected("prepare_commit", [ui, tooling]);
+  assert.equal(shared.id, "C");
+  assert.deepEqual(shared.checkIds, ["delivery_unit", ...policy.gates.C.checkIds]);
+  assert.ok(shared.reasonCodes.includes("DELIVERY_TOOLING_CHANGED"));
+
+  const scenario = selected("close_scenario", [feature, tooling], { featureFile: feature });
+  assert.equal(scenario.id, "B");
+  assert.deepEqual(scenario.checkIds, ["delivery_unit", ...policy.gates.B.checkIds]);
+
+  const batch = selected("close_batch", [feature, tooling], { scopeFiles: [feature] });
+  assert.equal(batch.id, "D");
+  assert.deepEqual(batch.checkIds, ["no_wip_in_scope", "delivery_unit", ...policy.gates.D.checkIds.slice(1)]);
+  assert.deepEqual(batch.postPushChecks, policy.gates.D.postPushChecks);
+
+  const repair = selected("repair_ci", [ui, tooling], { repairsSha: "abc1234" });
+  assert.equal(repair.id, "R");
+  assert.deepEqual(repair.checkIds, policy.gates.R.checkIds);
+});
+
 test("policy and executor accept only exact Android commands", () => {
   assert.equal(SAFE_COMMANDS.size, 9);
   for (const [checkId, definition] of Object.entries(policy.checkCatalog)) {

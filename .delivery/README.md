@@ -104,9 +104,15 @@ For Kotlin `mode=unit`, supplying `testFiles` selects exact JVM classes under
 match. The executor derives class names and permits only the fixed Android
 wrapper, Dev JVM task, and `--tests <class>` pairs. No shell text, wildcard
 filters, arbitrary Gradle flags, production files, or instrumented tests are
-accepted. Without files, or with `scenario`/`affected`, it runs the complete
-Dev JVM task. TDD cache identity includes changed source contents as well as
-tests and HEAD. None of these working-tree results replace a staged gate.
+accepted. Without files, `mode=unit` runs the complete Dev JVM task.
+`mode=scenario` selects a unique Cucumber JVM runner declared for the feature
+when one exists; it runs the feature's non-`@wip` scenarios, not just the
+requested `scenarioName`. An absent or empty runner falls back to the complete
+Dev JVM task. `mode=affected` focuses on changed runnable JVM test classes only
+when every changed path is one of those classes; otherwise it runs the complete
+Dev JVM task. The `selection` result states the actual scope. TDD cache
+identity includes changed source contents as well as tests and HEAD. None of
+these working-tree results replace a staged gate.
 
 Orchestration uses one batch and one implementation writer in the canonical
 checkout. Keep one Gradle/device operation active and retain one receipt ledger.
@@ -187,8 +193,9 @@ as a green result. The policy delivery window limits concurrent commits and
 in-flight work; a full window is a retryable blocked condition. Delivery only
 inspects the requested SHA for `delivery_ci_inspect`. For a full window,
 `delivery_ci_window_wait` checks the policy window internally for at most 45
-seconds and stops on a failed SHA or provider error. It does not return a job
-ID; `delivery_job_wait` applies only to existing jobs.
+seconds, including remote evaluation, and stops on a failed SHA or provider
+error. An evaluation timeout is not evidence that the window reopened. It does
+not return a job ID; `delivery_job_wait` applies only to existing jobs.
 
 `delivery_verify_head` validates current HEAD against its ledger entry,
 receipt digest, parent, and tree. `delivery_finalize` records a batch or User
