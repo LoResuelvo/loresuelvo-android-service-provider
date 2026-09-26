@@ -34,6 +34,24 @@
           ]
         },
         {
+          "featureFile": "app/src/test/resources/features/proposals/view-service-proposals.feature",
+          "entryPoints": [
+            "com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel",
+            "com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListRoute",
+            "com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListScreen"
+          ],
+          "integrationFiles": [
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNav.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNavHost.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeRoute.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeScreen.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeSections.kt"
+          ],
+          "deviceTestClasses": [
+            "com.loresuelvo.serviceprovider.acceptance.proposals.ServiceProposalNavigationAcceptanceTest"
+          ]
+        },
+        {
           "featureFile": "app/src/test/resources/features/messaging/provider-conversation.feature",
           "entryPoints": [
             "com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationViewModel",

@@ -145,7 +145,7 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
   const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore','pipe','pipe'] }).trim();
   const before = readFeatureGateTree(ROOT, git('rev-parse', 'HEAD'));
   const scenarios = [];
-  for (const [featureIndex, stem] of [[0, 'ui/screens/conversation/ProviderProposalViewModel'], [2, 'ui/screens/messages/MessagesListViewModel']]) {
+  for (const [featureIndex, stem] of [[0, 'ui/screens/conversation/ProviderProposalViewModel'], [3, 'ui/screens/messages/MessagesListViewModel']]) {
     const file = `app/src/main/java/com/loresuelvo/serviceprovider/${stem}.kt`;
     const testFile = `app/src/test/java/com/loresuelvo/serviceprovider/${stem}Test.kt`;
     const after = new Map(before); after.set(file, before.get(file) + '\n// reviewed implementation change\n');
@@ -157,6 +157,28 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
   stateChange.set(proposal, before.get(proposal).replaceAll('proposal_rejected', 'proposal_rejected_v2'));
   scenarios.push({ before, after: stateChange, files: [proposal], featureFile: features[0].featureFile,
     gate: 'C', reason: 'ANDROID_SAVED_STATE_CONTRACT_CHANGED' });
+  const viewFeature = 'app/src/test/resources/features/proposals/view-service-proposals.feature';
+  const viewRecord = features.find(feature => feature.featureFile === viewFeature);
+  assert.ok(viewRecord);
+  const viewScreen = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/proposals/ServiceProposalListScreen.kt';
+  const viewDevice = 'com.loresuelvo.serviceprovider.acceptance.proposals.ServiceProposalNavigationAcceptanceTest';
+  assert.ok(before.has('app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/view/ViewServiceProposalsCucumberTest.kt'));
+  assert.ok(before.has('app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/proposals/ServiceProposalNavigationAcceptanceTest.kt'));
+  assert.deepEqual(viewRecord.deviceTestClasses, [viewDevice]);
+  const changed = file => { const after = new Map(before); after.set(file, before.get(file) + '\n// reviewed implementation change\n'); return after; };
+  for (const file of [
+    viewScreen,
+    'app/src/main/java/com/loresuelvo/serviceprovider/ui/proposals/ServiceProposalListViewModel.kt',
+  ]) scenarios.push({ before, after: changed(file), files: [file], featureFile: viewFeature,
+    gate: 'B', deviceTestClasses: [viewDevice] });
+  for (const file of [
+    'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeScreen.kt',
+    'app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNavHost.kt',
+    'app/src/main/java/com/loresuelvo/serviceprovider/di/NetworkModule.kt',
+  ]) scenarios.push({ before, after: changed(file), files: [file], featureFile: viewFeature, gate: 'C' });
+  scenarios.push({ before, after: changed(viewScreen), files: [viewScreen], featureFile: viewFeature,
+    features: features.map(feature => feature.featureFile === viewFeature ? { ...feature, deviceTestClasses: [] } : feature),
+    gate: 'C', reason: 'ANDROID_FEATURE_COVERAGE_MISSING' });
   const corpus = JSON.parse(await fs.readFile(new URL('./fixtures/us53-gate-paths.json', import.meta.url)));
   for (const entry of corpus.filter(e => e.gate !== 'B')) {
     let old = before, after = before;
@@ -179,10 +201,20 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
     return (byFile.get(key) || []).map(fact => ({ ...fact, id: id + fact.id.slice(key.length) }));
   });
   for (const scenario of scenarios) {
-    const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenario, features, sourceTopology: policy.analysis.dependencyImpact.sourceTopology, parse });
+    const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenario, features: scenario.features || features,
+      sourceTopology: policy.analysis.dependencyImpact.sourceTopology, parse });
     if (scenario.reason) assert.equal(impact.reason, scenario.reason);
+    if (scenario.deviceTestClasses) {
+      assert.deepEqual(impact.deviceTestClasses, scenario.deviceTestClasses);
+      assert.equal(impact.runnerClass, 'com.loresuelvo.serviceprovider.bdd.proposals.view.ViewServiceProposalsCucumberTest');
+    }
     const result = selectGate({ policy, snapshot: { stagedFiles: scenario.files }, intent: scenario.gate === 'R' ? 'repair_ci' : 'close_scenario',
       featureFile: scenario.featureFile, repairsSha: 'a'.repeat(40), dependencyImpact: impact });
     assert.equal(result.gate.id, scenario.gate, `${scenario.sha || scenario.files[0]}: ${JSON.stringify(impact)}`);
+    if (scenario.deviceTestClasses) for (const intent of ['close_batch', 'close_us', 'repair_ci']) {
+      const fullGate = selectGate({ policy, snapshot: { stagedFiles: scenario.files }, intent,
+        featureFile: viewFeature, repairsSha: 'a'.repeat(40), dependencyImpact: impact });
+      assert.equal(fullGate.gate.id, intent === 'repair_ci' ? 'R' : 'D');
+    }
   }
 });
