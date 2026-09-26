@@ -207,7 +207,7 @@ function readCommittedSnapshot(root, commitSha) {
   }).trim();
   const rawFiles = execFileSync(
     "git",
-    ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-z", commitSha],
+    ["diff-tree", "--root", "--no-commit-id", "--name-only", "-r", "-M", "-z", commitSha],
     { cwd: root, encoding: "buffer" },
   );
   return {

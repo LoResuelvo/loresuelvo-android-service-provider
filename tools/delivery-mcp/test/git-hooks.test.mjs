@@ -211,6 +211,35 @@ test("post-commit binds and consumes an exact prepared receipt", async (t) => {
   assert.equal((await getLastPreparedEvidence({ repoRoot: root })).consumedByCommitSha, post.commitSha);
 });
 
+test("post-commit binds an exact prepared receipt for a renamed file", async (t) => {
+  const root = await createTempRepo(t);
+  await fs.writeFile(path.join(root, "old.txt"), "prepared\n", "utf8");
+  execFileSync("git", ["add", "old.txt"], { cwd: root });
+  execFileSync("git", ["commit", "-m", "test[35]: add rename fixture"], { cwd: root, stdio: "ignore" });
+  execFileSync("git", ["mv", "old.txt", "new.txt"], { cwd: root });
+  const snapshot = await captureGitSnapshot({ cwd: root });
+  const policyHash = "a".repeat(64);
+  const runKey = "c".repeat(64);
+  const evidence = await writePreparedRecord(root, { snapshotHash: snapshot.snapshotHash, runKey, policyHash });
+  await recordPreparedEvidence({
+    repoRoot: root,
+    snapshot,
+    inspection: { gate: { id: "A" }, policy: { hash: policyHash } },
+    runKey,
+    status: "passed",
+    recordPath: evidence.recordPath,
+    usId: "35",
+  });
+
+  execFileSync("git", ["commit", "-m", "test[35]: rename fixture"], { cwd: root, stdio: "ignore" });
+  const post = await runPostCommitHook({ repoRoot: root });
+  assert.equal(post.recorded, true, JSON.stringify(post));
+  assert.equal(post.verificationStatus, "passed");
+  const entry = await getCommitEvidence({ repoRoot: root, commitSha: post.commitSha });
+  assert.deepEqual(entry.stagedFiles, ["new.txt"]);
+  assert.equal((await getLastPreparedEvidence({ repoRoot: root })).consumedByCommitSha, post.commitSha);
+});
+
 test("post-commit leaves a created commit accepted when prepared evidence is corrupt", async (t) => {
   const root = await createTempRepo(t);
   await fs.writeFile(path.join(root, ".delivery/runtime/last-prepared.json"), "not-json\n", { mode: 0o600 });
