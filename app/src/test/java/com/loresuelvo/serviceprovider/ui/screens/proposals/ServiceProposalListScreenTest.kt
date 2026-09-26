@@ -1,6 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.screens.proposals
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.view.View
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertHasClickAction
@@ -12,10 +15,14 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.performScrollToNode
@@ -39,6 +46,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
 import java.time.Instant
 import java.util.Locale
 import java.util.TimeZone
@@ -241,6 +250,65 @@ class ServiceProposalListScreenTest {
                 hasText(context.getString(R.string.proposal_list_item, it)),
             )
             compose.onNodeWithText(context.getString(R.string.proposal_list_item, it)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "es-w320dp-h640dp-mdpi")
+    fun `compact proposal card and detail action remain reachable`() = renderProposalAtSize("compact")
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "es-w640dp-h320dp-mdpi")
+    fun `landscape proposal card action remains reachable`() = renderProposalAtSize("landscape")
+
+    private fun renderProposalAtSize(name: String) {
+        lateinit var view: View
+        var conversationOpens = 0
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        compose.setContent {
+            view = LocalView.current
+            LoresuelvoTheme {
+                ServiceProposalListScreen(
+                    ServiceProposalListUiState(proposals = listOf(proposal(12).copy(
+                        description = "Reparar la canilla de la cocina y revisar las conexiones bajo la mesada",
+                    )), loading = false),
+                    onSelectTab = {}, onRetry = {}, onBack = {},
+                    onConversation = { conversationOpens++ },
+                )
+            }
+        }
+        saveRender(view, "$name-list-initial")
+        compose.onNodeWithTag("proposal_list_items")
+            .performScrollToNode(hasText(context.getString(R.string.proposal_detail_open)))
+        val tabLayouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText(context.getString(R.string.proposal_list_rejected))
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(tabLayouts) }
+        org.junit.Assert.assertTrue(tabLayouts.isNotEmpty() && tabLayouts.all { it.lineCount == 1 })
+        compose.onNode(hasTestTag("proposal_status_badge") and
+            hasText(context.getString(R.string.proposal_status_pending))).assertExists()
+        val detail = compose.onNodeWithText(context.getString(R.string.proposal_detail_open))
+        detail.performScrollTo().assertIsDisplayed().assertIsEnabled()
+        saveRender(view, "$name-list")
+        detail.performClick()
+        compose.onNodeWithTag("proposal_detail_reason").assertExists()
+        val conversation = compose.onNodeWithText(context.getString(R.string.proposal_detail_conversation))
+            .assertHasClickAction()
+        if (name == "compact") {
+            conversation.performClick()
+            org.junit.Assert.assertEquals(1, conversationOpens)
+        }
+    }
+
+    private fun saveRender(view: View, name: String) {
+        val file = File("build/reports/proposal-design/$name.png")
+        file.parentFile.mkdirs()
+        compose.runOnIdle {
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            view.draw(Canvas(bitmap))
+            file.outputStream().use { org.junit.Assert.assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+            bitmap.recycle()
         }
     }
 

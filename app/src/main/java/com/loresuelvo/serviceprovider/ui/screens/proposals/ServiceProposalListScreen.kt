@@ -81,7 +81,7 @@ fun ServiceProposalListScreen(
                     Tab(
                         selected = state.selectedTab == tab,
                         onClick = { onSelectTab(tab) },
-                        text = { Text(stringResource(tab.labelRes())) },
+                        text = { Text(stringResource(tab.labelRes()), style = MaterialTheme.typography.labelMedium) },
                     )
                 }
             }

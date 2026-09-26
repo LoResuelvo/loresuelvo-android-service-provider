@@ -27,6 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.material3.Text
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.content.pm.ActivityInfo
 import java.io.File
 import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -281,6 +282,30 @@ class ServiceProposalNavigationAcceptanceTest {
         compose.onNodeWithText("Conversation 93").assertIsDisplayed()
         compose.onNodeWithText("Conversation 12").assertDoesNotExist()
         compose.onNodeWithText("Conversation 7").assertDoesNotExist()
+    }
+
+    @Test fun landscape_detail_conversation_action_is_reachable() {
+        val activity = compose.activity
+        var openedConversationId: Int? = null
+        try {
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            compose.waitForIdle()
+            compose.setContent {
+                ServiceProposalListScreen(
+                    state = ServiceProposalListUiState(proposals = listOf(proposal(12)), loading = false),
+                    onSelectTab = {}, onRetry = {}, onBack = {},
+                    onConversation = { openedConversationId = it },
+                )
+            }
+            compose.onNodeWithTag("proposal_list_items")
+                .performScrollToNode(hasText(compose.activity.getString(R.string.proposal_detail_open)))
+            compose.onNodeWithTag("proposal_detail_open_12").performScrollTo().assertIsDisplayed().performClick()
+            compose.onNodeWithText(compose.activity.getString(R.string.proposal_detail_conversation))
+                .performScrollTo().assertIsDisplayed().performClick()
+            compose.runOnIdle { org.junit.Assert.assertEquals(93, openedConversationId) }
+        } finally {
+            compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
     }
 
     @Test fun back_from_detail_keeps_accepted_tab_and_history_position() {
