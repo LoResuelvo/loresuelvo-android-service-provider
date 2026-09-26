@@ -12,6 +12,8 @@
     <string name="proposal_list_empty">No hay propuestas en esta pestaña.</string>
     <string name="proposal_list_item">Propuesta #%1$d</string>
     <string name="proposal_list_avatar">Foto de %1$s</string>
+    <string name="proposal_list_visit_pattern">\'el\' d \'de\' MMMM \'de\' yyyy \'a las\' HH:mm</string>
+    <string name="proposal_list_amount">ARS %1$s</string>
     <string name="proposal_status_pending">Pendiente</string>
     <string name="proposal_status_accepted">Aceptada</string>
     <string name="proposal_status_rejected">Rechazada</string>

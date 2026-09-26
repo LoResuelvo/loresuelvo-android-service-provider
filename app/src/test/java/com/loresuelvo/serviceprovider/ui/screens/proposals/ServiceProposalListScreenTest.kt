@@ -29,11 +29,73 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.time.Instant
+import java.util.Locale
+import java.util.TimeZone
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ServiceProposalListScreenTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test fun `proposal card shows Argentine amount and local visit`() {
+        val previousLocale = Locale.getDefault()
+        val previousZone = TimeZone.getDefault()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val previousConfiguration = android.content.res.Configuration(context.resources.configuration)
+        try {
+            Locale.setDefault(Locale.forLanguageTag("es-AR"))
+            TimeZone.setDefault(TimeZone.getTimeZone("America/Argentina/Buenos_Aires"))
+            context.resources.updateConfiguration(
+                android.content.res.Configuration(previousConfiguration).apply {
+                    setLocale(Locale.forLanguageTag("es-AR"))
+                }, context.resources.displayMetrics,
+            )
+            compose.setContent {
+                LoresuelvoTheme {
+                    ServiceProposalListScreen(
+                        ServiceProposalListUiState(
+                            proposals = listOf(proposal(12).copy(
+                                scheduledOnEpochMillis = Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(),
+                                description = "Reparar la canilla de la cocina",
+                                counterpart = proposal(12).counterpart.copy(categoryName = "Plomería"),
+                            )),
+                            loading = false,
+                        ),
+                        onSelectTab = {}, onRetry = {}, onBack = {},
+                    )
+                }
+            }
+            compose.onNodeWithText("Ana Pérez").assertIsDisplayed()
+            compose.onNodeWithText("ARS 15.000,50").assertIsDisplayed()
+            compose.onNodeWithText("el 4 de octubre de 2026 a las 21:30").assertIsDisplayed()
+            compose.onNodeWithText("Reparar la canilla de la cocina").assertIsDisplayed()
+            compose.onNodeWithText("Pendiente").assertIsDisplayed()
+            compose.onNodeWithText("Plomería").assertDoesNotExist()
+        } finally {
+            Locale.setDefault(previousLocale)
+            TimeZone.setDefault(previousZone)
+            context.resources.updateConfiguration(previousConfiguration, context.resources.displayMetrics)
+        }
+    }
+
+    @Test fun `missing and inaccessible photos leave consumer initials visible`() {
+        val proposalState = mutableStateOf(proposal(12))
+        compose.setContent {
+            LoresuelvoTheme {
+                ServiceProposalListScreen(
+                    ServiceProposalListUiState(proposals = listOf(proposalState.value), loading = false),
+                    onSelectTab = {}, onRetry = {}, onBack = {},
+                )
+            }
+        }
+        compose.onNodeWithText("AP").assertIsDisplayed()
+        compose.runOnIdle {
+            proposalState.value = proposalState.value.copy(counterpart = proposalState.value.counterpart.copy(
+                profilePhotoUrl = "bad://missing-photo",
+            ))
+        }
+        compose.onNodeWithText("AP").assertIsDisplayed()
+    }
 
     @Test fun `pending tab and ordered proposal cards are visible`() {
         val context = ApplicationProvider.getApplicationContext<Context>()

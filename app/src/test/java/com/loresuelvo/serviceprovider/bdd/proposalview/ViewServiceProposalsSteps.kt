@@ -30,6 +30,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotEquals
 import java.time.Instant
+import java.util.Locale
+import java.util.TimeZone
 
 class ViewServiceProposalsSteps {
     private val scope = TestScope(StandardTestDispatcher())
@@ -38,6 +40,8 @@ class ViewServiceProposalsSteps {
     private var proposals = emptyList<ServiceProposalSummary>()
     private lateinit var today: Instant
     private lateinit var viewModel: ServiceProposalListViewModel
+    private var previousLocale: Locale? = null
+    private var previousZone: TimeZone? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -46,6 +50,8 @@ class ViewServiceProposalsSteps {
     fun tearDown() {
         viewModelStore.clear()
         Dispatchers.resetMain()
+        previousLocale?.let(Locale::setDefault)
+        previousZone?.let(TimeZone::setDefault)
     }
 
     @Given("que inicié sesión como prestador")
@@ -196,5 +202,69 @@ class ViewServiceProposalsSteps {
             else -> error("Unexpected label: $label")
         }
         assertTrue(viewModel.uiState.value.visibleProposals.all { it.status == expected })
+    }
+
+    @Given("que una propuesta pendiente para la consumidora {string} tiene un monto de {long} centavos")
+    fun consumerProposal(name: String, amount: Long) {
+        assertEquals("Ana Pérez", name)
+        proposals = summaries(listOf(mapOf(
+            "id" to "12", "estado" to "pending", "fecha de creación" to "2026-09-21T12:00:00Z",
+            "fecha de visita" to "2026-10-05T00:30:00Z",
+        ))).map { it.copy(amountCents = amount) }
+    }
+
+    @And("su visita es el {string} y su motivo es {string}")
+    fun visitAndReason(visit: String, reason: String) {
+        proposals = proposals.map { it.copy(
+            scheduledOnEpochMillis = Instant.parse(visit).toEpochMilli(), description = reason,
+        ) }
+    }
+
+    @And("la foto de perfil de Ana está {string}")
+    fun photoIs(availability: String) {
+        val url = when (availability) {
+            "disponible" -> "https://example.test/ana.jpg"
+            "ausente" -> null
+            "inaccesible por un error" -> "https://example.test/unreachable.jpg"
+            else -> error("Unexpected photo availability: $availability")
+        }
+        proposals = proposals.map { it.copy(counterpart = it.counterpart.copy(profilePhotoUrl = url)) }
+    }
+
+    @And("mi configuración regional es español de Argentina y mi zona horaria es {string}")
+    fun argentineSettings(zone: String) {
+        previousLocale = Locale.getDefault()
+        previousZone = TimeZone.getDefault()
+        Locale.setDefault(Locale.forLanguageTag("es-AR"))
+        TimeZone.setDefault(TimeZone.getTimeZone(zone))
+    }
+
+    @When("abro Trabajos")
+    fun openJobs() = openAll("Ver todas", "Trabajos")
+
+    @Then("la tarjeta muestra {string}, ARS 15.000,50, el 4 de octubre de 2026 a las 21:30, el motivo y {string}")
+    fun cardShowsProposal(name: String, status: String) {
+        val proposal = viewModel.uiState.value.visibleProposals.single()
+        assertEquals(name, "${proposal.counterpart.name} ${proposal.counterpart.surname}")
+        assertEquals(1500050L, proposal.amountCents)
+        assertEquals(Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), proposal.scheduledOnEpochMillis)
+        assertEquals("Reparar la canilla de la cocina", proposal.description)
+        assertEquals("Pendiente", status)
+        assertEquals(ServiceProposalStatus.Pending, proposal.status)
+    }
+
+    @And("la tarjeta muestra {string}")
+    fun cardShowsAvatar(avatar: String) {
+        val photo = viewModel.uiState.value.visibleProposals.single().counterpart.profilePhotoUrl
+        if (avatar == "la foto de Ana") assertEquals("https://example.test/ana.jpg", photo)
+        else {
+            assertEquals("las iniciales AP", avatar)
+            assertTrue(photo == null || photo.endsWith("unreachable.jpg"))
+        }
+    }
+
+    @And("el nombre de la consumidora no tiene un rubro ni un espacio vacío reservado para él")
+    fun noConsumerCategory() {
+        assertEquals(null, viewModel.uiState.value.visibleProposals.single().counterpart.categoryName)
     }
 }

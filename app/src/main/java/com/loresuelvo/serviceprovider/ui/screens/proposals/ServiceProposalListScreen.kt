@@ -20,6 +20,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -31,9 +32,8 @@ import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
-import java.text.DateFormat
 import java.text.NumberFormat
-import java.util.Currency
+import java.text.SimpleDateFormat
 import java.util.Date
 import java.math.BigDecimal
 
@@ -95,6 +95,7 @@ fun ServiceProposalListScreen(
 
 @Composable
 private fun ProposalCard(proposal: ServiceProposalSummary) {
+    val locale = LocalConfiguration.current.locales[0]
     Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -112,11 +113,15 @@ private fun ProposalCard(proposal: ServiceProposalSummary) {
                 }
             }
             Text(proposal.description)
-            Text(
-                NumberFormat.getCurrencyInstance().apply { currency = Currency.getInstance("ARS") }
-                    .format(BigDecimal.valueOf(proposal.amountCents, 2)),
-            )
-            Text(DateFormat.getDateTimeInstance().format(Date(proposal.scheduledOnEpochMillis)))
+            Text(stringResource(
+                R.string.proposal_list_amount,
+                NumberFormat.getNumberInstance(locale).apply {
+                    minimumFractionDigits = 2
+                    maximumFractionDigits = 2
+                }.format(BigDecimal.valueOf(proposal.amountCents, 2)),
+            ))
+            Text(SimpleDateFormat(stringResource(R.string.proposal_list_visit_pattern), locale)
+                .format(Date(proposal.scheduledOnEpochMillis)))
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 shape = MaterialTheme.shapes.small,

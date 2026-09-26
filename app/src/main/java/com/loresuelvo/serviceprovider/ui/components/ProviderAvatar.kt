@@ -8,10 +8,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +34,8 @@ internal fun ProviderAvatar(
     size: Dp = 64.dp,
 ) {
     val initials = providerInitials(name, surname)
+    var photoLoaded by remember(profilePhotoUrl) { mutableStateOf(false) }
+    var photoFailed by remember(profilePhotoUrl) { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -38,20 +45,25 @@ internal fun ProviderAvatar(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = initials,
-            color = MaterialTheme.colorScheme.onPrimary,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
+        if (!photoLoaded) {
+            Text(
+                text = initials,
+                color = MaterialTheme.colorScheme.onPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
         if (!profilePhotoUrl.isNullOrBlank()) {
             AsyncImage(
                 model = profilePhotoUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                onSuccess = { photoLoaded = true; photoFailed = false },
+                onError = { photoLoaded = false; photoFailed = true },
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(CircleShape),
+                    .clip(CircleShape)
+                    .testTag(if (photoFailed) "provider_avatar_photo_error" else "provider_avatar_photo"),
             )
         }
     }

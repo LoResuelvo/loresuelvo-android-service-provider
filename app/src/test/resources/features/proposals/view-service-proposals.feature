@@ -31,7 +31,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | Aceptadas  | accepted | Aceptada  |
       | Rechazadas | rejected | Rechazada |
 
-  @wip
   Esquema del escenario: 03-PVP Ver el consumidor y la propuesta en una tarjeta
     Dado que una propuesta pendiente para la consumidora "Ana Pérez" tiene un monto de 1500050 centavos
     Y su visita es el "2026-10-05T00:30:00Z" y su motivo es "Reparar la canilla de la cocina"

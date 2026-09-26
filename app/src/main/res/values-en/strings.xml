@@ -12,6 +12,8 @@
     <string name="proposal_list_empty">No proposals in this tab.</string>
     <string name="proposal_list_item">Proposal #%1$d</string>
     <string name="proposal_list_avatar">Photo of %1$s</string>
+    <string name="proposal_list_visit_pattern">MMMM d, yyyy \'at\' HH:mm</string>
+    <string name="proposal_list_amount">ARS %1$s</string>
     <string name="proposal_status_pending">Pending</string>
     <string name="proposal_status_accepted">Accepted</string>
     <string name="proposal_status_rejected">Rejected</string>

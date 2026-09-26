@@ -13,6 +13,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.runtime.mutableStateOf
+import android.graphics.Bitmap
+import android.graphics.Color
+import java.io.File
 import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.loresuelvo.serviceprovider.R
@@ -85,6 +90,38 @@ class ServiceProposalNavigationAcceptanceTest {
         }
         compose.onNodeWithText(activity.getString(R.string.proposal_list_back)).performClick()
         compose.onNodeWithText(activity.getString(R.string.proposal_home_view_all)).assertIsDisplayed()
+    }
+
+    @Test fun proposal_avatar_shows_photo_and_restores_initials_after_load_error() {
+        val photo = File.createTempFile("ana-avatar", ".png", compose.activity.cacheDir)
+        try {
+            Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888).apply {
+                eraseColor(Color.RED)
+                photo.outputStream().use { compress(Bitmap.CompressFormat.PNG, 100, it) }
+                recycle()
+            }
+            val url = mutableStateOf<String?>(null)
+            compose.setContent {
+                ServiceProposalListScreen(
+                    ServiceProposalListUiState(
+                        proposals = listOf(proposal(12).copy(counterpart = proposal(12).counterpart.copy(
+                            profilePhotoUrl = url.value,
+                        ))), loading = false,
+                    ),
+                    onSelectTab = {}, onRetry = {}, onBack = {},
+                )
+            }
+            compose.onNodeWithText("AP").assertIsDisplayed()
+            compose.runOnIdle { url.value = photo.toURI().toString() }
+            compose.waitUntil(5_000) { compose.onAllNodes(hasText("AP")).fetchSemanticsNodes().isEmpty() }
+            compose.runOnIdle { url.value = File(photo.parentFile, "missing-ana-avatar.png").toURI().toString() }
+            compose.waitUntil(5_000) {
+                compose.onAllNodes(hasTestTag("provider_avatar_photo_error")).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText("AP").assertIsDisplayed()
+        } finally {
+            photo.delete()
+        }
     }
 
     private fun proposal(id: Int) = ServiceProposalSummary(
