@@ -252,7 +252,11 @@
       "label": "Isolated feature and affected Dev JVM tests",
       "handler": "feature_jvm_dev",
       "display": "Dev JVM feature runner and affected classes: {testClasses}",
-      "requires": ["featureFile", "runnerClass", "testClasses"]
+      "requires": [
+        "featureFile",
+        "runnerClass",
+        "testClasses"
+      ]
     },
     "delivery_unit": {
       "kind": "command",
@@ -362,6 +366,12 @@
       "requires": [
         "scopeFeatures"
       ]
+    },
+    "android_device": {
+      "kind": "builtin",
+      "label": "Android device prerequisite",
+      "handler": "android_device",
+      "display": "verify an authorized Android device is connected"
     }
   },
   "gates": {
@@ -404,6 +414,7 @@
       "description": "Shared Android architecture, UI, resources, build, and instrumented verification, including individual high-risk scenario closure",
       "priority": 4,
       "checkIds": [
+        "android_device",
         "lint_dev",
         "jvm_test_dev",
         "build_dev",
@@ -417,6 +428,7 @@
       "priority": 5,
       "checkIds": [
         "no_wip_in_scope",
+        "android_device",
         "lint_dev",
         "jvm_test_dev",
         "build_dev",
@@ -431,6 +443,7 @@
       "description": "CI repair path with complete Staging verification",
       "priority": 6,
       "checkIds": [
+        "android_device",
         "delivery_unit",
         "lint_staging",
         "jvm_test_staging",

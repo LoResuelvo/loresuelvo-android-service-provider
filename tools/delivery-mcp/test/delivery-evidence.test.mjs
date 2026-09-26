@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   acquireRunLock,
   computeRunKey,
@@ -55,13 +56,22 @@ test("run locks serialize equivalent Android executions", async (t) => {
 test("run artifacts and cache writes stay below .delivery/runtime", async (t) => {
   const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "android-evidence-cache-"));
   t.after(() => fs.rm(repoRoot, { recursive: true, force: true }));
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+  await fs.cp(path.join(root, ".delivery/schemas"), path.join(repoRoot, ".delivery/schemas"), { recursive: true });
   const runKey = "e".repeat(64);
   const artifacts = await createRunArtifacts({ repoRoot, runKey });
   assert.match(artifacts.logDirectory, /^\.delivery\/runtime\/logs\//);
   assert.match(artifacts.recordPath, /^\.delivery\/runtime\/runs\//);
 
   const result = {
+    schemaVersion: 1,
     status: "passed",
+    cached: false,
+    policy: { version: 1, hash: "a".repeat(64) },
+    gate: { id: "NONE", reasonCodes: [], checkIds: [], parameters: {}, postPushChecks: [] },
+    summary: { passed: 0, failed: 0, skipped: 0, durationMs: 0 },
+    checks: [],
+    diagnostics: [],
     runKey,
     evidence: { recordPath: artifacts.recordPath },
     snapshotHash: "f".repeat(64),
@@ -74,6 +84,8 @@ test("run artifacts and cache writes stay below .delivery/runtime", async (t) =>
   });
   assert.equal(await loadCachedFailure({ repoRoot, runKey, cacheable: true }), null);
   assert.deepEqual(JSON.parse(await fs.readFile(path.join(repoRoot, ".delivery/runtime/latest.json"), "utf8")), result);
+  await saveRunEvidence({ repoRoot, result: { ...result, checks: [{ id: "jvm_test_dev", status: "failed", durationMs: 1 }] }, cacheable: true });
+  assert.equal(await loadCachedSuccess({ repoRoot, runKey, cacheable: true }), null, "legacy false-pass cache must not be reused");
 });
 
 test("failed run evidence uses a separate failure cache key", async (t) => {
@@ -93,4 +105,3 @@ test("failed run evidence uses a separate failure cache key", async (t) => {
     cached: true,
   });
 });
-

@@ -179,21 +179,22 @@ export async function runGate({
         };
       }
       completedChecks.push(checkResultForOutput(completed));
-      if (completed.status === "failed") {
+      if (completed.status === "failed" || completed.status === "blocked") {
         failedCheck = completed;
         failureDiagnostic = completed.diagnostic;
         break;
       }
     }
 
-    const failed = failureDiagnostic ? 1 : 0;
+    const blocked = failedCheck?.status === "blocked";
+    const failed = failedCheck && !blocked ? 1 : 0;
     const passed = completedChecks.filter((check) => check.status === "passed").length;
 
     let failureObj = null;
-    if (failedCheck) {
+    if (failedCheck && !blocked) {
       const maxLines = policy.limits.maxFailureSummaryLines ?? 6;
       const locations = (failedCheck.locations || []).slice(0, maxLines);
-      const msg = failedCheck.diagnostic?.message || failedCheck.summaryLines[0] || "Check failed";
+      const msg = failedCheck.diagnostic?.message || failedCheck.summaryLines?.[0] || "Check failed";
       const signature = computeFailureSignature({
         checkId: failedCheck.id,
         exitCode: failedCheck.exitCode,
@@ -218,7 +219,7 @@ export async function runGate({
       ...baseResult({
         inspection,
         runKey,
-        status: failed ? "failed" : "passed",
+        status: blocked ? "blocked" : failed ? "failed" : "passed",
         diagnostics: [
           ...inspection.diagnostics,
           ...(failureDiagnostic ? [failureDiagnostic] : []),

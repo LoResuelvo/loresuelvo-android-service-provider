@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { assertSafeRepoPath } from "./repo-root.mjs";
+import { validateExecutionResult } from "./validate-schema.mjs";
 
 const RUNTIME_ROOT = ".delivery/runtime";
 const STALE_LOCK_MS = 30 * 60 * 1000;
@@ -51,6 +52,11 @@ export async function loadCachedSuccess({ repoRoot, runKey, cacheable }) {
   try {
     const cached = JSON.parse(await fs.readFile(cachePath, "utf8"));
     if (cached.status !== "passed" || cached.runKey !== runKey) return null;
+    try {
+      validateExecutionResult(cached, repoRoot);
+    } catch {
+      return null;
+    }
     return { ...cached, cached: true };
   } catch (error) {
     if (error.code === "ENOENT" || error instanceof SyntaxError) return null;

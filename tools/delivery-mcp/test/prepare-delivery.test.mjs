@@ -142,4 +142,7 @@ test("prepareDelivery runs the selected Android feature gate and records prepare
   assert.equal(result.gate.id, "0");
   assert.ok(result.evidence.recordPath);
   assert.ok(result.snapshotHash);
+  assert.deepEqual(Object.keys(result.timings).sort(), ["ciEvaluationMs", "gateMs", "inspectionMs", "receiptMs", "totalMs"]);
+  assert.ok(Object.values(result.timings).every((value) => Number.isInteger(value) && value >= 0));
+  assert.ok(result.timings.totalMs >= result.timings.gateMs);
 });

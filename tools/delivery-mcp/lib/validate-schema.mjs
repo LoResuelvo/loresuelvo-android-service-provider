@@ -196,6 +196,9 @@ export function validateInspectionResult(result, repoRoot) {
 }
 
 export function validateExecutionResult(result, repoRoot) {
+  if (result.status === "passed" && (result.failure || result.summary?.failed > 0 || result.checks?.some((check) => check.status !== "passed"))) {
+    throw new Error("Passed execution evidence contains a failed check");
+  }
   return validateAgainstSchema(result, "execution-result.schema.json", repoRoot);
 }
 

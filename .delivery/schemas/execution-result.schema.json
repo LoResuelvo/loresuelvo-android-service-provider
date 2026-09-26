@@ -45,7 +45,7 @@
         "required": ["id", "status", "durationMs"],
         "properties": {
           "id": { "type": "string" },
-          "status": { "type": "string", "enum": ["passed", "failed"] },
+          "status": { "type": "string", "enum": ["passed", "failed", "blocked"] },
           "durationMs": { "type": "integer", "minimum": 0 },
           "exitCode": { "type": ["integer", "null"] },
           "summaryLines": { "type": "array", "items": { "type": "string" } },
@@ -148,6 +148,7 @@
           }
         }
       }
-    }
+    },
+    "timings": {"type": "object", "additionalProperties": false, "required": ["inspectionMs", "ciEvaluationMs", "gateMs", "receiptMs", "totalMs"], "properties": {"inspectionMs": {"type": "integer", "minimum": 0}, "ciEvaluationMs": {"type": "integer", "minimum": 0}, "gateMs": {"type": "integer", "minimum": 0}, "receiptMs": {"type": "integer", "minimum": 0}, "totalMs": {"type": "integer", "minimum": 0}}}
   }
 }

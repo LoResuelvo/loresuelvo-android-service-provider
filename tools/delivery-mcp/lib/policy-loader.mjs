@@ -22,7 +22,7 @@ export const SAFE_COMMANDS = new Set([
   JSON.stringify(["make", "e2e", "FLAVOR=Staging"]),
 ]);
 
-export const SAFE_BUILTINS = new Set(["no_wip_in_scope", "ci_green", "feature_jvm_dev"]);
+export const SAFE_BUILTINS = new Set(["no_wip_in_scope", "ci_green", "feature_jvm_dev", "android_device"]);
 
 function assertPositiveInteger(value, field) {
   if (!Number.isInteger(value) || value < 1) {

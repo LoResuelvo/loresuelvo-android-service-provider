@@ -97,7 +97,7 @@ test("closing one Android scenario retains Gate C without closing future scenari
       snapshot: { stagedFiles: [`app/src/main/java/com/loresuelvo/serviceprovider/${area}/Profile.kt`, feature] },
     });
     assert.equal(result.gate.id, "C", area);
-    assert.deepEqual(result.gate.checkIds, ["lint_dev", "jvm_test_dev", "build_dev", "e2e_dev"]);
+    assert.deepEqual(result.gate.checkIds, ["android_device", "lint_dev", "jvm_test_dev", "build_dev", "e2e_dev"]);
     assert.deepEqual(result.gate.postPushChecks, []);
   }
 });

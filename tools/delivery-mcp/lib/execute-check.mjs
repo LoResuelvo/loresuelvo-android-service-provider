@@ -6,6 +6,7 @@ import { redactSecrets } from "./redact-secrets.mjs";
 import { SAFE_COMMANDS, loadDeliveryPolicy } from "./policy-loader.mjs";
 import { assertSafeRepoPath } from "./repo-root.mjs";
 import { wipTagLines } from "./gherkin-tags.mjs";
+import { checkAndroidDevice } from "./android-device.mjs";
 import {
   parseDiagnostics,
   extractLocations,
@@ -432,6 +433,9 @@ export async function executeFeatureJvmCheck({ check, repoRoot, logPath, limits,
 }
 
 export async function executeCheck({ check, repoRoot, logPath, limits }) {
+  if (check.kind === "builtin" && check.handler === "android_device") {
+    return checkAndroidDevice({ repoRoot });
+  }
   if (check.kind === "command") {
     return executeCommandCheck({ check, repoRoot, logPath, limits });
   }

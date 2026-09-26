@@ -178,7 +178,14 @@ export function resolveReview(inspection, acknowledgement) {
   };
 }
 
-export async function prepareDelivery({
+export async function prepareDelivery(options = {}) {
+  const startedAt = performance.now();
+  const timings = { inspectionMs: 0, ciEvaluationMs: 0, gateMs: 0, receiptMs: 0 };
+  const result = await prepareDeliveryAttempt(options, timings);
+  return { ...result, timings: { ...timings, totalMs: Math.round(performance.now() - startedAt) } };
+}
+
+async function prepareDeliveryAttempt({
   repoRoot,
   acknowledgement,
   force = false,
@@ -191,9 +198,10 @@ export async function prepareDelivery({
   // it must not discover and deduplicate against its own running record.
   workerJobId = null,
   ...inspectionInput
-} = {}) {
+} = {}, timings) {
   const root = findRepoRoot(repoRoot);
   const effectiveProvider = provider || ciProvider || null;
+  let phaseStarted = performance.now();
   const context = await inspectDelivery({
     repoRoot: root,
     ciProvider: effectiveProvider,
@@ -201,6 +209,7 @@ export async function prepareDelivery({
     ...inspectionInput,
   });
   const { result: inspection, snapshot, policy, resolvedInput } = context;
+  timings.inspectionMs = Math.round(performance.now() - phaseStarted);
 
   if (inspection.status === "no_changes") {
     return stoppedResult(inspection, "no_changes", null, root);
@@ -210,6 +219,7 @@ export async function prepareDelivery({
   }
 
   // Single compact CI window and incident evaluation before running local gates
+  phaseStarted = performance.now();
   const ciEvaluation = await evaluateCiWindow({
     repoRoot: root,
     policy,
@@ -218,6 +228,7 @@ export async function prepareDelivery({
     repairsSha: resolvedInput.repairsSha,
     historyHeadSha: snapshot.headSha,
   });
+  timings.ciEvaluationMs = Math.round(performance.now() - phaseStarted);
 
   if (!ciEvaluation.allowed) {
     const diagCode = ciEvaluation.code || ciEvaluation.reason || "CI_EVALUATION_BLOCKED";
@@ -326,6 +337,7 @@ export async function prepareDelivery({
     };
   }
 
+  phaseStarted = performance.now();
   const outcome = await runGate({
     inspection,
     snapshot,
@@ -335,6 +347,8 @@ export async function prepareDelivery({
     force,
     ...(executeCheck ? { executeCheck } : {}),
   });
+  timings.gateMs = Math.round(performance.now() - phaseStarted);
+  phaseStarted = performance.now();
 
   if (outcome.status === "passed" && resolvedInput.intent !== "prepare_commit") {
     await saveDeliveryContext({
@@ -364,6 +378,7 @@ export async function prepareDelivery({
     repairsSha: resolvedInput.repairsSha,
     repairStatus: resolvedInput.intent === "repair_ci" ? "unverified" : null,
   });
+  timings.receiptMs = Math.round(performance.now() - phaseStarted);
 
   return outcome;
 }

@@ -44,12 +44,37 @@ their results are `not_applicable`, not proof of isolation or quality.
 | `0` | Complete Dev JVM task | BDD feature/glue compatibility |
 | `A` | Dev JVM task; delivery tooling also runs its unit tests | Isolated domain Kotlin or delivery tooling |
 | `B` | Feature runner and affected JVM test classes when isolation is proven; complete Dev JVM task otherwise | Closing a low-risk scenario |
-| `C` | Dev lint, JVM tests, build, and instrumented UI | UI, DI, data, resources, manifest, or build changes |
+| `C` | Device prerequisite, Dev lint, JVM tests, build, and instrumented UI | UI, DI, data, resources, manifest, or build changes |
 | `D` | No `@wip`, Gate C checks, and post-push CI green | Complete batch or User Story |
-| `R` | Delivery tests, Staging lint/JVM/build/instrumented UI, and post-push CI green | One-time repair of `repairsSha` |
+| `R` | Device prerequisite, Delivery tests, Staging lint/JVM/build/instrumented UI, and post-push CI green | One-time repair of `repairsSha` |
 
 This table explains the current policy; `policy.v1.json` and Delivery MCP
 select the actual gate. Unknown functional paths fall back to Gate C.
+
+C/D/R query ADB through the Android wrapper before expensive Android checks.
+No device, offline/unauthorized devices, an unavailable `ANDROID_SERIAL`, or a
+failed query produces `blocked`, not a test pass. This prerequisite never starts
+an emulator. Keep the device unlocked and unused during instrumented tests;
+another app taking the foreground can invalidate Compose UI assertions.
+
+Every failed check fails its gate even when optional diagnostic metadata is
+absent. Contradictory passed records containing failed/blocked checks are rejected
+when loading evidence or a cached gate result.
+
+### Measuring preparation time
+
+`delivery_prepare` returns `timings` with `inspectionMs`, `ciEvaluationMs`,
+`gateMs`, `receiptMs`, and `totalMs` for the current invocation. Per-check
+`durationMs` remains in `checks`; `summary.durationMs` describes the gate run.
+On cache hits that summary can describe a previous run, while `timings` measures
+the current request. A job-start response measures dispatch only; the worker's
+final result measures its own invocation. Do not add overlapping controller and
+worker timings or confuse CI-window evaluation with post-push CI execution.
+
+Record device availability and Gradle `UP-TO-DATE`/`FROM-CACHE` state when
+comparing results. Diagnostic checks measure individual commands, not a staged
+gate or complete User Story closure. Failed device runs must be diagnosed before
+using their elapsed time to justify a narrower gate.
 
 ### Feature-scoped Gate B
 
