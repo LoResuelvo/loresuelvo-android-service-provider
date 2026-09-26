@@ -163,14 +163,22 @@ test("US-53 regression corpus never downgrades high-risk closures or CI repairs"
   // source analysis is also exercised locally when those Git objects exist.
   const corpus = JSON.parse(await fs.readFile(new URL("./fixtures/us53-gate-paths.json", import.meta.url), "utf8"));
   const current = readFeatureGateTree(ROOT, git("rev-parse", "HEAD"));
+  const shallowCase = corpus.find(entry => entry.sha === "81b3219");
+  const shallowImpact = analyzeFeatureGate({ files: shallowCase.files, featureFile: proposal,
+    before: current, after: current });
+  const shallowGate = selectGate({ policy, intent: "close_scenario", featureFile: proposal,
+    snapshot: { stagedFiles: shallowCase.files }, cucumberImpact: shallowImpact });
+  assert.deepEqual(shallowGate.gate.checkIds, ["jvm_test_dev"]);
   for (const { sha, gate: expectedGate, files } of corpus) {
     let before = current;
     let after = current;
+    let historicalTreesAvailable = true;
     try {
       before = readFeatureGateTree(ROOT, git("rev-parse", `${sha}^`));
       after = readFeatureGateTree(ROOT, git("rev-parse", sha));
     } catch {
       // Classification assertions still run; no historical execution is claimed.
+      historicalTreesAvailable = false;
     }
     const impact = analyzeFeatureGate({ files, featureFile: proposal,
       before, after });
@@ -178,7 +186,8 @@ test("US-53 regression corpus never downgrades high-risk closures or CI repairs"
       repairsSha: "a".repeat(40), featureFile: proposal, snapshot: { stagedFiles: files }, cucumberImpact: impact });
     assert.equal(result.gate.id, expectedGate, sha);
     if (expectedGate !== "B") assert.deepEqual(result.gate.checkIds, policy.gates[expectedGate].checkIds, sha);
-    if (sha === "81b3219") assert.deepEqual(result.gate.checkIds, ["feature_jvm_dev"]);
+    if (sha === "81b3219") assert.deepEqual(result.gate.checkIds,
+      [historicalTreesAvailable ? "feature_jvm_dev" : "jvm_test_dev"]);
     for (const intent of ["close_batch", "close_us"]) {
       const closure = selectGate({ policy, intent, featureFile: proposal, snapshot: { stagedFiles: files }, cucumberImpact: impact });
       assert.deepEqual(closure.gate.checkIds, policy.gates.D.checkIds);

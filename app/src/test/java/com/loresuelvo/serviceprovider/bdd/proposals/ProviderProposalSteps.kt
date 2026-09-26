@@ -89,6 +89,7 @@ class ProviderProposalSteps {
     fun tearDown() {
         pendingCreation?.cancel()
         viewModelStore.clear()
+        testScope.testScheduler.advanceUntilIdle()
         testScope.cancel()
         Dispatchers.resetMain()
     }
