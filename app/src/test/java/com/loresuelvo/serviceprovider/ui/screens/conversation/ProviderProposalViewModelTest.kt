@@ -49,7 +49,9 @@ class ProviderProposalViewModelTest {
         try {
         val calls = mutableListOf<ValidatedServiceProposal>()
         val repository = object : ServiceProposalRepository {
-            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+            override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                 calls += proposal
                 return CreateServiceProposalOutcome.Created(9)
             }
@@ -86,7 +88,9 @@ class ProviderProposalViewModelTest {
             val result = CompletableDeferred<CreateServiceProposalOutcome>()
             var calls = 0
             val repository = object : ServiceProposalRepository {
-                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                     calls++
                     return result.await()
                 }
@@ -143,7 +147,9 @@ class ProviderProposalViewModelTest {
             val pending = CompletableDeferred<CreateServiceProposalOutcome>()
             var calls = 0
             val repository = object : ServiceProposalRepository {
-                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                     calls++
                     return pending.await()
                 }
@@ -175,7 +181,9 @@ class ProviderProposalViewModelTest {
             val pending = CompletableDeferred<CreateServiceProposalOutcome>()
             var calls = 0
             val repository = object : ServiceProposalRepository {
-                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                     calls++
                     return pending.await()
                 }
@@ -218,7 +226,9 @@ class ProviderProposalViewModelTest {
                 override fun zone() = java.util.TimeZone.getTimeZone("UTC")
             }
             val repository = object : ServiceProposalRepository {
-                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                     calls++
                     return CreateServiceProposalOutcome.Created(9)
                 }
@@ -237,7 +247,9 @@ class ProviderProposalViewModelTest {
         try {
             var calls = 0
             val repository = object : ServiceProposalRepository {
-                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                     calls++
                     return CreateServiceProposalOutcome.Failure.Uncertain
                 }
@@ -265,7 +277,9 @@ class ProviderProposalViewModelTest {
         try {
             var calls = 0
             val repository = object : ServiceProposalRepository {
-                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                     calls++
                     return CreateServiceProposalOutcome.Failure.InactiveConversation
                 }
@@ -289,7 +303,9 @@ class ProviderProposalViewModelTest {
         try {
             val calls = mutableListOf<ValidatedServiceProposal>()
             val repository = object : ServiceProposalRepository {
-                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                     calls += proposal
                     return CreateServiceProposalOutcome.Failure.Rejected
                 }
@@ -330,7 +346,9 @@ class ProviderProposalViewModelTest {
         try {
             var calls = 0
             val repository = object : ServiceProposalRepository {
-                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
                     calls++
                     return CreateServiceProposalOutcome.Failure.Rejected
                 }
@@ -384,6 +402,8 @@ class ProviderProposalViewModelTest {
         selectDuration(45)
     }
     private val createUseCase = CreateServiceProposalUseCase(object : ServiceProposalRepository {
+        override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
         override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
             error("Unexpected proposal creation")
     })

@@ -36,6 +36,7 @@ fun ProviderHomeScreen(
     onRetryScheduledWork: () -> Unit,
     onJobRequestClick: (com.loresuelvo.serviceprovider.domain.activity.JobRequest) -> Unit,
     onMercadoPagoClick: () -> Unit,
+    onAllProposalsClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -71,6 +72,7 @@ fun ProviderHomeScreen(
                 state = uiState.scheduledWork,
                 onRetry = onRetryScheduledWork,
             )
+            ProposalsSection(onAllProposalsClick)
         }
     }
 }

@@ -177,6 +177,8 @@ class ProviderSignupServiceProposalRepository : ServiceProposalRepository {
     var outcome: CreateServiceProposalOutcome = CreateServiceProposalOutcome.Created(9)
     var pending: kotlinx.coroutines.CompletableDeferred<CreateServiceProposalOutcome>? = null
 
+    override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
     override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
         created += proposal
         return pending?.await() ?: outcome

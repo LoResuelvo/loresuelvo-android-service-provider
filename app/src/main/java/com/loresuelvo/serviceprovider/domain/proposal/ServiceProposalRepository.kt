@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.domain.proposal
 
 interface ServiceProposalRepository {
     suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome
+    suspend fun list(): ServiceProposalListOutcome
 }
 
 sealed interface CreateServiceProposalOutcome {

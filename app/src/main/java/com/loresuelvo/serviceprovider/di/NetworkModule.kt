@@ -95,7 +95,7 @@ object NetworkModule {
             .followSslRedirects(false)
             .addInterceptor { chain ->
                 val request = chain.request()
-                val body = checkNotNull(request.body)
+                val body = request.body ?: return@addInterceptor chain.proceed(request)
                 val oneShot = object : RequestBody() {
                     override fun contentType(): MediaType? = body.contentType()
                     override fun contentLength(): Long = body.contentLength()

@@ -54,6 +54,8 @@ class ProviderProposalSteps {
         override fun clearSession() { sessionFlow.value = null }
     }
     private val creation = CreateServiceProposalUseCase(object : ServiceProposalRepository {
+        override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+
         override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
             created += proposal
             return pendingCreation?.await() ?: createResult

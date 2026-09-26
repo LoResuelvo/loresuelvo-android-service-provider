@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="proposal_home_jobs">Trabajos</string>
+    <string name="proposal_home_view_all">Ver todas</string>
+    <string name="proposal_list_title">Propuestas</string>
+    <string name="proposal_list_back">Volver a Inicio</string>
+    <string name="proposal_list_pending">Pendientes</string>
+    <string name="proposal_list_accepted">Aceptadas</string>
+    <string name="proposal_list_rejected">Rechazadas</string>
+    <string name="proposal_list_loading">Cargando propuestas…</string>
+    <string name="proposal_list_error">No pudimos cargar las propuestas.</string>
+    <string name="proposal_list_empty">No hay propuestas en esta pestaña.</string>
+    <string name="proposal_list_item">Propuesta #%1$d</string>
+    <string name="proposal_list_avatar">Foto de %1$s</string>
+    <string name="proposal_status_pending">Pendiente</string>
+    <string name="proposal_status_accepted">Aceptada</string>
+    <string name="proposal_status_rejected">Rechazada</string>
     <string name="app_name">LoResuelvo Prestador</string>
 
     <!-- Branding -->

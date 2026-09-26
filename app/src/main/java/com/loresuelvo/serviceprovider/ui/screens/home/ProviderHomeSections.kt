@@ -66,6 +66,18 @@ internal fun ScheduledWorkSection(
 }
 
 @Composable
+internal fun ProposalsSection(onAllProposalsClick: () -> Unit) {
+    Text(
+        text = stringResource(R.string.proposal_home_jobs),
+        style = MaterialTheme.typography.titleLarge,
+        modifier = Modifier.semantics { heading() },
+    )
+    OutlinedButton(onClick = onAllProposalsClick) {
+        Text(stringResource(R.string.proposal_home_view_all))
+    }
+}
+
+@Composable
 private fun ActivitySectionHeader(title: String, count: String) {
     Row(
         modifier = Modifier

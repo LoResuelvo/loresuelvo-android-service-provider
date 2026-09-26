@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="proposal_home_jobs">Jobs</string>
+    <string name="proposal_home_view_all">View all</string>
+    <string name="proposal_list_title">Proposals</string>
+    <string name="proposal_list_back">Back to Home</string>
+    <string name="proposal_list_pending">Pending</string>
+    <string name="proposal_list_accepted">Accepted</string>
+    <string name="proposal_list_rejected">Rejected</string>
+    <string name="proposal_list_loading">Loading proposals…</string>
+    <string name="proposal_list_error">Could not load proposals.</string>
+    <string name="proposal_list_empty">No proposals in this tab.</string>
+    <string name="proposal_list_item">Proposal #%1$d</string>
+    <string name="proposal_list_avatar">Photo of %1$s</string>
+    <string name="proposal_status_pending">Pending</string>
+    <string name="proposal_status_accepted">Accepted</string>
+    <string name="proposal_status_rejected">Rejected</string>
     <string name="app_name">LoResuelvo Prestador</string>
 
     <!-- Branding -->

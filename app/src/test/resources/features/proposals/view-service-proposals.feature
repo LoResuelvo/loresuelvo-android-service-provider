@@ -3,7 +3,6 @@ Característica: Visualizar propuestas de servicio como prestador
   Antecedentes:
     Dado que inicié sesión como prestador
 
-  @wip
   Escenario: 01-PVP Abrir las propuestas pendientes desde Trabajos
     Dado que mis propuestas son:
       | id | estado   | fecha de creación    | fecha de visita      |

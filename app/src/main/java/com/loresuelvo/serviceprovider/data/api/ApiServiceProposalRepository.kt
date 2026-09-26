@@ -3,12 +3,15 @@ package com.loresuelvo.serviceprovider.data.api
 import com.loresuelvo.serviceprovider.data.api.dto.ServiceProposalErrorDto
 import com.loresuelvo.serviceprovider.data.api.mapper.isConfirmedPendingFor
 import com.loresuelvo.serviceprovider.data.api.mapper.toRequestDto
+import com.loresuelvo.serviceprovider.data.api.mapper.toDomain
 import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.SerializationException
 import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,6 +21,25 @@ class ApiServiceProposalRepository @Inject constructor(
     private val api: ServiceProposalApi,
     private val json: Json,
 ) : ServiceProposalRepository {
+    override suspend fun list(): ServiceProposalListOutcome = try {
+        val response = api.list()
+        when {
+            response.code() == 401 -> ServiceProposalListOutcome.Failure.SessionExpired
+            !response.isSuccessful -> ServiceProposalListOutcome.Failure.Unavailable
+            else -> response.body()?.let { items ->
+                ServiceProposalListOutcome.Success(items.map { it.toDomain() })
+            } ?: ServiceProposalListOutcome.Failure.InvalidResponse
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: SerializationException) {
+        ServiceProposalListOutcome.Failure.InvalidResponse
+    } catch (_: IllegalArgumentException) {
+        ServiceProposalListOutcome.Failure.InvalidResponse
+    } catch (_: Exception) {
+        ServiceProposalListOutcome.Failure.Unavailable
+    }
+
     override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = try {
         mapResponse(api.create(proposal.toRequestDto()), proposal)
     } catch (e: CancellationException) {
