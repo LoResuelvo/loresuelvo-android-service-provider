@@ -144,7 +144,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | conversación 93 | sin conexión |
       | conversación 93 | HTTP 500     |
 
-  @wip
   Esquema del escenario: 14-PVP Reintentar una consulta de propuestas fallida
     Dado que "<vista>" muestra un error de carga de propuestas
     Y la próxima consulta devolverá la propuesta 12 para la conversación 93

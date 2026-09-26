@@ -82,6 +82,7 @@ class ViewServiceProposalsSteps {
     private var pendingProposalList: CompletableDeferred<ServiceProposalListOutcome>? = null
     private var emptyTab: ProposalTab? = null
     private var proposalFailure: ServiceProposalListOutcome.Failure? = null
+    private var nextProposalList: ServiceProposalListOutcome? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -734,6 +735,59 @@ class ViewServiceProposalsSteps {
     fun serverReturnedNoProposalsForStatus(status: String) {
         emptyTab = ProposalTab.entries.single { it.status.name.equals(status, ignoreCase = true) }
         proposals = emptyList()
+    }
+
+    @Given("que {string} muestra un error de carga de propuestas")
+    fun proposalViewShowsError(view: String) {
+        assertTrue(view == "Trabajos" || view == "conversación 93")
+        detailView = view
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome {
+                proposalListCalls++
+                return nextProposalList ?: ServiceProposalListOutcome.Failure.Unavailable
+            }
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                error("Creation is outside this scenario")
+        }
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModelStore.put("proposals", viewModel)
+        scope.advanceUntilIdle()
+        assertEquals(ServiceProposalListOutcome.Failure.Unavailable, viewModel.uiState.value.failure)
+        if (view == "conversación 93") {
+            conversationHasMessagesWithoutProposals()
+            scope.advanceUntilIdle()
+            messagesAndComposerRemainAvailable()
+        }
+    }
+
+    @And("la próxima consulta devolverá la propuesta 12 para la conversación 93")
+    fun nextProposalRequestSucceeds() {
+        nextProposalList = ServiceProposalListOutcome.Success(listOf(
+            summaries(listOf(mapOf(
+                "id" to "12", "estado" to "pending",
+                "fecha de creación" to "2026-09-21T12:00:00Z",
+                "fecha de visita" to "2026-10-05T12:00:00Z",
+            ))).single(),
+        ))
+    }
+
+    @When("reintento cargar las propuestas")
+    fun retryProposals() {
+        viewModel.load()
+        assertEquals(null, viewModel.uiState.value.failure)
+        scope.advanceUntilIdle()
+    }
+
+    @Then("el error se reemplaza por la propuesta 12 en {string}")
+    fun retryShowsProposal(view: String) {
+        assertEquals(detailView, view)
+        assertEquals(2, proposalListCalls)
+        val state = viewModel.uiState.value
+        assertFalse(state.loading)
+        assertEquals(null, state.failure)
+        assertEquals(12, if (view == "Trabajos") state.visibleProposals.single().id
+            else requireNotNull(state.proposalInConversation(93)).id)
+        if (view == "conversación 93") messagesAndComposerRemainAvailable()
     }
 
     @Then("veo un mensaje que indica que esta pestaña no tiene propuestas")

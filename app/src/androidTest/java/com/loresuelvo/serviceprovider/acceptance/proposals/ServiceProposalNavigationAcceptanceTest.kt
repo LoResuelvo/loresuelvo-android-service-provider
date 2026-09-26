@@ -18,6 +18,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.material3.Text
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -67,6 +68,61 @@ import java.time.Instant
 @RunWith(AndroidJUnit4::class)
 class ServiceProposalNavigationAcceptanceTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test fun history_retry_replaces_error_with_proposal() {
+        var calls = 0
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome =
+                if (++calls == 1) ServiceProposalListOutcome.Failure.Unavailable
+                else ServiceProposalListOutcome.Success(listOf(proposal(12)))
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                error("Creation is outside this test")
+        }
+        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        compose.setContent { ServiceProposalListRoute(onBack = {}, onConversation = {}, viewModel = viewModel) }
+        val activity = compose.activity
+        compose.onNodeWithText(activity.getString(R.string.proposal_list_error)).assertIsDisplayed()
+        compose.onNodeWithText(activity.getString(R.string.provider_home_retry)).performClick()
+        compose.onNodeWithText(activity.getString(R.string.proposal_list_item, 12)).assertIsDisplayed()
+        compose.onNodeWithText(activity.getString(R.string.proposal_list_error)).assertDoesNotExist()
+        org.junit.Assert.assertEquals(2, calls)
+    }
+
+    @Test fun conversation_retry_replaces_proposal_error_and_keeps_messages() {
+        var calls = 0
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome =
+                if (++calls == 1) ServiceProposalListOutcome.Failure.Unavailable
+                else ServiceProposalListOutcome.Success(listOf(proposal(12)))
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                error("Creation is outside this test")
+        }
+        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        val message = ConversationMessage(1, ConversationSender.Consumer, "Hola", 1L)
+        val chat = ProviderConversationUiState.Ready(
+            detail = ConversationDetail(93, ConversationStatus.Active,
+                ConversationCounterpart(7, "Ana", "Pérez", null), listOf(message), 1L),
+            items = listOf(ChatListItem.ServerConfirmed(message)), promptInput = "", sending = false,
+        )
+        compose.setContent {
+            val proposals by viewModel.uiState.collectAsState()
+            ProviderConversationScreen(
+                state = chat, serviceProposal = proposals.proposalInConversation(93),
+                serviceProposalLoading = proposals.loading, serviceProposalFailure = proposals.failure,
+                onRetryProposals = viewModel::load,
+                onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {}, onRetryLoad = {},
+                onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+            )
+        }
+        val activity = compose.activity
+        compose.onNodeWithText(activity.getString(R.string.proposal_list_error)).assertIsDisplayed()
+        compose.onNodeWithText(activity.getString(R.string.provider_home_retry)).performClick()
+        compose.onNodeWithText(activity.getString(R.string.proposal_detail_chat_summary)).assertIsDisplayed()
+        compose.onNodeWithText(activity.getString(R.string.proposal_list_error)).assertDoesNotExist()
+        compose.onNodeWithText("Hola").assertIsDisplayed()
+        compose.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).assertIsDisplayed()
+        org.junit.Assert.assertEquals(2, calls)
+    }
 
     @Test fun empty_proposal_tabs_keep_the_message_and_all_tabs_available() {
         var calls = 0
