@@ -123,6 +123,8 @@ fun ProviderConversationRoute(
         state = state,
         serviceProposal = proposalListState.proposalInConversation(conversationId),
         serviceProposalLoading = proposalListState.loading,
+        serviceProposalFailure = proposalListState.failure,
+        onRetryProposals = proposalListViewModel::load,
         proposalSnackbarHostState = proposalSnackbarHostState,
         onPromptChange = viewModel::onPromptChange,
         onSendClick = viewModel::onSendClick,

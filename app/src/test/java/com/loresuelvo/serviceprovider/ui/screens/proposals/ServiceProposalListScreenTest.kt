@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.screens.proposals
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -21,6 +22,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
@@ -40,6 +42,26 @@ import java.util.TimeZone
 @Config(sdk = [34])
 class ServiceProposalListScreenTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test fun `proposal failure shows retry instead of empty copy`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        var retries = 0
+        compose.setContent {
+            LoresuelvoTheme {
+                ServiceProposalListScreen(
+                    ServiceProposalListUiState(
+                        loading = false,
+                        failure = ServiceProposalListOutcome.Failure.Unavailable,
+                    ),
+                    onSelectTab = {}, onRetry = { retries++ }, onBack = {},
+                )
+            }
+        }
+        compose.onNodeWithText(context.getString(R.string.proposal_list_error)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.provider_home_retry)).assertIsEnabled().performClick()
+        org.junit.Assert.assertEquals(1, retries)
+        compose.onNodeWithText(context.getString(R.string.proposal_list_empty)).assertDoesNotExist()
+    }
 
     @Test fun `pending proposals show a progress indicator without empty copy`() {
         val context = ApplicationProvider.getApplicationContext<Context>()

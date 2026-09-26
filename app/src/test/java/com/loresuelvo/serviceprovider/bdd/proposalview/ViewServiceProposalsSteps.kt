@@ -81,6 +81,7 @@ class ViewServiceProposalsSteps {
     private val snackbarShown = CompletableDeferred<Unit>()
     private var pendingProposalList: CompletableDeferred<ServiceProposalListOutcome>? = null
     private var emptyTab: ProposalTab? = null
+    private var proposalFailure: ServiceProposalListOutcome.Failure? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -678,6 +679,42 @@ class ViewServiceProposalsSteps {
     fun openPendingProposalView(view: String) {
         assertTrue(view == "Trabajos" || view == "conversación 93")
         detailView = view
+        if (proposalFailure != null) scope.advanceUntilIdle()
+    }
+
+    @Given("que la carga de propuestas fallará por {string}")
+    fun proposalLoadWillFail(error: String) {
+        proposalFailure = when (error) {
+            "sin conexión" -> ServiceProposalListOutcome.Failure.Unavailable
+            "HTTP 500" -> ServiceProposalListOutcome.Failure.Unavailable
+            else -> error("Unexpected proposal failure: $error")
+        }
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome {
+                proposalListCalls++
+                return requireNotNull(proposalFailure)
+            }
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                error("Creation is outside this scenario")
+        }
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModelStore.put("proposals", viewModel)
+    }
+
+    @And("los mensajes de la conversación 93 están disponibles")
+    fun conversationMessagesAvailable() {
+        conversationHasMessagesWithoutProposals()
+        scope.advanceUntilIdle()
+        assertTrue(conversationViewModel?.uiState?.value is ProviderConversationUiState.Ready)
+    }
+
+    @Then("veo un error de propuestas con una acción para reintentar")
+    fun proposalErrorHasRetry() {
+        val state = viewModel.uiState.value
+        assertEquals(1, proposalListCalls)
+        assertEquals(proposalFailure, state.failure)
+        assertFalse(state.loading)
+        if (detailView == "conversación 93") messagesAndComposerRemainAvailable()
     }
 
     @Then("veo un indicador de carga de propuestas")
@@ -689,7 +726,7 @@ class ViewServiceProposalsSteps {
 
     @And("no veo un mensaje de que no hay propuestas")
     fun noPrematureEmptyMessage() {
-        assertTrue(viewModel.uiState.value.loading)
+        assertTrue(viewModel.uiState.value.loading || viewModel.uiState.value.failure != null)
         assertTrue(viewModel.uiState.value.visibleProposals.isEmpty())
     }
 

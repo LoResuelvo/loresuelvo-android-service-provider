@@ -131,7 +131,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | Aceptadas  | accepted |
       | Rechazadas | rejected |
 
-  @wip
   Esquema del escenario: 13-PVP Mostrar un error al cargar propuestas
     Dado que la carga de propuestas fallará por "<error>"
     Y los mensajes de la conversación 93 están disponibles

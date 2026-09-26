@@ -23,6 +23,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
@@ -41,6 +42,27 @@ class ProviderConversationScreenTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test fun proposal_failure_keeps_chat_and_offers_retry() {
+        var retries = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(""),
+                    serviceProposalFailure = ServiceProposalListOutcome.Failure.Unavailable,
+                    onRetryProposals = { retries++ },
+                    onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                    onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.onNodeWithText(context.getString(R.string.proposal_list_error)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_home_retry)).assertIsEnabled().performClick()
+        assertEquals(1, retries)
+        composeTestRule.onNodeWithTag(PROVIDER_CONVERSATION_MESSAGES_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.proposal_list_empty)).assertDoesNotExist()
+    }
 
     @Test fun pending_proposals_show_progress_without_hiding_conversation() {
         composeTestRule.setContent {

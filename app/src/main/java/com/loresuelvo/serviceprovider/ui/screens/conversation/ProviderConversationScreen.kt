@@ -44,6 +44,7 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.ui.screens.proposals.ProposalDetailSheet
 import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalAmount
 import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalVisit
@@ -91,6 +92,8 @@ fun ProviderConversationScreen(
     state: ProviderConversationUiState,
     serviceProposal: ServiceProposalSummary? = null,
     serviceProposalLoading: Boolean = false,
+    serviceProposalFailure: ServiceProposalListOutcome.Failure? = null,
+    onRetryProposals: () -> Unit = {},
     onPromptChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onRetrySendFailedBubble: (String) -> Unit,
@@ -169,6 +172,13 @@ fun ProviderConversationScreen(
                     CircularProgressIndicator(Modifier.testTag("proposal_chat_loading_indicator")
                         .semantics { contentDescription = loadingLabel })
                     Text(loadingLabel)
+                }
+            } else if (state is ProviderConversationUiState.Ready && serviceProposalFailure != null) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                    Text(stringResource(R.string.proposal_list_error))
+                    Button(onClick = onRetryProposals) {
+                        Text(stringResource(R.string.provider_home_retry))
+                    }
                 }
             } else if (state is ProviderConversationUiState.Ready && serviceProposal != null) {
                 Card(onClick = { detailVisible = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
