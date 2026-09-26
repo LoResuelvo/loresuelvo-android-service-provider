@@ -47,6 +47,7 @@ class ViewServiceProposalsSteps {
     private var detailView = ""
     private var historyPosition = -1
     private var openedConversationPath: String? = null
+    private var conversationSummary: ServiceProposalSummary? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -391,5 +392,50 @@ class ViewServiceProposalsSteps {
     fun otherConversationsDoNotOpen(first: Int, second: Int) {
         assertNotEquals(Route.Conversation.buildPath(first), openedConversationPath)
         assertNotEquals(Route.Conversation.buildPath(second), openedConversationPath)
+    }
+
+    @Given("que las propuestas son:")
+    fun conversationProposalsAre(table: DataTable) {
+        proposals = table.asMaps().map { row ->
+            summaries(listOf(mapOf(
+                "id" to row.getValue("id"),
+                "estado" to row.getValue("estado"),
+                "fecha de creación" to row.getValue("fecha de creación"),
+                "fecha de visita" to "2026-10-05T00:30:00Z",
+            ))).single().copy(
+                conversationId = row.getValue("id conversación").toInt(),
+                amountCents = row.getValue("id").toLong() * 100,
+                description = "Visit reason for proposal ${row.getValue("id")}",
+            )
+        }
+    }
+
+    @When("abro la conversación 93")
+    fun openConversation93() {
+        openJobs()
+        conversationSummary = viewModel.uiState.value.proposalInConversation(93)
+    }
+
+    @Then("su resumen muestra el monto, la fecha y hora local de visita, el motivo y el estado pendiente de la propuesta 22")
+    fun latestProposalSummary() {
+        val summary = requireNotNull(conversationSummary)
+        assertEquals(22, summary.id)
+        assertEquals(2200L, summary.amountCents)
+        assertEquals(Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), summary.scheduledOnEpochMillis)
+        assertEquals("Visit reason for proposal 22", summary.description)
+        assertEquals(ServiceProposalStatus.Pending, summary.status)
+    }
+
+    @And("puedo abrir el detalle de la propuesta 22")
+    fun latestProposalDetail() {
+        detailProposal = conversationSummary
+        assertEquals(22, detailProposal?.id)
+    }
+
+    @And("las propuestas 20, 21 y 99 no aparecen en el resumen")
+    fun onlyLatestProposalIsSummarized() {
+        assertFalse(conversationSummary?.id in setOf(20, 21, 99))
+        assertEquals(4, viewModel.uiState.value.proposals.size)
+        assertEquals(94, proposals.single { it.id == 99 }.conversationId)
     }
 }

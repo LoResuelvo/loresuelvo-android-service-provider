@@ -117,7 +117,6 @@ fun ProviderConversationRoute(
 
     ProviderConversationScreen(
         state = state,
-        // ponytail: 04 has one matching proposal; choose the latest in 07 when multiple are specified.
         serviceProposal = proposalListState.proposalInConversation(conversationId),
         proposalSnackbarHostState = proposalSnackbarHostState,
         onPromptChange = viewModel::onPromptChange,

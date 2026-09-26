@@ -73,7 +73,6 @@ Característica: Visualizar propuestas de servicio como prestador
     Entonces se abre la conversación 93
     Y no se abre la conversación 12 ni la conversación 7
 
-  @wip
   Escenario: 07-PVP Mostrar la propuesta más reciente de este chat
     Dado que las propuestas son:
       | id | id conversación | fecha de creación    | estado   |

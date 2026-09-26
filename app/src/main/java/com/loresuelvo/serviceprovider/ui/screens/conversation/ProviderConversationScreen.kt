@@ -45,6 +45,8 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.ui.screens.proposals.ProposalDetailSheet
 import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalAmount
+import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalVisit
+import com.loresuelvo.serviceprovider.ui.screens.proposals.labelRes
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.ChatInputBar
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MediaAttachSheet
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MessageBubble
@@ -164,6 +166,9 @@ fun ProviderConversationScreen(
                     Column(Modifier.padding(12.dp)) {
                         Text(stringResource(R.string.proposal_detail_chat_summary))
                         Text(proposalAmount(serviceProposal.amountCents))
+                        Text(proposalVisit(serviceProposal.scheduledOnEpochMillis))
+                        Text(serviceProposal.description)
+                        Text(stringResource(serviceProposal.status.labelRes()))
                     }
                 }
             }

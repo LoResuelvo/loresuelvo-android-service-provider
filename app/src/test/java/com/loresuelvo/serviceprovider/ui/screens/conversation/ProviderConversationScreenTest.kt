@@ -30,6 +30,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.TimeZone
+import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "es-rAR", sdk = [34])
@@ -59,6 +61,36 @@ class ProviderConversationScreenTest {
         composeTestRule.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()
         composeTestRule.onNodeWithText("1 hora 30 minutos").assertExists()
         composeTestRule.onNodeWithText("Ver conversación").assertExists()
+    }
+
+    @Test fun chat_summary_shows_latest_proposal_terms_before_opening_detail() {
+        val previousZone = TimeZone.getDefault()
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Argentina/Buenos_Aires"))
+        try {
+            val proposal = ServiceProposalSummary(
+                22, 93, 2200, Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), "Visit reason for proposal 22",
+                45, ServiceProposalStatus.Pending, 0L,
+                ServiceProposalCounterpart(7, "consumer", "Ana", "Pérez", null, null),
+                ServiceProposalBookingTerms("ARS", 2200, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+            )
+            composeTestRule.setContent {
+                LoresuelvoTheme {
+                    ProviderConversationScreen(
+                        state = readyState(""), serviceProposal = proposal,
+                        onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                        onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                    )
+                }
+            }
+            composeTestRule.onNodeWithText("ARS 22,00").assertIsDisplayed()
+            composeTestRule.onNodeWithText("Visit reason for proposal 22").assertIsDisplayed()
+            composeTestRule.onNodeWithText("Pendiente").assertIsDisplayed()
+            composeTestRule.onNodeWithText("el 4 de octubre de 2026 a las 21:30").assertIsDisplayed()
+            composeTestRule.onNodeWithText("Propuesta de servicio").performClick()
+            composeTestRule.onNodeWithText("Propuesta #22").assertExists()
+        } finally {
+            TimeZone.setDefault(previousZone)
+        }
     }
 
     @Test
