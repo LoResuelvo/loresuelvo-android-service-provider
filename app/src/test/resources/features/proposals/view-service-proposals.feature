@@ -120,7 +120,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | Trabajos        |
       | conversación 93 |
 
-  @wip
   Esquema del escenario: 12-PVP Mostrar una pestaña sin propuestas
     Dado que el servidor devolvió un listado sin propuestas con estado "<estado>"
     Cuando selecciono "<pestaña>"

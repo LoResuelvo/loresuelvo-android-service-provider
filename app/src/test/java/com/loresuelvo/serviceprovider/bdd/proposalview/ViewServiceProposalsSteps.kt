@@ -80,6 +80,7 @@ class ViewServiceProposalsSteps {
     private var createdProposal: ProviderProposalViewModel? = null
     private val snackbarShown = CompletableDeferred<Unit>()
     private var pendingProposalList: CompletableDeferred<ServiceProposalListOutcome>? = null
+    private var emptyTab: ProposalTab? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -690,5 +691,28 @@ class ViewServiceProposalsSteps {
     fun noPrematureEmptyMessage() {
         assertTrue(viewModel.uiState.value.loading)
         assertTrue(viewModel.uiState.value.visibleProposals.isEmpty())
+    }
+
+    @Given("que el servidor devolvió un listado sin propuestas con estado {string}")
+    fun serverReturnedNoProposalsForStatus(status: String) {
+        emptyTab = ProposalTab.entries.single { it.status.name.equals(status, ignoreCase = true) }
+        proposals = emptyList()
+    }
+
+    @Then("veo un mensaje que indica que esta pestaña no tiene propuestas")
+    fun selectedTabIsEmpty() {
+        val state = viewModel.uiState.value
+        assertEquals(1, proposalListCalls)
+        assertFalse(state.loading)
+        assertEquals(null, state.failure)
+        assertEquals(emptyTab, state.selectedTab)
+        assertTrue(state.proposals.isEmpty())
+        assertTrue(state.visibleProposals.isEmpty())
+    }
+
+    @And("las tres pestañas de estado siguen disponibles")
+    fun allStatusTabsRemainAvailable() {
+        assertEquals(listOf(ProposalTab.Pending, ProposalTab.Accepted, ProposalTab.Rejected), ProposalTab.entries)
+        assertTrue(viewModel.uiState.value.selectedTab in ProposalTab.entries)
     }
 }

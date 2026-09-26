@@ -56,6 +56,7 @@ import com.loresuelvo.serviceprovider.ui.home.ProviderHomeUiState
 import com.loresuelvo.serviceprovider.ui.navigation.LoResuelvoNavHost
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
+import com.loresuelvo.serviceprovider.ui.proposals.ProposalTab
 import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeScreen
 import com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListScreen
 import org.junit.Rule
@@ -66,6 +67,37 @@ import java.time.Instant
 @RunWith(AndroidJUnit4::class)
 class ServiceProposalNavigationAcceptanceTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test fun empty_proposal_tabs_keep_the_message_and_all_tabs_available() {
+        var calls = 0
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome {
+                calls++
+                return ServiceProposalListOutcome.Success(emptyList())
+            }
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                error("Creation is outside this test")
+        }
+        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        compose.setContent { ServiceProposalListRoute(onBack = {}, onConversation = {}, viewModel = viewModel) }
+        val labels = listOf(
+            R.string.proposal_list_pending,
+            R.string.proposal_list_accepted,
+            R.string.proposal_list_rejected,
+        ).map(compose.activity::getString)
+        val empty = compose.activity.getString(R.string.proposal_list_empty)
+        labels.forEach { selected ->
+            compose.onNode(hasText(selected) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+                .performClick().assertIsSelected()
+            compose.onNodeWithText(empty).assertIsDisplayed()
+            labels.forEach { label ->
+                compose.onNode(hasText(label) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+                    .assertIsDisplayed()
+            }
+        }
+        org.junit.Assert.assertEquals(1, calls)
+        org.junit.Assert.assertEquals(ProposalTab.Rejected, viewModel.uiState.value.selectedTab)
+    }
 
     @Test fun returning_to_history_refreshes_the_pending_tab() {
         var status = ServiceProposalStatus.Pending
