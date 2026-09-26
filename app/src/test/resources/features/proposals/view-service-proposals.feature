@@ -85,7 +85,6 @@ Característica: Visualizar propuestas de servicio como prestador
     Y puedo abrir el detalle de la propuesta 22
     Y las propuestas 20, 21 y 99 no aparecen en el resumen
 
-  @wip
   Escenario: 08-PVP Usar un chat sin propuestas
     Dado que la conversación 93 tiene mensajes y ninguna propuesta
     Cuando abro la conversación 93

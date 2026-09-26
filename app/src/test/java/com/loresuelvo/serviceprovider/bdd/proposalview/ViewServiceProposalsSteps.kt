@@ -12,6 +12,19 @@ import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposal
 import com.loresuelvo.serviceprovider.ui.proposals.ProposalTab
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
 import com.loresuelvo.serviceprovider.ui.navigation.Route
+import com.loresuelvo.serviceprovider.domain.conversation.*
+import com.loresuelvo.serviceprovider.domain.usecase.conversation.GetConversationByIdUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMessageUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMediaMessageUseCase
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationViewModel
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationUiState
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ChatListItem
+import com.loresuelvo.serviceprovider.data.media.MediaReader
+import com.loresuelvo.serviceprovider.data.media.AudioRecorder
+import com.loresuelvo.serviceprovider.data.media.AudioPlayer
+import androidx.lifecycle.SavedStateHandle
+import android.net.Uri
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.lifecycle.ViewModelStore
 import io.cucumber.datatable.DataTable
 import io.cucumber.java.en.And
@@ -48,6 +61,7 @@ class ViewServiceProposalsSteps {
     private var historyPosition = -1
     private var openedConversationPath: String? = null
     private var conversationSummary: ServiceProposalSummary? = null
+    private var conversationViewModel: ProviderConversationViewModel? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -437,5 +451,57 @@ class ViewServiceProposalsSteps {
         assertFalse(conversationSummary?.id in setOf(20, 21, 99))
         assertEquals(4, viewModel.uiState.value.proposals.size)
         assertEquals(94, proposals.single { it.id == 99 }.conversationId)
+    }
+
+    @Given("que la conversación 93 tiene mensajes y ninguna propuesta")
+    fun conversationHasMessagesWithoutProposals() {
+        proposals = emptyList()
+        val repository = object : ConversationRepository {
+            override suspend fun getConversations(): ConversationsOutcome = error("Not needed")
+            override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome {
+                assertEquals(93, conversationId)
+                return ConversationDetailOutcome.Success(ConversationDetail(
+                    93, ConversationStatus.Active,
+                    ConversationCounterpart(7, "Ana", "Pérez", null),
+                    listOf(ConversationMessage(1, ConversationSender.Consumer, "Hola", 1L)), 1L,
+                ))
+            }
+            override suspend fun sendMessage(conversationId: Int, content: String): SendMessageOutcome =
+                error("Typing does not send")
+        }
+        conversationViewModel = ProviderConversationViewModel(
+            SavedStateHandle(mapOf(Route.Conversation.argument to 93)),
+            GetConversationByIdUseCase(repository),
+            SendMessageUseCase(repository),
+            SendMediaMessageUseCase(repository),
+            object : MediaReader { override suspend fun read(uri: Uri): MediaUpload = error("Not needed") },
+            object : AudioRecorder {
+                override fun start(): Result<Unit> = error("Not needed")
+                override fun stop(): Result<Uri> = error("Not needed")
+                override fun cancel() = Unit
+            },
+            object : AudioPlayer {
+                override val isPlaying = MutableStateFlow(false)
+                override val currentPositionMillis = MutableStateFlow(0L)
+                override fun play(url: String, startPositionMillis: Long) = Unit
+                override fun pause() = Unit
+                override fun stop() = Unit
+            },
+        ).also { viewModelStore.put("conversation", it) }
+    }
+
+    @Then("veo sus mensajes y puedo escribir un mensaje")
+    fun messagesAndComposerRemainAvailable() {
+        val conversation = requireNotNull(conversationViewModel)
+        val ready = conversation.uiState.value as ProviderConversationUiState.Ready
+        assertEquals("Hola", (ready.items.single() as ChatListItem.ServerConfirmed).content)
+        conversation.onPromptChange("Llegaré a las 9")
+        assertEquals("Llegaré a las 9", (conversation.uiState.value as ProviderConversationUiState.Ready).promptInput)
+    }
+
+    @And("no se muestra un resumen de propuesta")
+    fun noProposalSummary() {
+        assertTrue(conversationViewModel?.uiState?.value is ProviderConversationUiState.Ready)
+        assertEquals(null, conversationSummary)
     }
 }

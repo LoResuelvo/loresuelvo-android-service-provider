@@ -12,6 +12,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,17 @@ import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ChatListItem
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationScreen
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationUiState
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_INPUT_FIELD_TAG
+import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_SEND_BUTTON_TAG
+import androidx.compose.ui.test.assertIsEnabled
 import com.loresuelvo.serviceprovider.ui.home.ActivitySectionState
 import com.loresuelvo.serviceprovider.ui.home.ProviderHomeUiState
 import com.loresuelvo.serviceprovider.ui.navigation.LoResuelvoNavHost
@@ -46,6 +58,34 @@ import java.time.Instant
 @RunWith(AndroidJUnit4::class)
 class ServiceProposalNavigationAcceptanceTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test fun chat_without_proposals_keeps_messages_and_composer() {
+        val message = ConversationMessage(1, ConversationSender.Consumer, "Hola", 1L)
+        var state by mutableStateOf(ProviderConversationUiState.Ready(
+            detail = ConversationDetail(
+                93, ConversationStatus.Active, ConversationCounterpart(7, "Ana", "Pérez", null),
+                listOf(message), 1L,
+            ),
+            items = listOf(ChatListItem.ServerConfirmed(message)),
+            promptInput = "",
+            sending = false,
+        ))
+        compose.setContent {
+            ProviderConversationScreen(
+                state = state,
+                serviceProposal = ServiceProposalListUiState(proposals = emptyList(), loading = false)
+                    .proposalInConversation(93),
+                onPromptChange = { state = state.copy(promptInput = it) },
+                onSendClick = {}, onRetrySendFailedBubble = {}, onRetryLoad = {},
+                onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+            )
+        }
+        compose.onNodeWithText("Hola").assertIsDisplayed()
+        compose.onNodeWithText(compose.activity.getString(R.string.proposal_detail_chat_summary))
+            .assertDoesNotExist()
+        compose.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).performTextInput("Llegaré a las 9")
+        compose.onNodeWithTag(PROVIDER_CHAT_SEND_BUTTON_TAG).assertIsEnabled()
+    }
 
     @Test fun detail_opens_its_conversation_from_history() {
         compose.setContent {
