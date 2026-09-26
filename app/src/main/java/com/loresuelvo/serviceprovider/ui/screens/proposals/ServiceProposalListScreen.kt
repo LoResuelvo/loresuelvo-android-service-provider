@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.proposals.ProposalTab
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
@@ -44,6 +46,7 @@ fun ServiceProposalListRoute(
     viewModel: ServiceProposalListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
     ServiceProposalListScreen(state, viewModel::select, viewModel::load, onBack, onConversation)
 }
 

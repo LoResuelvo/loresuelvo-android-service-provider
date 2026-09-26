@@ -91,7 +91,6 @@ Característica: Visualizar propuestas de servicio como prestador
     Entonces veo sus mensajes y puedo escribir un mensaje
     Y no se muestra un resumen de propuesta
 
-  @wip
   Esquema del escenario: 09-PVP Actualizar las propuestas al regresar
     Dado que anteriormente vi la propuesta 12 como pendiente en "<vista>"
     Y salí de esa vista

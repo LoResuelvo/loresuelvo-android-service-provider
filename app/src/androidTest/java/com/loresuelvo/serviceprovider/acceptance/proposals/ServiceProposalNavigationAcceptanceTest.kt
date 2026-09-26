@@ -32,6 +32,14 @@ import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
+import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
+import com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListRoute
+import androidx.lifecycle.Lifecycle
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
@@ -58,6 +66,32 @@ import java.time.Instant
 @RunWith(AndroidJUnit4::class)
 class ServiceProposalNavigationAcceptanceTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test fun returning_to_history_refreshes_the_pending_tab() {
+        var status = ServiceProposalStatus.Pending
+        var calls = 0
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome {
+                calls++
+                return ServiceProposalListOutcome.Success(listOf(proposal(12).copy(status = status)))
+            }
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                error("Creation is outside this test")
+        }
+        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        compose.setContent {
+            ServiceProposalListRoute(onBack = {}, onConversation = {}, viewModel = viewModel)
+        }
+        val item = compose.activity.getString(R.string.proposal_list_item, 12)
+        compose.onNodeWithText(item).assertIsDisplayed()
+        org.junit.Assert.assertEquals(1, calls)
+        status = ServiceProposalStatus.Accepted
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.onNodeWithText(item).assertDoesNotExist()
+        org.junit.Assert.assertEquals(2, calls)
+        compose.onNodeWithText(compose.activity.getString(R.string.proposal_list_pending)).assertIsSelected()
+    }
 
     @Test fun chat_without_proposals_keeps_messages_and_composer() {
         val message = ConversationMessage(1, ConversationSender.Consumer, "Hola", 1L)

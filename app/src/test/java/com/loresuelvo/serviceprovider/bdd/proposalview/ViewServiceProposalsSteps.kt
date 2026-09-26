@@ -62,6 +62,8 @@ class ViewServiceProposalsSteps {
     private var openedConversationPath: String? = null
     private var conversationSummary: ServiceProposalSummary? = null
     private var conversationViewModel: ProviderConversationViewModel? = null
+    private var returnedView = ""
+    private var proposalListCalls = 0
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -114,7 +116,10 @@ class ViewServiceProposalsSteps {
         assertEquals("Ver todas", viewAll)
         assertEquals("Trabajos", section)
         val repository = object : ServiceProposalRepository {
-            override suspend fun list() = ServiceProposalListOutcome.Success(proposals)
+            override suspend fun list(): ServiceProposalListOutcome {
+                proposalListCalls++
+                return ServiceProposalListOutcome.Success(proposals)
+            }
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this scenario")
         }
@@ -503,5 +508,48 @@ class ViewServiceProposalsSteps {
     fun noProposalSummary() {
         assertTrue(conversationViewModel?.uiState?.value is ProviderConversationUiState.Ready)
         assertEquals(null, conversationSummary)
+    }
+
+    @Given("que anteriormente vi la propuesta 12 como pendiente en {string}")
+    fun previouslySawPendingProposal(view: String) {
+        assertTrue(view == "Trabajos" || view == "conversación 93")
+        returnedView = view
+        consumerProposal("Ana Pérez", 1500050)
+        openJobs()
+        viewModel.onResume()
+        assertEquals(1, proposalListCalls)
+        assertEquals(ServiceProposalStatus.Pending, viewModel.uiState.value.proposalInConversation(93)?.status)
+    }
+
+    @And("salí de esa vista")
+    fun leftView() { assertTrue(returnedView.isNotEmpty()) }
+
+    @And("el servidor ahora informa que la propuesta 12 está aceptada")
+    fun serverNowAcceptsProposal() {
+        proposals = proposals.map { it.copy(status = ServiceProposalStatus.Accepted) }
+    }
+
+    @When("regreso a {string}")
+    fun returnToView(view: String) {
+        assertEquals(returnedView, view)
+        viewModel.onResume()
+        scope.advanceUntilIdle()
+        assertEquals(2, proposalListCalls)
+    }
+
+    @Then("veo {string}")
+    fun seeUpdatedProposal(result: String) {
+        val state = viewModel.uiState.value
+        when (result) {
+            "la pestaña Pendientes sin la propuesta 12" -> {
+                assertEquals(ProposalTab.Pending, state.selectedTab)
+                assertFalse(state.visibleProposals.any { it.id == 12 })
+            }
+            "el resumen de la propuesta 12 con el estado Aceptada" -> {
+                assertEquals(12, state.proposalInConversation(93)?.id)
+                assertEquals(ServiceProposalStatus.Accepted, state.proposalInConversation(93)?.status)
+            }
+            else -> error("Unexpected result: $result")
+        }
     }
 }

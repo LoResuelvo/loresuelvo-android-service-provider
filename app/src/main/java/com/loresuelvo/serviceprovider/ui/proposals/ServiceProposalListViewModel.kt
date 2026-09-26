@@ -40,10 +40,19 @@ class ServiceProposalListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ServiceProposalListUiState())
     val uiState: StateFlow<ServiceProposalListUiState> = _uiState.asStateFlow()
     private var loadJob: Job? = null
+    private var initialResumePending = true
 
     init { load() }
 
     fun select(tab: ProposalTab) { _uiState.update { it.copy(selectedTab = tab) } }
+
+    fun onResume() {
+        if (initialResumePending) {
+            initialResumePending = false
+            return
+        }
+        load()
+    }
 
     fun load() {
         if (loadJob?.isActive == true) return

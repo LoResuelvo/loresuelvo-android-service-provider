@@ -16,6 +16,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.navigation.NavHostController
 import com.loresuelvo.serviceprovider.data.media.MediaOutputUriFactory
 import dagger.hilt.android.EntryPointAccessors
@@ -59,6 +60,7 @@ fun ProviderConversationRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val proposalListViewModel: ServiceProposalListViewModel = hiltViewModel()
     val proposalListState by proposalListViewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { proposalListViewModel.onResume() }
     val proposalViewModel: ProviderProposalViewModel = hiltViewModel()
     val proposalState by proposalViewModel.uiState.collectAsStateWithLifecycle()
     val readyConversation = (state as? ProviderConversationUiState.Ready)?.detail
