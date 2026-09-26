@@ -7,7 +7,7 @@ import org.junit.runner.RunWith
 @RunWith(Cucumber::class)
 @CucumberOptions(
     features = ["classpath:features/proposals/view-service-proposals.feature"],
-    glue = ["com.loresuelvo.serviceprovider.bdd.proposals.view"],
+    glue = ["com.loresuelvo.serviceprovider.bdd.proposalview"],
     plugin = ["pretty", "summary"],
     tags = "not @wip",
 )

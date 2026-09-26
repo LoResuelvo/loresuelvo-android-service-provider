@@ -1,4 +1,4 @@
-package com.loresuelvo.serviceprovider.bdd.proposals.view
+package com.loresuelvo.serviceprovider.bdd.proposalview
 
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
