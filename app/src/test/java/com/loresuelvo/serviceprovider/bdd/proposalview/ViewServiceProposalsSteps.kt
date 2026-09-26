@@ -19,12 +19,24 @@ import com.loresuelvo.serviceprovider.domain.usecase.conversation.SendMediaMessa
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationViewModel
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationUiState
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ChatListItem
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderProposalViewModel
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProposalTimeSource
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ProposalUiState
+import com.loresuelvo.serviceprovider.ui.screens.conversation.handleProposalSuccess
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.User
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.CreateServiceProposalUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.ValidateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.data.media.MediaReader
 import com.loresuelvo.serviceprovider.data.media.AudioRecorder
 import com.loresuelvo.serviceprovider.data.media.AudioPlayer
 import androidx.lifecycle.SavedStateHandle
 import android.net.Uri
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
 import androidx.lifecycle.ViewModelStore
 import io.cucumber.datatable.DataTable
 import io.cucumber.java.en.And
@@ -64,6 +76,9 @@ class ViewServiceProposalsSteps {
     private var conversationViewModel: ProviderConversationViewModel? = null
     private var returnedView = ""
     private var proposalListCalls = 0
+    private var proposalCreateCalls = 0
+    private var createdProposal: ProviderProposalViewModel? = null
+    private val snackbarShown = CompletableDeferred<Unit>()
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -551,5 +566,92 @@ class ViewServiceProposalsSteps {
             }
             else -> error("Unexpected result: $result")
         }
+    }
+
+    @Given("que estoy confirmando una propuesta nueva en la conversación 93 mediante el flujo de creación existente")
+    fun confirmingNewProposal() {
+        proposals = summaries(listOf(mapOf(
+            "id" to "22", "estado" to "pending", "fecha de creación" to "2026-09-21T12:00:00Z",
+            "fecha de visita" to "2026-10-05T12:00:00Z",
+        )))
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome {
+                proposalListCalls++
+                return ServiceProposalListOutcome.Success(proposals)
+            }
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+                proposalCreateCalls++
+                return CreateServiceProposalOutcome.Created(23)
+            }
+        }
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModelStore.put("proposals", viewModel)
+        val session = object : AuthSessionStore {
+            override val sessionFlow = MutableStateFlow<AuthSession?>(AuthSession(User("provider-1", "provider@example.com"), "token"))
+            override fun getSession() = sessionFlow.value
+            override fun saveSession(session: AuthSession) { sessionFlow.value = session }
+            override fun clearSession() { sessionFlow.value = null }
+        }
+        createdProposal = ProviderProposalViewModel(
+            SavedStateHandle(mapOf(Route.Conversation.argument to 93)),
+            ValidateServiceProposalUseCase(),
+            object : ProposalTimeSource() {
+                override fun nowMillis() = 1_780_000_000_000L
+                override fun zone() = TimeZone.getTimeZone("UTC")
+            },
+            CreateServiceProposalUseCase(repository), session,
+        ).also { viewModelStore.put("createdProposal", it) }
+        scope.advanceUntilIdle()
+        assertEquals(22, viewModel.uiState.value.proposalInConversation(93)?.id)
+        val chat = ConversationDetail(93, ConversationStatus.Active,
+            ConversationCounterpart(7, "Ana", "Pérez", null), emptyList(), 1L)
+        assertTrue(requireNotNull(createdProposal).open(chat))
+        requireNotNull(createdProposal).apply {
+            updateAmount("100,50")
+            updateDate("2026-10-01")
+            updateTime("10:00")
+            updateReason("Inspect sink")
+            selectDuration(45)
+            assertTrue(continueToConfirmation())
+            assertTrue(uiState.value is ProposalUiState.Reviewing)
+        }
+    }
+
+    @And("la creación finalizará correctamente con la propuesta 23")
+    fun creationWillSucceed() { assertEquals(0, proposalCreateCalls) }
+
+    @And("la próxima consulta devolverá la propuesta 23 como la más reciente de la conversación 93")
+    fun nextListContainsNewProposal() {
+        proposals = listOf(proposals.single().copy(id = 23, createdOnEpochMillis = Instant.parse("2026-09-22T12:00:00Z").toEpochMilli())) + proposals
+    }
+
+    @When("confirmo el envío de la propuesta")
+    fun confirmProposalSend() {
+        val creator = requireNotNull(createdProposal)
+        creator.confirmSend()
+        scope.advanceUntilIdle()
+        assertEquals(1, proposalCreateCalls)
+        assertTrue(creator.hasSuccess.value)
+        scope.backgroundScope.launch {
+            handleProposalSuccess(creator, viewModel) {
+                snackbarShown.complete(Unit)
+                awaitCancellation()
+            }
+        }
+        scope.testScheduler.runCurrent()
+        scope.advanceUntilIdle()
+    }
+
+    @Then("el resumen del chat muestra la propuesta 23 del listado actualizado")
+    fun chatSummaryShowsCreatedProposal() {
+        assertEquals(2, proposalListCalls)
+        assertEquals(23, viewModel.uiState.value.proposalInConversation(93)?.id)
+    }
+
+    @And("se conserva la confirmación de envío exitoso existente")
+    fun successFeedbackRemains() {
+        assertTrue(snackbarShown.isCompleted)
+        assertFalse(requireNotNull(createdProposal).hasSuccess.value)
+        assertEquals(1, proposalCreateCalls)
     }
 }

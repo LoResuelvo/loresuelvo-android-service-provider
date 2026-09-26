@@ -74,8 +74,10 @@ fun ProviderConversationRoute(
     LaunchedEffect(proposalViewModel, lifecycleOwner, proposalSnackbarHostState) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             proposalViewModel.hasSuccess.collect { pending ->
-                if (pending && proposalViewModel.consumeSuccess()) {
-                    proposalSnackbarHostState.showSnackbar(context.getString(R.string.provider_proposal_sent))
+                if (pending) {
+                    handleProposalSuccess(proposalViewModel, proposalListViewModel) {
+                        proposalSnackbarHostState.showSnackbar(context.getString(R.string.provider_proposal_sent))
+                    }
                 }
             }
         }
@@ -194,6 +196,17 @@ fun ProviderConversationRoute(
                 onCancel = proposalViewModel::cancelReview,
             )
         }
+    }
+}
+
+internal suspend fun handleProposalSuccess(
+    proposalViewModel: ProviderProposalViewModel,
+    proposalListViewModel: ServiceProposalListViewModel,
+    showSuccess: suspend () -> Unit,
+) {
+    if (proposalViewModel.consumeSuccess()) {
+        proposalListViewModel.load()
+        showSuccess()
     }
 }
 

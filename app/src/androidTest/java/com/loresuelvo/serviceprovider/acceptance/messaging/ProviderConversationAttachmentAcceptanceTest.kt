@@ -90,6 +90,10 @@ import org.junit.Assert.assertEquals
 import kotlinx.coroutines.CompletableDeferred
 import androidx.lifecycle.Lifecycle
 import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
 import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
 import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
@@ -137,6 +141,9 @@ class ProviderConversationAttachmentAcceptanceTest {
         proposalRepository = entryPoint.proposalRepository()
         proposalRepository.created.clear()
         proposalRepository.pending = null
+        proposalRepository.outcome = CreateServiceProposalOutcome.Created(9)
+        proposalRepository.listed = emptyList()
+        proposalRepository.listCalls = 0
 
         currentAccountRepository.outcome = CurrentAccountOutcome.Success(
             CurrentAccount.Provider(
@@ -320,11 +327,24 @@ class ProviderConversationAttachmentAcceptanceTest {
     @Test
     fun confirmed_proposal_returns_to_chat_and_clears_form() {
         openValidProposalReview()
+        proposalRepository.outcome = CreateServiceProposalOutcome.Created(23)
+        proposalRepository.listed = listOf(ServiceProposalSummary(
+            id = 23, conversationId = 42, amountCents = 10050,
+            scheduledOnEpochMillis = 1_780_000_000_000L,
+            description = "Proposal 23 visit", estimatedDurationMinutes = 45,
+            status = ServiceProposalStatus.Pending,
+            createdOnEpochMillis = 1_780_000_000_000L,
+            counterpart = ServiceProposalCounterpart(7, "consumer", "Ana", "Pérez", null, null),
+            bookingTerms = ServiceProposalBookingTerms("ARS", 10050, 1000, 9050, 500, 100, 400, 1100, 9450, 10550, 1_780_000_000_000L),
+        ))
+        val initialListCalls = proposalRepository.listCalls
         val context = composeTestRule.activity
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_confirm_send)).performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onAllNodesWithTag(PROPOSAL_FORM_TAG).assertCountEquals(0)
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_sent)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Proposal 23 visit").assertIsDisplayed()
+        assertEquals(initialListCalls + 1, proposalRepository.listCalls)
         composeTestRule.onNodeWithText("Ana Pérez").assertIsDisplayed()
         org.junit.Assert.assertEquals(1, proposalRepository.created.size)
         org.junit.Assert.assertEquals(7, proposalRepository.created.single().consumerId)

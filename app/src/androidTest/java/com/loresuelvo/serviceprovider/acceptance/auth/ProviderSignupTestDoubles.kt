@@ -174,10 +174,15 @@ class ProviderSignupConversationRepository : ConversationRepository {
 
 class ProviderSignupServiceProposalRepository : ServiceProposalRepository {
     val created = mutableListOf<ValidatedServiceProposal>()
+    var listed = emptyList<com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary>()
+    var listCalls = 0
     var outcome: CreateServiceProposalOutcome = CreateServiceProposalOutcome.Created(9)
     var pending: kotlinx.coroutines.CompletableDeferred<CreateServiceProposalOutcome>? = null
 
-    override suspend fun list() = com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(emptyList())
+    override suspend fun list(): com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome {
+        listCalls++
+        return com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(listed)
+    }
 
     override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
         created += proposal

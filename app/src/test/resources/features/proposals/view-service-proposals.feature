@@ -102,7 +102,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | Trabajos        | la pestaña Pendientes sin la propuesta 12            |
       | conversación 93 | el resumen de la propuesta 12 con el estado Aceptada |
 
-  @wip
   Escenario: 10-PVP Actualizar el chat después de enviar una propuesta
     Dado que estoy confirmando una propuesta nueva en la conversación 93 mediante el flujo de creación existente
     Y la creación finalizará correctamente con la propuesta 23
