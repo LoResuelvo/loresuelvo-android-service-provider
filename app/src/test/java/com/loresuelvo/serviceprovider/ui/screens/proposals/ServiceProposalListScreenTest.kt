@@ -7,10 +7,15 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.performScrollToNode
@@ -158,6 +163,29 @@ class ServiceProposalListScreenTest {
             ))
         }
         compose.onNodeWithText("AP").assertIsDisplayed()
+    }
+
+    @Test fun `long counterpart name keeps avatar and detail action at large font`() {
+        val item = proposal(12).copy(counterpart = proposal(12).counterpart.copy(
+            surname = "Pérez Fernández de los Ángeles",
+        ))
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, 1.8f)) {
+                LoresuelvoTheme {
+                    ServiceProposalListScreen(
+                        ServiceProposalListUiState(proposals = listOf(item), loading = false),
+                        onSelectTab = {}, onRetry = {}, onBack = {},
+                    )
+                }
+            }
+        }
+        compose.onNodeWithTag("proposal_list_items")
+            .performScrollToNode(hasText(context.getString(R.string.proposal_detail_open)))
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_open)).assertIsDisplayed().performClick()
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_conversation)).assertExists()
+        compose.onAllNodesWithText("AP").assertCountEquals(2)
     }
 
     @Test fun `removed detail does not reopen when its ID appears in a later list`() {

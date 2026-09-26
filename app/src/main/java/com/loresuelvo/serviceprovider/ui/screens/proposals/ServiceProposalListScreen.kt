@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +19,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +42,7 @@ import com.loresuelvo.serviceprovider.ui.proposals.ProposalTab
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 
 @Composable
@@ -126,15 +129,16 @@ fun ServiceProposalListScreen(
 
 @Composable
 private fun ProposalCard(proposal: ServiceProposalSummary, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), shape = RoundedCornerShape(20.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ProviderAvatar(
                     proposal.counterpart.name, proposal.counterpart.surname,
                     proposal.counterpart.profilePhotoUrl,
                     stringResource(R.string.proposal_list_avatar, proposal.counterpart.name),
+                    size = 56.dp,
                 )
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "${proposal.counterpart.name} ${proposal.counterpart.surname}".trim(),
                         style = MaterialTheme.typography.titleMedium,
@@ -145,18 +149,20 @@ private fun ProposalCard(proposal: ServiceProposalSummary, onClick: () -> Unit) 
             Text(proposal.description, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(proposalAmount(proposal.amountCents))
             Text(proposalVisit(proposal.scheduledOnEpochMillis))
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = MaterialTheme.shapes.small,
-            ) {
+            val (badgeColor, badgeTextColor) = when (proposal.status) {
+                ServiceProposalStatus.Pending -> MaterialTheme.colorScheme.tertiary to MaterialTheme.colorScheme.onTertiary
+                ServiceProposalStatus.Accepted -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
+                ServiceProposalStatus.Rejected -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
+            }
+            Surface(color = badgeColor, shape = RoundedCornerShape(50)) {
                 Text(
                     stringResource(proposal.status.labelRes()),
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         .testTag("proposal_status_badge"),
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    color = badgeTextColor,
                 )
             }
-            TextButton(onClick = onClick, modifier = Modifier.testTag("proposal_detail_open_${proposal.id}")) {
+            OutlinedButton(onClick = onClick, modifier = Modifier.testTag("proposal_detail_open_${proposal.id}")) {
                 Text(stringResource(R.string.proposal_detail_open))
             }
         }

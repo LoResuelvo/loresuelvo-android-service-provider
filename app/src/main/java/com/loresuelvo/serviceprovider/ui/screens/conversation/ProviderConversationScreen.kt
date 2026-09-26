@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -181,7 +182,8 @@ fun ProviderConversationScreen(
                     }
                 }
             } else if (state is ProviderConversationUiState.Ready && serviceProposal != null) {
-                Card(onClick = { detailVisible = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                Card(onClick = { detailVisible = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    shape = RoundedCornerShape(16.dp)) {
                     Column(Modifier.padding(12.dp)) {
                         Text(stringResource(R.string.proposal_detail_chat_summary))
                         Text(proposalAmount(serviceProposal.amountCents))

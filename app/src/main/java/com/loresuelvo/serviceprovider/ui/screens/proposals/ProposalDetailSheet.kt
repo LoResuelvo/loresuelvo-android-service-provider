@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.screens.proposals
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +12,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -20,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -39,7 +42,16 @@ fun ProposalDetailSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(stringResource(R.string.proposal_list_item, proposal.id), style = MaterialTheme.typography.titleLarge)
-            Text("${proposal.counterpart.name} ${proposal.counterpart.surname}".trim())
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ProviderAvatar(
+                    proposal.counterpart.name, proposal.counterpart.surname,
+                    proposal.counterpart.profilePhotoUrl,
+                    stringResource(R.string.proposal_list_avatar, proposal.counterpart.name),
+                    size = 56.dp,
+                )
+                Text("${proposal.counterpart.name} ${proposal.counterpart.surname}".trim(),
+                    modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            }
             Text(proposal.description, modifier = Modifier.testTag("proposal_detail_reason"))
             Text(proposalAmount(proposal.amountCents))
             Text(proposalVisit(proposal.scheduledOnEpochMillis))
