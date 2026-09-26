@@ -52,6 +52,7 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ChatListItem
+import com.loresuelvo.serviceprovider.ui.screens.conversation.PROVIDER_CONVERSATION_MESSAGES_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationScreen
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationUiState
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_INPUT_FIELD_TAG
@@ -127,6 +128,47 @@ class ServiceProposalNavigationAcceptanceTest {
         compose.onNodeWithText("Hola").assertIsDisplayed()
         compose.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).assertIsDisplayed()
         org.junit.Assert.assertEquals(2, calls)
+    }
+
+    @Test fun conversation_sends_message_while_proposal_retry_remains_available() {
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome = ServiceProposalListOutcome.Failure.Unavailable
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                error("Creation is outside this test")
+        }
+        val proposals = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), ProposalTestSessionStore())
+        val first = ConversationMessage(1, ConversationSender.Consumer, "Hola", 1L)
+        var chat by mutableStateOf(ProviderConversationUiState.Ready(
+            detail = ConversationDetail(93, ConversationStatus.Active,
+                ConversationCounterpart(7, "Ana", "Pérez", null), listOf(first), 1L),
+            items = listOf(ChatListItem.ServerConfirmed(first)), promptInput = "", sending = false,
+        ))
+        compose.setContent {
+            val proposalState by proposals.uiState.collectAsState()
+            ProviderConversationScreen(
+                state = chat, serviceProposal = proposalState.proposalInConversation(93),
+                serviceProposalLoading = proposalState.loading, serviceProposalFailure = proposalState.failure,
+                onRetryProposals = proposals::load,
+                onPromptChange = { chat = chat.copy(promptInput = it) },
+                onSendClick = {
+                    val sent = ConversationMessage(2, ConversationSender.Provider, chat.promptInput, 2L)
+                    chat = chat.copy(items = chat.items + ChatListItem.ServerConfirmed(sent), promptInput = "")
+                },
+                onRetrySendFailedBubble = {}, onRetryLoad = {}, onMediaPicked = {},
+                onClearStagedMedia = {}, onClose = {},
+            )
+        }
+        val retry = compose.activity.getString(R.string.provider_home_retry)
+        compose.onNodeWithText(compose.activity.getString(R.string.proposal_list_error)).assertIsDisplayed()
+        compose.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).performTextInput("Llegaré a las 9")
+        compose.onNodeWithTag(PROVIDER_CHAT_SEND_BUTTON_TAG).assertIsEnabled().performClick()
+        Espresso.pressBack()
+        compose.onNodeWithTag(PROVIDER_CONVERSATION_MESSAGES_TAG)
+            .performScrollToNode(hasText("Llegaré a las 9"))
+        compose.onNodeWithText("Llegaré a las 9").assertIsDisplayed()
+        compose.onNodeWithText(retry).assertIsEnabled()
+        org.junit.Assert.assertEquals(93, chat.detail.id)
+        org.junit.Assert.assertEquals(ServiceProposalListOutcome.Failure.Unavailable, proposals.uiState.value.failure)
     }
 
     @Test fun empty_proposal_tabs_keep_the_message_and_all_tabs_available() {

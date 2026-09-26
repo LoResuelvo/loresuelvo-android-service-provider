@@ -166,7 +166,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | Trabajos        |
       | conversación 93 |
 
-  @wip
   Escenario: 17-PVP Seguir enviando mensajes cuando falla la carga de propuestas
     Dado que la conversación 93 muestra sus mensajes y un error de carga de propuestas
     Y el envío de mensajes está disponible

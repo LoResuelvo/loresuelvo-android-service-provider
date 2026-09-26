@@ -85,6 +85,8 @@ class ViewServiceProposalsSteps {
     private var proposalFailure: ServiceProposalListOutcome.Failure? = null
     private var nextProposalList: ServiceProposalListOutcome? = null
     private var sessionExpiredOnNextQuery = false
+    private var messageSendingEnabled = false
+    private var sentMessage: Pair<Int, String>? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -493,8 +495,11 @@ class ViewServiceProposalsSteps {
                     listOf(ConversationMessage(1, ConversationSender.Consumer, "Hola", 1L)), 1L,
                 ))
             }
-            override suspend fun sendMessage(conversationId: Int, content: String): SendMessageOutcome =
-                error("Typing does not send")
+            override suspend fun sendMessage(conversationId: Int, content: String): SendMessageOutcome {
+                assertTrue(messageSendingEnabled)
+                sentMessage = conversationId to content
+                return SendMessageOutcome.Success(ConversationMessage(2, ConversationSender.Provider, content, 2L))
+            }
         }
         conversationViewModel = ProviderConversationViewModel(
             SavedStateHandle(mapOf(Route.Conversation.argument to 93)),
@@ -524,6 +529,37 @@ class ViewServiceProposalsSteps {
         assertEquals("Hola", (ready.items.single() as ChatListItem.ServerConfirmed).content)
         conversation.onPromptChange("Llegaré a las 9")
         assertEquals("Llegaré a las 9", (conversation.uiState.value as ProviderConversationUiState.Ready).promptInput)
+    }
+
+    @Given("que la conversación 93 muestra sus mensajes y un error de carga de propuestas")
+    fun conversationShowsMessagesAndProposalError() {
+        proposalViewShowsError("conversación 93")
+        assertEquals(ServiceProposalListOutcome.Failure.Unavailable, viewModel.uiState.value.failure)
+    }
+
+    @And("el envío de mensajes está disponible")
+    fun messageSendingIsAvailable() { messageSendingEnabled = true }
+
+    @When("envío el mensaje {string}")
+    fun sendMessage(content: String) {
+        val conversation = requireNotNull(conversationViewModel)
+        conversation.onPromptChange(content)
+        conversation.onSendClick()
+        scope.advanceUntilIdle()
+    }
+
+    @Then("el mensaje aparece como enviado en la conversación 93")
+    fun sentMessageAppears() {
+        assertEquals(93 to "Llegaré a las 9", sentMessage)
+        val ready = requireNotNull(conversationViewModel).uiState.value as ProviderConversationUiState.Ready
+        assertEquals("Llegaré a las 9", (ready.items.last() as ChatListItem.ServerConfirmed).content)
+        assertFalse(ready.sending)
+    }
+
+    @And("la acción para reintentar la carga de propuestas sigue disponible")
+    fun proposalRetryRemainsAvailable() {
+        assertEquals(ServiceProposalListOutcome.Failure.Unavailable, viewModel.uiState.value.failure)
+        assertEquals(1, proposalListCalls)
     }
 
     @And("no se muestra un resumen de propuesta")
