@@ -6,6 +6,9 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performClick
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.SemanticsMatcher
@@ -18,6 +21,7 @@ import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
+import com.loresuelvo.serviceprovider.ui.proposals.ProposalTab
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import org.junit.Rule
 import org.junit.Test
@@ -56,6 +60,68 @@ class ServiceProposalListScreenTest {
             )
             compose.onNodeWithText(context.getString(R.string.proposal_list_item, it)).assertIsDisplayed()
         }
+    }
+
+    @Test fun `each status is displayed in a badge`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val statusState = mutableStateOf(ServiceProposalStatus.Pending)
+        compose.setContent {
+            LoresuelvoTheme {
+                val status = statusState.value
+                ServiceProposalListScreen(
+                    state = ServiceProposalListUiState(
+                        selectedTab = when (status) {
+                            ServiceProposalStatus.Pending -> com.loresuelvo.serviceprovider.ui.proposals.ProposalTab.Pending
+                            ServiceProposalStatus.Accepted -> com.loresuelvo.serviceprovider.ui.proposals.ProposalTab.Accepted
+                            ServiceProposalStatus.Rejected -> com.loresuelvo.serviceprovider.ui.proposals.ProposalTab.Rejected
+                        },
+                        proposals = listOf(proposal(12).copy(status = status)), loading = false,
+                    ),
+                    onSelectTab = {}, onRetry = {}, onBack = {},
+                )
+            }
+        }
+        listOf(
+            ServiceProposalStatus.Pending to R.string.proposal_status_pending,
+            ServiceProposalStatus.Accepted to R.string.proposal_status_accepted,
+            ServiceProposalStatus.Rejected to R.string.proposal_status_rejected,
+        ).forEach { (status, label) ->
+            compose.runOnIdle { statusState.value = status }
+            compose.onNodeWithTag("proposal_list_items").performScrollToNode(
+                hasTestTag("proposal_status_badge"),
+            )
+            compose.onNode(hasTestTag("proposal_status_badge") and hasText(context.getString(label)))
+                .assertExists()
+        }
+    }
+
+    @Test fun `selecting a tab displays only its proposals`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val selected = mutableStateOf(ProposalTab.Pending)
+        compose.setContent {
+            LoresuelvoTheme {
+                ServiceProposalListScreen(
+                    state = ServiceProposalListUiState(
+                        selectedTab = selected.value,
+                        proposals = listOf(
+                            proposal(12),
+                            proposal(22).copy(status = ServiceProposalStatus.Accepted),
+                        ),
+                        loading = false,
+                    ),
+                    onSelectTab = { selected.value = it }, onRetry = {}, onBack = {},
+                )
+            }
+        }
+        compose.onNodeWithText(context.getString(R.string.proposal_list_accepted)).performClick()
+        compose.onNode(
+            hasText(context.getString(R.string.proposal_list_accepted)) and
+                SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab),
+        ).assertIsSelected()
+        compose.onNodeWithText(context.getString(R.string.proposal_list_item, 22)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.proposal_list_item, 12)).assertDoesNotExist()
+        compose.onNode(hasTestTag("proposal_status_badge") and
+            hasText(context.getString(R.string.proposal_status_accepted))).assertExists()
     }
 
     private fun proposal(id: Int) = ServiceProposalSummary(

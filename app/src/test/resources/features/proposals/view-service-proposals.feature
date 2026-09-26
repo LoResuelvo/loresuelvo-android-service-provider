@@ -18,7 +18,6 @@ Característica: Visualizar propuestas de servicio como prestador
     Y veo las propuestas 12, 11 y 10 en ese orden
     Y no veo las propuestas 13 ni 14
 
-  @wip
   Esquema del escenario: 02-PVP Filtrar propuestas por estado
     Dado que Trabajos contiene propuestas pendientes, aceptadas y rechazadas
     Y las propuestas de cada estado tienen fechas de creación distintas y fechas de creación iguales

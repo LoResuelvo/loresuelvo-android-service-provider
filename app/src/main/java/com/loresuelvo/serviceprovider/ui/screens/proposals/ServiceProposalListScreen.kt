@@ -117,7 +117,17 @@ private fun ProposalCard(proposal: ServiceProposalSummary) {
                     .format(BigDecimal.valueOf(proposal.amountCents, 2)),
             )
             Text(DateFormat.getDateTimeInstance().format(Date(proposal.scheduledOnEpochMillis)))
-            Text(stringResource(proposal.status.labelRes()))
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Text(
+                    stringResource(proposal.status.labelRes()),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        .testTag("proposal_status_badge"),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
         }
     }
 }
