@@ -11,6 +11,7 @@ import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import com.loresuelvo.serviceprovider.ui.proposals.ProposalTab
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
+import com.loresuelvo.serviceprovider.ui.navigation.Route
 import androidx.lifecycle.ViewModelStore
 import io.cucumber.datatable.DataTable
 import io.cucumber.java.en.And
@@ -45,6 +46,7 @@ class ViewServiceProposalsSteps {
     private var detailProposal: ServiceProposalSummary? = null
     private var detailView = ""
     private var historyPosition = -1
+    private var openedConversationPath: String? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -362,5 +364,32 @@ class ViewServiceProposalsSteps {
     @And("la propuesta 42 permanece en la misma posición visible")
     fun historyPositionRemains() {
         assertEquals(historyPosition, viewModel.uiState.value.visibleProposals.indexOfFirst { it.id == 42 })
+    }
+
+    @Given("que el detalle abierto corresponde a la propuesta {int} para el consumidor {int} y la conversación {int}")
+    fun detailBelongsToConversation(proposalId: Int, consumerId: Int, conversationId: Int) {
+        consumerProposal("Ana Pérez", 1500050)
+        openJobs()
+        detailProposal = viewModel.uiState.value.visibleProposals.single()
+        assertEquals(proposalId, detailProposal?.id)
+        assertEquals(consumerId, detailProposal?.counterpart?.id)
+        assertEquals(conversationId, detailProposal?.conversationId)
+    }
+
+    @When("elijo {string}")
+    fun chooseConversation(action: String) {
+        assertEquals("Ver conversación", action)
+        openedConversationPath = Route.Conversation.buildPath(requireNotNull(detailProposal).conversationId)
+    }
+
+    @Then("se abre la conversación {int}")
+    fun conversationOpens(conversationId: Int) {
+        assertEquals(Route.Conversation.buildPath(conversationId), openedConversationPath)
+    }
+
+    @And("no se abre la conversación {int} ni la conversación {int}")
+    fun otherConversationsDoNotOpen(first: Int, second: Int) {
+        assertNotEquals(Route.Conversation.buildPath(first), openedConversationPath)
+        assertNotEquals(Route.Conversation.buildPath(second), openedConversationPath)
     }
 }

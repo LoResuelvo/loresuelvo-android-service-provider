@@ -67,7 +67,6 @@ Característica: Visualizar propuestas de servicio como prestador
     Entonces la pestaña "Aceptadas" sigue seleccionada
     Y la propuesta 42 permanece en la misma posición visible
 
-  @wip
   Escenario: 06-PVP Abrir la conversación correspondiente
     Dado que el detalle abierto corresponde a la propuesta 12 para el consumidor 7 y la conversación 93
     Cuando elijo "Ver conversación"

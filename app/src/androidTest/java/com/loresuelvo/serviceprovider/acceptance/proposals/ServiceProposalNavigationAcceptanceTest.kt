@@ -62,7 +62,7 @@ class ServiceProposalNavigationAcceptanceTest {
                     )
                 },
                 messages = {}, profile = {}, jobRequestDetail = {},
-                conversation = { Text("Conversation 93") },
+                conversation = { conversationId -> Text("Conversation $conversationId") },
             )
         }
         val activity = compose.activity
@@ -70,6 +70,8 @@ class ServiceProposalNavigationAcceptanceTest {
         compose.onNodeWithText(activity.getString(R.string.proposal_detail_conversation))
             .performScrollTo().performClick()
         compose.onNodeWithText("Conversation 93").assertIsDisplayed()
+        compose.onNodeWithText("Conversation 12").assertDoesNotExist()
+        compose.onNodeWithText("Conversation 7").assertDoesNotExist()
     }
 
     @Test fun back_from_detail_keeps_accepted_tab_and_history_position() {
