@@ -15,10 +15,10 @@ import { analyzeCucumberImpact } from "../lib/impact-index.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
 
-test("Android policy enables bounded JVM and reviewed UI scope adapters", () => {
+test("Android policy enables JVM and conservative production feature adapters", () => {
   assert.deepEqual(policy.maintainabilityThresholds, {});
   assert.equal(policy.analysis.dependencyImpact.enabled, true);
-  assert.equal(policy.analysis.dependencyImpact.adapter, "android-reviewed-ui-scope");
+  assert.equal(policy.analysis.dependencyImpact.adapter, "android-feature-impact");
   assert.equal(policy.analysis.cucumberImpact.enabled, true);
   assert.equal(policy.analysis.cucumberImpact.adapter, "android-jvm-feature-gate");
   assert.equal(policy.analysis.maintainability.enabled, false);
@@ -35,7 +35,7 @@ test("numeric User Story extraction accepts [33] and rejects [US-33]", () => {
 
 test("Android classification covers the required path families", () => {
   const cases = [
-    ["app/src/main/java/com/loresuelvo/serviceprovider/Foo.kt", "production_kotlin", false],
+    ["app/src/main/java/com/loresuelvo/serviceprovider/Foo.kt", "production_kotlin", true],
     ["app/src/main/java/com/loresuelvo/serviceprovider/domain/Foo.kt", "isolated_domain_kotlin", false],
     ["app/src/main/java/com/loresuelvo/serviceprovider/data/Foo.kt", "data_kotlin", true],
     ["app/src/main/java/com/loresuelvo/serviceprovider/di/Foo.kt", "di_kotlin", true],
@@ -46,6 +46,7 @@ test("Android classification covers the required path families", () => {
     ["app/src/main/res/values/strings.xml", "android_resource", true],
     ["app/src/main/res/drawable-nodpi/logo.png", "android_resource", true],
     ["app/src/main/res/mipmap-hdpi/ic_launcher.webp", "android_resource", true],
+    ["app/src/dev/res/drawable/logo.png", "android_resource", true],
     ["docs/images/architecture.png", "non_code_docs_config", false],
     ["app/src/main/AndroidManifest.xml", "android_manifest", true],
     ["app/src/staging/AndroidManifest.xml", "android_manifest", true],

@@ -1,82 +1,61 @@
-import crypto from "node:crypto";
-import { readFeatureGateTree, analyzeFeatureGate } from "./feature-gate.mjs";
+import crypto from 'node:crypto';
+import { readFeatureGateTree, analyzeFeatureGate, featureRunners } from './feature-gate.mjs';
+import { parseAndroidSources } from './android-source-facts.mjs';
+import { buildAndroidGraph, traceAndroidImpact } from './android-impact-graph.mjs';
 
-export const sourceHash = (source) => crypto.createHash("sha256").update(source).digest("hex");
-const full = (reason) => ({ scope: "full", reason, testClasses: [] });
+const full = (reason, detail) => ({ scope: 'full', reason, ...(detail ? { detail } : {}), testClasses: [] });
+const source = file => /^app\/src\/(?:main|test|androidTest)\/(?:java|kotlin)\/.+\.kt$/.test(file);
+const resource = file => /^app\/src\/main\/res\/values(?:-[\w-]+)?\/[^/]+\.xml$/.test(file);
+const boundary = file => /\/(?:di|navigation|platform)\//.test(file);
 
-// A bounded, reviewed UI pilot, not a Kotlin dependency analyzer. Unknown syntax,
-// new dependencies/consumers, and drift in integration coverage retain Gate C.
-export function productionContract(source, symbol) {
-  const tokens = source.match(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|"""[\s\S]*?"""|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_$][\w$]*|\d+(?:\.\d+)?|[^\s]/g) || [];
-  if (tokens.some((token) => token.startsWith("/*") && token.slice(2).includes("/*"))) throw new Error("Nested comment");
-  const code = tokens.filter((token) => !token.startsWith("//") && !token.startsWith("/*"));
-  if (code.includes("`")) throw new Error("Unsupported identifier");
-  const start = code.indexOf("fun");
-  if (start < 0 || code[start + 1] !== symbol || code[start + 2] !== "(") throw new Error("Unsupported declaration");
-  let end = start + 2;
-  let depth = 0;
-  do {
-    if (code[end] === "(") depth++;
-    if (code[end] === ")") depth--;
-    end++;
-  } while (depth && end < code.length);
-  if (depth || code[end] !== "{") throw new Error("Unsupported function body");
-  const signature = sourceHash(JSON.stringify(code.slice(0, end)));
-  const vocabulary = sourceHash(JSON.stringify([...new Set(code.filter((token) => !/^\d/.test(token)))].sort()));
-  for (let i = end; i < code.length; i++) {
-    if (code[i] === "{") depth++;
-    if (code[i] === "}") depth--;
-    if (depth < 0 || (depth === 0 && i !== code.length - 1)) throw new Error("Additional declaration");
-  }
-  if (depth) throw new Error("Unbalanced body");
-  return { signature, vocabulary };
+// Each source is parsed once per evaluation; neither worktree contents nor cached facts select a gate.
+function parseTrees(repoRoot, before, after, parse) {
+  const input = new Map();
+  for (const [file, code] of before) if (file.endsWith('.kt') || file.endsWith('.xml')) input.set(`b/${file}`, code);
+  for (const [file, code] of after) if ((file.endsWith('.kt') || file.endsWith('.xml')) && before.get(file) !== code) input.set(`a/${file}`, code);
+  const facts = parse({ repoRoot, sources: input });
+  const oldFacts = facts.filter(node => node.id.startsWith('b/')).map(node => ({ ...node, id: node.id.slice(2) }));
+  const newFacts = [...oldFacts.filter(node => after.get(node.id.split('#')[0]) === before.get(node.id.split('#')[0])),
+    ...facts.filter(node => node.id.startsWith('a/')).map(node => ({ ...node, id: node.id.slice(2) }))];
+  return [oldFacts, newFacts];
 }
 
-export function analyzeProductionGate({ files, featureFile, before, after, scopes = [] }) {
-  const rule = scopes.find((scope) => scope.featureFile === featureFile && files.includes(scope.sourceFile));
-  if (!rule || files.some((file) => file !== rule.sourceFile && file !== featureFile)) return full("PRODUCTION_SCOPE_NOT_REVIEWED");
+export function analyzeProductionGate({ repoRoot, files, featureFile, before, after, features = [], sourceTopology = {}, parse = parseAndroidSources }) {
+  const selected = features.find(feature => feature.featureFile === featureFile);
+  const hosts = new Set(features.flatMap(feature => feature.integrationFiles));
+  if (!selected || !files.length || files.some(file => file !== featureFile &&
+      (!source(file) && !resource(file) || boundary(file) || hosts.has(file) || file.endsWith('CucumberTest.kt')))) return full('ANDROID_SHARED_OR_UNSUPPORTED_PATH');
   try {
-    if (rule.deviceTestClasses.length !== 1 || !rule.testClasses.length) return full("PRODUCTION_COVERAGE_MISSING");
     for (const tree of [before, after]) {
-      if ([...tree].some(([file, source]) => /\.(?:kt|java)$/.test(file) &&
-          (/Class\.forName|loadClass\(|ServiceLoader|(?:kotlin|java\.lang)\.reflect/.test(source.replace(/\s+/g, "")) ||
-           /^app\/src\/(?!main\/|test\/|androidTest\/)/.test(file)))) return full("PRODUCTION_DYNAMIC_OR_VARIANT_SOURCE");
-      if (!tree.has(rule.sourceFile)) return full("PRODUCTION_SOURCE_ADDED_OR_REMOVED");
-      const contract = productionContract(tree.get(rule.sourceFile), rule.symbol);
-      if (contract.signature !== rule.signature || contract.vocabulary !== rule.vocabulary) return full("PRODUCTION_CONTRACT_CHANGED");
-      for (const [file, hash] of Object.entries(rule.pinnedFiles)) {
-        if (!tree.has(file) || sourceHash(tree.get(file)) !== hash) return full("PRODUCTION_COVERAGE_DRIFT");
+      for (const [file, hash] of Object.entries(sourceTopology)) {
+        if (!tree.has(file) || crypto.createHash('sha256').update(tree.get(file)).digest('hex') !== hash) return full('ANDROID_SOURCE_TOPOLOGY_CHANGED');
       }
-      for (const [sourceSet, classes] of [["test", rule.testClasses], ["androidTest", rule.deviceTestClasses]]) {
-        for (const name of classes) {
-          const file = `app/src/${sourceSet}/java/${name.replaceAll(".", "/")}.kt`;
-          if (!Object.hasOwn(rule.pinnedFiles, file) || !/@Test\b/.test(tree.get(file))) return full("PRODUCTION_COVERAGE_MISSING");
-        }
-      }
-      const consumers = [...tree].filter(([file, source]) => file !== rule.sourceFile && source.includes(rule.symbol)).map(([file]) => file).sort();
-      if (JSON.stringify(consumers) !== JSON.stringify([...rule.consumers].sort())) return full("PRODUCTION_CONSUMERS_CHANGED");
-      if ([...tree].some(([file, source]) => file.startsWith("app/src/main/") && file !== rule.sourceFile &&
-          rule.boundarySymbols.some((symbol) => source.includes(symbol)) && !Object.hasOwn(rule.pinnedFiles, file))) {
-        return full("PRODUCTION_BOUNDARY_CONSUMERS_CHANGED");
-      }
+      if ([...tree].some(([file, code]) =>
+          file.startsWith('buildSrc/') || /\.java$/.test(file) || /^app\/src\/(?!main\/|test\/|androidTest\/).*\.kt$/.test(file) ||
+          (file.endsWith('.gradle.kts') && /sourceSets|srcDirs?|testFixtures|apply\s*\(\s*from/.test(code)))) return full('ANDROID_UNSUPPORTED_SOURCE_TOPOLOGY');
     }
-    // The exact runner and all test consumers must remain understood in both trees.
-    const impact = analyzeFeatureGate({ files: [featureFile], featureFile, before, after });
-    if (impact.scope !== "feature") return full(impact.reason);
-    return { ...impact, scope: "production_feature", reason: "REVIEWED_UI_FEATURE",
-      testClasses: [...new Set([...impact.testClasses, ...rule.testClasses])].sort(),
-      deviceTestClasses: rule.deviceTestClasses };
-  } catch {
-    return full("PRODUCTION_ANALYSIS_UNAVAILABLE");
+    const runner = analyzeFeatureGate({ files: [featureFile], featureFile, before, after });
+    if (runner.scope !== 'feature') return full(runner.reason);
+    const facts = parseTrees(repoRoot, before, after, parse);
+    if (facts.some(tree => tree.some(node => node.flags.includes('reflection') || node.references.includes('getIdentifier')))) return full('ANDROID_DYNAMIC_CONSUMERS');
+    const graphs = facts.map(buildAndroidGraph);
+    for (const file of files.filter(file => file.startsWith('app/src/main/'))) {
+      const state = graph => graph.nodes.get(file)?.flags.find(flag => flag.startsWith('state_contract='));
+      if (state(graphs[0]) !== state(graphs[1])) return full('ANDROID_SAVED_STATE_CONTRACT_CHANGED');
+    }
+    const impacts = graphs.map((graph, index) => traceAndroidImpact({ graph, other: graphs[1-index], files,
+      features, runners: featureRunners(index ? after : before), featureFile }));
+    const union = key => [...new Set(impacts.flatMap(impact => impact[key]))].sort();
+    return { scope: 'production_feature', featureFile, reason: 'ANDROID_ISOLATED_FEATURE', runnerClass: runner.runnerClass,
+      testClasses: [...new Set([runner.runnerClass, ...union('testClasses')])].sort(), deviceTestClasses: union('deviceTestClasses') };
+  } catch (error) {
+    return full(error.message.startsWith('ANDROID_') ? error.message : 'ANDROID_ANALYSIS_UNAVAILABLE', error.detail || error.message);
   }
 }
 
-export function inspectProductionGate({ repoRoot, snapshot, featureFile, scopes }) {
+export function inspectProductionGate({ repoRoot, snapshot, featureFile, features, sourceTopology }) {
   try {
-    return analyzeProductionGate({ files: snapshot.stagedFiles, featureFile, scopes,
-      before: readFeatureGateTree(repoRoot, snapshot.headSha),
-      after: readFeatureGateTree(repoRoot, snapshot.stagedTreeSha) });
-  } catch {
-    return full("PRODUCTION_ANALYSIS_UNAVAILABLE");
-  }
+    return analyzeProductionGate({ repoRoot, files: snapshot.stagedFiles, featureFile, features, sourceTopology,
+      before: readFeatureGateTree(repoRoot, snapshot.headSha), after: readFeatureGateTree(repoRoot, snapshot.stagedTreeSha) });
+  } catch (error) { return full('ANDROID_ANALYSIS_UNAVAILABLE', error.message); }
 }

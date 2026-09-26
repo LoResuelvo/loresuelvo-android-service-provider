@@ -25,7 +25,8 @@ Gate C/D instrumented tests cannot be silently skipped. If no device or
 emulator is available, return a blocked diagnostic. Gate R needs real Staging
 credentials and the failed CI `repairsSha`; Dev is not CI parity.
 
-`close_scenario` retains Gate C when its paths trigger Gate C; it does not
+`close_scenario` retains Gate C for Android impact unless the enabled analyzer
+proves an isolated production feature with scoped device coverage; it does not
 close future scenarios in the same feature. Gate D is for `close_batch` and
 `close_us` with completed feature scope. Only actual tag lines count as `@wip`.
 
@@ -40,10 +41,10 @@ authorize skipping a gate. Serialize Gradle and device checks.
 For low-risk scenario closure, Gate B may run an isolated feature runner and
 affected JVM classes using HEAD and staged-tree consumer analysis. Inspect its
 check IDs and impact reasons; uncertain test-only scope falls back to full JVM.
-The reviewed production UI pilot can select B with lint, scoped JVM and device
-checks, and a mandatory device prerequisite. Other production changes retain
-their path-selected gates. See `.delivery/README.md` for the exact eligibility
-and coverage-drift rules. Gate C/D/R checks and prerequisites remain intact.
+The Android feature-impact analyzer can select B for production and companion
+test changes proven to belong to one covered feature in both Git trees. It requires
+lint, scoped JVM/device checks and the device prerequisite. Shared or unsupported
+Android impact retains C. See `.delivery/README.md` for ownership and fallback rules. Gate C/D/R checks and prerequisites remain intact.
 
 The current CI workflow uses Java 17 and a prewarmed Pixel 6/API 34 x86_64
 emulator. Regenerate its cache through the checked-in

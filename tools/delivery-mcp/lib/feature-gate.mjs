@@ -8,10 +8,10 @@ const full = (reason) => ({ scope: "full_jvm", reason, testClasses: [] });
 export function readFeatureGateTree(repoRoot, tree) {
   if (!/^[a-f0-9]{40}$/.test(tree)) throw new Error("Missing immutable Git tree");
   const options = { cwd: repoRoot, maxBuffer: 20 * 1024 * 1024, timeout: 10000 };
-  const entries = execFileSync("git", ["ls-tree", "-rz", tree, "--", "app/src", "app/build.gradle.kts", "build.gradle.kts", "settings.gradle.kts"], options)
+  const entries = execFileSync("git", ["ls-tree", "-rz", tree, "--", "app/src", "app/build.gradle.kts", "build.gradle.kts", "settings.gradle.kts", "gradle/libs.versions.toml", "buildSrc"], options)
     .toString("utf8").split("\0").filter(Boolean)
     .map((entry) => entry.match(/^(\d+) blob ([a-f0-9]{40})\t(.+)$/))
-    .filter((entry) => entry && /\.(?:kts?|java|feature|xml)$/.test(entry[3]));
+    .filter((entry) => entry && (/\.(?:kts?|java|feature|xml|toml)$/.test(entry[3]) || entry[3].startsWith("buildSrc/")));
   if (entries.some((entry) => entry[1] !== "100644" && entry[1] !== "100755")) throw new Error("Unsupported source mode");
   if (!entries.length) return new Map();
   const output = execFileSync("git", ["cat-file", "--batch"], {
@@ -73,6 +73,14 @@ function runnerOptions(source) {
       (options.tags && options.tags !== "not @wip") ||
       (options.plugin || []).some((plugin) => !["pretty", "summary"].includes(plugin))) throw new Error("Filtered or unsupported runner");
   return { ...source, ...options };
+}
+
+export function featureRunners(tree) {
+  return [...tree].filter(([file]) => TEST_SOURCE.test(file))
+    .map(([file, source]) => runnerOptions(kotlinFile(file, source))).filter(Boolean)
+    .map(runner => ({ ...runner, featureFile: runner.features.length === 1 && runner.features[0].endsWith('.feature')
+      ? runner.features[0].replace('classpath:', 'app/src/test/resources/') : null,
+      runnerClass: `${runner.pkg}.${runner.name}` }));
 }
 
 function oneTestClass(source) {

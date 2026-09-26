@@ -2,113 +2,84 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { productionContract, sourceHash, analyzeProductionGate } from '../lib/production-gate.mjs';
+import { analyzeProductionGate } from '../lib/production-gate.mjs';
+import { buildAndroidGraph, traceAndroidImpact } from '../lib/android-impact-graph.mjs';
+import { parseAndroidSources } from '../lib/android-source-facts.mjs';
 import { readFeatureGateTree } from '../lib/feature-gate.mjs';
 import { loadDeliveryPolicy } from '../lib/policy-loader.mjs';
 import { selectGate } from '../lib/select-gate.mjs';
-import { inspectDelivery } from '../lib/inspect-delivery.mjs';
-import { runGate } from '../lib/run-gate.mjs';
 import { resolveCheck, executeFeatureDeviceCheck } from '../lib/execute-check.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const featureFile = 'app/src/test/resources/features/example.feature';
-const sourceFile = 'app/src/main/java/example/ui/Dialog.kt';
-const caller = 'app/src/main/java/example/ui/Route.kt';
-const unit = 'app/src/test/java/example/DialogTest.kt';
-const runner = 'app/src/test/java/example/bdd/ExampleCucumberTest.kt';
-const device = 'app/src/androidTest/java/example/DialogDeviceTest.kt';
+const sourceFile = 'app/src/main/java/example/ui/Screen.kt';
+const helper = 'app/src/main/java/example/Helper.kt';
+const host = 'app/src/main/java/example/navigation/Host.kt';
+const unit = 'app/src/test/java/example/ScreenTest.kt';
+const device = 'app/src/androidTest/java/example/ScreenDeviceTest.kt';
+const node = (id, name, references = [], extra = {}) => ({ id, kind: 'kotlin', pkg: 'example', declarations: [name],
+  references, imports: [], tests: [], supers: [], flags: [], ...extra });
 function fixture() {
-  const before = new Map([
-    [featureFile, 'Feature: Example\n Scenario: Show\n  Given dialog\n'],
-    [sourceFile, 'package example.ui\n@Composable\nfun Dialog(enabled: Boolean = true) { Text(size = 8) }\n'],
-    [caller, 'package example.ui\nfun Route() { Dialog() }\n'],
-    [unit, 'package example\nclass DialogTest { @Test fun shows() { Dialog() } }\n'],
-    [runner, 'package example.bdd\n@RunWith(Cucumber::class)\n@CucumberOptions(features = ["classpath:features/example.feature"], glue = ["example.bdd"])\nclass ExampleCucumberTest\n'],
-    [device, 'package example\nclass DialogDeviceTest { @Test fun shows() { Route() } }\n'],
-  ]);
-  const rule = { featureFile, sourceFile, symbol: 'Dialog', ...productionContract(before.get(sourceFile), 'Dialog'),
-    consumers: [caller, unit, device], boundarySymbols: ['Route'], testClasses: ['example.DialogTest'],
-    deviceTestClasses: ['example.DialogDeviceTest'], pinnedFiles: Object.fromEntries([caller, unit, runner, device].map(file => [file, sourceHash(before.get(file))])) };
-  const after = new Map(before);
-  after.set(sourceFile, before.get(sourceFile).replace('size = 8', 'size = 10'));
-  return { before, after, rule };
+  const facts = [node(sourceFile, 'Screen', ['Helper']), node(helper, 'Helper'), node(host, 'Host', ['Screen']),
+    node(unit, 'ScreenTest', ['Screen'], { tests: ['example.ScreenTest'] }),
+    node(device, 'ScreenDeviceTest', ['Host'], { tests: ['example.ScreenDeviceTest'] })];
+  const features = [{ featureFile, entryPoints: ['example.Screen'], integrationFiles: [host], deviceTestClasses: ['example.ScreenDeviceTest'] }];
+  return { facts, features };
 }
-const analyze = ({ before, after, rule }, files = [sourceFile]) => analyzeProductionGate({ before, after, scopes: [rule], files, featureFile });
+function trace(data, files = [helper, unit]) {
+  const graph = buildAndroidGraph(data.facts);
+  return traceAndroidImpact({ graph, other: graph, files, features: data.features, runners: [], featureFile });
+}
 
-test('reviewed production body uses scoped JVM and device checks, while D/R remain full', async () => {
-  const data = fixture();
-  const impact = analyze(data);
-  assert.equal(impact.scope, 'production_feature');
+test('production and test changes use feature ownership rather than file-body hashes; D/R remain full', async () => {
+  const impact = { ...trace(fixture()), featureFile, scope: 'production_feature', reason: 'ANDROID_ISOLATED_FEATURE', runnerClass: 'example.ExampleCucumberTest' };
+  assert.deepEqual(impact.testClasses, ['example.ScreenTest']);
+  assert.deepEqual(impact.deviceTestClasses, ['example.ScreenDeviceTest']);
   const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
   for (const [intent, expected] of [['close_scenario', 'B'], ['prepare_commit', 'C'], ['close_batch', 'D'], ['close_us', 'D'], ['repair_ci', 'R']]) {
-    const result = selectGate({ policy, intent, featureFile, repairsSha: 'a'.repeat(40), snapshot: { stagedFiles: [sourceFile] }, dependencyImpact: impact });
+    const result = selectGate({ policy, intent, featureFile, repairsSha: 'a'.repeat(40), snapshot: { stagedFiles: [sourceFile, unit] }, dependencyImpact: impact });
     assert.equal(result.gate.id, expected);
-    assert.deepEqual(result.gate.checkIds, expected === 'B'
-      ? ['android_device', 'lint_dev', 'feature_jvm_dev', 'feature_device_dev'] : policy.gates[expected].checkIds);
+    assert.deepEqual(result.gate.checkIds, expected === 'B' ? ['android_device', 'lint_dev', 'feature_jvm_dev', 'feature_device_dev'] : policy.gates[expected].checkIds);
     assert.deepEqual(result.gate.postPushChecks, policy.gates[expected].postPushChecks);
   }
+  const inferred = selectGate({ policy, intent: 'close_scenario', snapshot: { stagedFiles: [sourceFile, featureFile] }, dependencyImpact: impact });
+  assert.equal(inferred.gate.parameters.featureFile, featureFile);
 });
 
-test('production pilot fails closed on API, dependency, ownership, coverage and unsupported changes', () => {
-  const changes = [
-    data => data.after.set(sourceFile, data.after.get(sourceFile).replace('Boolean', 'String')),
-    data => data.after.set(sourceFile, data.after.get(sourceFile) + '\nfun Other() {}'),
-    data => data.after.set(sourceFile, data.after.get(sourceFile).replace('Text(size = 10)', 'Navigation.navigate("elsewhere")')),
-    data => data.after.set(sourceFile, data.after.get(sourceFile).replace('Text(size = 10)', 'Text(size = 10) /* nested /* comment */ */')),
-    data => data.after.set(caller, data.after.get(caller) + '// changed boundary'),
-    data => data.after.set(device, data.after.get(device) + '// changed coverage'),
-    data => data.after.set('app/src/main/java/example/Shared.kt', 'fun Shared() { Dialog() }'),
-    data => data.before.set('app/src/main/java/example/Removed.kt', 'fun Shared() { Dialog() }'),
-    data => data.after.set('app/src/main/java/example/NewEntry.kt', 'fun Entry() { Route() }'),
-    data => data.after.set('app/src/main/java/example/Dynamic.kt', 'Class.forName("example.ui.DialogKt")'),
-    data => data.after.set('app/src/dev/java/example/Variant.kt', 'fun variant() = 1'),
-    data => data.after.delete(sourceFile),
-    data => data.before.delete(sourceFile),
-    data => data.after.delete(runner),
+test('shared consumers, unknown cycles, unsupported syntax, DI, navigation and missing coverage fail closed', () => {
+  const cases = [
+    d => { d.facts.push(node('app/src/main/java/example/Other.kt', 'Other', ['Helper'])); d.features.push({ ...d.features[0], featureFile: 'other.feature', entryPoints: ['example.Other'] }); },
+    d => d.facts.push(node('app/src/main/java/example/Unknown.kt', 'Unknown', ['Helper'])),
+    d => { d.facts[1].references = ['Cycle']; d.facts[0].references = []; d.facts.push(node('app/src/main/java/example/Cycle.kt', 'Cycle', ['Helper'])); },
+    d => d.facts[1].flags.push('syntax_error'),
+    d => d.facts[1].flags.push('implicit_calls'),
+    d => d.facts.push(node('app/src/main/java/example/di/Module.kt', 'Module', ['Helper'], { flags: ['dynamic_module'] })),
+    d => d.facts[2].references.push('Helper'),
+    d => { d.features[0].deviceTestClasses = []; },
+    d => { d.features[0].deviceTestClasses = ['example.MissingTest']; },
+    d => { d.facts[3].references = []; },
   ];
-  for (const change of changes) {
-    const data = fixture(); change(data);
-    assert.equal(analyze(data).scope, 'full', String(change));
-  }
-  for (const extra of ['app/src/main/java/example/ui/CommonViewModel.kt', 'app/src/main/java/example/di/Bindings.kt',
-    'app/src/main/java/example/data/Dto.kt', 'app/src/main/java/example/data/Mapper.kt', 'app/src/main/res/values/strings.xml',
-    'app/src/main/java/example/ui/Navigation.kt', 'app/build.gradle.kts', device, unit]) {
-    assert.equal(analyze(fixture(), [sourceFile, extra]).scope, 'full', extra);
-  }
+  for (const mutate of cases) { const d = fixture(); mutate(d); assert.throws(() => trace(d), /ANDROID_/, String(mutate)); }
 });
 
-test('production selection uses staged Git trees and blocks dirty worktrees', async t => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'android-production-scope-'));
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
-  const git = (...args) => execFileSync('git', args, { cwd: root, stdio: 'pipe' });
-  const data = fixture();
-  git('init'); git('config', 'user.name', 'Delivery Tests'); git('config', 'user.email', 'tests@example.com'); git('config', 'commit.gpgsign', 'false');
-  await fs.cp(path.join(ROOT, '.delivery/schemas'), path.join(root, '.delivery/schemas'), { recursive: true });
-  const policy = JSON.parse(await fs.readFile(path.join(ROOT, '.delivery/policy.v1.json'), 'utf8'));
-  policy.analysis.dependencyImpact.scopes = [data.rule];
-  await fs.writeFile(path.join(root, '.delivery/policy.v1.json'), JSON.stringify(policy));
-  await fs.writeFile(path.join(root, '.gitignore'), '.delivery/runtime/\n');
-  for (const [file, source] of data.before) {
-    await fs.mkdir(path.dirname(path.join(root, file)), { recursive: true });
-    await fs.writeFile(path.join(root, file), source);
-  }
-  git('add', '.'); git('commit', '-m', 'test[53]: establish impact fixture');
-  await fs.writeFile(path.join(root, sourceFile), data.after.get(sourceFile)); git('add', sourceFile);
-  const input = { repoRoot: root, intent: 'close_scenario', featureFile };
-  const inspection = await inspectDelivery(input);
-  assert.equal(inspection.result.gate.id, 'B');
-  const calls = [];
-  const blocked = await runGate({ inspection: inspection.result, snapshot: { ...inspection.snapshot, cacheable: false },
-    policy: inspection.policy, repoRoot: root, executeCheck: async ({ check }) => {
-      calls.push(check.id); return { id: check.id, status: 'blocked', durationMs: 0, summaryLines: ['Device unavailable'] };
-    } });
-  assert.equal(blocked.status, 'blocked');
-  assert.deepEqual(calls, ['android_device']);
-  await fs.appendFile(path.join(root, sourceFile), '// unstaged\n');
-  assert.equal((await inspectDelivery(input)).result.status, 'blocked');
+test('resource entries, alias imports, inheritance and shared Cucumber glue retain consumers', () => {
+  const d = fixture();
+  const xml = 'app/src/main/res/values/strings.xml';
+  d.facts.push(node(xml + '#string/title', 'title', [], { kind: 'resource', pkg: 'new title' }));
+  d.facts[0].references.push('title');
+  let graph = buildAndroidGraph(d.facts);
+  const other = buildAndroidGraph(d.facts.map(n => n.id.startsWith(xml) ? { ...n, pkg: 'old title' } : n));
+  assert.equal(traceAndroidImpact({ graph, other, files: [xml], features: d.features, runners: [], featureFile }).deviceTestClasses.length, 1);
+  d.facts[0].references = ['Alias']; d.facts[0].imports = ['example.Helper.Nested'];
+  assert.equal(trace(d, [helper]).testClasses.length, 1);
+  d.facts.push(node('app/src/main/java/example/Impl.kt', 'Impl', ['Helper'], { supers: ['Helper'] }));
+  assert.equal(trace(d, ['app/src/main/java/example/Impl.kt']).testClasses.length, 1);
+  d.facts.push(node('app/src/test/java/example/shared/Steps.kt', 'Steps', ['Helper'], { pkg: 'example.shared' }));
+  graph = buildAndroidGraph(d.facts);
+  assert.throws(() => traceAndroidImpact({ graph, other: graph, files: [helper], features: d.features,
+    runners: [{ featureFile, glue: ['example.shared'] }, { featureFile: 'other.feature', glue: ['example.shared'] }], featureFile }), /ANDROID_SHARED/);
 });
 
 test('device selector requires exact classes and falls back on empty successful execution only', async () => {
@@ -132,17 +103,86 @@ test('device selector requires exact classes and falls back on empty successful 
   }
 });
 
-test('US-53 production changes retain historical high-risk and repair gates', async () => {
+
+test('every selected device class needs positive execution; failures do not become fallback passes', async () => {
   const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
+  const check = resolveCheck({ checkId: 'feature_device_dev', definition: policy.checkCatalog.feature_device_dev,
+    parameters: { deviceTestClasses: ['example.FirstTest', 'example.SecondTest'] }, repoRoot: ROOT });
+  const calls = [];
+  const result = await executeFeatureDeviceCheck({ check, repoRoot: ROOT, logPath: 'unused', execute: async ({ check: command }) => {
+    calls.push(command); return { status: 'passed', rawOutput: calls.length === 2 ? 'Finished 0 tests on device' : 'Finished 2 tests on device', durationMs: 1 };
+  } });
+  assert.equal(calls.length, 3);
+  assert.deepEqual(calls[2].args, ['e2e', 'FLAVOR=Dev']);
+  assert.equal(result.durationMs, 3);
+});
+
+test('parser unavailability is C, never isolated impact', () => {
+  const runner = 'app/src/test/java/example/ExampleCucumberTest.kt';
+  const tree = new Map([[featureFile, 'Feature: Example\n Scenario: Runs\n  Given example\n'],
+    [sourceFile, 'package example\nclass Screen'],
+    [runner, 'package example\n@RunWith(Cucumber::class)\n@CucumberOptions(features = ["classpath:features/example.feature"], glue = ["example.steps"])\nclass ExampleCucumberTest']]);
+  const result = analyzeProductionGate({ repoRoot: ROOT, before: tree, after: tree, files: [sourceFile], featureFile,
+    features: fixture().features, parse: () => { throw new Error('Parser unavailable'); } });
+  assert.equal(result.scope, 'full');
+  assert.equal(result.reason, 'ANDROID_ANALYSIS_UNAVAILABLE');
+});
+
+// This integration proof uses the installed compiler, never downloads a parser for Node-only CI.
+test('real Kotlin graph isolates mixed feature edits and preserves the US-53 regression corpus', async t => {
+  let probe;
+  try { probe = parseAndroidSources({ repoRoot: ROOT, sources: new Map([['Probe.kt', 'package example\nimport example.Port as Alias\nclass Probe : Alias\nprivate fun Hidden() = 1']]) }); }
+  catch (error) {
+    if (error.code === 'ENOENT') { t.skip('Installed Kotlin compiler unavailable; production selection fails closed to C'); return; }
+    throw error;
+  }
+  assert.deepEqual(probe[0].declarations, ['Probe']);
+  assert.ok(probe[0].supers.includes('example.Port'));
+  const reflected = parseAndroidSources({ repoRoot: ROOT, sources: new Map([['Reflection.kt', 'package example\nimport java.lang.Class.forName as hidden\nfun dynamic() = hidden("example.Probe")']]) });
+  assert.ok(reflected[0].flags.includes('reflection'));
+  const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
+  const features = policy.analysis.dependencyImpact.features;
+  const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore','pipe','pipe'] }).trim();
+  const before = readFeatureGateTree(ROOT, git('rev-parse', 'HEAD'));
+  const scenarios = [];
+  for (const [featureIndex, stem] of [[0, 'ui/screens/conversation/ProviderProposalViewModel'], [2, 'ui/screens/messages/MessagesListViewModel']]) {
+    const file = `app/src/main/java/com/loresuelvo/serviceprovider/${stem}.kt`;
+    const testFile = `app/src/test/java/com/loresuelvo/serviceprovider/${stem}Test.kt`;
+    const after = new Map(before); after.set(file, before.get(file) + '\n// reviewed implementation change\n');
+    after.set(testFile, before.get(testFile) + '\n// companion test change\n');
+    scenarios.push({ before, after, files: [file, testFile], featureFile: features[featureIndex].featureFile, gate: 'B' });
+  }
+  const proposal = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt';
+  const stateChange = new Map(before);
+  stateChange.set(proposal, before.get(proposal).replaceAll('proposal_rejected', 'proposal_rejected_v2'));
+  scenarios.push({ before, after: stateChange, files: [proposal], featureFile: features[0].featureFile,
+    gate: 'C', reason: 'ANDROID_SAVED_STATE_CONTRACT_CHANGED' });
   const corpus = JSON.parse(await fs.readFile(new URL('./fixtures/us53-gate-paths.json', import.meta.url)));
-  const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
-  const current = readFeatureGateTree(ROOT, git('rev-parse', 'HEAD'));
-  for (const { sha, gate, files } of corpus.filter(entry => entry.gate !== 'B')) {
-    let before = current; let after = current;
-    try { before = readFeatureGateTree(ROOT, git('rev-parse', `${sha}^`)); after = readFeatureGateTree(ROOT, git('rev-parse', sha)); } catch { /* Shallow checkout: retain path assertions. */ }
-    const impact = analyzeProductionGate({ before, after, files, featureFile: policy.analysis.dependencyImpact.scopes[0].featureFile, scopes: policy.analysis.dependencyImpact.scopes });
-    const result = selectGate({ policy, intent: gate === 'R' ? 'repair_ci' : 'close_scenario', featureFile,
-      snapshot: { stagedFiles: files }, repairsSha: 'a'.repeat(40), dependencyImpact: impact });
-    assert.equal(result.gate.id, gate, sha);
+  for (const entry of corpus.filter(e => e.gate !== 'B')) {
+    let old = before, after = before;
+    try { old = readFeatureGateTree(ROOT, git('rev-parse', `${entry.sha}^`)); after = readFeatureGateTree(ROOT, git('rev-parse', entry.sha)); }
+    catch { /* A shallow checkout still validates conservative path handling. */ }
+    scenarios.push({ ...entry, before: old, after, featureFile: features[0].featureFile });
+  }
+  // Deduplicate immutable syntax across snapshots; every scenario still rebuilds both graphs.
+  const sources = new Map(), keys = new Map();
+  for (const scenario of scenarios) for (const tree of [scenario.before, scenario.after]) for (const [file, code] of tree) {
+    if (!/\.(kt|xml)$/.test(file)) continue;
+    const key = file + '\0' + code;
+    if (!keys.has(key)) { const id = `${keys.size}/${file}`; keys.set(key, id); sources.set(id, code); }
+  }
+  const parsed = parseAndroidSources({ repoRoot: ROOT, sources });
+  const byFile = new Map();
+  for (const fact of parsed) { const key = fact.id.split('#')[0]; if (!byFile.has(key)) byFile.set(key, []); byFile.get(key).push(fact); }
+  const parse = ({ sources }) => [...sources].flatMap(([id, code]) => {
+    const file = id.slice(2), key = keys.get(file + '\0' + code);
+    return (byFile.get(key) || []).map(fact => ({ ...fact, id: id + fact.id.slice(key.length) }));
+  });
+  for (const scenario of scenarios) {
+    const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenario, features, sourceTopology: policy.analysis.dependencyImpact.sourceTopology, parse });
+    if (scenario.reason) assert.equal(impact.reason, scenario.reason);
+    const result = selectGate({ policy, snapshot: { stagedFiles: scenario.files }, intent: scenario.gate === 'R' ? 'repair_ci' : 'close_scenario',
+      featureFile: scenario.featureFile, repairsSha: 'a'.repeat(40), dependencyImpact: impact });
+    assert.equal(result.gate.id, scenario.gate, `${scenario.sha || scenario.files[0]}: ${JSON.stringify(impact)}`);
   }
 });

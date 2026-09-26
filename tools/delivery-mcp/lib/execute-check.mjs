@@ -111,7 +111,7 @@ export function resolveCheck({ checkId, definition, parameters = {}, repoRoot })
     }
   }
   if (definition.handler === "feature_device_dev" && (!Array.isArray(normalized.deviceTestClasses) ||
-      normalized.deviceTestClasses.length !== 1 || normalized.deviceTestClasses.some((name) =>
+      !normalized.deviceTestClasses.length || normalized.deviceTestClasses.some((name) =>
         typeof name !== "string" || !/^(?:[A-Za-z_]\w*\.)+[A-Za-z_]\w*Test$/.test(name)))) {
     throw new Error("Feature device check requires exact test classes");
   }
@@ -444,17 +444,23 @@ export async function executeFeatureJvmCheck({ check, repoRoot, logPath, limits,
 export async function executeFeatureDeviceCheck({ check, repoRoot, logPath, limits, execute = executeCommandCheck }) {
   const policy = await loadDeliveryPolicy({ repoRoot });
   const fullCheck = resolveCheck({ checkId: "e2e_dev", definition: policy.checkCatalog.e2e_dev, repoRoot });
-  const result = await execute({ repoRoot, logPath, limits, check: {
-    id: check.id, kind: "command", command: "scripts/with-android-env.sh",
-    args: ["./gradlew", ":app:connectedDevDebugAndroidTest",
-      `-Pandroid.testInstrumentationRunnerArguments.class=${check.parameters.deviceTestClasses.join(",")}`],
-    dynamicAllowlist: "focused_android_device_test", timeoutMs: fullCheck.timeoutMs,
-  } });
-  if (result.status !== "passed") return result;
-  if (/Finished [1-9]\d* tests? on /.test(result.rawOutput || "")) return result;
-  const fallback = await execute({ check: { ...fullCheck, id: check.id }, repoRoot, limits, logPath: `${logPath}.full` });
-  return { ...fallback, durationMs: result.durationMs + fallback.durationMs,
-    summaryLines: ["No positive focused device test count; executed full Dev device suite", ...(fallback.summaryLines || [])].slice(0, 6) };
+  let durationMs = 0, result;
+  // Execute each exact class separately so one empty class cannot hide behind another's tests.
+  for (const [index, name] of [...new Set(check.parameters.deviceTestClasses)].entries()) {
+    result = await execute({ repoRoot, logPath: index ? `${logPath}.${index}` : logPath, limits, check: {
+      id: check.id, kind: "command", command: "scripts/with-android-env.sh",
+      args: ["./gradlew", ":app:connectedDevDebugAndroidTest", `-Pandroid.testInstrumentationRunnerArguments.class=${name}`],
+      dynamicAllowlist: "focused_android_device_test", timeoutMs: fullCheck.timeoutMs,
+    } });
+    durationMs += result.durationMs;
+    if (result.status !== "passed") return { ...result, durationMs };
+    if (!/Finished [1-9]\d* tests? on /.test(result.rawOutput || "")) {
+      const fallback = await execute({ check: { ...fullCheck, id: check.id }, repoRoot, limits, logPath: `${logPath}.full` });
+      return { ...fallback, durationMs: durationMs + fallback.durationMs,
+        summaryLines: ["No positive focused device test count; executed full Dev device suite", ...(fallback.summaryLines || [])].slice(0, 6) };
+    }
+  }
+  return { ...result, durationMs };
 }
 
 export async function executeCheck({ check, repoRoot, logPath, limits }) {

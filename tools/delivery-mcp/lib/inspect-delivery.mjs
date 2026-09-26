@@ -113,7 +113,8 @@ export async function inspectDelivery({
     ? inspectFeatureGate({ repoRoot: root, snapshot, featureFile: featureCandidates[0] })
     : null;
   const dependencyImpact = policy.analysis.dependencyImpact.enabled && effectiveIntent === "close_scenario" && featureCandidates.length === 1
-    ? inspectProductionGate({ repoRoot: root, snapshot, featureFile: featureCandidates[0], scopes: policy.analysis.dependencyImpact.scopes })
+    ? inspectProductionGate({ repoRoot: root, snapshot, featureFile: featureCandidates[0], features: policy.analysis.dependencyImpact.features,
+        sourceTopology: policy.analysis.dependencyImpact.sourceTopology })
     : null;
 
   const gateResult = selectGate({

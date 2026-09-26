@@ -146,7 +146,7 @@ export function selectGate({
     }
   } else if (classified.hasGateCTrigger && intent === "close_scenario" && policy.analysis.dependencyImpact.enabled &&
       dependencyImpact?.scope === "production_feature") {
-    gate = buildGate(policy, "B", [dependencyImpact.reason], { featureFile,
+    gate = buildGate(policy, "B", [dependencyImpact.reason], { featureFile: dependencyImpact.featureFile || featureFile,
       runnerClass: dependencyImpact.runnerClass, testClasses: dependencyImpact.testClasses,
       deviceTestClasses: dependencyImpact.deviceTestClasses }, ["android_device", "lint_dev", "feature_jvm_dev", "feature_device_dev"]);
     gate.checkIds = gate.checkIds.filter((id) => id !== "jvm_test_dev");

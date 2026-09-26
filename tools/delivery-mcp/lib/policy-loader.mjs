@@ -83,8 +83,12 @@ function validateAnalysis(policy) {
       throw new Error(`Invalid delivery policy: analysis.${key} must define enabled and adapter`);
     }
   }
-  if (analyzers.maintainability.enabled || (analyzers.dependencyImpact.enabled && analyzers.dependencyImpact.adapter !== "android-reviewed-ui-scope")) {
+  if (analyzers.maintainability.enabled || (analyzers.dependencyImpact.enabled && analyzers.dependencyImpact.adapter !== "android-feature-impact")) {
     throw new Error("Unsupported Android production or maintainability adapter");
+  }
+  if (analyzers.dependencyImpact.enabled && ['app/build.gradle.kts', 'build.gradle.kts', 'settings.gradle.kts', 'gradle/libs.versions.toml']
+      .some(file => !analyzers.dependencyImpact.sourceTopology?.[file])) {
+    throw new Error("Android impact requires the reviewed build source topology");
   }
   if (analyzers.cucumberImpact.enabled && analyzers.cucumberImpact.adapter !== "android-jvm-feature-gate") {
     throw new Error("Unsupported Android Cucumber impact adapter");
