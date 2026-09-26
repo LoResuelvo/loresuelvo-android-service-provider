@@ -196,7 +196,8 @@ test("CI window wait bounds a stalled remote evaluation", async (t) => {
   const result = await waitForCiWindow({
     repoRoot: root,
     ciProvider: provider,
-    timeoutMs: 40,
+    // Real ledger/Git reads precede the provider; give them time to reach it.
+    timeoutMs: 1000,
     pollIntervalMs: 10,
   });
   assert.equal(result.status, "timed_out");

@@ -22,7 +22,7 @@ export const SAFE_COMMANDS = new Set([
   JSON.stringify(["make", "e2e", "FLAVOR=Staging"]),
 ]);
 
-export const SAFE_BUILTINS = new Set(["no_wip_in_scope", "ci_green"]);
+export const SAFE_BUILTINS = new Set(["no_wip_in_scope", "ci_green", "feature_jvm_dev"]);
 
 function assertPositiveInteger(value, field) {
   if (!Number.isInteger(value) || value < 1) {
@@ -83,10 +83,11 @@ function validateAnalysis(policy) {
       throw new Error(`Invalid delivery policy: analysis.${key} must define enabled and adapter`);
     }
   }
-  // The first Android release intentionally keeps all unavailable analyzers
-  // disabled. Enabling one without an implementation would be unsafe.
-  if (analyzers.dependencyImpact.enabled || analyzers.cucumberImpact.enabled || analyzers.maintainability.enabled) {
+  if (analyzers.dependencyImpact.enabled || analyzers.maintainability.enabled) {
     throw new Error("Android delivery analyzers are disabled until their adapters are implemented");
+  }
+  if (analyzers.cucumberImpact.enabled && analyzers.cucumberImpact.adapter !== "android-jvm-feature-gate") {
+    throw new Error("Unsupported Android Cucumber impact adapter");
   }
 }
 
@@ -155,4 +156,3 @@ export async function loadDeliveryPolicy({ repoRoot } = {}) {
     sourceHash: crypto.createHash("sha256").update(source).digest("hex"),
   };
 }
-

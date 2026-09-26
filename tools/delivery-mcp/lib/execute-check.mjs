@@ -3,7 +3,7 @@ import fs from "node:fs";
 import fsPromises from "node:fs/promises";
 import path from "node:path";
 import { redactSecrets } from "./redact-secrets.mjs";
-import { SAFE_COMMANDS } from "./policy-loader.mjs";
+import { SAFE_COMMANDS, loadDeliveryPolicy } from "./policy-loader.mjs";
 import { assertSafeRepoPath } from "./repo-root.mjs";
 import { wipTagLines } from "./gherkin-tags.mjs";
 import {
@@ -94,6 +94,15 @@ export function resolveCheck({ checkId, definition, parameters = {}, repoRoot })
   for (const required of definition.requires || []) {
     if (!requiredValuePresent(normalized[required])) {
       throw new Error(`Check ${checkId} requires parameter ${required}`);
+    }
+  }
+
+  if (definition.handler === "feature_jvm_dev") {
+    const className = /^(?:[A-Za-z_][A-Za-z0-9_]*\.)+[A-Za-z_][A-Za-z0-9_]*Test$/;
+    if (!Array.isArray(normalized.testClasses) || !normalized.testClasses.length ||
+        normalized.testClasses.some((value) => typeof value !== "string" || !className.test(value)) ||
+        !normalized.testClasses.includes(normalized.runnerClass) || !normalized.runnerClass.endsWith("CucumberTest")) {
+      throw new Error("Feature JVM check requires exact test classes including its Cucumber runner");
     }
   }
 
@@ -393,12 +402,44 @@ async function executeNoWipCheck({ check, repoRoot }) {
   };
 }
 
+export async function executeFeatureJvmCheck({ check, repoRoot, logPath, limits, execute = executeCommandCheck }) {
+  const policy = await loadDeliveryPolicy({ repoRoot });
+  const fullCheck = resolveCheck({ checkId: "jvm_test_dev", definition: policy.checkCatalog.jvm_test_dev, repoRoot });
+  const { runnerClass, testClasses } = check.parameters;
+  const groups = [[runnerClass], testClasses.filter((name) => name !== runnerClass)].filter((group) => group.length);
+  let durationMs = 0;
+  const counts = { passed: 0, failed: 0, skipped: 0 };
+  let result;
+  for (const [index, classes] of groups.entries()) {
+    result = await execute({
+      repoRoot, limits, logPath: index === 0 ? logPath : `${logPath}.affected`,
+      check: {
+        id: check.id, kind: "command", command: "scripts/with-android-env.sh",
+        args: ["./gradlew", ":app:testDevDebugUnitTest", ...classes.flatMap((name) => ["--tests", name])],
+        dynamicAllowlist: "focused_android_jvm_test", timeoutMs: fullCheck.timeoutMs,
+      },
+    });
+    durationMs += result.durationMs;
+    if (result.status !== "passed" && /No tests found for given includes:/i.test(result.rawOutput || "")) {
+      const fallback = await execute({ check: { ...fullCheck, id: check.id }, repoRoot, limits, logPath: `${logPath}.full` });
+      return { ...fallback, durationMs: durationMs + fallback.durationMs,
+        summaryLines: ["Empty focused selection; executed complete Dev JVM task", ...(fallback.summaryLines || [])].slice(0, 6) };
+    }
+    for (const key of Object.keys(counts)) counts[key] += result.counts?.[key] || 0;
+    if (result.status !== "passed") break;
+  }
+  return { ...result, durationMs, counts };
+}
+
 export async function executeCheck({ check, repoRoot, logPath, limits }) {
   if (check.kind === "command") {
     return executeCommandCheck({ check, repoRoot, logPath, limits });
   }
   if (check.kind === "builtin" && check.handler === "no_wip_in_scope") {
     return executeNoWipCheck({ check, repoRoot });
+  }
+  if (check.kind === "builtin" && check.handler === "feature_jvm_dev") {
+    return executeFeatureJvmCheck({ check, repoRoot, logPath, limits });
   }
   throw new Error(`Unsupported delivery check: ${check.id}`);
 }

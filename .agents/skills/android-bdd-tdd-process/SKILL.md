@@ -35,7 +35,7 @@ One provider example is `features/auth/provider-welcome.feature`, with glue in
    owned use case or ViewModel. Observe a relevant RED through a runnable
    focused test before production code. With `@wip` present, Cucumber skips
    that scenario. `delivery_test(mode="scenario", featureFile=<feature path>)`
-   runs the full Dev JVM task and cannot by itself prove its RED. To observe
+   selects a feature runner when available and cannot by itself prove its RED. To observe
    Cucumber RED, temporarily remove `@wip` in the working tree and restore it
    before an intermediate commit. A coherent glue-only boundary may be
    committed after its staged `delivery_prepare(intent="prepare_commit")`
@@ -47,7 +47,7 @@ One provider example is `features/auth/provider-welcome.feature`, with glue in
 4. Refactor while focused tests stay GREEN. Add an instrumented UI test when
    the change crosses Activity, navigation, or real Android boundaries.
 5. For the final functional boundary, remove `@wip` in the working tree so
-   the active Cucumber scenario runs. Verify the complete Dev JVM task GREEN
+   the active Cucumber scenario runs. Verify focused GREEN
    with `delivery_test(mode="scenario", featureFile=<feature path>)`. Confirm
    a runner includes the feature and inspect the Cucumber report or test log
    to see that the active scenario executed; a green suite with a filtered or
@@ -88,5 +88,5 @@ typed outcomes and observable effects in JVM tests, not localized UI strings;
 resolve locale-dependent strings through the Activity in instrumented tests.
 Use focused Gradle diagnostics through the Android wrapper only when processed
 Delivery output is insufficient; see `.delivery/README.md` for the test
-topology. Gate 0/B run the complete Dev JVM task, not one Cucumber feature or
-scenario.
+topology. Gate 0 runs the complete Dev JVM task. Gate B may select an isolated
+feature and affected JVM classes; inspect the gate's actual check IDs and scope.

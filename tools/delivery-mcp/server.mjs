@@ -388,7 +388,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
           scenarioName: {
             type: "string",
-            description: "Optional scenario name recorded as context; scenario mode runs the complete Dev JVM task, not a scenario filter.",
+            description: "Optional scenario name recorded as context; scenario mode selects a feature runner when available and never filters an individual scenario.",
           },
           checkId: {
             type: "string",

@@ -97,7 +97,7 @@ function disabledImpact(gate) {
     consumerCount: 0,
     affectedFeatures: 0,
     confidence: "high",
-    parameters: { analyzers: "disabled" },
+    parameters: { analyzers: "not_applicable_for_scope" },
   };
 }
 
@@ -179,6 +179,14 @@ export function selectGate({
     gate = buildGate(policy, "C", ["UNKNOWN_FUNCTIONAL_ANDROID_CHANGE"]);
   }
 
+  if (gate.id === "B" && policy.analysis.cucumberImpact.enabled && cucumberImpact?.scope === "feature") {
+    gate.checkIds = gate.checkIds.map((id) => id === "jvm_test_dev" ? "feature_jvm_dev" : id);
+    gate.parameters.testClasses = cucumberImpact.testClasses;
+    gate.parameters.runnerClass = cucumberImpact.runnerClass;
+    gate.reasonCodes.push("ISOLATED_JVM_FEATURE");
+    gate.checks = gate.checkIds.map((id) => substituteDisplay(policy.checkCatalog[id].display, gate.parameters));
+  }
+
   if (classified.hasDeliveryTooling && !gate.checkIds.includes("delivery_unit")) {
     gate = buildGate(policy, gate.id, [...gate.reasonCodes, "DELIVERY_TOOLING_CHANGED"], gate.parameters, ["delivery_unit"]);
   }
@@ -195,6 +203,13 @@ export function selectGate({
     gate,
     status,
     diagnostics: diagnostics.slice(0, policy.limits.maxDiagnostics),
-    impact: disabledImpact(gate),
+    impact: cucumberImpact ? {
+      gate: gate.id,
+      reasonCodes: [cucumberImpact.reason],
+      consumerCount: cucumberImpact.testClasses.length,
+      affectedFeatures: cucumberImpact.scope === "feature" ? 1 : 0,
+      confidence: cucumberImpact.scope === "feature" ? "high" : "low",
+      parameters: { scope: cucumberImpact.scope },
+    } : disabledImpact(gate),
   };
 }

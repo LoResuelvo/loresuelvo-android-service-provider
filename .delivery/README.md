@@ -34,23 +34,45 @@ Android integration changes. It does not require future scenarios in the same
 feature to be complete. Gate D is reserved for `close_batch` and `close_us`;
 only actual `@wip` tags, not comments or doc strings, block scope completion.
 
-The dependency-impact, Cucumber-impact, and maintainability analyzers are
-represented explicitly in the policy and disabled until Android-specific
-adapters exist. Disabled analyzers return `not_applicable` and are neither
-imported nor executed.
+The JVM feature-gate analyzer is enabled for low-risk scenario closures.
+Production dependency-impact and maintainability analyzers remain disabled;
+their results are `not_applicable`, not proof of isolation or quality.
 
 | Gate | Checks | Typical scope |
 | --- | --- | --- |
 | `NONE` | None | Documentation-only or empty diff |
 | `0` | Complete Dev JVM task | BDD feature/glue compatibility |
 | `A` | Dev JVM task; delivery tooling also runs its unit tests | Isolated domain Kotlin or delivery tooling |
-| `B` | Complete Dev JVM task | Closing a low-risk scenario |
+| `B` | Feature runner and affected JVM test classes when isolation is proven; complete Dev JVM task otherwise | Closing a low-risk scenario |
 | `C` | Dev lint, JVM tests, build, and instrumented UI | UI, DI, data, resources, manifest, or build changes |
 | `D` | No `@wip`, Gate C checks, and post-push CI green | Complete batch or User Story |
 | `R` | Delivery tests, Staging lint/JVM/build/instrumented UI, and post-push CI green | One-time repair of `repairsSha` |
 
 This table explains the current policy; `policy.v1.json` and Delivery MCP
 select the actual gate. Unknown functional paths fall back to Gate C.
+
+### Feature-scoped Gate B
+
+Only a `close_scenario` snapshot containing one feature and/or existing Kotlin
+JVM test/glue files can qualify. The analyzer reads immutable HEAD and staged
+Git trees, resolves one exact Cucumber runner, and follows reverse package
+references and glue ownership in both trees. It includes affected conventional
+JUnit classes alongside the feature runner. Shared glue, ambiguous or filtered
+runners, renamed/deleted/new sources, unsupported syntax or source sets,
+reflection, and unavailable Git objects retain the complete JVM check.
+Runner edits, production changes, tooling, and other resources do not qualify.
+
+The runner executes separately before affected JUnit classes so an empty
+feature cannot be hidden by passing unit tests. An empty selection falls back
+to the complete Dev JVM task; assertion failures remain failures. Reported
+duration includes attempted focused checks and fallback. Inspect `gate.checkIds`,
+`gate.parameters`, and `impact.reasonCodes` for the selected scope. This is
+fresh staged-gate evidence, never reuse of a focused TDD result.
+
+Gate 0/A and C/D/R retain their existing checks, including device prerequisites
+and post-push CI requirements. This analyzer does not justify C-to-B downgrades
+for Android production changes. Restart a connected Delivery MCP after changing
+its implementation; the CLI starts a fresh process with the checked-out code.
 
 ## Safe checks
 
@@ -146,8 +168,8 @@ make e2e FLAVOR=Staging
 debug app; `make e2e FLAVOR=Dev` runs instrumented UI tests on a device or
 emulator. Gherkin features live under `app/src/test/resources/features/`, JVM
 glue and runners under `app/src/test/java/com/loresuelvo/serviceprovider/bdd/`,
-and device tests under `app/src/androidTest/`. There is no reliable
-feature-file-to-runner command, so Gate 0/B run the complete Dev JVM task.
+and device tests under `app/src/androidTest/`. Gate 0 runs the complete Dev JVM
+task; Gate B can select an isolated feature as described above.
 If processed Delivery output cannot diagnose a failure, a focused JVM class
 can be run through the Android wrapper:
 
@@ -214,7 +236,7 @@ Preflight cannot certify commits that have not been created or predict CI.
 
 Receipts are cryptographically bound to HEAD, the exact staged snapshot,
 policy, intent, and scope. A changed staged file invalidates the receipt.
-Long Gate C/D/R, HEAD verification, and bounded CI waits may return a `jobId`;
+Long Gate C/D/R and HEAD verification may return a `jobId`;
 await it with `delivery_job_wait`; `delivery_job_cancel` is cooperative and
 leaves a recoverable cancelled/failed job record, so a caller may retry with a
 fresh snapshot. Do not busy-poll. CI repair starts with

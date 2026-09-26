@@ -20,8 +20,8 @@
       "adapter": "android"
     },
     "cucumberImpact": {
-      "enabled": false,
-      "adapter": "android-jvm"
+      "enabled": true,
+      "adapter": "android-jvm-feature-gate"
     },
     "maintainability": {
       "enabled": false,
@@ -247,6 +247,13 @@
     }
   },
   "checkCatalog": {
+    "feature_jvm_dev": {
+      "kind": "builtin",
+      "label": "Isolated feature and affected Dev JVM tests",
+      "handler": "feature_jvm_dev",
+      "display": "Dev JVM feature runner and affected classes: {testClasses}",
+      "requires": ["featureFile", "runnerClass", "testClasses"]
+    },
     "delivery_unit": {
       "kind": "command",
       "label": "Delivery tooling tests",
@@ -385,7 +392,7 @@
     },
     "B": {
       "id": "B",
-      "description": "Complete Dev JVM tests for one low-risk BDD scenario closure",
+      "description": "Isolated JVM feature closure when proven by both Git trees; otherwise complete Dev JVM tests",
       "priority": 3,
       "checkIds": [
         "jvm_test_dev"

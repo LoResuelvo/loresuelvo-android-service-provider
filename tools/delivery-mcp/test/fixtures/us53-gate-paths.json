@@ -1,0 +1,189 @@
+[
+  {
+    "sha": "c58f4f8",
+    "gate": "C",
+    "files": [
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationScreen.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreen.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/components/ChatInputBar.kt",
+      "app/src/main/res/values-en/strings.xml",
+      "app/src/main/res/values/strings.xml",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalCucumberTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationScreenTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModelTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "17fb896",
+    "gate": "C",
+    "files": [
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationScreen.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationScreenTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "4e021ae",
+    "gate": "C",
+    "files": [
+      "app/src/main/java/com/loresuelvo/serviceprovider/domain/proposal/ServiceProposalDraft.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/domain/usecase/proposal/ValidateServiceProposalUseCase.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreen.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt",
+      "app/src/main/res/values-en/strings.xml",
+      "app/src/main/res/values/strings.xml",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/domain/usecase/proposal/ValidateServiceProposalUseCaseTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModelTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "8a5f732",
+    "gate": "C",
+    "files": [
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreen.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt",
+      "app/src/main/res/values-en/strings.xml",
+      "app/src/main/res/values/strings.xml",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModelTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "4dae784",
+    "gate": "B",
+    "files": [
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModelTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "d551d1d",
+    "gate": "C",
+    "files": [
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModelTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "e4941e2",
+    "gate": "C",
+    "files": [
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/auth/ProviderSignupTestDoubles.kt",
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/data/api/ApiServiceProposalRepository.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/data/api/ServiceProposalApi.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/data/api/dto/ServiceProposalDto.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/data/api/mapper/ServiceProposalMapper.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/di/NetworkModule.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/di/RepositoryModule.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/domain/proposal/ServiceProposalRepository.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/domain/usecase/proposal/CreateServiceProposalUseCase.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationScreen.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalConfirmationDialog.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreen.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt",
+      "app/src/main/res/values-en/strings.xml",
+      "app/src/main/res/values/strings.xml",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/data/api/ApiServiceProposalRepositoryTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/domain/usecase/proposal/ValidateServiceProposalUseCaseTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModelTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "81b3219",
+    "gate": "B",
+    "files": [
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "b495005",
+    "gate": "C",
+    "files": [
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/auth/ProviderSignupTestDoubles.kt",
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreen.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModelTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "7f0d91d",
+    "gate": "R",
+    "files": [
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt"
+    ]
+  },
+  {
+    "sha": "7a1dfa5",
+    "gate": "C",
+    "files": [
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNav.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/Route.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalConfirmationDialog.kt",
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt",
+      "app/src/main/res/values-en/strings.xml",
+      "app/src/main/res/values/strings.xml",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "79ba616",
+    "gate": "R",
+    "files": [
+      "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt"
+    ]
+  },
+  {
+    "sha": "8863291",
+    "gate": "C",
+    "files": [
+      "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/data/api/ApiServiceProposalRepositoryTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModelTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  },
+  {
+    "sha": "3add1b7",
+    "gate": "B",
+    "files": [
+      "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt",
+      "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt",
+      "app/src/test/resources/features/proposals/provider-service-proposal.feature"
+    ]
+  }
+]

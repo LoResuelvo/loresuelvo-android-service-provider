@@ -15,10 +15,11 @@ import { analyzeCucumberImpact } from "../lib/impact-index.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
 
-test("Android policy validates with all analyzers disabled", () => {
+test("Android policy enables only the bounded JVM feature-gate analyzer", () => {
   assert.deepEqual(policy.maintainabilityThresholds, {});
   assert.equal(policy.analysis.dependencyImpact.enabled, false);
-  assert.equal(policy.analysis.cucumberImpact.enabled, false);
+  assert.equal(policy.analysis.cucumberImpact.enabled, true);
+  assert.equal(policy.analysis.cucumberImpact.adapter, "android-jvm-feature-gate");
   assert.equal(policy.analysis.maintainability.enabled, false);
   assert.deepEqual(Object.keys(policy.gates).sort(), ["0", "A", "B", "C", "D", "NONE", "R"]);
 });

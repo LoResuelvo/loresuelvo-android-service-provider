@@ -1,6 +1,7 @@
 /**
- * Cucumber impact is disabled for Cucumber JVM in the Android provider.
- * Gate 0/B run the complete JVM test task until a focused runner exists.
+ * Compatibility placeholders for the former generic impact-index API.
+ * Staged JVM feature analysis lives in feature-gate.mjs and is invoked by
+ * inspect-delivery.mjs only for eligible scenario closures.
  */
 export const CUCUMBER_IMPACT_INDEX_PATH = ".delivery/runtime/indexes/cucumber-impact-v1.json";
 
@@ -33,4 +34,3 @@ export function isStepDefinitionFile(filePath) {
 export function isCucumberSupportFile() {
   return false;
 }
-
