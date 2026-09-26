@@ -38,17 +38,22 @@
           "entryPoints": [
             "com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel",
             "com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListRoute",
-            "com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListScreen"
+            "com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListScreen",
+            "com.loresuelvo.serviceprovider.ui.screens.proposals.ProposalDetailSheet"
           ],
           "integrationFiles": [
             "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNav.kt",
             "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNavHost.kt",
             "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeRoute.kt",
             "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeScreen.kt",
-            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeSections.kt"
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeSections.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationScreen.kt"
           ],
           "deviceTestClasses": [
-            "com.loresuelvo.serviceprovider.acceptance.proposals.ServiceProposalNavigationAcceptanceTest"
+            "com.loresuelvo.serviceprovider.acceptance.proposals.ServiceProposalNavigationAcceptanceTest",
+            "com.loresuelvo.serviceprovider.acceptance.messaging.ProviderConversationAttachmentAcceptanceTest",
+            "com.loresuelvo.serviceprovider.acceptance.profile.ProviderProfileNavigationAcceptanceTest"
           ]
         },
         {

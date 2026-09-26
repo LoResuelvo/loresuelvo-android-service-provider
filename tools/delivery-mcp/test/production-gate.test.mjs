@@ -150,7 +150,9 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
     const testFile = `app/src/test/java/com/loresuelvo/serviceprovider/${stem}Test.kt`;
     const after = new Map(before); after.set(file, before.get(file) + '\n// reviewed implementation change\n');
     after.set(testFile, before.get(testFile) + '\n// companion test change\n');
-    scenarios.push({ before, after, files: [file, testFile], featureFile: features[featureIndex].featureFile, gate: 'B' });
+    scenarios.push({ before, after, files: [file, testFile], featureFile: features[featureIndex].featureFile,
+      gate: featureIndex === 0 ? 'C' : 'B',
+      ...(featureIndex === 0 && { reason: 'ANDROID_SHARED_OR_UNKNOWN_FEATURE' }) });
   }
   const proposal = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt';
   const stateChange = new Map(before);
@@ -161,19 +163,29 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
   const viewRecord = features.find(feature => feature.featureFile === viewFeature);
   assert.ok(viewRecord);
   const viewScreen = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/proposals/ServiceProposalListScreen.kt';
+  const viewDetail = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/proposals/ProposalDetailSheet.kt';
   const viewDevice = 'com.loresuelvo.serviceprovider.acceptance.proposals.ServiceProposalNavigationAcceptanceTest';
+  const viewDevices = [
+    'com.loresuelvo.serviceprovider.acceptance.messaging.ProviderConversationAttachmentAcceptanceTest',
+    'com.loresuelvo.serviceprovider.acceptance.profile.ProviderProfileNavigationAcceptanceTest',
+    viewDevice,
+  ];
   assert.ok(before.has('app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/view/ViewServiceProposalsCucumberTest.kt'));
   assert.ok(before.has('app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/proposals/ServiceProposalNavigationAcceptanceTest.kt'));
-  assert.deepEqual(viewRecord.deviceTestClasses, [viewDevice]);
+  assert.deepEqual(viewRecord.deviceTestClasses, [viewDevice, ...viewDevices.slice(0, 2)]);
   const changed = file => { const after = new Map(before); after.set(file, before.get(file) + '\n// reviewed implementation change\n'); return after; };
   for (const file of [
     viewScreen,
     'app/src/main/java/com/loresuelvo/serviceprovider/ui/proposals/ServiceProposalListViewModel.kt',
   ]) scenarios.push({ before, after: changed(file), files: [file], featureFile: viewFeature,
-    gate: 'B', deviceTestClasses: [viewDevice] });
+    gate: 'B', deviceTestClasses: viewDevices });
+  scenarios.push({ before, after: changed(viewDetail), files: [viewDetail], featureFile: viewFeature,
+    gate: 'C', reason: 'ANDROID_SHARED_BOUNDARY' });
   for (const file of [
     'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeScreen.kt',
     'app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNavHost.kt',
+    'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt',
+    'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationScreen.kt',
     'app/src/main/java/com/loresuelvo/serviceprovider/di/NetworkModule.kt',
   ]) scenarios.push({ before, after: changed(file), files: [file], featureFile: viewFeature, gate: 'C' });
   scenarios.push({ before, after: changed(viewScreen), files: [viewScreen], featureFile: viewFeature,
@@ -205,7 +217,7 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
       sourceTopology: policy.analysis.dependencyImpact.sourceTopology, parse });
     if (scenario.reason) assert.equal(impact.reason, scenario.reason);
     if (scenario.deviceTestClasses) {
-      assert.deepEqual(impact.deviceTestClasses, scenario.deviceTestClasses);
+      assert.deepEqual(impact.deviceTestClasses, scenario.deviceTestClasses, `${scenario.files[0]}: ${JSON.stringify(impact)}`);
       assert.equal(impact.runnerClass, 'com.loresuelvo.serviceprovider.bdd.proposals.view.ViewServiceProposalsCucumberTest');
     }
     const result = selectGate({ policy, snapshot: { stagedFiles: scenario.files }, intent: scenario.gate === 'R' ? 'repair_ci' : 'close_scenario',
