@@ -44,7 +44,88 @@
           "required": ["enabled", "adapter"],
           "properties": {
             "enabled": { "type": "boolean" },
-            "adapter": { "type": "string", "minLength": 1 }
+            "adapter": { "type": "string", "minLength": 1 },
+            "scopes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "featureFile",
+                  "sourceFile",
+                  "symbol",
+                  "signature",
+                  "vocabulary",
+                  "consumers",
+                  "boundarySymbols",
+                  "testClasses",
+                  "deviceTestClasses",
+                  "pinnedFiles"
+                ],
+                "properties": {
+                  "featureFile": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sourceFile": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "symbol": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_]\\w*$"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "vocabulary": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "consumers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "boundarySymbols": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "testClasses": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "deviceTestClasses": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "pinnedFiles": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "additionalProperties": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "cucumberImpact": {

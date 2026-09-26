@@ -22,7 +22,7 @@ export const SAFE_COMMANDS = new Set([
   JSON.stringify(["make", "e2e", "FLAVOR=Staging"]),
 ]);
 
-export const SAFE_BUILTINS = new Set(["no_wip_in_scope", "ci_green", "feature_jvm_dev", "android_device"]);
+export const SAFE_BUILTINS = new Set(["no_wip_in_scope", "ci_green", "feature_jvm_dev", "feature_device_dev", "android_device"]);
 
 function assertPositiveInteger(value, field) {
   if (!Number.isInteger(value) || value < 1) {
@@ -83,8 +83,8 @@ function validateAnalysis(policy) {
       throw new Error(`Invalid delivery policy: analysis.${key} must define enabled and adapter`);
     }
   }
-  if (analyzers.dependencyImpact.enabled || analyzers.maintainability.enabled) {
-    throw new Error("Android delivery analyzers are disabled until their adapters are implemented");
+  if (analyzers.maintainability.enabled || (analyzers.dependencyImpact.enabled && analyzers.dependencyImpact.adapter !== "android-reviewed-ui-scope")) {
+    throw new Error("Unsupported Android production or maintainability adapter");
   }
   if (analyzers.cucumberImpact.enabled && analyzers.cucumberImpact.adapter !== "android-jvm-feature-gate") {
     throw new Error("Unsupported Android Cucumber impact adapter");

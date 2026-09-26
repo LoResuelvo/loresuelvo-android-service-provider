@@ -34,16 +34,17 @@ Android integration changes. It does not require future scenarios in the same
 feature to be complete. Gate D is reserved for `close_batch` and `close_us`;
 only actual `@wip` tags, not comments or doc strings, block scope completion.
 
-The JVM feature-gate analyzer is enabled for low-risk scenario closures.
-Production dependency-impact and maintainability analyzers remain disabled;
-their results are `not_applicable`, not proof of isolation or quality.
+The JVM feature-gate analyzer and a bounded reviewed UI scope adapter are
+enabled for scenario closures. The UI adapter is not a general Kotlin dependency
+graph. Unreviewed production changes retain their path-selected gate.
+Maintainability analysis remains disabled (`not_applicable`).
 
 | Gate | Checks | Typical scope |
 | --- | --- | --- |
 | `NONE` | None | Documentation-only or empty diff |
 | `0` | Complete Dev JVM task | BDD feature/glue compatibility |
 | `A` | Dev JVM task; delivery tooling also runs its unit tests | Isolated domain Kotlin or delivery tooling |
-| `B` | Feature runner and affected JVM test classes when isolation is proven; complete Dev JVM task otherwise | Closing a low-risk scenario |
+| `B` | Scoped JVM tests, or full JVM fallback; reviewed UI scopes additionally require a device, lint, and scoped device tests | Closing a low-risk or reviewed isolated UI scenario |
 | `C` | Device prerequisite, Dev lint, JVM tests, build, and instrumented UI | UI, DI, data, resources, manifest, or build changes |
 | `D` | No `@wip`, Gate C checks, and post-push CI green | Complete batch or User Story |
 | `R` | Device prerequisite, Delivery tests, Staging lint/JVM/build/instrumented UI, and post-push CI green | One-time repair of `repairsSha` |
@@ -51,7 +52,7 @@ their results are `not_applicable`, not proof of isolation or quality.
 This table explains the current policy; `policy.v1.json` and Delivery MCP
 select the actual gate. Unknown functional paths fall back to Gate C.
 
-C/D/R query ADB through the Android wrapper before expensive Android checks.
+C/D/R and reviewed UI Gate B query ADB through the Android wrapper before expensive Android checks.
 No device, offline/unauthorized devices, an unavailable `ANDROID_SERIAL`, or a
 failed query produces `blocked`, not a test pass. This prerequisite never starts
 an emulator. Keep the device unlocked and unused during instrumented tests;
@@ -78,7 +79,7 @@ using their elapsed time to justify a narrower gate.
 
 ### Feature-scoped Gate B
 
-Only a `close_scenario` snapshot containing one feature and/or existing Kotlin
+For test-only optimization, a `close_scenario` snapshot containing one feature and/or existing Kotlin
 JVM test/glue files can qualify. The analyzer reads immutable HEAD and staged
 Git trees, resolves one exact Cucumber runner, and follows reverse package
 references and glue ownership in both trees. It includes affected conventional
@@ -95,9 +96,40 @@ duration includes attempted focused checks and fallback. Inspect `gate.checkIds`
 fresh staged-gate evidence, never reuse of a focused TDD result.
 
 Gate 0/A and C/D/R retain their existing checks, including device prerequisites
-and post-push CI requirements. This analyzer does not justify C-to-B downgrades
-for Android production changes. Restart a connected Delivery MCP after changing
+and post-push CI requirements. Restart a connected Delivery MCP after changing
 its implementation; the CLI starts a fresh process with the checked-out code.
+
+### Reviewed production C-to-B pilot
+
+The `android-reviewed-ui-scope` adapter currently covers only
+`ProviderProposalConfirmationDialog.kt` under the proposal feature. It supports
+compatible body edits, such as changing existing layout numbers or rearranging
+existing expressions. It does not enable arbitrary UI, ViewModel, or data changes.
+
+Both HEAD and the staged tree must match the policy's reviewed function signature
+(including imports) and nonnumeric token vocabulary. New identifiers, strings,
+declarations, dependencies, consumers, dynamic access, or variant sources retain C.
+The source must already exist. Only that source and its feature file may be staged;
+test, resource, navigation, DI, build, and other production edits retain C.
+
+Policy-bound source hashes pin the reviewed conversation route, navigation roots,
+manifest, build configuration, runner/glue, and JVM/device coverage. Drift produces
+C, with the reason in `impact.reasonCodes`. These are source-contract hashes, not
+test receipts. Do not automatically refresh them: review the changed boundary and
+coverage before updating a scope. This deliberately narrow pilot avoids claiming
+that a feature directory or lexical scan proves general Kotlin isolation.
+
+An eligible scenario runs, serially: device prerequisite, Dev lint, the complete
+proposal Cucumber runner, `ProviderProposalScreenTest`, and the complete
+`ProviderConversationAttachmentAcceptanceTest` device class. Instrumentation
+builds the Dev app and test APK. The scoped device executor accepts one exact class,
+never a method or wildcard. A successful process without a positive test count falls
+back to the full device suite; assertion failures remain failures. JVM empty-selection
+fallback remains intact. No device means blocked. D/R remain full closure/repair gates.
+
+Expanding this pilot requires reviewed consumer and coverage evidence, negative
+classification tests, historical regression checks, and real scoped execution.
+Do not claim a repository-wide speedup from this single eligible boundary.
 
 ## Safe checks
 

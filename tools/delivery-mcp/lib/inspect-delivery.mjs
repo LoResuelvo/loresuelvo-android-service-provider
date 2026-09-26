@@ -13,6 +13,7 @@ import { inspectCi } from "./ci-provider.mjs";
 import { listCommitEvidence } from "./delivery-ledger.mjs";
 import { hasUnrecoveredRepair } from "./repair-recovery.mjs";
 import { inspectFeatureGate } from "./feature-gate.mjs";
+import { inspectProductionGate } from "./production-gate.mjs";
 
 function isLedgerFailure(error) {
   return (
@@ -111,6 +112,9 @@ export async function inspectDelivery({
   const cucumberImpact = policy.analysis.cucumberImpact.enabled && effectiveIntent === "close_scenario" && featureCandidates.length === 1
     ? inspectFeatureGate({ repoRoot: root, snapshot, featureFile: featureCandidates[0] })
     : null;
+  const dependencyImpact = policy.analysis.dependencyImpact.enabled && effectiveIntent === "close_scenario" && featureCandidates.length === 1
+    ? inspectProductionGate({ repoRoot: root, snapshot, featureFile: featureCandidates[0], scopes: policy.analysis.dependencyImpact.scopes })
+    : null;
 
   const gateResult = selectGate({
     repoRoot: root,
@@ -123,6 +127,7 @@ export async function inspectDelivery({
     policy,
     maintainability,
     cucumberImpact,
+    dependencyImpact,
   });
 
   if (effectiveIntent === "repair_ci" && effectiveRepairsSha) {

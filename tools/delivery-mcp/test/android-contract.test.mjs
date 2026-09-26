@@ -15,9 +15,10 @@ import { analyzeCucumberImpact } from "../lib/impact-index.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
 
-test("Android policy enables only the bounded JVM feature-gate analyzer", () => {
+test("Android policy enables bounded JVM and reviewed UI scope adapters", () => {
   assert.deepEqual(policy.maintainabilityThresholds, {});
-  assert.equal(policy.analysis.dependencyImpact.enabled, false);
+  assert.equal(policy.analysis.dependencyImpact.enabled, true);
+  assert.equal(policy.analysis.dependencyImpact.adapter, "android-reviewed-ui-scope");
   assert.equal(policy.analysis.cucumberImpact.enabled, true);
   assert.equal(policy.analysis.cucumberImpact.adapter, "android-jvm-feature-gate");
   assert.equal(policy.analysis.maintainability.enabled, false);

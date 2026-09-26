@@ -144,6 +144,13 @@ export function selectGate({
       status = "needs_input";
       diagnostic(diagnostics, "MISSING_SCOPE_FOR_GATE_D", "Gate D requires at least one feature path to verify completed scope");
     }
+  } else if (classified.hasGateCTrigger && intent === "close_scenario" && policy.analysis.dependencyImpact.enabled &&
+      dependencyImpact?.scope === "production_feature") {
+    gate = buildGate(policy, "B", [dependencyImpact.reason], { featureFile,
+      runnerClass: dependencyImpact.runnerClass, testClasses: dependencyImpact.testClasses,
+      deviceTestClasses: dependencyImpact.deviceTestClasses }, ["android_device", "lint_dev", "feature_jvm_dev", "feature_device_dev"]);
+    gate.checkIds = gate.checkIds.filter((id) => id !== "jvm_test_dev");
+    gate.checks = gate.checkIds.map((id) => substituteDisplay(policy.checkCatalog[id].display, gate.parameters));
   } else if (classified.hasGateCTrigger) {
     gate = buildGate(policy, "C", ["SHARED_OR_HIGH_RISK_CHANGES"]);
   } else if (intent === "close_scenario") {
@@ -199,17 +206,18 @@ export function selectGate({
     diagnostic(diagnostics, "MAINTAINABILITY_SIGNALS", `${maintainability.signalCount} maintainability signal(s) detected; review required before commit`);
   }
 
+  const selectedImpact = dependencyImpact && classified.hasGateCTrigger ? dependencyImpact : cucumberImpact;
   return {
     gate,
     status,
     diagnostics: diagnostics.slice(0, policy.limits.maxDiagnostics),
-    impact: cucumberImpact ? {
+    impact: selectedImpact ? {
       gate: gate.id,
-      reasonCodes: [cucumberImpact.reason],
-      consumerCount: cucumberImpact.testClasses.length,
-      affectedFeatures: cucumberImpact.scope === "feature" ? 1 : 0,
-      confidence: cucumberImpact.scope === "feature" ? "high" : "low",
-      parameters: { scope: cucumberImpact.scope },
+      reasonCodes: [selectedImpact.reason],
+      consumerCount: selectedImpact.testClasses.length,
+      affectedFeatures: ["feature", "production_feature"].includes(selectedImpact.scope) ? 1 : 0,
+      confidence: ["feature", "production_feature"].includes(selectedImpact.scope) ? "high" : "low",
+      parameters: { scope: selectedImpact.scope },
     } : disabledImpact(gate),
   };
 }

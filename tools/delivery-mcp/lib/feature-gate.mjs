@@ -8,10 +8,10 @@ const full = (reason) => ({ scope: "full_jvm", reason, testClasses: [] });
 export function readFeatureGateTree(repoRoot, tree) {
   if (!/^[a-f0-9]{40}$/.test(tree)) throw new Error("Missing immutable Git tree");
   const options = { cwd: repoRoot, maxBuffer: 20 * 1024 * 1024, timeout: 10000 };
-  const entries = execFileSync("git", ["ls-tree", "-rz", tree, "--", "app/src", "app/build.gradle.kts", "build.gradle.kts"], options)
+  const entries = execFileSync("git", ["ls-tree", "-rz", tree, "--", "app/src", "app/build.gradle.kts", "build.gradle.kts", "settings.gradle.kts"], options)
     .toString("utf8").split("\0").filter(Boolean)
     .map((entry) => entry.match(/^(\d+) blob ([a-f0-9]{40})\t(.+)$/))
-    .filter((entry) => entry && /\.(?:kts?|java|feature)$/.test(entry[3]));
+    .filter((entry) => entry && /\.(?:kts?|java|feature|xml)$/.test(entry[3]));
   if (entries.some((entry) => entry[1] !== "100644" && entry[1] !== "100755")) throw new Error("Unsupported source mode");
   if (!entries.length) return new Map();
   const output = execFileSync("git", ["cat-file", "--batch"], {

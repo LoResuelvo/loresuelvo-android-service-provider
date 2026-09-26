@@ -85,6 +85,10 @@ function assertCommandAllowed(command, args, dynamicAllowlist = null) {
     return;
   }
 
+  if (dynamicAllowlist === "focused_android_device_test" && command === "scripts/with-android-env.sh" &&
+      args.length === 3 && args[0] === "./gradlew" && args[1] === ":app:connectedDevDebugAndroidTest" &&
+      /^-Pandroid\.testInstrumentationRunnerArguments\.class=(?:[A-Za-z_]\w*\.)+[A-Za-z_]\w*Test$/.test(args[2])) return;
+
   throw new Error(`Unsafe or unauthorized command rejected by allowlist: ${command} ${args.join(" ")}`);
 }
 
@@ -105,6 +109,11 @@ export function resolveCheck({ checkId, definition, parameters = {}, repoRoot })
         !normalized.testClasses.includes(normalized.runnerClass) || !normalized.runnerClass.endsWith("CucumberTest")) {
       throw new Error("Feature JVM check requires exact test classes including its Cucumber runner");
     }
+  }
+  if (definition.handler === "feature_device_dev" && (!Array.isArray(normalized.deviceTestClasses) ||
+      normalized.deviceTestClasses.length !== 1 || normalized.deviceTestClasses.some((name) =>
+        typeof name !== "string" || !/^(?:[A-Za-z_]\w*\.)+[A-Za-z_]\w*Test$/.test(name)))) {
+    throw new Error("Feature device check requires exact test classes");
   }
 
   if (definition.kind !== "command") {
@@ -432,6 +441,22 @@ export async function executeFeatureJvmCheck({ check, repoRoot, logPath, limits,
   return { ...result, durationMs, counts };
 }
 
+export async function executeFeatureDeviceCheck({ check, repoRoot, logPath, limits, execute = executeCommandCheck }) {
+  const policy = await loadDeliveryPolicy({ repoRoot });
+  const fullCheck = resolveCheck({ checkId: "e2e_dev", definition: policy.checkCatalog.e2e_dev, repoRoot });
+  const result = await execute({ repoRoot, logPath, limits, check: {
+    id: check.id, kind: "command", command: "scripts/with-android-env.sh",
+    args: ["./gradlew", ":app:connectedDevDebugAndroidTest",
+      `-Pandroid.testInstrumentationRunnerArguments.class=${check.parameters.deviceTestClasses.join(",")}`],
+    dynamicAllowlist: "focused_android_device_test", timeoutMs: fullCheck.timeoutMs,
+  } });
+  if (result.status !== "passed") return result;
+  if (/Finished [1-9]\d* tests? on /.test(result.rawOutput || "")) return result;
+  const fallback = await execute({ check: { ...fullCheck, id: check.id }, repoRoot, limits, logPath: `${logPath}.full` });
+  return { ...fallback, durationMs: result.durationMs + fallback.durationMs,
+    summaryLines: ["No positive focused device test count; executed full Dev device suite", ...(fallback.summaryLines || [])].slice(0, 6) };
+}
+
 export async function executeCheck({ check, repoRoot, logPath, limits }) {
   if (check.kind === "builtin" && check.handler === "android_device") {
     return checkAndroidDevice({ repoRoot });
@@ -444,6 +469,9 @@ export async function executeCheck({ check, repoRoot, logPath, limits }) {
   }
   if (check.kind === "builtin" && check.handler === "feature_jvm_dev") {
     return executeFeatureJvmCheck({ check, repoRoot, logPath, limits });
+  }
+  if (check.kind === "builtin" && check.handler === "feature_device_dev") {
+    return executeFeatureDeviceCheck({ check, repoRoot, logPath, limits });
   }
   throw new Error(`Unsupported delivery check: ${check.id}`);
 }

@@ -16,8 +16,47 @@
   "maintainabilityThresholds": {},
   "analysis": {
     "dependencyImpact": {
-      "enabled": false,
-      "adapter": "android"
+      "enabled": true,
+      "adapter": "android-reviewed-ui-scope",
+      "scopes": [
+        {
+          "featureFile": "app/src/test/resources/features/proposals/provider-service-proposal.feature",
+          "sourceFile": "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalConfirmationDialog.kt",
+          "symbol": "ProviderProposalConfirmationDialog",
+          "signature": "4723366b4c099cffffcc31a7e58aefcf93310c80ed1fbce64fa5cc105fd3d5b3",
+          "vocabulary": "bacd9f53f47ebd4cc8be91d3aac005b573d641c73ad7d0e65ef34dec8ae17088",
+          "consumers": [
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt",
+            "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt"
+          ],
+          "boundarySymbols": [
+            "MainActivity",
+            "LoResuelvoNav",
+            "ProviderConversationRoute"
+          ],
+          "testClasses": [
+            "com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderProposalScreenTest"
+          ],
+          "deviceTestClasses": [
+            "com.loresuelvo.serviceprovider.acceptance.messaging.ProviderConversationAttachmentAcceptanceTest"
+          ],
+          "pinnedFiles": {
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderConversationRoute.kt": "a5f4f8f55908de734db0279dce87de5dab1aa80e5477979b1742adf3734c92c2",
+            "app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalScreenTest.kt": "48005e9543ccca33aa5a0594746f771413eeba5de126cbc8cecde2cf40374b91",
+            "app/src/main/java/com/loresuelvo/serviceprovider/MainActivity.kt": "72450febf02f62a815c955fd5ab4db269cdc94187b7c2d70953da15f4633dda9",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNav.kt": "52decde72134f0896939d7fa310462d6c64a066a263b5759587c0de2ade7f072",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNavHost.kt": "13d6eab9dc03b4600d5a2e910d2eb28e548ef8b1d8377714b0bc78435f81637f",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/theme/Theme.kt": "f4bd4d273c483df750b5fcc78b9787673a9b034c1da59c51b7d7c4c9881033a5",
+            "app/src/main/AndroidManifest.xml": "a51bd26d477329e94b69e48ae1de87d8e211ad28470caec2d969b5600e7f2b97",
+            "app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/messaging/ProviderConversationAttachmentAcceptanceTest.kt": "d10294875d77b020f6b4489a176fff8e6318b1e54079daf569061e22554b10db",
+            "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalCucumberTest.kt": "ed608aae2d48eb33f28c5762a70c388981b8321fb7561d89556c74f230361439",
+            "app/src/test/java/com/loresuelvo/serviceprovider/bdd/proposals/ProviderProposalSteps.kt": "a3a2101184b061ebbede48a5666029f6fbe68c9c888d48bd197f2f28dbb5f8fb",
+            "app/build.gradle.kts": "886219b762b8b4691981c36321468b46f39bf455a8236e5042584b677635dfb4",
+            "build.gradle.kts": "e915463b9250cfa529fec4407be0a76bf1fa9cab711ace9904f456c6b3474f0c",
+            "settings.gradle.kts": "08cb3f5be0ff685cff9305d4161f37025eb8737b3a3338255b7d328ebddea20a"
+          }
+        }
+      ]
     },
     "cucumberImpact": {
       "enabled": true,
@@ -372,6 +411,15 @@
       "label": "Android device prerequisite",
       "handler": "android_device",
       "display": "verify an authorized Android device is connected"
+    },
+    "feature_device_dev": {
+      "kind": "builtin",
+      "label": "Reviewed feature Dev device tests",
+      "handler": "feature_device_dev",
+      "display": "Dev device test classes: {deviceTestClasses}",
+      "requires": [
+        "deviceTestClasses"
+      ]
     }
   },
   "gates": {

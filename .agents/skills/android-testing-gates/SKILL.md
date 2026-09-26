@@ -39,9 +39,11 @@ authorize skipping a gate. Serialize Gradle and device checks.
 
 For low-risk scenario closure, Gate B may run an isolated feature runner and
 affected JVM classes using HEAD and staged-tree consumer analysis. Inspect its
-check IDs and impact reasons; uncertain scope falls back to full JVM. Production
-changes never qualify for this optimization. See `.delivery/README.md` for the
-eligibility rules. Gate C/D/R checks and prerequisites remain intact.
+check IDs and impact reasons; uncertain test-only scope falls back to full JVM.
+The reviewed production UI pilot can select B with lint, scoped JVM and device
+checks, and a mandatory device prerequisite. Other production changes retain
+their path-selected gates. See `.delivery/README.md` for the exact eligibility
+and coverage-drift rules. Gate C/D/R checks and prerequisites remain intact.
 
 The current CI workflow uses Java 17 and a prewarmed Pixel 6/API 34 x86_64
 emulator. Regenerate its cache through the checked-in
