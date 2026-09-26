@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.test.core.app.ApplicationProvider
+import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_ATTACH_BUTTON_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CREATE_PROPOSAL_ROW_TAG
@@ -39,6 +41,22 @@ class ProviderConversationScreenTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test fun pending_proposals_show_progress_without_hiding_conversation() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(""), serviceProposalLoading = true,
+                    onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                    onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("proposal_chat_loading_indicator").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_CONVERSATION_MESSAGES_TAG).assertIsDisplayed()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.onNodeWithText(context.getString(R.string.proposal_list_empty)).assertDoesNotExist()
+    }
 
     @Test fun chat_summary_opens_the_shared_read_only_detail() {
         val proposal = ServiceProposalSummary(

@@ -122,6 +122,7 @@ fun ProviderConversationRoute(
     ProviderConversationScreen(
         state = state,
         serviceProposal = proposalListState.proposalInConversation(conversationId),
+        serviceProposalLoading = proposalListState.loading,
         proposalSnackbarHostState = proposalSnackbarHostState,
         onPromptChange = viewModel::onPromptChange,
         onSendClick = viewModel::onSendClick,

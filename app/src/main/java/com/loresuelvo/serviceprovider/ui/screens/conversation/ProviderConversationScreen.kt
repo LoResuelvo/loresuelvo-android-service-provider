@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -89,6 +90,7 @@ import kotlinx.coroutines.launch
 fun ProviderConversationScreen(
     state: ProviderConversationUiState,
     serviceProposal: ServiceProposalSummary? = null,
+    serviceProposalLoading: Boolean = false,
     onPromptChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onRetrySendFailedBubble: (String) -> Unit,
@@ -161,7 +163,14 @@ fun ProviderConversationScreen(
                     }
                 },
             )
-            if (state is ProviderConversationUiState.Ready && serviceProposal != null) {
+            if (state is ProviderConversationUiState.Ready && serviceProposalLoading) {
+                val loadingLabel = stringResource(R.string.proposal_list_loading)
+                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                    CircularProgressIndicator(Modifier.testTag("proposal_chat_loading_indicator")
+                        .semantics { contentDescription = loadingLabel })
+                    Text(loadingLabel)
+                }
+            } else if (state is ProviderConversationUiState.Ready && serviceProposal != null) {
                 Card(onClick = { detailVisible = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     Column(Modifier.padding(12.dp)) {
                         Text(stringResource(R.string.proposal_detail_chat_summary))

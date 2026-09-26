@@ -79,6 +79,7 @@ class ViewServiceProposalsSteps {
     private var proposalCreateCalls = 0
     private var createdProposal: ProviderProposalViewModel? = null
     private val snackbarShown = CompletableDeferred<Unit>()
+    private var pendingProposalList: CompletableDeferred<ServiceProposalListOutcome>? = null
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -653,5 +654,41 @@ class ViewServiceProposalsSteps {
         assertTrue(snackbarShown.isCompleted)
         assertFalse(requireNotNull(createdProposal).hasSuccess.value)
         assertEquals(1, proposalCreateCalls)
+    }
+
+    @Given("que la consulta de propuestas todavía no terminó")
+    fun proposalRequestIsPending() {
+        pendingProposalList = CompletableDeferred()
+        val repository = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome {
+                proposalListCalls++
+                return requireNotNull(pendingProposalList).await()
+            }
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                error("Creation is outside this scenario")
+        }
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModelStore.put("proposals", viewModel)
+        scope.testScheduler.runCurrent()
+        assertEquals(1, proposalListCalls)
+    }
+
+    @When("abro {string}")
+    fun openPendingProposalView(view: String) {
+        assertTrue(view == "Trabajos" || view == "conversación 93")
+        detailView = view
+    }
+
+    @Then("veo un indicador de carga de propuestas")
+    fun proposalLoadingIsVisible() {
+        assertTrue(requireNotNull(pendingProposalList).isActive)
+        assertTrue(viewModel.uiState.value.loading)
+        assertEquals(null, viewModel.uiState.value.proposalInConversation(93))
+    }
+
+    @And("no veo un mensaje de que no hay propuestas")
+    fun noPrematureEmptyMessage() {
+        assertTrue(viewModel.uiState.value.loading)
+        assertTrue(viewModel.uiState.value.visibleProposals.isEmpty())
     }
 }

@@ -41,6 +41,17 @@ import java.util.TimeZone
 class ServiceProposalListScreenTest {
     @get:Rule val compose = createComposeRule()
 
+    @Test fun `pending proposals show a progress indicator without empty copy`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        compose.setContent {
+            LoresuelvoTheme {
+                ServiceProposalListScreen(ServiceProposalListUiState(), {}, {}, {})
+            }
+        }
+        compose.onNodeWithTag("proposal_list_loading_indicator").assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.proposal_list_empty)).assertDoesNotExist()
+    }
+
     @Test fun `proposal card shows Argentine amount and local visit`() {
         val previousLocale = Locale.getDefault()
         val previousZone = TimeZone.getDefault()

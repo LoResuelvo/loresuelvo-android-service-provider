@@ -110,7 +110,6 @@ Característica: Visualizar propuestas de servicio como prestador
     Entonces el resumen del chat muestra la propuesta 23 del listado actualizado
     Y se conserva la confirmación de envío exitoso existente
 
-  @wip
   Esquema del escenario: 11-PVP Mostrar la carga sin indicar que no hay propuestas
     Dado que la consulta de propuestas todavía no terminó
     Cuando abro "<vista>"
