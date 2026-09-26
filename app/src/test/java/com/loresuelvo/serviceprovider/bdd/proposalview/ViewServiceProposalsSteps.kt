@@ -44,6 +44,7 @@ class ViewServiceProposalsSteps {
     private var previousZone: TimeZone? = null
     private var detailProposal: ServiceProposalSummary? = null
     private var detailView = ""
+    private var historyPosition = -1
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -328,5 +329,38 @@ class ViewServiceProposalsSteps {
     @And("no puedo aceptar, rechazar, pagar ni calificar la propuesta")
     fun detailIsReadOnly() {
         assertEquals(12, requireNotNull(detailProposal).id)
+    }
+
+    @Given("que abrí un detalle desde la pestaña {string} después de desplazarme hasta la propuesta 42")
+    fun openScrolledAcceptedDetail(tab: String) {
+        assertEquals("Aceptadas", tab)
+        val accepted = summaries(listOf(mapOf(
+            "id" to "1", "estado" to "accepted",
+            "fecha de creación" to "2026-09-21T12:00:00Z",
+            "fecha de visita" to "2026-10-05T12:00:00Z",
+        ))).single()
+        proposals = (1..60).map { accepted.copy(id = it) }
+        openJobs()
+        viewModel.select(ProposalTab.Accepted)
+        historyPosition = viewModel.uiState.value.visibleProposals.indexOfFirst { it.id == 42 }
+        assertTrue(historyPosition > 0)
+        detailProposal = viewModel.uiState.value.visibleProposals[historyPosition]
+    }
+
+    @When("cierro el detalle con la acción Atrás")
+    fun dismissHistoryDetail() {
+        assertEquals(42, requireNotNull(detailProposal).id)
+        detailProposal = null
+    }
+
+    @Then("la pestaña {string} sigue seleccionada")
+    fun historyTabRemainsSelected(tab: String) {
+        assertEquals("Aceptadas", tab)
+        assertEquals(ProposalTab.Accepted, viewModel.uiState.value.selectedTab)
+    }
+
+    @And("la propuesta 42 permanece en la misma posición visible")
+    fun historyPositionRemains() {
+        assertEquals(historyPosition, viewModel.uiState.value.visibleProposals.indexOfFirst { it.id == 42 })
     }
 }

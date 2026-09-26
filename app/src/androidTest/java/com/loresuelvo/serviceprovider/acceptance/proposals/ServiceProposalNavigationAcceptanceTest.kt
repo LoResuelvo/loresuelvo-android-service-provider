@@ -15,12 +15,15 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import android.graphics.Bitmap
 import android.graphics.Color
 import java.io.File
 import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.espresso.Espresso
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.category.Category
@@ -67,6 +70,38 @@ class ServiceProposalNavigationAcceptanceTest {
         compose.onNodeWithText(activity.getString(R.string.proposal_detail_conversation))
             .performScrollTo().performClick()
         compose.onNodeWithText("Conversation 93").assertIsDisplayed()
+    }
+
+    @Test fun back_from_detail_keeps_accepted_tab_and_history_position() {
+        compose.setContent {
+            var selectedTab by androidx.compose.runtime.remember {
+                mutableStateOf(com.loresuelvo.serviceprovider.ui.proposals.ProposalTab.Pending)
+            }
+            ServiceProposalListScreen(
+                state = ServiceProposalListUiState(
+                    selectedTab = selectedTab,
+                    proposals = (1..60).map { proposal(it).copy(status = ServiceProposalStatus.Accepted) },
+                    loading = false,
+                ),
+                onSelectTab = { selectedTab = it }, onRetry = {}, onBack = {},
+            )
+        }
+        val activity = compose.activity
+        val accepted = activity.getString(R.string.proposal_list_accepted)
+        val item = activity.getString(R.string.proposal_list_item, 42)
+        compose.onNodeWithText(accepted).performClick()
+        compose.onNodeWithTag("proposal_list_items").performScrollToNode(hasText(item))
+        compose.onNodeWithTag("proposal_detail_open_42").performScrollTo()
+        val before = compose.onNodeWithText(item).fetchSemanticsNode().boundsInRoot.top
+        compose.onNodeWithTag("proposal_detail_open_42").performClick()
+        compose.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()
+        Espresso.pressBack()
+        compose.onNode(
+            hasText(accepted) and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab),
+        ).assertIsSelected()
+        compose.onNodeWithText(item).assertIsDisplayed()
+        val after = compose.onNodeWithText(item).fetchSemanticsNode().boundsInRoot.top
+        org.junit.Assert.assertEquals(before, after, 1f)
     }
 
     @Test fun opens_pending_proposals_from_home_and_returns_to_home() {

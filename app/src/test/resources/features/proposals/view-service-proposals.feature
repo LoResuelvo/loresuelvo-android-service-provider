@@ -61,7 +61,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | Trabajos         | 60      | 1 hora            |
       | resumen del chat | 90      | 1 hora 30 minutos |
 
-  @wip
   Escenario: 05-PVP Volver al mismo lugar del historial
     Dado que abrí un detalle desde la pestaña "Aceptadas" después de desplazarme hasta la propuesta 42
     Cuando cierro el detalle con la acción Atrás

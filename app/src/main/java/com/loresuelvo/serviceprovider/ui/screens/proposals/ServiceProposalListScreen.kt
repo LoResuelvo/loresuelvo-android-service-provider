@@ -142,7 +142,9 @@ private fun ProposalCard(proposal: ServiceProposalSummary, onClick: () -> Unit) 
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
-            TextButton(onClick = onClick) { Text(stringResource(R.string.proposal_detail_open)) }
+            TextButton(onClick = onClick, modifier = Modifier.testTag("proposal_detail_open_${proposal.id}")) {
+                Text(stringResource(R.string.proposal_detail_open))
+            }
         }
     }
 }
