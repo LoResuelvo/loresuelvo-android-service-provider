@@ -154,7 +154,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | Trabajos        |
       | conversación 93 |
 
-  @wip
   Esquema del escenario: 15-PVP Ocultar las propuestas privadas al vencer la sesión
     Dado que anteriormente cargué mis propuestas en "<vista>"
     Y mi sesión venció

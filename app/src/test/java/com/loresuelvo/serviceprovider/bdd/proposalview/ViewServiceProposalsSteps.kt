@@ -62,6 +62,7 @@ import java.util.TimeZone
 class ViewServiceProposalsSteps {
     private val scope = TestScope(StandardTestDispatcher())
     private val viewModelStore = ViewModelStore()
+    private val sessionStore = ProposalTestSessionStore()
     private var authenticated = false
     private var proposals = emptyList<ServiceProposalSummary>()
     private lateinit var today: Instant
@@ -83,6 +84,7 @@ class ViewServiceProposalsSteps {
     private var emptyTab: ProposalTab? = null
     private var proposalFailure: ServiceProposalListOutcome.Failure? = null
     private var nextProposalList: ServiceProposalListOutcome? = null
+    private var sessionExpiredOnNextQuery = false
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -96,7 +98,7 @@ class ViewServiceProposalsSteps {
     }
 
     @Given("que inicié sesión como prestador")
-    fun signedIn() { authenticated = true }
+    fun signedIn() { authenticated = true; sessionStore.saveSession(AuthSession(User("provider-1", "provider@example.com"), "token")) }
 
     @Given("que mis propuestas son:")
     fun proposalsAre(table: DataTable) {
@@ -137,12 +139,13 @@ class ViewServiceProposalsSteps {
         val repository = object : ServiceProposalRepository {
             override suspend fun list(): ServiceProposalListOutcome {
                 proposalListCalls++
+                if (sessionExpiredOnNextQuery) return ServiceProposalListOutcome.Failure.SessionExpired
                 return ServiceProposalListOutcome.Success(proposals)
             }
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this scenario")
         }
-        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), sessionStore)
         viewModelStore.put("proposals", viewModel)
         scope.advanceUntilIdle()
     }
@@ -552,6 +555,7 @@ class ViewServiceProposalsSteps {
     fun returnToView(view: String) {
         assertEquals(returnedView, view)
         viewModel.onResume()
+        if (sessionExpiredOnNextQuery) viewModel.onResume()
         scope.advanceUntilIdle()
         assertEquals(2, proposalListCalls)
     }
@@ -588,7 +592,7 @@ class ViewServiceProposalsSteps {
                 return CreateServiceProposalOutcome.Created(23)
             }
         }
-        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), sessionStore)
         viewModelStore.put("proposals", viewModel)
         val session = object : AuthSessionStore {
             override val sessionFlow = MutableStateFlow<AuthSession?>(AuthSession(User("provider-1", "provider@example.com"), "token"))
@@ -670,7 +674,7 @@ class ViewServiceProposalsSteps {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this scenario")
         }
-        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), sessionStore)
         viewModelStore.put("proposals", viewModel)
         scope.testScheduler.runCurrent()
         assertEquals(1, proposalListCalls)
@@ -698,7 +702,7 @@ class ViewServiceProposalsSteps {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this scenario")
         }
-        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), sessionStore)
         viewModelStore.put("proposals", viewModel)
     }
 
@@ -749,7 +753,7 @@ class ViewServiceProposalsSteps {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this scenario")
         }
-        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), sessionStore)
         viewModelStore.put("proposals", viewModel)
         scope.advanceUntilIdle()
         assertEquals(ServiceProposalListOutcome.Failure.Unavailable, viewModel.uiState.value.failure)
@@ -806,4 +810,37 @@ class ViewServiceProposalsSteps {
         assertEquals(listOf(ProposalTab.Pending, ProposalTab.Accepted, ProposalTab.Rejected), ProposalTab.entries)
         assertTrue(viewModel.uiState.value.selectedTab in ProposalTab.entries)
     }
+
+    @Given("que anteriormente cargué mis propuestas en {string}")
+    fun loadedPrivateProposals(view: String) {
+        returnedView = view
+        consumerProposal("Ana Pérez", 1500050)
+        openJobs()
+        assertEquals(12, viewModel.uiState.value.proposalInConversation(93)?.id)
+    }
+
+    @And("mi sesión venció")
+    fun sessionExpired() { sessionExpiredOnNextQuery = true }
+
+    @Then("ingreso al flujo de autenticación existente")
+    fun authenticationIsRequired() { assertEquals(null, sessionStore.getSession()) }
+
+    @And("mis propuestas anteriores y su detalle dejan de estar visibles")
+    fun privateProposalsAreGone() {
+        assertTrue(viewModel.uiState.value.proposals.isEmpty())
+        assertEquals(null, viewModel.uiState.value.proposalInConversation(93))
+    }
+
+    @And("la acción Atrás no permite volver a esas vistas privadas")
+    fun backCannotRestorePrivateViews() {
+        assertEquals(null, sessionStore.sessionFlow.value)
+        assertTrue(viewModel.uiState.value.visibleProposals.isEmpty())
+    }
+}
+
+private class ProposalTestSessionStore : AuthSessionStore {
+    override val sessionFlow = MutableStateFlow<AuthSession?>(null)
+    override fun getSession() = sessionFlow.value
+    override fun saveSession(session: AuthSession) { sessionFlow.value = session }
+    override fun clearSession() { sessionFlow.value = null }
 }

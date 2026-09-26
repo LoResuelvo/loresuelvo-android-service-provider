@@ -22,6 +22,20 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupCurrentAccountRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupPaymentAccountRepository
 import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupSessionStore
+import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupServiceProposalRepository
+import com.loresuelvo.serviceprovider.acceptance.auth.ProviderSignupConversationRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
+import com.loresuelvo.serviceprovider.domain.conversation.Conversation
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
+import com.loresuelvo.serviceprovider.ui.screens.messages.components.PROVIDER_MESSAGES_ROW_TAG_PREFIX
+import androidx.test.espresso.Espresso
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
@@ -60,6 +74,8 @@ class ProviderProfileNavigationAcceptanceTest {
     private lateinit var currentAccountRepository: ProviderSignupCurrentAccountRepository
     private lateinit var paymentAccountRepository: ProviderSignupPaymentAccountRepository
     private lateinit var paymentBrowserLauncher: TestPaymentAccountBrowserLauncher
+    private lateinit var proposalRepository: ProviderSignupServiceProposalRepository
+    private lateinit var conversationRepository: ProviderSignupConversationRepository
 
     @Before
     fun setUp() {
@@ -73,6 +89,8 @@ class ProviderProfileNavigationAcceptanceTest {
         currentAccountRepository.outcome = CurrentAccountOutcome.Success(provider())
         paymentAccountRepository = entryPoint.paymentAccountRepository()
         paymentBrowserLauncher = entryPoint.paymentBrowserLauncher()
+        proposalRepository = entryPoint.proposalRepository()
+        conversationRepository = entryPoint.conversationRepository()
         paymentAccountRepository.outcome = PaymentAccountStatusOutcome.Success(
             PaymentAccountStatus(ConnectionStatus.PENDING),
         )
@@ -289,6 +307,61 @@ class ProviderProfileNavigationAcceptanceTest {
         composeTestRule.onNodeWithText("Carlos Gómez").assertDoesNotExist()
     }
 
+    @Test
+    fun expired_session_removes_proposal_detail_and_back_stack() {
+        proposalRepository.listed = listOf(ServiceProposalSummary(
+            12, 93, 1500050, 1L, "Inspect sink", 45, ServiceProposalStatus.Pending, 1L,
+            ServiceProposalCounterpart(7, "consumer", "Ana", "Pérez", null, null),
+            ServiceProposalBookingTerms("ARS", 1500050, 1000, 1499050, 500, 100, 400,
+                1100, 1499450, 1500550, 1L),
+        ))
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.proposal_home_view_all))
+            .performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("proposal_detail_open_12").performClick()
+        composeTestRule.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()
+
+        sessionStore.clearSession()
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.welcome_login))
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.proposal_list_item, 12))
+            .assertDoesNotExist()
+        Espresso.pressBackUnconditionally()
+        org.junit.Assert.assertNotEquals(Lifecycle.State.RESUMED, composeTestRule.activityRule.scenario.state)
+        org.junit.Assert.assertEquals(null, sessionStore.getSession())
+    }
+
+    @Test
+    fun expired_session_removes_chat_proposal_and_back_stack() {
+        val counterpart = ConversationCounterpart(7, "Ana", "Pérez", null)
+        conversationRepository.outcome = ConversationsOutcome.Success(listOf(
+            Conversation(93, ConversationStatus.Active, counterpart, null, 1L),
+        ))
+        conversationRepository.detailOutcome = ConversationDetailOutcome.Success(
+            ConversationDetail(93, ConversationStatus.Active, counterpart, emptyList(), 1L),
+        )
+        proposalRepository.listed = listOf(ServiceProposalSummary(
+            12, 93, 1500050, 1L, "Inspect sink", 45, ServiceProposalStatus.Pending, 1L,
+            ServiceProposalCounterpart(7, "consumer", "Ana", "Pérez", null, null),
+            ServiceProposalBookingTerms("ARS", 1500050, 1000, 1499050, 500, 100, 400,
+                1100, 1499450, 1500550, 1L),
+        ))
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + 93).performClick()
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.proposal_detail_chat_summary))
+            .assertIsDisplayed()
+
+        sessionStore.clearSession()
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.welcome_login))
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.proposal_detail_chat_summary))
+            .assertDoesNotExist()
+        Espresso.pressBackUnconditionally()
+        org.junit.Assert.assertNotEquals(Lifecycle.State.RESUMED, composeTestRule.activityRule.scenario.state)
+        org.junit.Assert.assertEquals(null, sessionStore.getSession())
+    }
+
     private fun openProfileFrom(destination: Route) {
         composeTestRule
             .onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + destination.path)
@@ -388,4 +461,8 @@ interface ProviderProfileNavigationTestEntryPoint {
     fun paymentAccountRepository(): ProviderSignupPaymentAccountRepository
 
     fun paymentBrowserLauncher(): TestPaymentAccountBrowserLauncher
+
+    fun proposalRepository(): ProviderSignupServiceProposalRepository
+
+    fun conversationRepository(): ProviderSignupConversationRepository
 }

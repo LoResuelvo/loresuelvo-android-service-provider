@@ -1,5 +1,10 @@
 package com.loresuelvo.serviceprovider.acceptance.proposals
 
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.User
+import kotlinx.coroutines.flow.MutableStateFlow
+
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
@@ -78,7 +83,7 @@ class ServiceProposalNavigationAcceptanceTest {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this test")
         }
-        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), ProposalTestSessionStore())
         compose.setContent { ServiceProposalListRoute(onBack = {}, onConversation = {}, viewModel = viewModel) }
         val activity = compose.activity
         compose.onNodeWithText(activity.getString(R.string.proposal_list_error)).assertIsDisplayed()
@@ -97,7 +102,7 @@ class ServiceProposalNavigationAcceptanceTest {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this test")
         }
-        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), ProposalTestSessionStore())
         val message = ConversationMessage(1, ConversationSender.Consumer, "Hola", 1L)
         val chat = ProviderConversationUiState.Ready(
             detail = ConversationDetail(93, ConversationStatus.Active,
@@ -134,7 +139,7 @@ class ServiceProposalNavigationAcceptanceTest {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this test")
         }
-        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), ProposalTestSessionStore())
         compose.setContent { ServiceProposalListRoute(onBack = {}, onConversation = {}, viewModel = viewModel) }
         val labels = listOf(
             R.string.proposal_list_pending,
@@ -166,7 +171,7 @@ class ServiceProposalNavigationAcceptanceTest {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Creation is outside this test")
         }
-        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository))
+        val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), ProposalTestSessionStore())
         compose.setContent {
             ServiceProposalListRoute(onBack = {}, onConversation = {}, viewModel = viewModel)
         }
@@ -358,4 +363,11 @@ class ServiceProposalNavigationAcceptanceTest {
             Instant.parse("2026-09-30T12:00:00Z").toEpochMilli(),
         ),
     )
+}
+
+private class ProposalTestSessionStore : AuthSessionStore {
+    override val sessionFlow = MutableStateFlow<AuthSession?>(AuthSession(User("provider-1", "provider@example.com"), "token"))
+    override fun getSession() = sessionFlow.value
+    override fun saveSession(session: AuthSession) { sessionFlow.value = session }
+    override fun clearSession() { sessionFlow.value = null }
 }

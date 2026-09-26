@@ -176,11 +176,13 @@ class ProviderSignupServiceProposalRepository : ServiceProposalRepository {
     val created = mutableListOf<ValidatedServiceProposal>()
     var listed = emptyList<com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary>()
     var listCalls = 0
+    var listFailure: com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Failure? = null
     var outcome: CreateServiceProposalOutcome = CreateServiceProposalOutcome.Created(9)
     var pending: kotlinx.coroutines.CompletableDeferred<CreateServiceProposalOutcome>? = null
 
     override suspend fun list(): com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome {
         listCalls++
+        listFailure?.let { return it }
         return com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome.Success(listed)
     }
 

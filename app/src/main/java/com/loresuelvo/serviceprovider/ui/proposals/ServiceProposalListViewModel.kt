@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
@@ -36,13 +37,27 @@ data class ServiceProposalListUiState(
 @HiltViewModel
 class ServiceProposalListViewModel @Inject constructor(
     private val getServiceProposals: GetServiceProposalsUseCase,
+    private val sessionStore: AuthSessionStore,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ServiceProposalListUiState())
     val uiState: StateFlow<ServiceProposalListUiState> = _uiState.asStateFlow()
     private var loadJob: Job? = null
     private var initialResumePending = true
 
-    init { load() }
+    private var activeSession = sessionStore.getSession()
+
+    init {
+        viewModelScope.launch {
+            sessionStore.sessionFlow.collect { session ->
+                if (session != activeSession) {
+                    activeSession = session
+                    loadJob?.cancel()
+                    _uiState.value = ServiceProposalListUiState(loading = false)
+                }
+            }
+        }
+        load()
+    }
 
     fun select(tab: ProposalTab) { _uiState.update { it.copy(selectedTab = tab) } }
 
@@ -56,9 +71,21 @@ class ServiceProposalListViewModel @Inject constructor(
 
     fun load() {
         if (loadJob?.isActive == true) return
+        val requestSession = sessionStore.getSession()
+        if (requestSession == null) {
+            _uiState.value = ServiceProposalListUiState(loading = false)
+            sessionStore.clearSession()
+            return
+        }
         _uiState.update { it.copy(loading = true, failure = null) }
         loadJob = viewModelScope.launch {
             val result = getServiceProposals()
+            if (sessionStore.getSession() != requestSession) return@launch
+            if (result == ServiceProposalListOutcome.Failure.SessionExpired) {
+                _uiState.value = ServiceProposalListUiState(loading = false)
+                sessionStore.clearSession()
+                return@launch
+            }
             _uiState.update { state ->
                 when (result) {
                     is ServiceProposalListOutcome.Success -> state.copy(
