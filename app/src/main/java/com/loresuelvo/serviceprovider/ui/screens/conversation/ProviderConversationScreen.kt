@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -40,6 +42,9 @@ import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.ui.screens.proposals.ProposalDetailSheet
+import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalAmount
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.ChatInputBar
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MediaAttachSheet
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MessageBubble
@@ -81,6 +86,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProviderConversationScreen(
     state: ProviderConversationUiState,
+    serviceProposal: ServiceProposalSummary? = null,
     onPromptChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onRetrySendFailedBubble: (String) -> Unit,
@@ -101,6 +107,7 @@ fun ProviderConversationScreen(
     modifier: Modifier = Modifier,
 ) {
     var attachSheetVisible by remember { mutableStateOf(false) }
+    var detailVisible by remember { mutableStateOf(false) }
     val snackbarHostState = proposalSnackbarHostState ?: remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -128,6 +135,7 @@ fun ProviderConversationScreen(
     Scaffold(
         modifier = modifier.testTag(PROVIDER_CONVERSATION_READY_TAG),
         topBar = {
+            Column {
             TopAppBar(
                 title = {
                     if (state is ProviderConversationUiState.Ready) {
@@ -151,6 +159,15 @@ fun ProviderConversationScreen(
                     }
                 },
             )
+            if (state is ProviderConversationUiState.Ready && serviceProposal != null) {
+                Card(onClick = { detailVisible = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(stringResource(R.string.proposal_detail_chat_summary))
+                        Text(proposalAmount(serviceProposal.amountCents))
+                    }
+                }
+            }
+            }
         },
         bottomBar = {
             if (state is ProviderConversationUiState.Ready) {
@@ -201,6 +218,13 @@ fun ProviderConversationScreen(
             onCaptureFromCamera = onCaptureFromCamera,
             onDismiss = { attachSheetVisible = false },
             onCreateProposal = onCreateProposal.takeIf { state.canCreateProposal() },
+        )
+    }
+    if (detailVisible && serviceProposal != null) {
+        ProposalDetailSheet(
+            proposal = serviceProposal,
+            onDismiss = { detailVisible = false },
+            onConversation = { detailVisible = false },
         )
     }
 

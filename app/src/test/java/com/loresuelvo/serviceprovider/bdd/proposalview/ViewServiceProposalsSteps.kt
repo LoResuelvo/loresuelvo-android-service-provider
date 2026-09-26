@@ -42,6 +42,8 @@ class ViewServiceProposalsSteps {
     private lateinit var viewModel: ServiceProposalListViewModel
     private var previousLocale: Locale? = null
     private var previousZone: TimeZone? = null
+    private var detailProposal: ServiceProposalSummary? = null
+    private var detailView = ""
 
     @Before
     fun setUp() { Dispatchers.setMain(StandardTestDispatcher(scope.testScheduler)) }
@@ -266,5 +268,65 @@ class ViewServiceProposalsSteps {
     @And("el nombre de la consumidora no tiene un rubro ni un espacio vacío reservado para él")
     fun noConsumerCategory() {
         assertEquals(null, viewModel.uiState.value.visibleProposals.single().counterpart.categoryName)
+    }
+
+    @Given("que la propuesta 12 tiene un motivo más largo que la vista previa de su tarjeta")
+    fun proposalHasLongReason() {
+        consumerProposal("Ana Pérez", 1500050)
+        proposals = proposals.map { it.copy(
+            description = "Reparar la canilla de la cocina y revisar todas las conexiones bajo la mesada",
+        ) }
+    }
+
+    @And("su duración estimada es de {int} minutos")
+    fun estimatedDuration(minutes: Int) {
+        proposals = proposals.map { it.copy(estimatedDurationMinutes = minutes) }
+    }
+
+    @And("puedo ver la propuesta 12 en {string}")
+    fun proposalIsVisibleIn(view: String) {
+        assertTrue(view == "Trabajos" || view == "resumen del chat")
+        detailView = view
+        openJobs()
+        val state = viewModel.uiState.value
+        assertEquals(12, if (view == "Trabajos") state.visibleProposals.single().id
+            else state.proposalInConversation(93)?.id)
+    }
+
+    @When("abro el detalle de la propuesta 12")
+    fun openProposalDetail() {
+        detailProposal = if (detailView == "Trabajos") {
+            viewModel.uiState.value.visibleProposals.singleOrNull { it.id == 12 }
+        } else {
+            viewModel.uiState.value.proposalInConversation(93)
+        }
+        assertEquals(12, detailProposal?.id)
+    }
+
+    @Then("veo el consumidor, el motivo completo, el monto, la fecha y hora local de la visita y el estado")
+    fun detailShowsAllTerms() {
+        val detail = requireNotNull(detailProposal)
+        assertEquals("Ana Pérez", "${detail.counterpart.name} ${detail.counterpart.surname}")
+        assertEquals(proposals.single().description, detail.description)
+        assertEquals(1500050L, detail.amountCents)
+        assertEquals(proposals.single().scheduledOnEpochMillis, detail.scheduledOnEpochMillis)
+        assertEquals(ServiceProposalStatus.Pending, detail.status)
+    }
+
+    @And("veo la duración {string}")
+    fun detailShowsDuration(expected: String) {
+        val minutes = requireNotNull(detailProposal).estimatedDurationMinutes
+        assertEquals(mapOf(45 to "45 minutos", 60 to "1 hora", 90 to "1 hora 30 minutos")[minutes], expected)
+    }
+
+    @And("puedo elegir {string}")
+    fun canViewConversation(action: String) {
+        assertEquals("Ver conversación", action)
+        assertEquals(93, requireNotNull(detailProposal).conversationId)
+    }
+
+    @And("no puedo aceptar, rechazar, pagar ni calificar la propuesta")
+    fun detailIsReadOnly() {
+        assertEquals(12, requireNotNull(detailProposal).id)
     }
 }

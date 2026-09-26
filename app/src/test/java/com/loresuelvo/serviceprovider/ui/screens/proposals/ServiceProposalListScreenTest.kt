@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.screens.proposals
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -9,7 +10,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.semantics.Role
@@ -78,6 +82,32 @@ class ServiceProposalListScreenTest {
         }
     }
 
+    @Test fun `opening a card shows the complete reason and duration without payment actions`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val reason = "Reparar la canilla de la cocina y revisar todas las conexiones bajo la mesada"
+        compose.setContent {
+            LoresuelvoTheme {
+                ServiceProposalListScreen(
+                    ServiceProposalListUiState(proposals = listOf(proposal(12).copy(
+                        description = reason, estimatedDurationMinutes = 90,
+                    )), loading = false),
+                    onSelectTab = {}, onRetry = {}, onBack = {},
+                )
+            }
+        }
+        compose.onNodeWithTag("proposal_list_items").performScrollToNode(hasText(context.getString(R.string.proposal_detail_open)))
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_open)).performClick()
+        compose.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_hours_minutes, 1, 30))
+            .assertExists()
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_conversation))
+            .assertHasClickAction()
+        compose.onNodeWithText("Aceptar").assertDoesNotExist()
+        compose.onNodeWithText("Rechazar").assertDoesNotExist()
+        compose.onNodeWithText("Pagar").assertDoesNotExist()
+        compose.onNodeWithText("Calificar").assertDoesNotExist()
+    }
+
     @Test fun `missing and inaccessible photos leave consumer initials visible`() {
         val proposalState = mutableStateOf(proposal(12))
         compose.setContent {
@@ -95,6 +125,35 @@ class ServiceProposalListScreenTest {
             ))
         }
         compose.onNodeWithText("AP").assertIsDisplayed()
+    }
+
+    @Test fun `removed detail does not reopen when its ID appears in a later list`() {
+        val state = mutableStateOf(ServiceProposalListUiState(proposals = listOf(proposal(12)), loading = false))
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        compose.setContent {
+            LoresuelvoTheme {
+                ServiceProposalListScreen(state.value, onSelectTab = {}, onRetry = {}, onBack = {})
+            }
+        }
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_open)).performClick()
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_conversation)).assertExists()
+        compose.runOnIdle { state.value = state.value.copy(proposals = emptyList()) }
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_conversation)).assertDoesNotExist()
+        compose.runOnIdle { state.value = state.value.copy(proposals = listOf(proposal(12))) }
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_conversation)).assertDoesNotExist()
+    }
+
+    @Test
+    @Config(qualifiers = "es-rAR", sdk = [34])
+    fun `duration uses natural Spanish for 45 60 and 90 minutes`() {
+        compose.setContent {
+            Column {
+                listOf(45, 60, 90).forEach { Text(durationText(it)) }
+            }
+        }
+        listOf("45 minutos", "1 hora", "1 hora 30 minutos").forEach {
+            compose.onNodeWithText(it).assertExists()
+        }
     }
 
     @Test fun `pending tab and ordered proposal cards are visible`() {

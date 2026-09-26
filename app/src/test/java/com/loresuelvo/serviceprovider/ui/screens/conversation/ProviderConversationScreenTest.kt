@@ -19,6 +19,10 @@ import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutc
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -33,6 +37,29 @@ class ProviderConversationScreenTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test fun chat_summary_opens_the_shared_read_only_detail() {
+        val proposal = ServiceProposalSummary(
+            12, 42, 1500050, 1791150600000L,
+            "Reparar la canilla de la cocina y revisar todas las conexiones bajo la mesada",
+            90, ServiceProposalStatus.Pending, 0L,
+            ServiceProposalCounterpart(7, "consumer", "Ana", "Pérez", null, null),
+            ServiceProposalBookingTerms("ARS", 1500050, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+        )
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(""), serviceProposal = proposal,
+                    onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                    onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithText("Propuesta de servicio").performClick()
+        composeTestRule.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()
+        composeTestRule.onNodeWithText("1 hora 30 minutos").assertExists()
+        composeTestRule.onNodeWithText("Ver conversación").assertExists()
+    }
 
     @Test
     fun active_chat_offers_proposal_after_media_actions() {

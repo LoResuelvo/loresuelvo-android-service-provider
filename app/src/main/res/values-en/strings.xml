@@ -14,6 +14,13 @@
     <string name="proposal_list_avatar">Photo of %1$s</string>
     <string name="proposal_list_visit_pattern">MMMM d, yyyy \'at\' HH:mm</string>
     <string name="proposal_list_amount">ARS %1$s</string>
+    <string name="proposal_detail_duration">Estimated duration</string>
+    <string name="proposal_detail_minutes">%1$d minutes</string>
+    <string name="proposal_detail_hours">%1$d hour</string>
+    <string name="proposal_detail_hours_minutes">%1$d hour %2$d minutes</string>
+    <string name="proposal_detail_conversation">View conversation</string>
+    <string name="proposal_detail_open">View details</string>
+    <string name="proposal_detail_chat_summary">Service proposal</string>
     <string name="proposal_status_pending">Pending</string>
     <string name="proposal_status_accepted">Accepted</string>
     <string name="proposal_status_rejected">Rejected</string>

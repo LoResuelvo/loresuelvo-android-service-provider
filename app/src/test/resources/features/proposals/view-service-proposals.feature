@@ -46,7 +46,6 @@ Característica: Visualizar propuestas de servicio como prestador
       | ausente                  | las iniciales AP |
       | inaccesible por un error | las iniciales AP |
 
-  @wip
   Esquema del escenario: 04-PVP Ver el detalle completo de una propuesta
     Dado que la propuesta 12 tiene un motivo más largo que la vista previa de su tarjeta
     Y su duración estimada es de <minutos> minutos

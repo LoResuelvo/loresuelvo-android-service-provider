@@ -137,7 +137,14 @@ fun LoResuelvoNav(
                                 }
                             },
                             serviceProposals = {
-                                ServiceProposalListRoute(onBack = { navController.popBackStack() })
+                                ServiceProposalListRoute(
+                                    onBack = { navController.popBackStack() },
+                                    onConversation = { conversationId ->
+                                        navController.navigate(Route.Conversation.buildPath(conversationId)) {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                )
                             },
                             messages = {
                                 ProviderMessagesRoute(

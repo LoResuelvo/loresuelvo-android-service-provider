@@ -18,11 +18,15 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,18 +36,15 @@ import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
-import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.math.BigDecimal
 
 @Composable
 fun ServiceProposalListRoute(
     onBack: () -> Unit,
+    onConversation: (Int) -> Unit,
     viewModel: ServiceProposalListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ServiceProposalListScreen(state, viewModel::select, viewModel::load, onBack)
+    ServiceProposalListScreen(state, viewModel::select, viewModel::load, onBack, onConversation)
 }
 
 @Composable
@@ -52,7 +53,13 @@ fun ServiceProposalListScreen(
     onSelectTab: (ProposalTab) -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
+    onConversation: (Int) -> Unit = {},
 ) {
+    var selectedProposalId by rememberSaveable { mutableStateOf<Int?>(null) }
+    LaunchedEffect(state.loading, state.proposals, selectedProposalId) {
+        if (!state.loading && selectedProposalId != null &&
+            state.proposals.none { it.id == selectedProposalId }) selectedProposalId = null
+    }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -85,17 +92,26 @@ fun ServiceProposalListScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                 ) {
                     items(state.visibleProposals, key = { it.id }) { proposal ->
-                        ProposalCard(proposal)
+                        ProposalCard(proposal) { selectedProposalId = proposal.id }
                     }
                 }
             }
         }
     }
+    state.proposals.firstOrNull { it.id == selectedProposalId }?.let { proposal ->
+        ProposalDetailSheet(
+            proposal = proposal,
+            onDismiss = { selectedProposalId = null },
+            onConversation = {
+                selectedProposalId = null
+                onConversation(proposal.conversationId)
+            },
+        )
+    }
 }
 
 @Composable
-private fun ProposalCard(proposal: ServiceProposalSummary) {
-    val locale = LocalConfiguration.current.locales[0]
+private fun ProposalCard(proposal: ServiceProposalSummary, onClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -112,16 +128,9 @@ private fun ProposalCard(proposal: ServiceProposalSummary) {
                     Text(stringResource(R.string.proposal_list_item, proposal.id))
                 }
             }
-            Text(proposal.description)
-            Text(stringResource(
-                R.string.proposal_list_amount,
-                NumberFormat.getNumberInstance(locale).apply {
-                    minimumFractionDigits = 2
-                    maximumFractionDigits = 2
-                }.format(BigDecimal.valueOf(proposal.amountCents, 2)),
-            ))
-            Text(SimpleDateFormat(stringResource(R.string.proposal_list_visit_pattern), locale)
-                .format(Date(proposal.scheduledOnEpochMillis)))
+            Text(proposal.description, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(proposalAmount(proposal.amountCents))
+            Text(proposalVisit(proposal.scheduledOnEpochMillis))
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 shape = MaterialTheme.shapes.small,
@@ -133,6 +142,7 @@ private fun ProposalCard(proposal: ServiceProposalSummary) {
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             }
+            TextButton(onClick = onClick) { Text(stringResource(R.string.proposal_detail_open)) }
         }
     }
 }
@@ -141,10 +151,4 @@ private fun ProposalTab.labelRes(): Int = when (this) {
     ProposalTab.Pending -> R.string.proposal_list_pending
     ProposalTab.Accepted -> R.string.proposal_list_accepted
     ProposalTab.Rejected -> R.string.proposal_list_rejected
-}
-
-private fun com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus.labelRes(): Int = when (this) {
-    com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus.Pending -> R.string.proposal_status_pending
-    com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus.Accepted -> R.string.proposal_status_accepted
-    com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus.Rejected -> R.string.proposal_status_rejected
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.Text
 import android.graphics.Bitmap
 import android.graphics.Color
 import java.io.File
@@ -42,6 +43,31 @@ import java.time.Instant
 @RunWith(AndroidJUnit4::class)
 class ServiceProposalNavigationAcceptanceTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Test fun detail_opens_its_conversation_from_history() {
+        compose.setContent {
+            val nav = rememberNavController()
+            LoResuelvoNavHost(
+                navController = nav,
+                startDestination = Route.ServiceProposals.path,
+                welcome = {}, professionalProfile = {}, optionalIdentityVerification = {}, home = {},
+                serviceProposals = {
+                    ServiceProposalListScreen(
+                        state = ServiceProposalListUiState(proposals = listOf(proposal(12)), loading = false),
+                        onSelectTab = {}, onRetry = {}, onBack = {},
+                        onConversation = { nav.navigate(Route.Conversation.buildPath(it)) },
+                    )
+                },
+                messages = {}, profile = {}, jobRequestDetail = {},
+                conversation = { Text("Conversation 93") },
+            )
+        }
+        val activity = compose.activity
+        compose.onNodeWithText(activity.getString(R.string.proposal_detail_open)).performClick()
+        compose.onNodeWithText(activity.getString(R.string.proposal_detail_conversation))
+            .performScrollTo().performClick()
+        compose.onNodeWithText("Conversation 93").assertIsDisplayed()
+    }
 
     @Test fun opens_pending_proposals_from_home_and_returns_to_home() {
         compose.setContent {

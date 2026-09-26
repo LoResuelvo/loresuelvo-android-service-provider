@@ -28,6 +28,9 @@ data class ServiceProposalListUiState(
 ) {
     val visibleProposals: List<ServiceProposalSummary>
         get() = proposals.filter { it.status == selectedTab.status }
+
+    fun proposalInConversation(conversationId: Int): ServiceProposalSummary? =
+        proposals.firstOrNull { it.conversationId == conversationId }
 }
 
 @HiltViewModel

@@ -27,6 +27,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.collect
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.navigation.Route
+import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
 
 /**
  * Route composable for `Route.Conversation` on the provider side.
@@ -52,10 +53,12 @@ import com.loresuelvo.serviceprovider.ui.navigation.Route
 @Composable
 fun ProviderConversationRoute(
     navController: NavHostController,
-    @Suppress("UNUSED_PARAMETER") conversationId: Int,
+    conversationId: Int,
 ) {
     val viewModel: ProviderConversationViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val proposalListViewModel: ServiceProposalListViewModel = hiltViewModel()
+    val proposalListState by proposalListViewModel.uiState.collectAsStateWithLifecycle()
     val proposalViewModel: ProviderProposalViewModel = hiltViewModel()
     val proposalState by proposalViewModel.uiState.collectAsStateWithLifecycle()
     val readyConversation = (state as? ProviderConversationUiState.Ready)?.detail
@@ -114,6 +117,8 @@ fun ProviderConversationRoute(
 
     ProviderConversationScreen(
         state = state,
+        // ponytail: 04 has one matching proposal; choose the latest in 07 when multiple are specified.
+        serviceProposal = proposalListState.proposalInConversation(conversationId),
         proposalSnackbarHostState = proposalSnackbarHostState,
         onPromptChange = viewModel::onPromptChange,
         onSendClick = viewModel::onSendClick,
