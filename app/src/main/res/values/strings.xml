@@ -9,6 +9,15 @@
     <string name="provider_turns_status_scheduled">Confirmado</string>
     <string name="provider_turns_status_awaiting_payment">Pendiente de pago</string>
     <string name="provider_turns_status_paid">Pagado</string>
+    <string name="provider_turns_status_unknown">Estado no disponible</string>
+    <string name="provider_turns_detail_title">Detalle del turno</string>
+    <string name="provider_turns_detail_consumer">Consumidor</string>
+    <string name="provider_turns_detail_amount">Monto</string>
+    <string name="provider_turns_detail_date">Fecha</string>
+    <string name="provider_turns_detail_status">Estado</string>
+    <string name="provider_turns_detail_reason">Motivo</string>
+    <string name="provider_turns_view_details">Ver detalles</string>
+    <string name="provider_turns_view_conversation">Ver conversación</string>
     <string name="proposal_home_view_all">Ver todas</string>
     <string name="proposal_list_title">Propuestas</string>
     <string name="proposal_list_back">Volver a Inicio</string>

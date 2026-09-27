@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
@@ -65,6 +67,37 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("Pagado").assertExists()
         compose.onNodeWithTag("provider_turns_list").performScrollToIndex(3)
         compose.onAllNodesWithTag("provider_turn_status_4").fetchSemanticsNodes().isEmpty().let { org.junit.Assert.assertTrue(it) }
+    }
+
+    @Test fun details_action_only_opens_summary() {
+        val order = WorkOrder(7, "Ana Pérez", "A long reason that must remain fully visible in detail",
+            Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), WorkOrderStatus.Scheduled,
+            amountCents = 1500050)
+        var selected: WorkOrder? = null
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), {}, {}, { selected = it })
+        } }
+        compose.onNodeWithTag("provider_turn_7").performClick()
+        org.junit.Assert.assertNull(selected)
+        compose.onNodeWithTag("provider_turn_details_7").performClick()
+        org.junit.Assert.assertEquals(order, selected)
+    }
+
+    @Test fun full_summary_shows_loaded_order_and_only_conversation_action() {
+        val order = WorkOrder(7, "Ana Pérez", "A long reason that must remain fully visible in detail",
+            Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), WorkOrderStatus.Scheduled,
+            amountCents = 1500050)
+        var conversations = 0
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnDetailScreen(order, {}, { conversations++ })
+        } }
+        compose.onNodeWithText(order.description).assertExists()
+        compose.onNodeWithText("Ana Pérez").assertExists()
+        compose.onNodeWithText("ARS 15.000,50").assertExists()
+        compose.onNodeWithText("el 4 de octubre a las 21:30").assertExists()
+        compose.onNodeWithText("Confirmado").assertExists()
+        compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
+        org.junit.Assert.assertEquals(1, conversations)
     }
 
 

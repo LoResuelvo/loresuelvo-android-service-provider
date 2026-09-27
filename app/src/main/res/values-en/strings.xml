@@ -9,6 +9,15 @@
     <string name="provider_turns_status_scheduled">Confirmed</string>
     <string name="provider_turns_status_awaiting_payment">Awaiting payment</string>
     <string name="provider_turns_status_paid">Paid</string>
+    <string name="provider_turns_status_unknown">Status unavailable</string>
+    <string name="provider_turns_detail_title">Appointment details</string>
+    <string name="provider_turns_detail_consumer">Customer</string>
+    <string name="provider_turns_detail_amount">Amount</string>
+    <string name="provider_turns_detail_date">Date</string>
+    <string name="provider_turns_detail_status">Status</string>
+    <string name="provider_turns_detail_reason">Reason</string>
+    <string name="provider_turns_view_details">View details</string>
+    <string name="provider_turns_view_conversation">View conversation</string>
     <string name="proposal_home_view_all">View all</string>
     <string name="proposal_list_title">Proposals</string>
     <string name="proposal_list_back">Back to Home</string>

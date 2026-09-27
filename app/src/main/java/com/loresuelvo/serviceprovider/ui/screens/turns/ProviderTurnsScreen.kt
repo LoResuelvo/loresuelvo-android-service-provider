@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -47,7 +48,8 @@ fun ProviderTurnsRoute(onBack: () -> Unit, viewModel: ProviderTurnsViewModel = h
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit) {
+fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit,
+    onDetails: (WorkOrder) -> Unit = {}) {
     Surface(Modifier.fillMaxSize()) {
         Scaffold(topBar = {
             TopAppBar(
@@ -67,7 +69,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                         Text(stringResource(R.string.provider_turns_empty))
                     } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list")) {
                         items(state.orders, key = { it.id }) { order ->
-                            ProviderTurnCard(order)
+                            ProviderTurnCard(order, onDetails)
                         }
                     }
                 }
@@ -77,7 +79,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
 }
 
 @Composable
-private fun ProviderTurnCard(order: WorkOrder) {
+private fun ProviderTurnCard(order: WorkOrder, onDetails: (WorkOrder) -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val datePattern = stringResource(R.string.provider_turns_visit_pattern)
     Surface(
@@ -100,6 +102,9 @@ private fun ProviderTurnCard(order: WorkOrder) {
             Text(order.description)
             Text(proposalAmount(order.amountCents))
             Text(formatTurnDate(order.scheduledOn, datePattern, locale, TimeZone.getDefault()))
+            OutlinedButton(onClick = { onDetails(order) }, modifier = Modifier.testTag("provider_turn_details_${order.id}")) {
+                Text(stringResource(R.string.provider_turns_view_details))
+            }
         }
     }
 }
