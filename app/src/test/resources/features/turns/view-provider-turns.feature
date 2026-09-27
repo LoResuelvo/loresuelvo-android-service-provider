@@ -96,7 +96,6 @@ Característica: Visualizar turnos como prestador
     Entonces veo un indicador y texto de carga accesibles
     Y no veo un mensaje de lista vacía
 
-  @wip
   Escenario: 11-PVT Mostrar un vacío real
     Dado que la API devuelve una lista de órdenes vacía
     Cuando entro a Turnos

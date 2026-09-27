@@ -140,6 +140,24 @@ class ProviderTurnsSteps {
         assertNotEquals(ProviderTurnsUiState.Ready(emptyList()), viewModel.uiState.value)
     }
 
+    @Given("que la API devuelve una lista de órdenes vacía")
+    fun apiReturnsNoOrders() {
+        Dispatchers.setMain(dispatcher)
+        orders = emptyList()
+    }
+
+    @Then("veo el estado vacío con texto adaptado al prestador")
+    fun seesProviderEmptyState() {
+        assertEquals(ProviderTurnsUiState.Ready(emptyList()), viewModel.uiState.value)
+        assertEquals(1, orderCalls)
+    }
+
+    @And("no veo un indicador de carga ni un error")
+    fun seesNeitherLoadingNorError() {
+        assertNotEquals(ProviderTurnsUiState.Loading, viewModel.uiState.value)
+        assertNotEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
+    }
+
     @Given("que una orden pasada tiene estado {string}")
     fun pastOrderHasStatus(status: String) {
         pastStatus = when (status) {
