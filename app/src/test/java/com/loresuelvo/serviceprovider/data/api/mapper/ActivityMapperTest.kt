@@ -36,6 +36,10 @@ class ActivityMapperTest {
 
         assertEquals(Instant.parse("2026-09-20T15:00:00Z").toEpochMilli(), scheduled.scheduledOn)
         assertEquals("Carlos López", scheduled.consumerName)
+        assertEquals("Carlos", scheduled.consumerGivenName)
+        assertEquals("López", scheduled.consumerSurname)
+        assertEquals(25000, scheduled.amountCents)
+        assertEquals("https://cdn.example/carlos.jpg", scheduled.consumerPhotoUrl)
         assertEquals(WorkOrderStatus.Scheduled, scheduled.status)
         assertEquals(WorkOrderStatus.AwaitingPayment, awaitingPayment.status)
     }
@@ -69,6 +73,7 @@ class ActivityMapperTest {
             role = "consumer",
             name = "Carlos",
             surname = "López",
+            profilePhotoUrl = "https://cdn.example/carlos.jpg",
         ),
     )
 }

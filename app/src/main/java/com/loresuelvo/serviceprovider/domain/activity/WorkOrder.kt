@@ -6,6 +6,10 @@ data class WorkOrder(
     val description: String,
     val scheduledOn: Long,
     val status: WorkOrderStatus,
+    val amountCents: Long = 0,
+    val consumerGivenName: String = consumerName,
+    val consumerSurname: String = "",
+    val consumerPhotoUrl: String? = null,
 )
 
 sealed interface WorkOrderStatus {

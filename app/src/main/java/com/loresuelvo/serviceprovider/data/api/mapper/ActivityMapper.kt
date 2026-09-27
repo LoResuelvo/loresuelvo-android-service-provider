@@ -29,6 +29,10 @@ internal fun WorkOrderSummaryDto.toDomain(): WorkOrder = WorkOrder(
     description = description,
     scheduledOn = scheduledOn.toEpochMillis(),
     status = status.toDomainStatus(),
+    amountCents = amountCents,
+    consumerGivenName = counterpart.name,
+    consumerSurname = counterpart.surname,
+    consumerPhotoUrl = counterpart.profilePhotoUrl,
 )
 
 private fun String.toDomainStatus(): WorkOrderStatus = when (lowercase()) {
