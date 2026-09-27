@@ -4,6 +4,7 @@ import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -33,7 +34,7 @@ class ProviderTurnsViewModelTest {
             override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(orders)
         }
 
-        val viewModel = ProviderTurnsViewModel(repository)
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository))
         assertEquals(ProviderTurnsUiState.Loading, viewModel.uiState.value)
         advanceUntilIdle()
 

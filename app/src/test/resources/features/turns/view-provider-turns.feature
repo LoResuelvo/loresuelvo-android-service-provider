@@ -13,7 +13,6 @@ Característica: Visualizar turnos como prestador
       | Ver todos en Trabajos agendados de Inicio |
       | Turnos en Trabajos                         |
 
-  @wip
   Escenario: 02-PVT Conservar órdenes pasadas y ordenar determinísticamente
     Dado que la API devuelve estas órdenes y hoy es 26 de septiembre de 2026:
       | id | estado           | fecha                    |

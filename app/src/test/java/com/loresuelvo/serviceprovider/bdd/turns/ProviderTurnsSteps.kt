@@ -4,6 +4,7 @@ import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
@@ -12,6 +13,8 @@ import io.cucumber.java.en.Given
 import io.cucumber.java.en.When
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.And
+import io.cucumber.datatable.DataTable
+import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -24,7 +27,7 @@ import org.junit.Assert.assertNotEquals
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderTurnsSteps {
     private val dispatcher = StandardTestDispatcher()
-    private val orders = listOf(
+    private var orders = listOf(
         WorkOrder(1, "Ana Pérez", "Reparar canilla", 1, WorkOrderStatus.Scheduled),
         WorkOrder(2, "Bea Silva", "Pintar pared", 2, WorkOrderStatus.Paid),
     )
@@ -42,8 +45,42 @@ class ProviderTurnsSteps {
     @When("abro Turnos desde {string}")
     fun openTurns(access: String) {
         require(access == "Ver todos en Trabajos agendados de Inicio" || access == "Turnos en Trabajos")
-        viewModel = ProviderTurnsViewModel(repository)
+        enterTurns()
+    }
+
+    @Given("que la API devuelve estas órdenes y hoy es 26 de septiembre de 2026:")
+    fun apiReturnsOrders(table: DataTable) {
+        orders = table.asMaps().map { row ->
+            val status = when (row.getValue("estado")) {
+                "scheduled" -> WorkOrderStatus.Scheduled
+                "paid" -> WorkOrderStatus.Paid
+                "awaiting_payment" -> WorkOrderStatus.AwaitingPayment
+                else -> error("Unexpected status")
+            }
+            WorkOrder(
+                id = row.getValue("id").toInt(),
+                consumerName = "Ana Pérez",
+                description = "Existing work order",
+                scheduledOn = Instant.parse(row.getValue("fecha")).toEpochMilli(),
+                status = status,
+            )
+        }
+    }
+
+    @When("entro a Turnos")
+    fun enterTurns() {
+        viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository))
         dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("veo las órdenes 40, 30, 11 y 12 en ese orden")
+    fun seesDeterministicOrder() {
+        assertEquals(listOf(40, 30, 11, 12), (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.map { it.id })
+    }
+
+    @And("no veo propuestas pendientes o rechazadas como órdenes de trabajo")
+    fun noProposalsInOrders() {
+        assertEquals(4, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.size)
     }
 
     @Then("veo el listado completo de mis órdenes de trabajo")
