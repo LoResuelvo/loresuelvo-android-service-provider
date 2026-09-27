@@ -162,6 +162,21 @@ class ProviderTurnsScreenTest {
         org.junit.Assert.assertEquals(1, conversations)
     }
 
+    @Test fun enlarged_detail_keeps_full_reason_and_conversation_reachable() {
+        val reason = "Repair the kitchen tap and replace the worn valve while preserving the original fittings"
+        val order = WorkOrder(7, "Ana Pérez", reason, 1, WorkOrderStatus.Scheduled)
+        var conversations = 0
+        compose.setContent {
+            val enlarged = Configuration(LocalConfiguration.current).apply { fontScale = 1.5f }
+            androidx.compose.runtime.CompositionLocalProvider(LocalConfiguration provides enlarged) {
+                LoresuelvoTheme { ProviderTurnDetailScreen(order, {}, { conversations++ }) }
+            }
+        }
+        compose.onNodeWithText(reason).assertExists()
+        compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
+        compose.runOnIdle { org.junit.Assert.assertEquals(1, conversations) }
+    }
+
     @Test fun details_back_returns_to_loaded_list_without_refetch() {
         val order = WorkOrder(7, "Ana Pérez", "Complete reason", 1, WorkOrderStatus.Scheduled)
         var retries = 0
