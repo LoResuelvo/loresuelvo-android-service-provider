@@ -110,6 +110,52 @@ test('Turns registration selects isolated B and retains shared and missing-cover
     features: [record], runners: [], featureFile: turnsFeature }), /ANDROID_UNOWNED_PRODUCTION/);
 });
 
+test('Completion registration binds its runner, UI entry points and physical coverage', async () => {
+  const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
+  const feature = 'app/src/test/resources/features/workorder/report-provider-work-completion.feature';
+  const record = policy.analysis.dependencyImpact.features.find(item => item.featureFile === feature);
+  const viewModel = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/turns/ProviderCompletionViewModel.kt';
+  const route = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/turns/ProviderCompletionRoute.kt';
+  const form = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/turns/ProviderCompletionFormScreen.kt';
+  const navigation = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNav.kt';
+  const deviceClass = 'com.loresuelvo.serviceprovider.acceptance.turns.ProviderCompletionAcceptanceTest';
+  assert.deepEqual(record.entryPoints, [
+    'com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionViewModel',
+    'com.loresuelvo.serviceprovider.ui.screens.turns.ProviderCompletionRoute',
+    'com.loresuelvo.serviceprovider.ui.screens.turns.ProviderCompletionFormScreen',
+  ]);
+  assert.ok(record.deviceTestClasses.includes(deviceClass));
+  assert.match(await fs.readFile(path.join(ROOT,
+    'app/src/test/java/com/loresuelvo/serviceprovider/bdd/workorder/ReportProviderWorkCompletionCucumberTest.kt'), 'utf8'),
+    /features\/workorder\/report-provider-work-completion\.feature/);
+  const facts = [
+    node(viewModel, 'ProviderCompletionViewModel', [], { pkg: 'com.loresuelvo.serviceprovider.ui.turns' }),
+    node(form, 'ProviderCompletionFormScreen', [], { pkg: 'com.loresuelvo.serviceprovider.ui.screens.turns' }),
+    node(route, 'ProviderCompletionRoute', ['ProviderCompletionViewModel', 'ProviderCompletionFormScreen'], {
+      pkg: 'com.loresuelvo.serviceprovider.ui.screens.turns',
+    }),
+    node(navigation, 'LoResuelvoNav', ['ProviderCompletionRoute'], {
+      pkg: 'com.loresuelvo.serviceprovider.ui.navigation',
+    }),
+    node('app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/turns/ProviderCompletionAcceptanceTest.kt',
+      'ProviderCompletionAcceptanceTest', ['ProviderCompletionRoute'], {
+        pkg: 'com.loresuelvo.serviceprovider.acceptance.turns', tests: [deviceClass],
+      }),
+  ];
+  const graph = buildAndroidGraph(facts);
+  const impact = traceAndroidImpact({ graph, other: graph, files: [viewModel],
+    features: [record], runners: [], featureFile: feature });
+  assert.ok(impact.deviceTestClasses.includes(deviceClass));
+  assert.equal(selectGate({ policy, intent: 'close_scenario', featureFile: feature,
+    snapshot: { stagedFiles: [viewModel] }, dependencyImpact: {
+      ...impact, featureFile: feature, scope: 'production_feature', reason: 'ANDROID_ISOLATED_FEATURE',
+      runnerClass: 'com.loresuelvo.serviceprovider.bdd.workorder.ReportProviderWorkCompletionCucumberTest',
+    } }).gate.id, 'B');
+  assert.throws(() => traceAndroidImpact({ graph, other: graph, files: [viewModel],
+    features: [{ ...record, deviceTestClasses: [] }], runners: [], featureFile: feature }),
+  /ANDROID_FEATURE_COVERAGE_MISSING/);
+});
+
 test('resource entries, alias imports, inheritance and shared Cucumber glue retain consumers', () => {
   const d = fixture();
   const xml = 'app/src/main/res/values/strings.xml';

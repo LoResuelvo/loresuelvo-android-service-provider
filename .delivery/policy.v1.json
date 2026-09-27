@@ -157,6 +157,23 @@
           ]
         },
         {
+          "featureFile": "app/src/test/resources/features/workorder/report-provider-work-completion.feature",
+          "entryPoints": [
+            "com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionViewModel",
+            "com.loresuelvo.serviceprovider.ui.screens.turns.ProviderCompletionRoute",
+            "com.loresuelvo.serviceprovider.ui.screens.turns.ProviderCompletionFormScreen"
+          ],
+          "integrationFiles": [
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNav.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/turns/ProviderTurnsScreen.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/turns/ProviderTurnDetailScreen.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeRoute.kt"
+          ],
+          "deviceTestClasses": [
+            "com.loresuelvo.serviceprovider.acceptance.turns.ProviderCompletionAcceptanceTest"
+          ]
+        },
+        {
           "featureFile": "app/src/test/resources/features/jobrequest/respond-job-request.feature",
           "entryPoints": [
             "com.loresuelvo.serviceprovider.ui.jobrequest.JobRequestDetailViewModel",
