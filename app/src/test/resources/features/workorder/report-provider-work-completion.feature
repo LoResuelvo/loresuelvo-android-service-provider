@@ -120,7 +120,6 @@ Característica: Informar finalización con evidencia como prestador
       | elijo Cancelar                                        | el resumen de la misma orden sin cambios                             |
       | vuelvo con Atrás una vez cerrado el teclado            | el resumen de la misma orden sin cambios                             |
 
-  @wip
   Esquema del escenario: 09-PIF Mantener la identidad visual y accesibilidad del flujo
     Dado que uso "<idioma>" y tamaño de fuente "<fuente>"
     Y tengo las referencias Android consumidor y del resumen de US-55

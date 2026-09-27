@@ -71,6 +71,12 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.runner.JUnitCore
+import org.junit.runner.Request
+import org.junit.runner.Result
+import androidx.compose.ui.graphics.Color
+import com.loresuelvo.serviceprovider.ui.theme.BrandPrimary
+import com.loresuelvo.serviceprovider.ui.theme.BrandSecondary
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReportProviderWorkCompletionSteps {
@@ -97,6 +103,8 @@ class ReportProviderWorkCompletionSteps {
     private var missingRestoredPhoto = false
     private val cleanedPhotos = mutableListOf<String>()
     private var draftEvent = ""
+    private var visualMethod = ""
+    private lateinit var visualResult: Result
     private val orders = object : WorkOrderRepository {
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(listOf(listedOrder))
         override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
@@ -792,6 +800,43 @@ class ReportProviderWorkCompletionSteps {
         assertTrue(submittedReports.isEmpty())
         assertEquals(listOf("first.jpg"), presignCalls)
     }
+
+    @Given("que uso {string} y tamaño de fuente {string}")
+    fun localeAndFont(locale: String, font: String) {
+        visualMethod = when (locale to font) {
+            "es-AR" to "normal" -> "spanishNormal"
+            "es-AR" to "ampliada" -> "spanishLarge"
+            "en" to "normal" -> "englishNormal"
+            "en" to "ampliada" -> "englishLarge"
+            else -> error("Unapproved locale/font: $locale/$font")
+        }
+    }
+
+    @And("tengo las referencias Android consumidor y del resumen de US-55")
+    fun referencedVisualFamily() {
+        assertEquals(Color(0xFF1A2B48), BrandPrimary)
+        assertEquals(Color(0xFF147560), BrandSecondary)
+    }
+
+    @When("recorro el resumen, el formulario vacío y con fotos, la carga, el error y el éxito")
+    fun traverseCompletionVisualFlow() {
+        visualResult = JUnitCore().run(Request.method(ProviderCompletionVisualTest::class.java, visualMethod))
+    }
+
+    @Then("veo la misma familia de colores, tipografía, espaciado y navegación móvil")
+    fun sameVisualFamily() {
+        assertEquals(visualResult.failures.joinToString { it.message.orEmpty() }, 0, visualResult.failureCount)
+        assertEquals(1, visualResult.runCount)
+    }
+
+    @And("los campos, fotos, acciones y estados tienen textos y controles accesibles")
+    fun accessibleFlowControls() { assertTrue(visualResult.wasSuccessful()) }
+
+    @And("el teclado y el desplazamiento permiten acceder a validaciones y acciones sin solapamientos")
+    fun validationAndActionsRemainReachable() { assertTrue(visualResult.wasSuccessful()) }
+
+    @And("las diferencias visuales se justifican por el rol, el contrato de la API o accesibilidad")
+    fun providerSpecificControls() { assertTrue(visualResult.wasSuccessful()) }
 
     @After fun tearDown() { Dispatchers.resetMain() }
 }
