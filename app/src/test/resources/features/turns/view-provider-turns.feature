@@ -129,7 +129,6 @@ Característica: Visualizar turnos como prestador
       | Inicio   |
       | Trabajos |
 
-  @wip
   Esquema del escenario: 15-PVT Recuperar una sesión inválida
     Dado que "<consulta>" responde 401
     Cuando realizo la acción que requiere esa consulta

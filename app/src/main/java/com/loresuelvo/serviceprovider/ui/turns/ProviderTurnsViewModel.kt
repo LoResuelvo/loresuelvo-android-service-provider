@@ -113,6 +113,11 @@ class ProviderTurnsViewModel @Inject constructor(
                 }
                 is ServiceProposalListOutcome.Failure -> {
                     if (sessionStore.getSession() != requestSession) return@launch
+                    if (result == ServiceProposalListOutcome.Failure.SessionExpired) {
+                        _uiState.value = ProviderTurnsUiState.Error
+                        sessionStore.clearSession()
+                        return@launch
+                    }
                     _uiState.value = current.copy(proposalFailure = result, resolvingConversation = false)
                 }
             }

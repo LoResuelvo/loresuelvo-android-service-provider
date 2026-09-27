@@ -96,6 +96,7 @@ class ProviderTurnsSteps {
     private var selectedOrder: WorkOrder? = null
     private var openedConversationId: Int? = null
     private var turnsOrigin: String? = null
+    private var unauthorizedQuery: String? = null
     private lateinit var homeViewModel: ProviderHomeViewModel
     private lateinit var now: Instant
 
@@ -534,6 +535,39 @@ class ProviderTurnsSteps {
     fun listBackDestinationIs(origin: String) {
         assertEquals(origin, turnsOrigin)
         assertEquals(20, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.size)
+    }
+
+    @Given("que {string} responde 401")
+    fun queryReturnsUnauthorized(query: String) {
+        when (query.trim()) {
+            "cargar órdenes" -> nextOrderFailure = ActivityLoadOutcome.Failure.Unauthorized
+            "resolver la propuesta para el chat" -> {
+                orderReferencesProposal()
+                enterTurns()
+                proposalFailure = ServiceProposalListOutcome.Failure.SessionExpired
+            }
+            else -> error("Unexpected query")
+        }
+        unauthorizedQuery = query.trim()
+    }
+
+    @When("realizo la acción que requiere esa consulta")
+    fun performUnauthorizedQuery() {
+        if (unauthorizedQuery == "cargar órdenes") enterTurns()
+        else {
+            viewModel.retryConversation(40)
+            dispatcher.scheduler.advanceUntilIdle()
+        }
+    }
+
+    @Then("se utiliza el flujo de autenticación existente")
+    fun returnsToExistingAuthentication() {
+        assertEquals(null, sessionStore.getSession())
+    }
+
+    @And("no quedan visibles órdenes ni vínculos de la sesión anterior")
+    fun previousOrdersAndLinksAreGone() {
+        assertEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
     }
 
     @After fun tearDown() { pendingOrders?.cancel(); Dispatchers.resetMain() }

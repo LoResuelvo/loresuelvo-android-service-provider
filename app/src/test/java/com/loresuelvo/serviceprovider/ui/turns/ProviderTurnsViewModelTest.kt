@@ -204,6 +204,27 @@ class ProviderTurnsViewModelTest {
         assertEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
     }
 
+    @Test fun contact_retry_401_clears_session_and_previous_orders() = runTest(dispatcher.scheduler) {
+        var expired = false
+        val repository = object : WorkOrderRepository {
+            override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(listOf(
+                WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled, serviceProposalId = 12, consumerId = 7)))
+        }
+        val proposals = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome = if (expired)
+                ServiceProposalListOutcome.Failure.SessionExpired
+            else ServiceProposalListOutcome.Success(emptyList())
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = error("Not used")
+        }
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposals), sessionStore)
+        advanceUntilIdle()
+        expired = true
+        viewModel.retryConversation(40)
+        advanceUntilIdle()
+        assertEquals(null, sessionStore.getSession())
+        assertEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
+    }
+
     private fun proposal(id: Int, consumerId: Int, conversationId: Int) = ServiceProposalSummary(
         id = id, conversationId = conversationId, amountCents = 100, scheduledOnEpochMillis = 1,
         description = "Work", estimatedDurationMinutes = 60, status = ServiceProposalStatus.Accepted,
