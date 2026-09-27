@@ -138,6 +138,25 @@
           "deviceTestClasses": []
         },
         {
+          "featureFile": "app/src/test/resources/features/turns/view-provider-turns.feature",
+          "entryPoints": [
+            "com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel",
+            "com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnsRoute",
+            "com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnsScreen",
+            "com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnDetailScreen"
+          ],
+          "integrationFiles": [
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNav.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNavHost.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeRoute.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeScreen.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeSections.kt"
+          ],
+          "deviceTestClasses": [
+            "com.loresuelvo.serviceprovider.acceptance.turns.ProviderTurnsAcceptanceTest"
+          ]
+        },
+        {
           "featureFile": "app/src/test/resources/features/jobrequest/respond-job-request.feature",
           "entryPoints": [
             "com.loresuelvo.serviceprovider.ui.jobrequest.JobRequestDetailViewModel",

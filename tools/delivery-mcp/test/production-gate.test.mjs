@@ -66,6 +66,50 @@ test('shared consumers, unknown cycles, unsupported syntax, DI, navigation and m
   for (const mutate of cases) { const d = fixture(); mutate(d); assert.throws(() => trace(d), /ANDROID_/, String(mutate)); }
 });
 
+test('Turns registration selects isolated B and retains shared and missing-coverage fallbacks', async () => {
+  const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
+  const turnsFeature = 'app/src/test/resources/features/turns/view-provider-turns.feature';
+  const record = policy.analysis.dependencyImpact.features.find(feature => feature.featureFile === turnsFeature);
+  const screen = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/turns/ProviderTurnsScreen.kt';
+  const viewModel = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/turns/ProviderTurnsViewModel.kt';
+  const home = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/home/ProviderHomeSections.kt';
+  const deviceClass = 'com.loresuelvo.serviceprovider.acceptance.turns.ProviderTurnsAcceptanceTest';
+  assert.ok(record.entryPoints.includes('com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnsScreen'));
+  assert.ok(record.integrationFiles.includes(home));
+  assert.deepEqual(record.deviceTestClasses, [deviceClass]);
+  const facts = [
+    node(screen, 'ProviderTurnsScreen', ['ProviderTurnsViewModel'], {
+      pkg: 'com.loresuelvo.serviceprovider.ui.screens.turns',
+      declarations: ['ProviderTurnsRoute', 'ProviderTurnsScreen'],
+    }),
+    node('app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/turns/ProviderTurnDetailScreen.kt',
+      'ProviderTurnDetailScreen', [], { pkg: 'com.loresuelvo.serviceprovider.ui.screens.turns' }),
+    node(viewModel, 'ProviderTurnsViewModel', [], { pkg: 'com.loresuelvo.serviceprovider.ui.turns' }),
+    node(home, 'ProviderHomeSections', ['ProviderTurnsScreen'], { pkg: 'com.loresuelvo.serviceprovider.ui.screens.home' }),
+    node('app/src/test/java/com/loresuelvo/serviceprovider/ui/screens/turns/ProviderTurnsScreenTest.kt',
+      'ProviderTurnsScreenTest', ['ProviderTurnsViewModel'], {
+        pkg: 'com.loresuelvo.serviceprovider.ui.screens.turns',
+        tests: ['com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnsScreenTest'],
+      }),
+    node('app/src/androidTest/java/com/loresuelvo/serviceprovider/acceptance/turns/ProviderTurnsAcceptanceTest.kt',
+      'ProviderTurnsAcceptanceTest', ['ProviderTurnsScreen'], {
+        pkg: 'com.loresuelvo.serviceprovider.acceptance.turns', tests: [deviceClass],
+      }),
+  ];
+  const graph = buildAndroidGraph(facts);
+  const impact = traceAndroidImpact({ graph, other: graph, files: [viewModel], features: [record], runners: [], featureFile: turnsFeature });
+  assert.deepEqual(impact.deviceTestClasses, [deviceClass]);
+  assert.equal(selectGate({ policy, intent: 'close_scenario', featureFile: turnsFeature,
+    snapshot: { stagedFiles: [viewModel] }, dependencyImpact: {
+      ...impact, featureFile: turnsFeature, scope: 'production_feature', reason: 'ANDROID_ISOLATED_FEATURE',
+      runnerClass: 'com.loresuelvo.serviceprovider.bdd.turns.ProviderTurnsCucumberTest',
+    } }).gate.id, 'B');
+  assert.throws(() => traceAndroidImpact({ graph, other: graph, files: [viewModel],
+    features: [{ ...record, deviceTestClasses: [] }], runners: [], featureFile: turnsFeature }), /ANDROID_FEATURE_COVERAGE_MISSING/);
+  assert.throws(() => traceAndroidImpact({ graph, other: graph, files: [home],
+    features: [record], runners: [], featureFile: turnsFeature }), /ANDROID_UNOWNED_PRODUCTION/);
+});
+
 test('resource entries, alias imports, inheritance and shared Cucumber glue retain consumers', () => {
   const d = fixture();
   const xml = 'app/src/main/res/values/strings.xml';
