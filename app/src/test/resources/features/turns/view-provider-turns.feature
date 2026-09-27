@@ -70,7 +70,6 @@ Característica: Visualizar turnos como prestador
     Entonces veo un aviso con una acción para reintentar
     Y permanezco en Turnos sin abrir ni crear otro chat
 
-  @wip
   Esquema del escenario: 08-PVT Recuperar errores al resolver el contacto
     Dado que la consulta de propuestas falló por "<causa>"
     Y una nueva consulta devuelve la propuesta vinculada a la conversación 93

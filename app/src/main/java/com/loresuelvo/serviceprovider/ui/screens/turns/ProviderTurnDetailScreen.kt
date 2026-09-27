@@ -20,13 +20,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalAmount
 import java.util.TimeZone
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversation: () -> Unit,
-    missingConversation: Boolean = false, onRetryConversation: () -> Unit = {}) {
+    missingConversation: Boolean = false, proposalFailure: ServiceProposalListOutcome.Failure? = null,
+    resolvingConversation: Boolean = false,
+    onRetryConversation: () -> Unit = {}) {
     Scaffold(
         topBar = { TopAppBar(
             title = { Text(stringResource(R.string.provider_turns_detail_title)) },
@@ -47,8 +50,11 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
                 Text(stringResource(R.string.provider_turns_view_conversation))
             }
             if (missingConversation) {
-                Text(stringResource(R.string.provider_turns_conversation_missing))
-                Button(onClick = onRetryConversation) { Text(stringResource(R.string.provider_home_retry)) }
+                Text(stringResource(if (proposalFailure == null) R.string.provider_turns_conversation_missing
+                    else R.string.proposal_list_error))
+                Button(onClick = onRetryConversation, enabled = !resolvingConversation) {
+                    Text(stringResource(R.string.provider_home_retry))
+                }
             }
         }
     }

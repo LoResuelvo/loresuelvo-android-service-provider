@@ -20,6 +20,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -49,13 +50,22 @@ import java.util.TimeZone
 fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {},
     viewModel: ProviderTurnsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ProviderTurnsScreen(state, onBack, viewModel::load, onConversation = onConversation)
+    val conversationToOpen = (state as? ProviderTurnsUiState.Ready)?.conversationToOpen
+    LaunchedEffect(conversationToOpen) {
+        if (conversationToOpen != null) {
+            viewModel.conversationOpened()
+            onConversation(conversationToOpen)
+        }
+    }
+    ProviderTurnsScreen(state, onBack, viewModel::load, onConversation = onConversation,
+        onRetryConversation = viewModel::retryConversation)
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit,
-    onDetails: (WorkOrder) -> Unit = {}, onConversation: (Int) -> Unit = {}) {
+    onDetails: (WorkOrder) -> Unit = {}, onConversation: (Int) -> Unit = {},
+    onRetryConversation: (Int) -> Unit = { onRetry() }) {
     var selectedId by rememberSaveable { mutableStateOf<Int?>(null) }
     var missingConversation by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -66,7 +76,11 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
             onConversation = {
                 val conversationId = (state as? ProviderTurnsUiState.Ready)?.conversationIds?.get(selectedOrder.id)
                 if (conversationId == null) missingConversation = true else onConversation(conversationId)
-            }, missingConversation = missingConversation, onRetryConversation = onRetry)
+            }, missingConversation = missingConversation &&
+                (state as ProviderTurnsUiState.Ready).conversationIds[selectedOrder.id] == null,
+            proposalFailure = (state as ProviderTurnsUiState.Ready).proposalFailure,
+            resolvingConversation = state.resolvingConversation,
+            onRetryConversation = { onRetryConversation(selectedOrder.id) })
         return
     }
     Surface(Modifier.fillMaxSize()) {

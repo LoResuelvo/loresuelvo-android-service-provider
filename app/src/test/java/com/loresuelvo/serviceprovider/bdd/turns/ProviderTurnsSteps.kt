@@ -53,9 +53,11 @@ class ProviderTurnsSteps {
     private var proposals = emptyList<ServiceProposalSummary>()
     private var proposalListCalls = 0
     private var proposalCreateCalls = 0
+    private var proposalFailure: ServiceProposalListOutcome.Failure? = null
     private val proposalRepository = object : ServiceProposalRepository {
         override suspend fun list(): ServiceProposalListOutcome {
             proposalListCalls++
+            proposalFailure?.let { proposalFailure = null; return it }
             return ServiceProposalListOutcome.Success(proposals)
         }
         override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
@@ -229,6 +231,35 @@ class ProviderTurnsSteps {
     @And("permanezco en Turnos sin abrir ni crear otro chat")
     fun remainsInTurns() {
         assertEquals(null, openedConversationId)
+        assertEquals(0, proposalCreateCalls)
+    }
+
+    @Given("que la consulta de propuestas falló por {string}")
+    fun proposalsFailed(cause: String) {
+        orderReferencesProposal()
+        proposalFailure = when (cause) {
+            "falta de red" -> ServiceProposalListOutcome.Failure.Unavailable
+            "respuesta 500" -> ServiceProposalListOutcome.Failure.InvalidResponse
+            else -> error("Unexpected proposal failure")
+        }
+        enterTurns()
+        assertEquals(true, (viewModel.uiState.value as ProviderTurnsUiState.Ready).proposalFailure != null)
+    }
+
+    @And("una nueva consulta devuelve la propuesta vinculada a la conversación 93")
+    fun nextProposalLookupSucceeds() { proposalReferencesConversation() }
+
+    @When("reintento Ver conversación")
+    fun retryConversation() {
+        viewModel.retryConversation(40)
+        dispatcher.scheduler.advanceUntilIdle()
+        openedConversationId = (viewModel.uiState.value as ProviderTurnsUiState.Ready).conversationToOpen
+    }
+
+    @And("desaparece el aviso de error")
+    fun errorNoticeClears() {
+        assertEquals(null, (viewModel.uiState.value as ProviderTurnsUiState.Ready).proposalFailure)
+        assertEquals(2, proposalListCalls)
         assertEquals(0, proposalCreateCalls)
     }
 

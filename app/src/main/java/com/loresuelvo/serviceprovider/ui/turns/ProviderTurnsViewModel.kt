@@ -17,7 +17,10 @@ import kotlinx.coroutines.launch
 
 sealed interface ProviderTurnsUiState {
     data object Loading : ProviderTurnsUiState
-    data class Ready(val orders: List<WorkOrder>, val conversationIds: Map<Int, Int> = emptyMap()) : ProviderTurnsUiState
+    data class Ready(val orders: List<WorkOrder>, val conversationIds: Map<Int, Int> = emptyMap(),
+        val proposalFailure: ServiceProposalListOutcome.Failure? = null,
+        val resolvingConversation: Boolean = false,
+        val conversationToOpen: Int? = null) : ProviderTurnsUiState
     data object Error : ProviderTurnsUiState
 }
 
@@ -36,13 +39,38 @@ class ProviderTurnsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = when (val result = getProviderTurns()) {
                 is ActivityLoadOutcome.Success -> {
-                    val proposals = (getServiceProposals() as? ServiceProposalListOutcome.Success)?.proposals.orEmpty()
+                    val proposalResult = getServiceProposals()
+                    val proposals = (proposalResult as? ServiceProposalListOutcome.Success)?.proposals.orEmpty()
                     ProviderTurnsUiState.Ready(result.items, result.items.mapNotNull { order ->
                         order.linkedConversationId(proposals)?.let { order.id to it }
-                    }.toMap())
+                    }.toMap(), proposalResult as? ServiceProposalListOutcome.Failure)
                 }
                 is ActivityLoadOutcome.Failure -> ProviderTurnsUiState.Error
             }
         }
+    }
+
+    fun retryConversation(orderId: Int) {
+        val current = _uiState.value as? ProviderTurnsUiState.Ready ?: return
+        if (current.resolvingConversation || current.conversationToOpen != null) return
+        val order = current.orders.firstOrNull { it.id == orderId } ?: return
+        _uiState.value = current.copy(resolvingConversation = true)
+        viewModelScope.launch {
+            when (val result = getServiceProposals()) {
+                is ServiceProposalListOutcome.Success -> {
+                    val id = order.linkedConversationId(result.proposals)
+                    _uiState.value = current.copy(conversationIds = if (id == null) current.conversationIds
+                        else current.conversationIds + (orderId to id), proposalFailure = null,
+                        resolvingConversation = false, conversationToOpen = id)
+                }
+                is ServiceProposalListOutcome.Failure -> _uiState.value = current.copy(proposalFailure = result,
+                    resolvingConversation = false)
+            }
+        }
+    }
+
+    fun conversationOpened() {
+        val current = _uiState.value as? ProviderTurnsUiState.Ready ?: return
+        _uiState.value = current.copy(conversationToOpen = null)
     }
 }

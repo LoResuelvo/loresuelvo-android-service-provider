@@ -79,6 +79,41 @@ class ProviderTurnsViewModelTest {
         assertEquals(1, listCalls)
     }
 
+    @Test fun retry_after_proposal_failure_resolves_conversation_without_reloading_orders() = runTest(dispatcher.scheduler) {
+        val order = WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled,
+            serviceProposalId = 12, consumerId = 7)
+        var orderCalls = 0
+        val workOrders = object : WorkOrderRepository {
+            override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> {
+                orderCalls++
+                return ActivityLoadOutcome.Success(listOf(order))
+            }
+        }
+        var proposalCalls = 0
+        val proposals = object : ServiceProposalRepository {
+            override suspend fun list(): ServiceProposalListOutcome = if (++proposalCalls == 1)
+                ServiceProposalListOutcome.Failure.Unavailable
+            else ServiceProposalListOutcome.Success(listOf(proposal(12, 7, 93)))
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = error("Must not create")
+        }
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(workOrders), GetServiceProposalsUseCase(proposals))
+        advanceUntilIdle()
+        assertEquals(ServiceProposalListOutcome.Failure.Unavailable,
+            (viewModel.uiState.value as ProviderTurnsUiState.Ready).proposalFailure)
+
+        viewModel.retryConversation(40)
+        viewModel.retryConversation(40)
+        advanceUntilIdle()
+        val ready = viewModel.uiState.value as ProviderTurnsUiState.Ready
+        assertEquals(null, ready.proposalFailure)
+        assertEquals(93, ready.conversationIds[40])
+        assertEquals(93, ready.conversationToOpen)
+        viewModel.conversationOpened()
+        assertEquals(null, (viewModel.uiState.value as ProviderTurnsUiState.Ready).conversationToOpen)
+        assertEquals(1, orderCalls)
+        assertEquals(2, proposalCalls)
+    }
+
     private fun proposal(id: Int, consumerId: Int, conversationId: Int) = ServiceProposalSummary(
         id = id, conversationId = conversationId, amountCents = 100, scheduledOnEpochMillis = 1,
         description = "Work", estimatedDurationMinutes = 60, status = ServiceProposalStatus.Accepted,

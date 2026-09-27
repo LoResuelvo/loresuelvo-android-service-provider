@@ -1,6 +1,8 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -10,6 +12,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasClickAction
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import java.time.Instant
@@ -144,6 +147,28 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("No encontramos la conversación de este turno.").assertExists()
         compose.onNodeWithText("Reintentar").assertExists()
         compose.onNodeWithText("Reintentar").performScrollTo().performClick()
+        compose.runOnIdle {
+            org.junit.Assert.assertEquals(1, retries)
+            org.junit.Assert.assertEquals(0, opened)
+        }
+    }
+
+    @Test fun proposal_lookup_error_shows_retry_notice_and_clears_after_resolution() {
+        val order = WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled,
+            serviceProposalId = 12, consumerId = 7)
+        var retries = 0
+        var opened = 0
+        var state: ProviderTurnsUiState.Ready by androidx.compose.runtime.mutableStateOf(
+            ProviderTurnsUiState.Ready(listOf(order), proposalFailure = ServiceProposalListOutcome.Failure.Unavailable))
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(state, {}, {}, onConversation = { opened++ },
+                onRetryConversation = { retries++; state = state.copy(conversationIds = mapOf(40 to 93), proposalFailure = null) })
+        } }
+        compose.onNodeWithTag("provider_turn_details_40").performClick()
+        compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
+        compose.onNodeWithText("No pudimos cargar las propuestas.").assertExists()
+        compose.onNodeWithText("Reintentar").performScrollTo().performClick()
+        compose.onNodeWithText("No pudimos cargar las propuestas.").assertDoesNotExist()
         compose.runOnIdle {
             org.junit.Assert.assertEquals(1, retries)
             org.junit.Assert.assertEquals(0, opened)
