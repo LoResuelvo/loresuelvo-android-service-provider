@@ -10,6 +10,9 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
@@ -73,6 +76,18 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("Reparar la canilla").assertExists()
         compose.onNodeWithText("ARS 15.000,50").assertExists()
         compose.onNodeWithText("el 4 de octubre a las 21:30").assertExists()
+    }
+
+    @Test fun enlarged_font_keeps_date_and_details_action_visible() {
+        val order = WorkOrder(7, "Ana Pérez", "Reparar la canilla", 1, WorkOrderStatus.Scheduled)
+        compose.setContent {
+            val enlarged = Configuration(LocalConfiguration.current).apply { fontScale = 1.5f }
+            androidx.compose.runtime.CompositionLocalProvider(LocalConfiguration provides enlarged) {
+                LoresuelvoTheme { ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), {}, {}) }
+            }
+        }
+        compose.onNodeWithTag("provider_turn_details_7").assertIsDisplayed()
+        compose.onNodeWithTag("provider_turn_7").assertIsDisplayed()
     }
 
     @Test fun falls_back_to_initials_when_photo_cannot_load() {

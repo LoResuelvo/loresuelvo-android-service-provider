@@ -1,7 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +38,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -100,10 +103,10 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                 },
             )
         }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.fillMaxSize().padding(padding)) {
                 when (state) {
                     ProviderTurnsUiState.Loading -> Column(
-                        Modifier.fillMaxWidth().fillMaxHeight(),
+                        Modifier.fillMaxWidth().fillMaxHeight().padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
@@ -113,7 +116,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                         Text(loading, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodyMedium)
                     }
                     ProviderTurnsUiState.Error -> Column(
-                        Modifier.fillMaxSize().testTag("provider_turns_error"),
+                        Modifier.fillMaxSize().padding(32.dp).testTag("provider_turns_error"),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
@@ -125,7 +128,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                     }
                     is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
                         Column(
-                            Modifier.fillMaxSize().testTag("provider_turns_empty"),
+                            Modifier.fillMaxSize().padding(32.dp).testTag("provider_turns_empty"),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
@@ -135,9 +138,12 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                                 Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center)
                         }
-                    } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list"), state = listState) {
+                    } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list"), state = listState,
+                        contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(state.orders, key = { it.id }) { order ->
-                            ProviderTurnCard(order) { selectedId = order.id; missingConversation = false; onDetails(it) }
+                            ProviderTurnCard(order, Modifier.padding(horizontal = 20.dp)) {
+                                selectedId = order.id; missingConversation = false; onDetails(it)
+                            }
                         }
                     }
                 }
@@ -147,16 +153,16 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
 }
 
 @Composable
-private fun ProviderTurnCard(order: WorkOrder, onDetails: (WorkOrder) -> Unit) {
+private fun ProviderTurnCard(order: WorkOrder, modifier: Modifier = Modifier, onDetails: (WorkOrder) -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val datePattern = stringResource(R.string.provider_turns_visit_pattern)
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("provider_turn_${order.id}"),
+        modifier = modifier.fillMaxWidth().testTag("provider_turn_${order.id}"),
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
     ) {
         Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 ProviderAvatar(
                     name = order.consumerGivenName,
                     surname = order.consumerSurname,
@@ -164,14 +170,27 @@ private fun ProviderTurnCard(order: WorkOrder, onDetails: (WorkOrder) -> Unit) {
                     contentDescription = stringResource(R.string.proposal_list_avatar, order.consumerGivenName),
                     size = 56.dp,
                 )
-                Text(order.consumerName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                Text(order.consumerName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
                 ProviderTurnStatusBadge(order.id, order.status)
             }
-            Text(order.description)
-            Text(proposalAmount(order.amountCents))
-            Text(formatTurnDate(order.scheduledOn, datePattern, locale, TimeZone.getDefault()))
-            OutlinedButton(onClick = { onDetails(order) }, modifier = Modifier.testTag("provider_turn_details_${order.id}")) {
-                Text(stringResource(R.string.provider_turns_view_details))
+            Text(order.description, style = MaterialTheme.typography.bodyMedium)
+            Text(proposalAmount(order.amountCents), style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold)
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val expanded = maxWidth < 360.dp || LocalConfiguration.current.fontScale > 1f
+                if (expanded) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TurnDate(order, datePattern, locale)
+                        TurnDetailsButton(order, onDetails)
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        TurnDate(order, datePattern, locale)
+                        TurnDetailsButton(order, onDetails)
+                    }
+                }
             }
         }
     }
@@ -187,7 +206,20 @@ private fun ProviderTurnStatusBadge(orderId: Int, status: WorkOrderStatus) {
     }
     Surface(modifier = Modifier.testTag("provider_turn_status_$orderId"), shape = RoundedCornerShape(50), color = background) {
         Text(stringResource(badge.label), Modifier.padding(horizontal = 10.dp, vertical = 4.dp), color = foreground,
-            style = MaterialTheme.typography.labelSmall)
+            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun TurnDate(order: WorkOrder, pattern: String, locale: Locale) {
+    Text(formatTurnDate(order.scheduledOn, pattern, locale, TimeZone.getDefault()),
+        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+}
+
+@Composable
+private fun TurnDetailsButton(order: WorkOrder, onDetails: (WorkOrder) -> Unit) {
+    OutlinedButton(onClick = { onDetails(order) }, modifier = Modifier.testTag("provider_turn_details_${order.id}")) {
+        Text(stringResource(R.string.provider_turns_view_details))
     }
 }
 
