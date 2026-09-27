@@ -3,12 +3,16 @@ package com.loresuelvo.serviceprovider.ui.turns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.activity.CompletionEligibility
+import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidencePreparer
+import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
+import com.loresuelvo.serviceprovider.domain.activity.PreparedEvidenceImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,18 +25,39 @@ sealed interface ProviderCompletionUiState {
     data object SessionExpired : ProviderCompletionUiState
 }
 
+data class CompletionEvidenceSelection(
+    val id: Long,
+    val source: String,
+    val status: EvidenceSelectionStatus,
+)
+
+sealed interface EvidenceSelectionStatus {
+    data object Preparing : EvidenceSelectionStatus
+    data class Ready(val image: PreparedEvidenceImage) : EvidenceSelectionStatus
+    data class Invalid(val reason: EvidenceImagePreparation.Invalid) : EvidenceSelectionStatus
+}
+
+enum class EvidenceSelectionIssue { MaximumReached, AlreadySelected }
+
 @HiltViewModel
 class ProviderCompletionViewModel @Inject constructor(
     private val getEligibility: GetCompletionEligibilityUseCase,
     private val sessionStore: AuthSessionStore,
+    private val evidencePreparer: CompletionEvidencePreparer,
 ) : ViewModel() {
     private var activeSession = sessionStore.getSession()
     private var queryJob: Job? = null
     private var draftOrderId: Int? = null
+    private var nextEvidenceId = 0L
+    private val evidenceJobs = mutableMapOf<Long, Job>()
     private val _uiState = MutableStateFlow<ProviderCompletionUiState>(ProviderCompletionUiState.Closed)
     val uiState: StateFlow<ProviderCompletionUiState> = _uiState.asStateFlow()
     private val _description = MutableStateFlow("")
     val description: StateFlow<String> = _description.asStateFlow()
+    private val _evidence = MutableStateFlow<List<CompletionEvidenceSelection>>(emptyList())
+    val evidence: StateFlow<List<CompletionEvidenceSelection>> = _evidence.asStateFlow()
+    private val _evidenceIssue = MutableStateFlow<EvidenceSelectionIssue?>(null)
+    val evidenceIssue: StateFlow<EvidenceSelectionIssue?> = _evidenceIssue.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -50,7 +75,7 @@ class ProviderCompletionViewModel @Inject constructor(
     fun open(order: WorkOrder) {
         queryJob?.cancel()
         if (draftOrderId != order.id) {
-            _description.value = ""
+            clearDraft()
             draftOrderId = order.id
         }
         val requestSession = sessionStore.getSession()
@@ -83,8 +108,61 @@ class ProviderCompletionViewModel @Inject constructor(
             _description.value = value
     }
 
+    fun selectEvidence(sources: List<String>) {
+        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility != CompletionEligibility.Eligible)
+            return
+        _evidenceIssue.value = null
+        sources.forEach { source ->
+            if (_evidence.value.size >= 3) {
+                _evidenceIssue.value = EvidenceSelectionIssue.MaximumReached
+                return@forEach
+            }
+            if (_evidence.value.any { it.source == source }) {
+                _evidenceIssue.value = EvidenceSelectionIssue.AlreadySelected
+                return@forEach
+            }
+            val id = ++nextEvidenceId
+            _evidence.value += CompletionEvidenceSelection(id, source, EvidenceSelectionStatus.Preparing)
+            evidenceJobs[id] = viewModelScope.launch {
+                val result = try {
+                    evidencePreparer.prepare(source)
+                } catch (e: CancellationException) {
+                    return@launch
+                }
+                evidenceJobs.remove(id)
+                if (_evidence.value.none { it.id == id }) {
+                    if (result is EvidenceImagePreparation.Ready) {
+                        viewModelScope.launch { evidencePreparer.clean(result.image) }
+                    }
+                    return@launch
+                }
+                val status = when (result) {
+                    is EvidenceImagePreparation.Ready -> EvidenceSelectionStatus.Ready(result.image)
+                    is EvidenceImagePreparation.Invalid -> EvidenceSelectionStatus.Invalid(result)
+                }
+                _evidence.value = _evidence.value.map { if (it.id == id) it.copy(status = status) else it }
+            }
+        }
+    }
+
+    fun removeEvidence(id: Long) {
+        val selected = _evidence.value.firstOrNull { it.id == id } ?: return
+        evidenceJobs.remove(id)?.cancel()
+        _evidence.value = _evidence.value.filterNot { it.id == id }
+        _evidenceIssue.value = null
+        if (selected.status is EvidenceSelectionStatus.Ready) {
+            viewModelScope.launch { evidencePreparer.clean(selected.status.image) }
+        }
+    }
+
     private fun clearDraft() {
         _description.value = ""
         draftOrderId = null
+        evidenceJobs.values.forEach { it.cancel() }
+        evidenceJobs.clear()
+        val prepared = _evidence.value.mapNotNull { (it.status as? EvidenceSelectionStatus.Ready)?.image }
+        _evidence.value = emptyList()
+        _evidenceIssue.value = null
+        prepared.forEach { image -> viewModelScope.launch { evidencePreparer.clean(image) } }
     }
 }

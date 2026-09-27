@@ -10,6 +10,9 @@ import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
+import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidencePreparer
+import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
+import com.loresuelvo.serviceprovider.domain.activity.PreparedEvidenceImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
@@ -115,7 +118,11 @@ class ProviderCompletionRouteTest {
     }
 
     private fun showRoute(onBack: () -> Unit): ProviderCompletionViewModel {
-        val viewModel = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { 1_000 }, session)
+        val viewModel = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { 1_000 }, session,
+            object : CompletionEvidencePreparer {
+                override suspend fun prepare(source: String): EvidenceImagePreparation = error("No photo selected")
+                override suspend fun clean(image: PreparedEvidenceImage) = Unit
+            })
         compose.setContent { LoresuelvoTheme {
             ProviderCompletionRoute(42, ProviderTurnsUiState.Ready(listOf(order)), onBack, {}, viewModel)
         } }

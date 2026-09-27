@@ -5,6 +5,9 @@ import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.CompletionEligibility
+import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidencePreparer
+import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
+import com.loresuelvo.serviceprovider.domain.activity.PreparedEvidenceImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
@@ -112,7 +115,11 @@ class ReportProviderWorkCompletionSteps {
 
     @When("intento abrir Informar finalización")
     fun openCompletion() = runTest(dispatcher.scheduler) {
-        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now }, session)
+        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now }, session,
+            object : CompletionEvidencePreparer {
+                override suspend fun prepare(source: String): EvidenceImagePreparation = error("No photo selected in 01-PIF")
+                override suspend fun clean(image: PreparedEvidenceImage) = Unit
+            })
         completion.open((turns.uiState.value as ProviderTurnsUiState.Ready).orders.single())
         advanceUntilIdle()
     }
