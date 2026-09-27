@@ -323,11 +323,36 @@ class ProviderCompletionViewModel @Inject constructor(
                 }
                 is PostCompletionReportOutcome.Rejected -> {
                     clearSubmissionMarker()
-                    if (outcome == PostCompletionReportOutcome.Rejected.Unauthorized) expireSession()
-                    else _submission.value = CompletionSubmissionState.Rejected(outcome)
+                    when (outcome) {
+                        PostCompletionReportOutcome.Rejected.Unauthorized -> expireSession()
+                        PostCompletionReportOutcome.Rejected.Conflict -> {
+                            _submission.value = CompletionSubmissionState.Rejected(outcome)
+                            refreshAfterConflict(order, session)
+                        }
+                        else -> _submission.value = CompletionSubmissionState.Rejected(outcome)
+                    }
                 }
             }
         }
+    }
+
+    fun retryConflictQuery() {
+        if (_submission.value != CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.Conflict)) return
+        val order = (_uiState.value as? ProviderCompletionUiState.Ready)?.order ?: return
+        val session = sessionStore.getSession() ?: return
+        queryJob?.cancel()
+        queryJob = viewModelScope.launch { refreshAfterConflict(order, session) }
+    }
+
+    private suspend fun refreshAfterConflict(order: WorkOrder, session: AuthSession) {
+        val eligibility = getEligibility(order)
+        if (!isCurrent(order, session)) return
+        if (eligibility == CompletionEligibility.Failure.Unauthorized) {
+            expireSession()
+            return
+        }
+        _uiState.value = ProviderCompletionUiState.Ready(order,
+            if (eligibility == CompletionEligibility.Eligible) CompletionEligibility.ChangedOrder else eligibility)
     }
 
     fun retryReconciliation() {
@@ -386,7 +411,8 @@ class ProviderCompletionViewModel @Inject constructor(
         }
     }
 
-    private fun canEdit(): Boolean = _submission.value == CompletionSubmissionState.Idle &&
+    private fun canEdit(): Boolean = (_submission.value == CompletionSubmissionState.Idle ||
+        _submission.value == CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData)) &&
         (_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility == CompletionEligibility.Eligible
 
     private fun isCurrent(order: WorkOrder, session: AuthSession): Boolean =

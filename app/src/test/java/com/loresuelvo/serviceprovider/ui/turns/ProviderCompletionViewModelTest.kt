@@ -580,6 +580,134 @@ class ProviderCompletionViewModelTest {
         assertEquals(ProviderCompletionUiState.Ready(selected, CompletionEligibility.AlreadyReported), viewModel.uiState.value)
     }
 
+    @Test fun invalid_data_rejection_keeps_confirmed_draft_editable_for_explicit_correction() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        orders.postNext = { PostCompletionReportOutcome.Rejected.InvalidData }
+        val viewModel = viewModel(UploadFiles().useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Original")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+        advanceUntilIdle()
+
+        viewModel.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData),
+            viewModel.submission.value)
+        assertEquals("Original", viewModel.description.value)
+        assertEquals(EvidenceUploadStatus.Confirmed("file-one"), viewModel.evidence.value.single().uploadStatus)
+        assertEquals(1, orders.postCalls)
+
+        viewModel.onDescriptionChange("Corrected")
+        orders.postNext = { PostCompletionReportOutcome.Rejected.InvalidData }
+        viewModel.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals("Corrected", orders.postedDescription)
+        assertEquals(listOf("file-one"), orders.postedFileIds)
+        assertEquals(2, orders.postCalls)
+    }
+
+    @Test fun conflict_queries_current_time_or_report_without_reposting() = runTest(dispatcher.scheduler) {
+        listOf(
+            detail.copy(scheduledOn = 2_000) to CompletionEligibility.TooEarly,
+            detail.copy(status = WorkOrderStatus.AwaitingPayment, completionReportId = 17) to CompletionEligibility.AlreadyReported,
+        ).forEach { (current, expected) ->
+            val postsBefore = orders.postCalls
+            orders.next = { WorkOrderDetailOutcome.Success(if (orders.postCalls == postsBefore) detail else current) }
+            orders.postNext = { PostCompletionReportOutcome.Rejected.Conflict }
+            val viewModel = viewModel(UploadFiles().useCase())
+            viewModel.open(selected)
+            advanceUntilIdle()
+            viewModel.onDescriptionChange("Done")
+            viewModel.selectEvidence(listOf("one"))
+            advanceUntilIdle()
+            viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+            advanceUntilIdle()
+
+            viewModel.confirmCompletion()
+            advanceUntilIdle()
+            assertEquals(ProviderCompletionUiState.Ready(selected, expected), viewModel.uiState.value)
+            viewModel.confirmCompletion()
+            assertEquals(postsBefore + 1, orders.postCalls)
+        }
+    }
+
+    @Test fun rejected_session_clears_private_draft_and_terminal_denials_cannot_repost() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        listOf(PostCompletionReportOutcome.Rejected.Forbidden,
+            PostCompletionReportOutcome.Rejected.NotFound).forEach { rejection ->
+            orders.postNext = { rejection }
+            val viewModel = viewModel(UploadFiles().useCase())
+            viewModel.open(selected)
+            advanceUntilIdle()
+            viewModel.onDescriptionChange("Private note")
+            viewModel.selectEvidence(listOf("one"))
+            advanceUntilIdle()
+            viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+            advanceUntilIdle()
+            val postsBefore = orders.postCalls
+            viewModel.confirmCompletion()
+            advanceUntilIdle()
+            assertEquals(CompletionSubmissionState.Rejected(rejection), viewModel.submission.value)
+            viewModel.confirmCompletion()
+            advanceUntilIdle()
+            assertEquals(postsBefore + 1, orders.postCalls)
+            viewModel.discardDraft()
+        }
+
+        orders.postNext = { PostCompletionReportOutcome.Rejected.Unauthorized }
+        val viewModel = viewModel(UploadFiles().useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Private note")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+        advanceUntilIdle()
+        viewModel.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(null, sessionStore.getSession())
+        assertEquals(ProviderCompletionUiState.SessionExpired, viewModel.uiState.value)
+        assertEquals("", viewModel.description.value)
+        assertEquals(emptyList<CompletionEvidenceSelection>(), viewModel.evidence.value)
+    }
+
+    @Test fun conflict_get_failure_allows_only_a_query_retry() = runTest(dispatcher.scheduler) {
+        orders.next = { if (orders.postCalls == 0) WorkOrderDetailOutcome.Success(detail)
+            else WorkOrderDetailOutcome.Failure.Network(Exception("offline")) }
+        orders.postNext = { PostCompletionReportOutcome.Rejected.Conflict }
+        val viewModel = viewModel(UploadFiles().useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Done")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+        advanceUntilIdle()
+        viewModel.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.Conflict),
+            viewModel.submission.value)
+        assertTrue((viewModel.uiState.value as ProviderCompletionUiState.Ready).eligibility
+            is CompletionEligibility.Failure.Network)
+        val queriesBefore = orders.queriedIds.size
+        viewModel.confirmCompletion()
+        assertEquals(1, orders.postCalls)
+        viewModel.retryConflictQuery()
+        advanceUntilIdle()
+        assertEquals(queriesBefore + 1, orders.queriedIds.size)
+        assertEquals(1, orders.postCalls)
+        orders.next = { WorkOrderDetailOutcome.Success(detail.copy(
+            status = WorkOrderStatus.AwaitingPayment, completionReportId = 17)) }
+        viewModel.retryConflictQuery()
+        advanceUntilIdle()
+        assertEquals(CompletionEligibility.AlreadyReported,
+            (viewModel.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+        assertEquals(1, orders.postCalls)
+    }
+
     @Test fun session_change_discards_late_post_result_and_private_state() = runTest(dispatcher.scheduler) {
         orders.next = { WorkOrderDetailOutcome.Success(detail) }
         val late = CompletableDeferred<PostCompletionReportOutcome>()
