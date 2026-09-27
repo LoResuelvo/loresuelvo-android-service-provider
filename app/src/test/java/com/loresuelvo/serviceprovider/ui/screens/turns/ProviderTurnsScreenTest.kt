@@ -226,6 +226,22 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithTag("provider_turn_1").assertDoesNotExist()
     }
 
+    @Test fun summary_back_restores_list_scroll_without_firing_list_back() {
+        val orders = (1..20).map { WorkOrder(it, "Consumer $it", "Work", it.toLong(), WorkOrderStatus.Scheduled) }
+        var listBackCalls = 0
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(orders), { listBackCalls++ }, {})
+        } }
+        compose.onNodeWithTag("provider_turns_list").performScrollToIndex(19)
+        compose.onNodeWithTag("provider_turn_details_20").performClick()
+        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithTag("provider_turn_20").assertExists()
+        compose.onNodeWithTag("provider_turn_1").assertDoesNotExist()
+        compose.runOnIdle { org.junit.Assert.assertEquals(0, listBackCalls) }
+        compose.onNodeWithText("Volver").performClick()
+        compose.runOnIdle { org.junit.Assert.assertEquals(1, listBackCalls) }
+    }
+
 
     private fun showOrder(photo: String?) {
         val order = WorkOrder(

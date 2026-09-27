@@ -119,7 +119,6 @@ Característica: Visualizar turnos como prestador
     Entonces veo el estado actualizado de esa orden
     Y conservo la posición del listado
 
-  @wip
   Esquema del escenario: 14-PVT Respetar Atrás y el origen del acceso
     Dado que entré a Turnos desde "<origen>" y abrí un resumen tras desplazarme
     Cuando cierro el resumen con Atrás

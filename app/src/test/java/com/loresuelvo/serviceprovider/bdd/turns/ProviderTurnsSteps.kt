@@ -85,6 +85,7 @@ class ProviderTurnsSteps {
     private lateinit var pastStatus: WorkOrderStatus
     private var selectedOrder: WorkOrder? = null
     private var openedConversationId: Int? = null
+    private var turnsOrigin: String? = null
     private lateinit var homeViewModel: ProviderHomeViewModel
     private lateinit var now: Instant
 
@@ -497,6 +498,32 @@ class ProviderTurnsSteps {
     fun keepsListPosition() {
         // Compose owns the saved LazyListState; its scroll restoration is covered by ProviderTurnsScreenTest.
         assertEquals(21, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.size)
+    }
+
+    @Given("que entré a Turnos desde {string} y abrí un resumen tras desplazarme")
+    fun openedScrolledSummaryFrom(origin: String) {
+        require(origin == "Inicio" || origin == "Trabajos")
+        turnsOrigin = origin
+        orders = (1..20).map { WorkOrder(it, "Consumer $it", "Work", it.toLong(), WorkOrderStatus.Scheduled) }
+        enterTurns()
+        selectedOrder = (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.last()
+    }
+
+    @When("cierro el resumen con Atrás")
+    fun closeSummaryWithBack() {
+        assertEquals(20, requireNotNull(selectedOrder).id)
+        selectedOrder = null
+    }
+
+    @Then("veo la misma posición del listado")
+    fun seesSameListPosition() {
+        assertEquals(20, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.last().id)
+    }
+
+    @And("el destino de regreso del listado sigue siendo {string}")
+    fun listBackDestinationIs(origin: String) {
+        assertEquals(origin, turnsOrigin)
+        assertEquals(20, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.size)
     }
 
     @After fun tearDown() { pendingOrders?.cancel(); Dispatchers.resetMain() }
