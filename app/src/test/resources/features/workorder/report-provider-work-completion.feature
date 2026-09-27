@@ -105,7 +105,6 @@ Característica: Informar finalización con evidencia como prestador
       | sigue habilitada y no tiene reporte       | el borrador conservado y la opción de confirmar un nuevo intento  |
       | no se pudo consultar el estado            | el borrador conservado y la opción de reintentar sólo la consulta  |
 
-  @wip
   Esquema del escenario: 08-PIF Proteger el borrador y la salida del formulario
     Dado que tengo una descripción y fotografías seleccionadas en el formulario
     Y todavía no confirmé la finalización

@@ -94,6 +94,9 @@ class ReportProviderWorkCompletionSteps {
     private var uncertainReport = false
     private val reconciliationResult = CompletableDeferred<String>()
     private val completionHandle = SavedStateHandle()
+    private var missingRestoredPhoto = false
+    private val cleanedPhotos = mutableListOf<String>()
+    private var draftEvent = ""
     private val orders = object : WorkOrderRepository {
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(listOf(listedOrder))
         override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
@@ -191,7 +194,9 @@ class ReportProviderWorkCompletionSteps {
                     else -> "image/jpeg"
                 }, 100, source))
         }
-        override suspend fun clean(image: PreparedEvidenceImage) = Unit
+        override suspend fun isAvailable(image: PreparedEvidenceImage) =
+            !(missingRestoredPhoto && image.originalName == "second.jpg")
+        override suspend fun clean(image: PreparedEvidenceImage) { cleanedPhotos += image.originalName }
     }
 
     @Given("que inicié sesión como prestador")
@@ -707,6 +712,85 @@ class ReportProviderWorkCompletionSteps {
             assertEquals(1, submittedReports.size)
             assertEquals(selected.id, completionHandle.get<Int>("completion_pending_order_id"))
         }
+    }
+
+    @Given("que tengo una descripción y fotografías seleccionadas en el formulario")
+    fun selectedDraftBeforeExit() = runTest(dispatcher.scheduler) {
+        turns = ProviderTurnsViewModel(GetProviderTurnsUseCase(orders), GetServiceProposalsUseCase(proposals), session)
+        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
+            session, evidencePreparer, validateDraft, completionUploader, orders, completionHandle)
+        completion.open(selected)
+        advanceUntilIdle()
+        completion.onDescriptionChange("Trabajo terminado y revisado")
+        completion.selectEvidence(listOf("photo://first.jpg", "photo://second.jpg"))
+        advanceUntilIdle()
+        completion.uploadEvidence(completion.evidence.value.first().id)
+        advanceUntilIdle()
+        assertEquals(listOf(EvidenceUploadStatus.Confirmed("file-first.jpg"), EvidenceUploadStatus.NotStarted),
+            completion.evidence.value.map { it.uploadStatus })
+    }
+
+    @And("todavía no confirmé la finalización")
+    fun draftNotSubmitted() { assertTrue(submittedReports.isEmpty()) }
+
+    @When("ocurre {string}")
+    fun draftEventOccurs(event: String) = runTest(dispatcher.scheduler) {
+        draftEvent = event
+        when (event) {
+            "roto el dispositivo" -> completion.open(selected)
+            "regreso del selector sin elegir nuevas fotos" -> completion.selectEvidence(emptyList())
+            "se recrea el proceso y los archivos siguen disponibles",
+            "se recrea el proceso y una foto dejó de ser accesible" -> {
+                missingRestoredPhoto = event.endsWith("una foto dejó de ser accesible")
+                completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
+                    session, evidencePreparer, validateDraft, completionUploader, orders, completionHandle)
+                completion.open(selected)
+            }
+            "elijo Cancelar", "vuelvo con Atrás una vez cerrado el teclado" -> completion.discardDraft()
+            else -> error("Unapproved draft event: $event")
+        }
+        advanceUntilIdle()
+    }
+
+    @Then("obtengo {string}")
+    fun seeDraftOutcome(result: String) {
+        when (result) {
+            "el mismo borrador con el estado de sus fotografías",
+            "el mismo borrador sin cambios" -> {
+                assertEquals("Trabajo terminado y revisado", completion.description.value)
+                assertEquals(listOf(EvidenceUploadStatus.Confirmed("file-first.jpg"), EvidenceUploadStatus.NotStarted),
+                    completion.evidence.value.map { it.uploadStatus })
+            }
+            "el borrador restaurado sin dar cargas incompletas por confirmadas" -> {
+                assertEquals("Trabajo terminado y revisado", completion.description.value)
+                assertEquals(listOf(EvidenceUploadStatus.Confirmed("file-first.jpg"), EvidenceUploadStatus.Interrupted),
+                    completion.evidence.value.map { it.uploadStatus })
+                assertEquals(CompletionDraftValidation.Invalid.UnconfirmedPhoto, completion.attemptSubmit())
+            }
+            "la descripción y fotos disponibles con un aviso para reseleccionarla" -> {
+                assertEquals("Trabajo terminado y revisado", completion.description.value)
+                assertEquals(EvidenceUploadStatus.Confirmed("file-first.jpg"), completion.evidence.value.first().uploadStatus)
+                assertEquals(EvidenceSelectionStatus.Invalid(EvidenceImagePreparation.Invalid.Unreadable),
+                    completion.evidence.value[1].status)
+                assertEquals(CompletionDraftValidation.Invalid.UnconfirmedPhoto, completion.attemptSubmit())
+            }
+            "el resumen de la misma orden sin cambios" -> {
+                assertEquals(ProviderCompletionUiState.Closed, completion.uiState.value)
+                assertEquals(selected, (turns.uiState.value as ProviderTurnsUiState.Ready).orders.single())
+                assertEquals("", completion.description.value)
+                assertEquals(listOf("first.jpg", "second.jpg"), cleanedPhotos)
+            }
+            else -> error("Unapproved draft outcome: $result")
+        }
+        assertEquals(listOf("photo://first.jpg", "photo://second.jpg").take(
+            if (draftEvent.startsWith("elijo") || draftEvent.startsWith("vuelvo")) 0 else 2),
+            completion.evidence.value.map { it.source })
+    }
+
+    @And("no se registra una finalización ni se duplican las cargas")
+    fun noReportOrDuplicateUploadOnExit() {
+        assertTrue(submittedReports.isEmpty())
+        assertEquals(listOf("first.jpg"), presignCalls)
     }
 
     @After fun tearDown() { Dispatchers.resetMain() }

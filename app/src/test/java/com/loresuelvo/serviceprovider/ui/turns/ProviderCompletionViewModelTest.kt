@@ -433,6 +433,8 @@ class ProviderCompletionViewModelTest {
         assertEquals(1, orders.postCalls)
         assertEquals(null, viewModel.attemptSubmit())
         assertEquals(42, handle.get<Int>("completion_pending_order_id"))
+        assertEquals(null, handle.get<Int>("completion_draft_order_id"))
+        assertEquals(listOf("one", "two"), evidence.cleaned)
 
         orders.next = { WorkOrderDetailOutcome.Success(detail.copy(
             status = WorkOrderStatus.AwaitingPayment, completionReportId = 17)) }
@@ -872,7 +874,8 @@ class ProviderCompletionViewModelTest {
             prepared += source
             return next(source)
         }
-        override suspend fun isAvailable(image: PreparedEvidenceImage) = image.localPath !in unavailable
+        override suspend fun isAvailable(image: PreparedEvidenceImage) =
+            image.localPath !in unavailable && image.localPath !in cleaned
         override suspend fun clean(image: PreparedEvidenceImage) { cleaned += image.localPath }
     }
 }

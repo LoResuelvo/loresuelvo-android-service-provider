@@ -87,6 +87,7 @@ class ProviderCompletionViewModel @Inject constructor(
     private var draftOrderId: Int? = null
     private var nextEvidenceId = 0L
     private var restoredDraft = false
+    private var privateCopiesCleaned = false
     private val evidenceJobs = mutableMapOf<Long, Job>()
     private val uploadJobs = mutableMapOf<Long, Job>()
     private val _uiState = MutableStateFlow<ProviderCompletionUiState>(ProviderCompletionUiState.Closed)
@@ -330,6 +331,7 @@ class ProviderCompletionViewModel @Inject constructor(
                     savedStateHandle["completion_known_report_id"] = outcome.reportId
                     _submission.value = CompletionSubmissionState.Confirmed(outcome.reportId, false)
                     _uiState.value = ProviderCompletionUiState.Ready(order, CompletionEligibility.AlreadyReported)
+                    cleanSubmittedDraft()
                     reconcile(order, session)
                 }
                 is PostCompletionReportOutcome.Uncertain -> {
@@ -398,7 +400,10 @@ class ProviderCompletionViewModel @Inject constructor(
                         (knownReportId == null || it.completionReportId == knownReportId)
                 }
                 _refreshedOrderStatus.value = verified?.status
-                if (verified != null) clearSubmissionMarker()
+                if (verified != null) {
+                    clearSubmissionMarker()
+                    cleanSubmittedDraft()
+                }
                 _submission.value = when {
                     verified != null -> CompletionSubmissionState.Confirmed(knownReportId, true)
                     knownReportId != null -> CompletionSubmissionState.Confirmed(knownReportId, false)
@@ -460,6 +465,17 @@ class ProviderCompletionViewModel @Inject constructor(
         })
     }
 
+    private fun cleanSubmittedDraft() {
+        if (privateCopiesCleaned) return
+        privateCopiesCleaned = true
+        savedStateHandle.remove<Int>("completion_draft_order_id")
+        savedStateHandle.remove<String>("completion_draft_owner_id")
+        savedStateHandle.remove<String>("completion_draft_description")
+        savedStateHandle.remove<ArrayList<String>>("completion_draft_photos")
+        _evidence.value.mapNotNull { (it.status as? EvidenceSelectionStatus.Ready)?.image }
+            .forEach { image -> viewModelScope.launch { evidencePreparer.clean(image) } }
+    }
+
     private suspend fun restoreDraft(order: WorkOrder, session: AuthSession) {
         if (savedStateHandle.get<Int>("completion_draft_order_id") != order.id ||
             savedStateHandle.get<String>("completion_draft_owner_id") != session.user.id) return
@@ -500,6 +516,7 @@ class ProviderCompletionViewModel @Inject constructor(
         _evidence.value = emptyList()
         _evidenceIssue.value = null
         _validationIssue.value = null
-        prepared.forEach { image -> viewModelScope.launch { evidencePreparer.clean(image) } }
+        if (!privateCopiesCleaned) prepared.forEach { image -> viewModelScope.launch { evidencePreparer.clean(image) } }
+        privateCopiesCleaned = false
     }
 }
