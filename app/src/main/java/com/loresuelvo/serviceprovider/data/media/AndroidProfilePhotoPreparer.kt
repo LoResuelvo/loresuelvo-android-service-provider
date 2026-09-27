@@ -9,6 +9,7 @@ import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoLimits
 import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
 import com.loresuelvo.serviceprovider.domain.profile.SelectedProfilePhoto
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -27,19 +28,38 @@ class AndroidProfilePhotoPreparer @Inject constructor(
 ) : ProfilePhotoPreparer {
 
     override suspend fun preparePhoto(source: String): PhotoValidationOutcome =
+        prepareImage(source, "profile_photos", "profile_photo")
+
+    internal suspend fun prepareImage(
+        source: String,
+        cacheDirectory: String,
+        fallbackName: String,
+    ): PhotoValidationOutcome =
         withContext(Dispatchers.IO) {
             val uri = Uri.parse(source)
             val resolver = context.contentResolver
 
-            val originalName = queryDisplayName(uri) ?: "profile_photo"
-            val resolvedMime = (resolver.getType(uri) ?: inferMimeFromExtension(originalName))?.lowercase()
+            val originalName = queryDisplayName(uri) ?: fallbackName
+            val resolvedMime = try {
+                (resolver.getType(uri) ?: inferMimeFromExtension(originalName))?.lowercase()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                return@withContext PhotoValidationOutcome.Invalid.Unreadable
+            }
 
             if (resolvedMime == null || resolvedMime !in ProfilePhotoLimits.ALLOWED_MIME_TYPES) {
                 return@withContext PhotoValidationOutcome.Invalid.UnsupportedFormat
             }
 
-            val photoDir = File(context.cacheDir, "profile_photos").apply { mkdirs() }
-            val tempFile = File.createTempFile("photo_", ".tmp", photoDir)
+            val tempFile = try {
+                val photoDir = File(context.cacheDir, cacheDirectory).apply { mkdirs() }
+                File.createTempFile("photo_", ".tmp", photoDir)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                return@withContext PhotoValidationOutcome.Invalid.Unreadable
+            }
 
             try {
                 val input = openInputStream(uri, source) ?: run {
@@ -85,6 +105,9 @@ class AndroidProfilePhotoPreparer @Inject constructor(
                         localPath = tempFile.absolutePath,
                     ),
                 )
+            } catch (e: CancellationException) {
+                tempFile.delete()
+                throw e
             } catch (e: Exception) {
                 tempFile.delete()
                 PhotoValidationOutcome.Invalid.Unreadable
@@ -99,6 +122,8 @@ class AndroidProfilePhotoPreparer @Inject constructor(
             } else {
                 context.contentResolver.openInputStream(uri)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }
@@ -129,6 +154,8 @@ class AndroidProfilePhotoPreparer @Inject constructor(
                 if (file.exists()) {
                     file.delete()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
             }
         }
@@ -145,6 +172,8 @@ class AndroidProfilePhotoPreparer @Inject constructor(
                         }
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
             }
         }
