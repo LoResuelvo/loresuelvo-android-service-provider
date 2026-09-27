@@ -22,6 +22,7 @@ import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceUploadStatus
+import com.loresuelvo.serviceprovider.ui.turns.CompletionSubmissionState
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionEvidenceUpload
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadFailure
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadStage
@@ -146,5 +147,40 @@ class ProviderCompletionFormScreenTest {
             assertEquals(EvidenceUploadStatus.Uploading, selections[1].uploadStatus)
         }
         compose.onNodeWithText("Subiendo foto…").assertExists()
+    }
+
+    @Test fun submission_states_disable_mutation_and_show_server_confirmed_success() {
+        var submission by mutableStateOf<CompletionSubmissionState>(CompletionSubmissionState.Checking)
+        var refreshedStatus by mutableStateOf<WorkOrderStatus?>(null)
+        var queryRetries = 0
+        val photo = CompletionEvidenceSelection(1, "one", EvidenceSelectionStatus.Ready(
+            PreparedEvidenceImage("one.jpg", "image/jpeg", 100, "/missing/one.jpg")),
+            EvidenceUploadStatus.Confirmed("file-one"))
+        compose.setContent { LoresuelvoTheme {
+            ProviderCompletionFormScreen(order, CompletionFormAvailability.Eligible, "Done", {}, {}, {},
+                canAddPhotos = true, canAttemptSubmit = true, submission = submission,
+                refreshedOrderStatus = refreshedStatus, evidence = listOf(photo),
+                onRetryReconciliation = { queryRetries++ })
+        } }
+
+        compose.onNodeWithText("Comprobando la orden…").assertExists()
+        compose.onNodeWithTag("completion_description").assertIsNotEnabled()
+        compose.onNodeWithTag("completion_submit").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Quitar foto 1").assertIsNotEnabled()
+        compose.runOnIdle { submission = CompletionSubmissionState.Sending }
+        compose.onNodeWithText("Enviando finalización…").assertExists()
+        compose.runOnIdle { submission = CompletionSubmissionState.Confirmed(17, false) }
+        compose.onNodeWithText("Finalización informada correctamente.").assertExists()
+        compose.onNodeWithText("Pendiente de pago").assertDoesNotExist()
+        compose.onNodeWithTag("completion_submit").assertDoesNotExist()
+        compose.runOnIdle {
+            submission = CompletionSubmissionState.Confirmed(17, true)
+            refreshedStatus = WorkOrderStatus.AwaitingPayment
+        }
+        compose.onNodeWithText("Pendiente de pago").assertExists()
+        compose.runOnIdle { submission = CompletionSubmissionState.QueryFailed }
+        compose.onNodeWithText("No pudimos consultar la orden. Reintentá la consulta.").assertExists()
+        compose.onNodeWithTag("completion_retry_query").performSemanticsAction(SemanticsActions.OnClick)
+        compose.runOnIdle { assertEquals(1, queryRetries) }
     }
 }

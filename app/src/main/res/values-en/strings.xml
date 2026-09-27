@@ -62,6 +62,13 @@
     <string name="provider_completion_photo_required">Add at least one photo.</string>
     <string name="provider_completion_photo_unconfirmed">Wait for the photo to be confirmed before sending.</string>
     <string name="provider_completion_photo_duplicate_ids">There are duplicate photos. Remove one to continue.</string>
+    <string name="provider_completion_report_checking">Checking the order…</string>
+    <string name="provider_completion_report_sending">Sending completion report…</string>
+    <string name="provider_completion_report_reconciling">Checking whether the report was recorded…</string>
+    <string name="provider_completion_report_query_failed">We couldn’t check the order. Retry the query.</string>
+    <string name="provider_completion_report_success">Completion reported successfully.</string>
+    <string name="provider_completion_report_refresh_pending">We’re updating the turn status.</string>
+    <string name="provider_completion_report_retry_query">Retry query</string>
     <string name="proposal_home_view_all">View all</string>
     <string name="proposal_list_title">Proposals</string>
     <string name="proposal_list_back">Back to Home</string>

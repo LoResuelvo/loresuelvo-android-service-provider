@@ -62,6 +62,13 @@
     <string name="provider_completion_photo_required">Agregá al menos una foto.</string>
     <string name="provider_completion_photo_unconfirmed">Esperá a que se confirme la fotografía antes de enviar.</string>
     <string name="provider_completion_photo_duplicate_ids">Hay fotografías repetidas. Quitá una para continuar.</string>
+    <string name="provider_completion_report_checking">Comprobando la orden…</string>
+    <string name="provider_completion_report_sending">Enviando finalización…</string>
+    <string name="provider_completion_report_reconciling">Consultando si la finalización quedó registrada…</string>
+    <string name="provider_completion_report_query_failed">No pudimos consultar la orden. Reintentá la consulta.</string>
+    <string name="provider_completion_report_success">Finalización informada correctamente.</string>
+    <string name="provider_completion_report_refresh_pending">Estamos actualizando el estado del turno.</string>
+    <string name="provider_completion_report_retry_query">Reintentar consulta</string>
     <string name="proposal_home_view_all">Ver todas</string>
     <string name="proposal_list_title">Propuestas</string>
     <string name="proposal_list_back">Volver a Inicio</string>

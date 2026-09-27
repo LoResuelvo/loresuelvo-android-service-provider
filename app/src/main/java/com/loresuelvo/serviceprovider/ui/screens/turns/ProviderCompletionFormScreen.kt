@@ -36,11 +36,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceUploadStatus
+import com.loresuelvo.serviceprovider.ui.turns.CompletionSubmissionState
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadStage
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import coil3.compose.AsyncImage
@@ -68,7 +70,11 @@ fun ProviderCompletionFormScreen(
     validationIssue: CompletionDraftValidation.Invalid? = null,
     onSubmitAttempt: () -> Unit = {},
     canAttemptSubmit: Boolean = false,
+    submission: CompletionSubmissionState = CompletionSubmissionState.Idle,
+    onRetryReconciliation: () -> Unit = {},
+    refreshedOrderStatus: WorkOrderStatus? = null,
 ) {
+    val editable = submission == CompletionSubmissionState.Idle
     Scaffold(topBar = { TopAppBar(
         title = { Text(stringResource(R.string.provider_completion_title)) },
         navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) } },
@@ -78,7 +84,33 @@ fun ProviderCompletionFormScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(order.consumerName, style = MaterialTheme.typography.titleLarge)
             Text(order.description, style = MaterialTheme.typography.bodyLarge)
-            when (availability) {
+            when (submission) {
+                is CompletionSubmissionState.Confirmed -> {
+                    Text(stringResource(R.string.provider_completion_report_success))
+                    val statusLabel = if (submission.serverConfirmed)
+                        refreshedOrderStatus?.let { providerTurnStatusBadge(it)?.label } else null
+                    if (statusLabel != null) {
+                        Text(stringResource(statusLabel))
+                    } else {
+                        Text(stringResource(R.string.provider_completion_report_refresh_pending))
+                        Button(onClick = onRetryReconciliation,
+                            modifier = Modifier.testTag("completion_retry_query")) {
+                            Text(stringResource(R.string.provider_completion_report_retry_query))
+                        }
+                    }
+                }
+                CompletionSubmissionState.QueryFailed -> {
+                    Text(stringResource(R.string.provider_completion_report_query_failed))
+                    Button(onClick = onRetryReconciliation,
+                        modifier = Modifier.testTag("completion_retry_query")) {
+                        Text(stringResource(R.string.provider_completion_report_retry_query))
+                    }
+                }
+                CompletionSubmissionState.Reconciling -> {
+                    CircularProgressIndicator()
+                    Text(stringResource(R.string.provider_completion_report_reconciling))
+                }
+                else -> when (availability) {
                 CompletionFormAvailability.Checking -> {
                     CircularProgressIndicator(Modifier.testTag("completion_checking"))
                     Text(stringResource(R.string.provider_completion_checking))
@@ -99,9 +131,15 @@ fun ProviderCompletionFormScreen(
                     Button(onClick = onRetry) { Text(stringResource(R.string.provider_home_retry)) }
                 }
                 CompletionFormAvailability.Eligible -> {
+                    when (submission) {
+                        CompletionSubmissionState.Checking -> Text(stringResource(R.string.provider_completion_report_checking))
+                        CompletionSubmissionState.Sending -> Text(stringResource(R.string.provider_completion_report_sending))
+                        else -> Unit
+                    }
                     OutlinedTextField(value = description, onValueChange = onDescriptionChange,
                         label = { Text(stringResource(R.string.provider_completion_description)) },
-                        modifier = Modifier.fillMaxWidth().testTag("completion_description"), minLines = 3)
+                        modifier = Modifier.fillMaxWidth().testTag("completion_description"), minLines = 3,
+                        enabled = editable)
                     Text(stringResource(R.string.provider_completion_photos), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.provider_completion_photo_limit),
                         style = MaterialTheme.typography.bodySmall)
@@ -109,7 +147,7 @@ fun ProviderCompletionFormScreen(
                         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             evidence.forEachIndexed { index, selection ->
-                                CompletionEvidenceItem(index, selection, onRemoveEvidence, onRetryEvidence)
+                                CompletionEvidenceItem(index, selection, onRemoveEvidence, onRetryEvidence, editable)
                             }
                         }
                     }
@@ -119,7 +157,8 @@ fun ProviderCompletionFormScreen(
                             EvidenceSelectionIssue.AlreadySelected -> R.string.provider_completion_photo_duplicate
                         }), color = MaterialTheme.colorScheme.error)
                     }
-                    OutlinedButton(onClick = onAddPhotos, enabled = canAddPhotos) {
+                    OutlinedButton(onClick = onAddPhotos,
+                        enabled = canAddPhotos && editable) {
                         Text(stringResource(R.string.provider_completion_add_photos))
                     }
                     TextButton(onClick = onBack) { Text(stringResource(R.string.provider_completion_cancel)) }
@@ -128,10 +167,12 @@ fun ProviderCompletionFormScreen(
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.testTag("completion_validation_issue"))
                     }
-                    Button(onClick = onSubmitAttempt, enabled = canAttemptSubmit,
+                    Button(onClick = onSubmitAttempt,
+                        enabled = canAttemptSubmit && editable,
                         modifier = Modifier.testTag("completion_submit")) {
                         Text(stringResource(R.string.provider_completion_submit))
                     }
+                }
                 }
             }
         }
@@ -152,6 +193,7 @@ private fun CompletionEvidenceItem(
     selection: CompletionEvidenceSelection,
     onRemove: (Long) -> Unit,
     onRetry: (Long) -> Unit,
+    editable: Boolean,
 ) {
     Column(Modifier.width(96.dp).testTag("completion_evidence_${index}_${selection.id}"),
         verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -189,7 +231,7 @@ private fun CompletionEvidenceItem(
                     Text(stringResource(upload.failure.stage.messageResource()),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     val retryDescription = stringResource(R.string.provider_completion_photo_retry_description, index + 1)
-                    TextButton(onClick = { onRetry(selection.id) },
+                    TextButton(onClick = { onRetry(selection.id) }, enabled = editable,
                         modifier = Modifier.testTag("completion_retry_${selection.id}")
                             .semantics { contentDescription = retryDescription }) {
                         Text(stringResource(R.string.provider_completion_photo_retry))
@@ -198,7 +240,7 @@ private fun CompletionEvidenceItem(
             }
         }
         val removeDescription = stringResource(R.string.provider_completion_photo_remove_description, index + 1)
-        TextButton(onClick = { onRemove(selection.id) },
+        TextButton(onClick = { onRemove(selection.id) }, enabled = editable,
             modifier = Modifier.semantics { contentDescription = removeDescription }) {
             Text(stringResource(R.string.provider_completion_photo_remove))
         }
