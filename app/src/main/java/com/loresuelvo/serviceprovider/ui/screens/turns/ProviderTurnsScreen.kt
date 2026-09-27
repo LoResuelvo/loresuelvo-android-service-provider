@@ -185,7 +185,7 @@ internal fun ProviderTurnCard(order: WorkOrder, modifier: Modifier = Modifier, o
             Text(proposalAmount(order.amountCents), style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold)
             BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val expanded = maxWidth < 360.dp || LocalConfiguration.current.fontScale > 1f
+                val expanded = shouldStackTurnActions(maxWidth.value, LocalConfiguration.current.fontScale)
                 if (expanded) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         TurnDate(order, datePattern, locale)
@@ -242,3 +242,6 @@ internal fun providerTurnStatusBadge(status: WorkOrderStatus): ProviderTurnBadge
 
 internal fun formatTurnDate(epochMillis: Long, pattern: String, locale: Locale, timeZone: TimeZone): String =
     SimpleDateFormat(pattern, locale).apply { this.timeZone = timeZone }.format(Date(epochMillis))
+
+internal fun shouldStackTurnActions(widthDp: Float, fontScale: Float): Boolean =
+    widthDp < 360f || fontScale > 1f

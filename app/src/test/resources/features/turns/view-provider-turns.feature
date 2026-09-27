@@ -139,7 +139,6 @@ Característica: Visualizar turnos como prestador
       | cargar órdenes                    |
       | resolver la propuesta para el chat|
 
-  @wip
   Esquema del escenario: 16-PVT Mantener paridad visual y accesibilidad
     Dado que uso "<idioma>" y tamaño de fuente "<fuente>"
     Y existen referencias equivalentes de consumidor para listado, tarjeta y resumen

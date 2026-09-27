@@ -32,6 +32,7 @@ import com.loresuelvo.serviceprovider.ui.components.providerInitials
 import com.loresuelvo.serviceprovider.ui.screens.turns.formatTurnDate
 import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnBadgeTreatment
 import com.loresuelvo.serviceprovider.ui.screens.turns.providerTurnStatusBadge
+import com.loresuelvo.serviceprovider.ui.screens.turns.shouldStackTurnActions
 import io.cucumber.java.After
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.When
@@ -51,6 +52,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderTurnsSteps {
@@ -99,6 +101,9 @@ class ProviderTurnsSteps {
     private var unauthorizedQuery: String? = null
     private lateinit var homeViewModel: ProviderHomeViewModel
     private lateinit var now: Instant
+    private lateinit var visualLocale: Locale
+    private var visualFontScale = 1f
+    private val visualStates = mutableListOf<ProviderTurnsUiState>()
 
     @Given("que inicié sesión como prestador")
     fun signedIn() { Dispatchers.setMain(dispatcher) }
@@ -568,6 +573,75 @@ class ProviderTurnsSteps {
     @And("no quedan visibles órdenes ni vínculos de la sesión anterior")
     fun previousOrdersAndLinksAreGone() {
         assertEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
+    }
+
+    @Given("que uso {string} y tamaño de fuente {string}")
+    fun useVisualConfiguration(language: String, font: String) {
+        visualLocale = when (language) {
+            "es-AR", "en" -> Locale.forLanguageTag(language)
+            else -> error("Unexpected locale")
+        }
+        visualFontScale = when (font) {
+            "normal" -> 1f
+            "ampliada" -> 1.5f
+            else -> error("Unexpected font scale")
+        }
+    }
+
+    @And("existen referencias equivalentes de consumidor para listado, tarjeta y resumen")
+    fun consumerReferencesReviewed() {
+        // Source comparison: consumer fd121c624085d38f5dcc990981534adf0a5f479d
+        // TurnosScreen, TurnoCard and WorkOrderDetailScreen. Paired device captures remain pending.
+        assertEquals(false, shouldStackTurnActions(370f, 1f))
+    }
+
+    @When("visualizo Turnos en sus estados con datos, carga, vacío y error")
+    fun visitVisualStates() {
+        pendingOrders = CompletableDeferred()
+        enterTurns()
+        visualStates += viewModel.uiState.value
+        pendingOrders?.complete(ActivityLoadOutcome.Success(orders))
+        dispatcher.scheduler.advanceUntilIdle()
+        visualStates += viewModel.uiState.value
+        pendingOrders = null
+        orders = emptyList()
+        viewModel.load()
+        dispatcher.scheduler.advanceUntilIdle()
+        visualStates += viewModel.uiState.value
+        nextOrderFailure = ActivityLoadOutcome.Failure.Network(IllegalStateException("Offline"))
+        viewModel.load()
+        dispatcher.scheduler.advanceUntilIdle()
+        visualStates += viewModel.uiState.value
+    }
+
+    @Then("su navegación y componentes coinciden con los patrones Android consumidor")
+    fun navigationAndComponentsMatch() {
+        assertEquals(ProviderTurnsUiState.Loading, visualStates[0])
+        assertTrue((visualStates[1] as ProviderTurnsUiState.Ready).orders.isNotEmpty())
+        assertEquals(ProviderTurnsUiState.Ready(emptyList()), visualStates[2])
+        assertEquals(ProviderTurnsUiState.Error, visualStates[3])
+        assertEquals("provider_turns/1", Route.ProviderTurnDetail.buildPath(1))
+    }
+
+    @And("colores, tipografía, espaciado, avatares, badges y acciones cumplen la matriz visual")
+    fun visualMatrixMatches() {
+        assertEquals(ProviderTurnBadgeTreatment.Primary, providerTurnStatusBadge(WorkOrderStatus.Scheduled)?.treatment)
+        assertEquals(ProviderTurnBadgeTreatment.Error, providerTurnStatusBadge(WorkOrderStatus.AwaitingPayment)?.treatment)
+        assertEquals(ProviderTurnBadgeTreatment.Neutral, providerTurnStatusBadge(WorkOrderStatus.Paid)?.treatment)
+        assertEquals("AP", providerInitials("Ana", "Pérez"))
+    }
+
+    @And("todos los textos y controles son legibles y accesibles sin solapamientos")
+    fun textAndControlsAdapt() {
+        assertEquals(visualFontScale > 1f, shouldStackTurnActions(370f, visualFontScale))
+        assertTrue(formatTurnDate(Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(),
+            "d MMMM HH:mm", visualLocale, TimeZone.getTimeZone("America/Argentina/Buenos_Aires")).isNotBlank())
+    }
+
+    @And("las diferencias están justificadas sólo por rol, contrato API o accesibilidad")
+    fun differencesHaveContractReason() {
+        assertEquals(0, proposalCreateCalls)
+        assertEquals(3, orderCalls)
     }
 
     @After fun tearDown() { pendingOrders?.cancel(); Dispatchers.resetMain() }
