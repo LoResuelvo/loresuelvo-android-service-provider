@@ -4,6 +4,7 @@ import com.loresuelvo.serviceprovider.data.api.mapper.toDomain
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
 import com.loresuelvo.serviceprovider.domain.api.ApiError
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,6 +25,23 @@ class ApiWorkOrderRepository @Inject constructor(
             is ApiError.Unauthorized -> ActivityLoadOutcome.Failure.Unauthorized
             is ApiError.Server -> ActivityLoadOutcome.Failure.Server(error.code)
             is ApiError.Unknown -> ActivityLoadOutcome.Failure.Invalid
+        }
+    }
+
+    override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome = try {
+        WorkOrderDetailOutcome.Success(backendApi.getWorkOrder(id).toDomain())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        when (val error = e.toApiError()) {
+            is ApiError.Network -> WorkOrderDetailOutcome.Failure.Network(error.networkCause)
+            is ApiError.Unauthorized -> WorkOrderDetailOutcome.Failure.Unauthorized
+            is ApiError.Server -> when (error.code) {
+                403 -> WorkOrderDetailOutcome.Failure.Forbidden
+                404 -> WorkOrderDetailOutcome.Failure.NotFound
+                else -> WorkOrderDetailOutcome.Failure.Server(error.code)
+            }
+            is ApiError.Unknown -> WorkOrderDetailOutcome.Failure.Invalid
         }
     }
 }

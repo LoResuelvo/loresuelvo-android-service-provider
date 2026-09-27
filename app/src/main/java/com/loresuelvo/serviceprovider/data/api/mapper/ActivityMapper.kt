@@ -4,9 +4,11 @@ import com.loresuelvo.serviceprovider.data.api.dto.JobRequestRequesterDto
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderCounterpartDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderSummaryDto
+import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderDetailDto
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 
 internal fun JobRequestSummaryDto.toDomain(): JobRequest = JobRequest(
@@ -35,6 +37,18 @@ internal fun WorkOrderSummaryDto.toDomain(): WorkOrder = WorkOrder(
     consumerPhotoUrl = counterpart.profilePhotoUrl,
     serviceProposalId = serviceProposalId,
     consumerId = counterpart.id,
+)
+
+internal fun WorkOrderDetailDto.toDomain(): WorkOrderDetail = WorkOrderDetail(
+    id = id,
+    serviceProposalId = serviceProposalId,
+    consumerId = consumerId,
+    providerId = providerId,
+    amountCents = amountCents,
+    scheduledOn = scheduledOn.toEpochMillis(),
+    description = description,
+    status = status.toDomainStatus(),
+    completionReportId = completionReport?.id,
 )
 
 private fun String.toDomainStatus(): WorkOrderStatus = when (lowercase()) {

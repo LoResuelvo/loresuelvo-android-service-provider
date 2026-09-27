@@ -2,4 +2,6 @@ package com.loresuelvo.serviceprovider.domain.activity
 
 interface WorkOrderRepository {
     suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder>
+    suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome =
+        error("Current work-order detail is not configured")
 }
