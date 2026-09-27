@@ -4,6 +4,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollToIndex
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
@@ -46,6 +47,26 @@ class ProviderTurnsScreenTest {
         }
         compose.onNodeWithText("AP").assertExists()
     }
+
+    @Test fun shows_published_statuses_for_past_orders_without_inferring_unsupported_status() {
+        val past = Instant.parse("2020-01-01T00:00:00Z").toEpochMilli()
+        val orders = listOf(
+            WorkOrder(1, "Ana", "Work", past, WorkOrderStatus.Scheduled),
+            WorkOrder(2, "Bea", "Work", past, WorkOrderStatus.AwaitingPayment),
+            WorkOrder(3, "Cora", "Work", past, WorkOrderStatus.Paid),
+            WorkOrder(4, "Dani", "Work", past, WorkOrderStatus.Unsupported("unknown")),
+        )
+        compose.setContent { LoresuelvoTheme { ProviderTurnsScreen(ProviderTurnsUiState.Ready(orders), {}, {}) } }
+
+        compose.onNodeWithText("Confirmado").assertExists()
+        compose.onNodeWithTag("provider_turns_list").performScrollToIndex(1)
+        compose.onNodeWithText("Pendiente de pago").assertExists()
+        compose.onNodeWithTag("provider_turns_list").performScrollToIndex(2)
+        compose.onNodeWithText("Pagado").assertExists()
+        compose.onNodeWithTag("provider_turns_list").performScrollToIndex(3)
+        compose.onAllNodesWithTag("provider_turn_status_4").fetchSemanticsNodes().isEmpty().let { org.junit.Assert.assertTrue(it) }
+    }
+
 
     private fun showOrder(photo: String?) {
         val order = WorkOrder(

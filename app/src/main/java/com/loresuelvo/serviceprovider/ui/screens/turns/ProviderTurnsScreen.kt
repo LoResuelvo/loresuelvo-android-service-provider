@@ -32,6 +32,7 @@ import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalAmount
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import androidx.compose.foundation.shape.RoundedCornerShape
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -93,12 +94,30 @@ private fun ProviderTurnCard(order: WorkOrder) {
                     contentDescription = stringResource(R.string.proposal_list_avatar, order.consumerGivenName),
                     size = 56.dp,
                 )
-                Text(order.consumerName, style = MaterialTheme.typography.titleMedium)
+                Text(order.consumerName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                ProviderTurnStatusBadge(order.id, order.status)
             }
             Text(order.description)
             Text(proposalAmount(order.amountCents))
             Text(formatTurnDate(order.scheduledOn, datePattern, locale, TimeZone.getDefault()))
         }
+    }
+}
+
+@Composable
+private fun ProviderTurnStatusBadge(orderId: Int, status: WorkOrderStatus) {
+    val (label, background, foreground) = when (status) {
+        WorkOrderStatus.Scheduled -> Triple(R.string.provider_turns_status_scheduled,
+            MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
+        WorkOrderStatus.AwaitingPayment -> Triple(R.string.provider_turns_status_awaiting_payment,
+            MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.onError)
+        WorkOrderStatus.Paid -> Triple(R.string.provider_turns_status_paid,
+            MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+        is WorkOrderStatus.Unsupported -> return
+    }
+    Surface(modifier = Modifier.testTag("provider_turn_status_$orderId"), shape = RoundedCornerShape(50), color = background) {
+        Text(stringResource(label), Modifier.padding(horizontal = 10.dp, vertical = 4.dp), color = foreground,
+            style = MaterialTheme.typography.labelSmall)
     }
 }
 
