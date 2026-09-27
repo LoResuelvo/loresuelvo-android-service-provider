@@ -1,6 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.screens.home
 
 import android.content.Context
+import android.content.res.Configuration
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertCountEquals
@@ -87,6 +90,25 @@ class ProviderHomeScreenTest {
         assertEquals("Scheduled work", context.getString(R.string.provider_home_scheduled_count_label))
         assertEquals("Scheduled work", context.getString(R.string.provider_home_scheduled_action))
         assertEquals("View all", context.getString(R.string.provider_turns_view_all))
+    }
+
+    @Test @Config(qualifiers = "en")
+    fun enlarged_scheduled_header_keeps_count_and_view_all_separate() {
+        composeTestRule.setContent {
+            val enlarged = Configuration(LocalConfiguration.current).apply { fontScale = 1.5f }
+            CompositionLocalProvider(LocalConfiguration provides enlarged) {
+                LoresuelvoTheme { ProviderHomeScreen(provider(), ProviderHomeUiState(
+                    jobRequests = ActivitySectionState.Ready(emptyList()),
+                    scheduledWork = ActivitySectionState.Ready(listOf(workOrder())),
+                ), {}, {}, {}, {}) }
+            }
+        }
+        composeTestRule.onNodeWithTag("scheduled_view_all_turns").performScrollTo()
+        val title = composeTestRule.onNodeWithTag("scheduled_section_title").fetchSemanticsNode().boundsInRoot
+        val count = composeTestRule.onNodeWithTag("scheduled_section_count").fetchSemanticsNode().boundsInRoot
+        val link = composeTestRule.onNodeWithTag("scheduled_view_all_turns").fetchSemanticsNode().boundsInRoot
+        assertTrue(title.right < count.left)
+        assertTrue(link.top >= maxOf(title.bottom, count.bottom))
     }
 
     @Test

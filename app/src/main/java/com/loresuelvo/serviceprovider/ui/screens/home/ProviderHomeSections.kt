@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -96,18 +97,24 @@ internal fun ProposalsSection(onAllProposalsClick: () -> Unit, onAllTurnsClick: 
 
 @Composable
 private fun ActivitySectionHeader(title: String, count: String, onViewAll: (() -> Unit)? = null) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { heading() },
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(text = title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        Text(text = count, style = MaterialTheme.typography.titleLarge)
-        if (onViewAll != null) {
-            TextButton(onClick = onViewAll, modifier = Modifier.testTag("scheduled_view_all_turns")) {
+    val stackLink = onViewAll != null && LocalConfiguration.current.fontScale > 1f
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
+        Row(Modifier.fillMaxWidth().semantics { heading() },
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(text = title, style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f).then(
+                    if (onViewAll != null) Modifier.testTag("scheduled_section_title") else Modifier))
+            Text(text = count, style = MaterialTheme.typography.titleLarge,
+                modifier = if (onViewAll != null) Modifier.testTag("scheduled_section_count") else Modifier)
+            if (onViewAll != null && !stackLink) TextButton(onClick = onViewAll,
+                modifier = Modifier.testTag("scheduled_view_all_turns")) {
                 Text(stringResource(R.string.provider_turns_view_all))
             }
+        }
+        if (stackLink) TextButton(onClick = onViewAll!!,
+            modifier = Modifier.testTag("scheduled_view_all_turns")) {
+            Text(stringResource(R.string.provider_turns_view_all))
         }
     }
 }
