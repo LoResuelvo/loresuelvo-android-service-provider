@@ -64,7 +64,6 @@ Característica: Informar finalización con evidencia como prestador
       | transferencia del archivo      |
       | confirmación del archivo       |
 
-  @wip
   Esquema del escenario: 05-PIF Confirmar una única finalización y actualizar el turno
     Dado que soy el prestador asignado de una orden scheduled cuyo turno ya comenzó
     Y escribí una descripción válida y tengo <cantidad> fotografías confirmadas

@@ -58,6 +58,7 @@ sealed class Route(val path: String) {
 
     data object ProviderCompletion : Route("provider_turns/{turnId}/completion") {
         const val argument = "turnId"
+        const val reportedOrderId = "reportedOrderId"
         fun buildPath(turnId: Int): String {
             require(turnId > 0) { "turnId must be positive" }
             return "provider_turns/$turnId/completion"

@@ -475,6 +475,48 @@ class ProviderCompletionViewModelTest {
         assertEquals(2, orders.postCalls)
     }
 
+    @Test fun uncertain_post_stays_locked_when_awaiting_payment_has_no_verified_report() = runTest(dispatcher.scheduler) {
+        val awaitingWithoutReport = detail.copy(status = WorkOrderStatus.AwaitingPayment)
+        orders.next = { when (orders.queriedIds.size) {
+            3, 5, 6 -> WorkOrderDetailOutcome.Success(awaitingWithoutReport)
+            4 -> WorkOrderDetailOutcome.Failure.Network(Exception("offline"))
+            else -> WorkOrderDetailOutcome.Success(detail)
+        } }
+        orders.postNext = { PostCompletionReportOutcome.Uncertain.Network }
+        val handle = SavedStateHandle()
+        val viewModel = viewModel(UploadFiles().useCase(), handle)
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Done")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+        advanceUntilIdle()
+
+        viewModel.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.QueryFailed, viewModel.submission.value)
+        assertEquals(42, handle.get<Int>("completion_pending_order_id"))
+        assertEquals(null, viewModel.refreshedOrderStatus.value)
+        viewModel.confirmCompletion()
+        assertEquals(1, orders.postCalls)
+
+        viewModel.retryReconciliation()
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.QueryFailed, viewModel.submission.value)
+        assertEquals(42, handle.get<Int>("completion_pending_order_id"))
+        viewModel.confirmCompletion()
+        assertEquals(1, orders.postCalls)
+
+        orders.next = { WorkOrderDetailOutcome.Success(awaitingWithoutReport.copy(completionReportId = 17)) }
+        viewModel.retryReconciliation()
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.Confirmed(null, true), viewModel.submission.value)
+        assertEquals(WorkOrderStatus.AwaitingPayment, viewModel.refreshedOrderStatus.value)
+        assertEquals(null, handle.get<Int>("completion_pending_order_id"))
+        assertEquals(1, orders.postCalls)
+    }
+
     @Test fun recreated_viewmodel_with_pending_marker_reconciles_before_post() = runTest(dispatcher.scheduler) {
         val handle = SavedStateHandle(mapOf(
             "completion_pending_order_id" to 42,

@@ -175,7 +175,12 @@ fun LoResuelvoNav(
                                     val turnsState by turnsViewModel.uiState.collectAsStateWithLifecycle()
                                     ProviderCompletionRoute(orderId, turnsState,
                                         onBack = { navController.popBackStack() },
-                                        onRetryTurns = turnsViewModel::load)
+                                        onRetryTurns = turnsViewModel::load,
+                                        onReportConfirmed = {
+                                            turnsViewModel.load(preserveContent = true)
+                                            runCatching { navController.getBackStackEntry(Route.Home.path) }.getOrNull()
+                                                ?.savedStateHandle?.set(Route.ProviderCompletion.reportedOrderId, orderId)
+                                        })
                                 }
                             },
                             messages = {

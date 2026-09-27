@@ -6,6 +6,7 @@ import com.loresuelvo.serviceprovider.testing.unavailableCompletionUploadUseCase
 
 import android.net.Uri
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -26,6 +27,10 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
+import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidenceReader
+import com.loresuelvo.serviceprovider.domain.file.*
+import com.loresuelvo.serviceprovider.domain.usecase.activity.UploadCompletionEvidenceUseCase
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -61,11 +66,22 @@ class ProviderCompletionRouteTest {
         WorkOrderStatus.Scheduled, serviceProposalId = 10, consumerId = 3)
     private var result: WorkOrderDetailOutcome = WorkOrderDetailOutcome.Success(
         WorkOrderDetail(42, 10, 3, 7, 100, 1_000, order.description, WorkOrderStatus.Scheduled, null))
+    private var postCalls = 0
     private val orders = object : WorkOrderRepository {
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = error("No list query")
         override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
             assertEquals(42, id)
             return result
+        }
+        override suspend fun postCompletionReport(orderId: Int, description: String,
+            confirmedFileIds: List<String>): PostCompletionReportOutcome {
+            assertEquals(42, orderId)
+            assertEquals("Done", description)
+            assertEquals(listOf("file-first.jpg"), confirmedFileIds)
+            postCalls++
+            result = WorkOrderDetailOutcome.Success(WorkOrderDetail(42, 10, 3, 7, 100, 1_000,
+                order.description, WorkOrderStatus.AwaitingPayment, 17))
+            return PostCompletionReportOutcome.Success(17)
         }
     }
     private val accounts = object : CurrentAccountRepository {
@@ -193,6 +209,49 @@ class ProviderCompletionRouteTest {
         compose.runOnIdle {
             assertEquals("Done", viewModel.description.value)
             assertEquals(1, viewModel.evidence.value.size)
+        }
+    }
+
+    @Test fun confirmed_report_refreshes_from_server_and_disables_second_submission() {
+        var refreshes = 0
+        val filePort = object : FileRepository {
+            override suspend fun presign(request: PresignUploadRequest) = PresignUploadOutcome.Success(
+                PresignUploadResult("file-${request.originalName}", "private/${request.originalName}",
+                    "https://storage.example/file", emptyMap()))
+            override suspend fun uploadBytes(uploadUrl: String, headers: Map<String, String>, bytes: ByteArray) =
+                UploadBytesOutcome.Success
+            override suspend fun confirm(fileId: String, request: ConfirmUploadRequest) =
+                ConfirmUploadOutcome.Success(ConfirmedFile(fileId, mimeType = request.mimeType, originalName = "first.jpg"))
+        }
+        val uploader = UploadCompletionEvidenceUseCase(filePort, object : CompletionEvidenceReader {
+            override suspend fun read(image: PreparedEvidenceImage) = ByteArray(image.sizeBytes.toInt())
+        })
+        val viewModel = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { 1_000 },
+            session, evidencePort, ValidateCompletionReportDraftUseCase(), uploader, orders, SavedStateHandle())
+        compose.setContent { LoresuelvoTheme {
+            ProviderCompletionRoute(42, ProviderTurnsUiState.Ready(listOf(order)), {}, {}, viewModel,
+                onReportConfirmed = { refreshes++ })
+        } }
+        compose.onNodeWithTag("completion_description").performTextInput("Done")
+        compose.runOnIdle { onCompletionImagesPicked(viewModel, listOf(Uri.parse("photo://first.jpg"))) }
+        compose.onNodeWithText("Foto confirmada").assertExists()
+        compose.runOnIdle { assertEquals(com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation.Valid(
+            "Done", listOf("file-first.jpg")), viewModel.attemptSubmit()) }
+        compose.onNodeWithTag("completion_submit").assertIsEnabled()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        compose.waitUntil(5_000) { postCalls == 1 }
+        compose.runOnIdle {
+            assertEquals("submission=${viewModel.submission.value}, state=${viewModel.uiState.value}, validation=${viewModel.validationIssue.value}", 1, postCalls)
+            assertEquals(com.loresuelvo.serviceprovider.ui.turns.CompletionSubmissionState.Confirmed(17, true),
+                viewModel.submission.value)
+            assertEquals(WorkOrderStatus.AwaitingPayment, viewModel.refreshedOrderStatus.value)
+        }
+        compose.onNodeWithText("Pendiente de pago").assertExists()
+        compose.onNodeWithTag("completion_submit").assertDoesNotExist()
+        compose.runOnIdle {
+            viewModel.confirmCompletion()
+            assertEquals(1, postCalls)
+            assertEquals(1, refreshes)
         }
     }
 

@@ -102,6 +102,22 @@ class ProviderHomeViewModelTest {
         assertEquals(listOf(second), (viewModel.uiState.value.jobRequests as ActivitySectionState.Ready).items)
     }
 
+    @Test
+    fun refreshes_only_scheduled_work_after_a_report_changes_the_order_status() = runTest(scheduler) {
+        workOrders.next = ActivityLoadOutcome.Success(listOf(workOrder()))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        assertEquals(1, (viewModel.uiState.value.scheduledWork as ActivitySectionState.Ready).items.size)
+
+        workOrders.next = ActivityLoadOutcome.Success(listOf(workOrder().copy(status = WorkOrderStatus.AwaitingPayment)))
+        viewModel.retryScheduledWork()
+        advanceUntilIdle()
+
+        assertTrue((viewModel.uiState.value.scheduledWork as ActivitySectionState.Ready).items.isEmpty())
+        assertEquals(2, workOrders.calls)
+        assertEquals(1, jobRequests.calls)
+    }
+
     private fun createViewModel() = ProviderHomeViewModel(
         getPendingJobRequests = GetPendingJobRequestsUseCase(jobRequests),
         getScheduledWork = GetScheduledWorkUseCase(workOrders) {

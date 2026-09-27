@@ -22,6 +22,10 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
+import com.loresuelvo.serviceprovider.domain.activity.JobRequest
+import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
+import com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -38,6 +42,11 @@ import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligi
 import com.loresuelvo.serviceprovider.domain.usecase.activity.ValidateCompletionReportDraftUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.GetScheduledWorkUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.GetPendingJobRequestsUseCase
+import com.loresuelvo.serviceprovider.ui.home.ProviderHomeViewModel
+import com.loresuelvo.serviceprovider.ui.home.ActivitySectionState
+import com.loresuelvo.serviceprovider.ui.turns.CompletionSubmissionState
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionViewModel
@@ -76,12 +85,21 @@ class ReportProviderWorkCompletionSteps {
         WorkOrderStatus.Scheduled, null)
     private var now = 1_000L
     private var detailCalls = 0
+    private var listedOrder = selected
+    private val submittedReports = mutableListOf<Triple<Int, String, List<String>>>()
     private val orders = object : WorkOrderRepository {
-        override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(listOf(selected))
+        override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(listOf(listedOrder))
         override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
             assertEquals(selected.id, id)
             detailCalls++
             return WorkOrderDetailOutcome.Success(detail)
+        }
+        override suspend fun postCompletionReport(orderId: Int, description: String,
+            confirmedFileIds: List<String>): PostCompletionReportOutcome {
+            submittedReports += Triple(orderId, description, confirmedFileIds)
+            detail = detail.copy(status = WorkOrderStatus.AwaitingPayment, completionReportId = 17)
+            listedOrder = selected.copy(status = WorkOrderStatus.AwaitingPayment)
+            return PostCompletionReportOutcome.Success(17)
         }
     }
     private val accounts = object : CurrentAccountRepository {
@@ -99,6 +117,7 @@ class ReportProviderWorkCompletionSteps {
     }
     private lateinit var turns: ProviderTurnsViewModel
     private lateinit var completion: ProviderCompletionViewModel
+    private lateinit var home: ProviderHomeViewModel
     private lateinit var initialDetail: WorkOrderDetail
     private var expectedPhotos = emptyList<String>()
     private var photoAction = ""
@@ -436,6 +455,79 @@ class ReportProviderWorkCompletionSteps {
         assertEquals(null, detail.completionReportId)
         assertEquals(listOf("file-first.jpg", "file-second.jpg"),
             (completion.attemptSubmit() as CompletionDraftValidation.Valid).confirmedFileIds)
+    }
+
+    @Given("que soy el prestador asignado de una orden scheduled cuyo turno ya comenzó")
+    fun eligibleReportOrder() = runTest(dispatcher.scheduler) {
+        turns = ProviderTurnsViewModel(GetProviderTurnsUseCase(orders), GetServiceProposalsUseCase(proposals), session)
+        home = ProviderHomeViewModel(GetPendingJobRequestsUseCase(object : JobRequestRepository {
+            override suspend fun getPendingJobRequests(): ActivityLoadOutcome<JobRequest> = ActivityLoadOutcome.Success(emptyList())
+            override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome = error("Unused")
+        }), GetScheduledWorkUseCase(orders) { 0L })
+        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
+            session, evidencePreparer, validateDraft, completionUploader, orders, SavedStateHandle())
+        completion.open(selected)
+        advanceUntilIdle()
+        assertEquals(CompletionEligibility.Eligible,
+            (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+        assertEquals(1, (home.uiState.value.scheduledWork as ActivitySectionState.Ready).items.size)
+    }
+
+    @And("escribí una descripción válida y tengo {int} fotografías confirmadas")
+    fun validConfirmedDraft(count: Int) = runTest(dispatcher.scheduler) {
+        completion.onDescriptionChange("  Trabajo terminado y revisado  ")
+        expectedPhotos = listOf("first.jpg", "second.jpg", "third.jpg").take(count)
+        completion.selectEvidence(expectedPhotos.map { "photo://$it" })
+        advanceUntilIdle()
+        completion.evidence.value.forEach { completion.uploadEvidence(it.id) }
+        advanceUntilIdle()
+        assertEquals(count, completion.evidence.value.size)
+    }
+
+    @And("la API registra el reporte y devuelve la orden actualizada como awaiting_payment")
+    fun apiWillReportAwaitingPayment() { assertTrue(submittedReports.isEmpty()) }
+
+    @When("confirmo la finalización con un doble toque")
+    fun doubleTapReport() = runTest(dispatcher.scheduler) {
+        completion.confirmCompletion()
+        completion.confirmCompletion()
+        advanceUntilIdle()
+    }
+
+    @Then("se envía un solo reporte con la descripción y las fotografías en su orden")
+    fun oneOrderedReport() {
+        assertEquals(listOf(Triple(42, "Trabajo terminado y revisado",
+            expectedPhotos.map { "file-$it" })), submittedReports)
+        assertEquals(expectedPhotos.map { "file-$it" }, completion.evidence.value.map {
+            (it.uploadStatus as EvidenceUploadStatus.Confirmed).fileId
+        })
+    }
+
+    @And("veo la confirmación de éxito y el turno como Pendiente de pago")
+    fun seesServerPaymentStatus() {
+        assertEquals(CompletionSubmissionState.Confirmed(17, true), completion.submission.value)
+        assertTrue(17 != selected.id)
+        assertEquals(WorkOrderStatus.AwaitingPayment, completion.refreshedOrderStatus.value)
+    }
+
+    @And("se actualizan Turnos y la actividad afectada de Inicio")
+    fun refreshedTurnsAndHome() = runTest(dispatcher.scheduler) {
+        turns.load(preserveContent = true)
+        home.retryScheduledWork()
+        advanceUntilIdle()
+        assertEquals(WorkOrderStatus.AwaitingPayment,
+            (turns.uiState.value as ProviderTurnsUiState.Ready).orders.single().status)
+        assertTrue((home.uiState.value.scheduledWork as ActivitySectionState.Ready).items.isEmpty())
+    }
+
+    @And("no se ofrece otro reporte ni se marca la orden como Pagado localmente")
+    fun noDuplicateOrLocalPaid() = runTest(dispatcher.scheduler) {
+        completion.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(1, submittedReports.size)
+        assertEquals(WorkOrderStatus.AwaitingPayment, detail.status)
+        assertEquals(CompletionEligibility.AlreadyReported,
+            (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
     }
 
     @After fun tearDown() { Dispatchers.resetMain() }

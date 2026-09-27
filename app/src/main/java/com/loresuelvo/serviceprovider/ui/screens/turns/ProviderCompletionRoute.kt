@@ -18,7 +18,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -32,6 +35,7 @@ import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionViewModel
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceUploadStatus
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
+import com.loresuelvo.serviceprovider.ui.turns.CompletionSubmissionState
 
 @Composable
 fun ProviderCompletionRoute(
@@ -41,12 +45,16 @@ fun ProviderCompletionRoute(
     onRetryTurns: () -> Unit,
     viewModel: ProviderCompletionViewModel = hiltViewModel(),
     pickPhotos: (() -> Unit)? = null,
+    onReportConfirmed: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val description by viewModel.description.collectAsStateWithLifecycle()
     val evidence by viewModel.evidence.collectAsStateWithLifecycle()
     val evidenceIssue by viewModel.evidenceIssue.collectAsStateWithLifecycle()
     val validationIssue by viewModel.validationIssue.collectAsStateWithLifecycle()
+    val submission by viewModel.submission.collectAsStateWithLifecycle()
+    val refreshedOrderStatus by viewModel.refreshedOrderStatus.collectAsStateWithLifecycle()
+    var refreshSignaled by remember(orderId) { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(3)) { uris ->
         onCompletionImagesPicked(viewModel, uris)
     }
@@ -60,6 +68,12 @@ fun ProviderCompletionRoute(
     LaunchedEffect(evidence, state) {
         evidence.filter { it.status is EvidenceSelectionStatus.Ready && it.uploadStatus == EvidenceUploadStatus.NotStarted }
             .forEach { viewModel.uploadEvidence(it.id) }
+    }
+    LaunchedEffect(submission) {
+        if (submission is CompletionSubmissionState.Confirmed && !refreshSignaled) {
+            refreshSignaled = true
+            onReportConfirmed()
+        }
     }
 
     when {
@@ -83,8 +97,10 @@ fun ProviderCompletionRoute(
                 evidence = evidence, evidenceIssue = evidenceIssue,
                 onRemoveEvidence = viewModel::removeEvidence,
                 onRetryEvidence = viewModel::retryEvidence,
-                validationIssue = validationIssue, onSubmitAttempt = { viewModel.attemptSubmit() },
-                canAttemptSubmit = availability == CompletionFormAvailability.Eligible)
+                validationIssue = validationIssue, onSubmitAttempt = viewModel::confirmCompletion,
+                canAttemptSubmit = availability == CompletionFormAvailability.Eligible,
+                submission = submission, onRetryReconciliation = viewModel::retryReconciliation,
+                refreshedOrderStatus = refreshedOrderStatus)
         }
     }
 }

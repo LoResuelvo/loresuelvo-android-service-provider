@@ -32,6 +32,16 @@ fun ProviderHomeRoute(
                 }
             }
     }
+    LaunchedEffect(navController, viewModel) {
+        val homeEntry = navController.currentBackStackEntry ?: return@LaunchedEffect
+        homeEntry.savedStateHandle.getStateFlow<Int?>(Route.ProviderCompletion.reportedOrderId, null)
+            .collect { reportedOrderId ->
+                reportedOrderId?.let {
+                    viewModel.retryScheduledWork()
+                    homeEntry.savedStateHandle[Route.ProviderCompletion.reportedOrderId] = null
+                }
+            }
+    }
 
     ProviderHomeScreen(
         provider = provider,

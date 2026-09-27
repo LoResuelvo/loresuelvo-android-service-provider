@@ -8,6 +8,8 @@ import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidencePreparer
 import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.domain.activity.PreparedEvidenceImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
@@ -97,6 +99,8 @@ class ProviderCompletionViewModel @Inject constructor(
     val validationIssue: StateFlow<CompletionDraftValidation.Invalid?> = _validationIssue.asStateFlow()
     private val _submission = MutableStateFlow<CompletionSubmissionState>(CompletionSubmissionState.Idle)
     val submission: StateFlow<CompletionSubmissionState> = _submission.asStateFlow()
+    private val _refreshedOrderStatus = MutableStateFlow<WorkOrderStatus?>(null)
+    val refreshedOrderStatus: StateFlow<WorkOrderStatus?> = _refreshedOrderStatus.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -346,8 +350,20 @@ class ProviderCompletionViewModel @Inject constructor(
         val knownReportId = savedStateHandle.get<Int>("completion_known_report_id")
         when {
             eligibility == CompletionEligibility.AlreadyReported -> {
-                clearSubmissionMarker()
-                _submission.value = CompletionSubmissionState.Confirmed(knownReportId, true)
+                val refreshed = (workOrders.getWorkOrder(order.id) as? WorkOrderDetailOutcome.Success)?.order
+                if (!isCurrent(order, session)) return
+                val verified = refreshed?.takeIf {
+                    it.id == order.id && it.serviceProposalId == order.serviceProposalId &&
+                        it.consumerId == order.consumerId && it.completionReportId != null &&
+                        (knownReportId == null || it.completionReportId == knownReportId)
+                }
+                _refreshedOrderStatus.value = verified?.status
+                if (verified != null) clearSubmissionMarker()
+                _submission.value = when {
+                    verified != null -> CompletionSubmissionState.Confirmed(knownReportId, true)
+                    knownReportId != null -> CompletionSubmissionState.Confirmed(knownReportId, false)
+                    else -> CompletionSubmissionState.QueryFailed
+                }
                 _uiState.value = ProviderCompletionUiState.Ready(order, eligibility)
             }
             knownReportId != null -> {
@@ -391,6 +407,7 @@ class ProviderCompletionViewModel @Inject constructor(
 
     private fun clearDraft() {
         _description.value = ""
+        _refreshedOrderStatus.value = null
         draftOrderId = null
         evidenceJobs.values.forEach { it.cancel() }
         evidenceJobs.clear()
