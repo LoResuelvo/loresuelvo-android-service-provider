@@ -22,6 +22,14 @@
     <string name="provider_turns_view_details">Ver detalles</string>
     <string name="provider_turns_view_conversation">Ver conversación</string>
     <string name="provider_turns_conversation_missing">No encontramos la conversación de este turno.</string>
+    <string name="provider_completion_title">Informar finalización</string>
+    <string name="provider_completion_checking">Consultando el estado de la orden…</string>
+    <string name="provider_completion_too_early">Todavía no podés informar la finalización de este turno.</string>
+    <string name="provider_completion_already_reported">Esta orden ya tiene un reporte de finalización.</string>
+    <string name="provider_completion_forbidden">No tenés permiso para informar la finalización de esta orden.</string>
+    <string name="provider_completion_description">Descripción de la entrega</string>
+    <string name="provider_completion_add_photos">Agregar fotos</string>
+    <string name="provider_completion_submit">Confirmar finalización</string>
     <string name="proposal_home_view_all">Ver todas</string>
     <string name="proposal_list_title">Propuestas</string>
     <string name="proposal_list_back">Volver a Inicio</string>
