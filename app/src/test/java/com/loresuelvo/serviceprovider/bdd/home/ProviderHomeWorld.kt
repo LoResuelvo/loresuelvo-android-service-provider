@@ -157,7 +157,9 @@ internal class ProviderHomeWorld : AutoCloseable {
         assertTrue(entryViewModel.uiState.value is ProviderEntryUiState.Home)
         homeViewModel = ProviderHomeViewModel(
             getPendingJobRequests = GetPendingJobRequestsUseCase(jobRequests),
-            getScheduledWork = GetScheduledWorkUseCase(workOrders),
+            getScheduledWork = GetScheduledWorkUseCase(workOrders) {
+                Instant.parse("2026-09-19T00:00:00Z").toEpochMilli()
+            },
         )
         scheduler.advanceUntilIdle()
     }

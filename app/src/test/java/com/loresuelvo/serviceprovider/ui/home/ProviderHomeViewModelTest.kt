@@ -104,7 +104,9 @@ class ProviderHomeViewModelTest {
 
     private fun createViewModel() = ProviderHomeViewModel(
         getPendingJobRequests = GetPendingJobRequestsUseCase(jobRequests),
-        getScheduledWork = GetScheduledWorkUseCase(workOrders),
+        getScheduledWork = GetScheduledWorkUseCase(workOrders) {
+            Instant.parse("2026-09-19T00:00:00Z").toEpochMilli()
+        },
     )
 
     private fun jobRequest() = JobRequest(
