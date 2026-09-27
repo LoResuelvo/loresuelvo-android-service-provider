@@ -90,6 +90,18 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithTag("provider_turn_7").assertIsDisplayed()
     }
 
+    @Test fun enlarged_error_keeps_retry_reachable() {
+        var retries = 0
+        compose.setContent {
+            val enlarged = Configuration(LocalConfiguration.current).apply { fontScale = 1.5f }
+            androidx.compose.runtime.CompositionLocalProvider(LocalConfiguration provides enlarged) {
+                LoresuelvoTheme { ProviderTurnsScreen(ProviderTurnsUiState.Error, {}, { retries++ }) }
+            }
+        }
+        compose.onNodeWithText("Reintentar").performScrollTo().performClick()
+        compose.runOnIdle { org.junit.Assert.assertEquals(1, retries) }
+    }
+
     @Test fun falls_back_to_initials_when_photo_cannot_load() {
         showOrder("invalid://photo")
 

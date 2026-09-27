@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -106,7 +108,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
             Column(Modifier.fillMaxSize().padding(padding)) {
                 when (state) {
                     ProviderTurnsUiState.Loading -> Column(
-                        Modifier.fillMaxWidth().fillMaxHeight().padding(32.dp),
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
@@ -116,7 +118,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                         Text(loading, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodyMedium)
                     }
                     ProviderTurnsUiState.Error -> Column(
-                        Modifier.fillMaxSize().padding(32.dp).testTag("provider_turns_error"),
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp).testTag("provider_turns_error"),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
@@ -128,7 +130,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                     }
                     is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
                         Column(
-                            Modifier.fillMaxSize().padding(32.dp).testTag("provider_turns_empty"),
+                            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp).testTag("provider_turns_empty"),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
