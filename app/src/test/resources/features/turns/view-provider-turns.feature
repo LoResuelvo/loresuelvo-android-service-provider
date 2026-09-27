@@ -102,7 +102,6 @@ Característica: Visualizar turnos como prestador
     Entonces veo el estado vacío con texto adaptado al prestador
     Y no veo un indicador de carga ni un error
 
-  @wip
   Esquema del escenario: 12-PVT Recuperar la carga del listado
     Dado que la consulta de órdenes falló por "<causa>" y veo error con Reintentar
     Y la próxima consulta devuelve mis órdenes

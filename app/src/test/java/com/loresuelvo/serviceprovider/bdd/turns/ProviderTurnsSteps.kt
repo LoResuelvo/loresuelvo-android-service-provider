@@ -56,10 +56,12 @@ class ProviderTurnsSteps {
         WorkOrder(2, "Bea Silva", "Pintar pared", 2, WorkOrderStatus.Paid),
     )
     private var pendingOrders: CompletableDeferred<ActivityLoadOutcome<WorkOrder>>? = null
+    private var nextOrderFailure: ActivityLoadOutcome.Failure? = null
     private var orderCalls = 0
     private val repository = object : WorkOrderRepository {
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> {
             orderCalls++
+            nextOrderFailure?.let { nextOrderFailure = null; return it }
             return pendingOrders?.await() ?: ActivityLoadOutcome.Success(orders)
         }
     }
@@ -156,6 +158,35 @@ class ProviderTurnsSteps {
     fun seesNeitherLoadingNorError() {
         assertNotEquals(ProviderTurnsUiState.Loading, viewModel.uiState.value)
         assertNotEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
+    }
+
+    @Given("que la consulta de órdenes falló por {string} y veo error con Reintentar")
+    fun ordersFailed(cause: String) {
+        Dispatchers.setMain(dispatcher)
+        nextOrderFailure = when (cause) {
+            "falta de red" -> ActivityLoadOutcome.Failure.Network(IllegalStateException("Offline"))
+            "respuesta 500" -> ActivityLoadOutcome.Failure.Server(500)
+            else -> error("Unexpected order failure")
+        }
+        enterTurns()
+        assertEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
+    }
+
+    @And("la próxima consulta devuelve mis órdenes")
+    fun nextOrderQuerySucceeds() {
+        orders = listOf(WorkOrder(91, "Ana Pérez", "Updated work", 1, WorkOrderStatus.Scheduled))
+    }
+
+    @When("elijo Reintentar")
+    fun retryOrders() {
+        viewModel.load()
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("veo las órdenes actualizadas y desaparece el error")
+    fun seesRefreshedOrders() {
+        assertEquals(orders, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders)
+        assertEquals(2, orderCalls)
     }
 
     @Given("que una orden pasada tiene estado {string}")
