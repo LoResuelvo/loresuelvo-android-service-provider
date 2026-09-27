@@ -109,8 +109,16 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                             .semantics { contentDescription = loading })
                         Text(loading, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodyMedium)
                     }
-                    ProviderTurnsUiState.Error -> Button(onClick = onRetry) {
-                        Text(stringResource(R.string.provider_home_retry))
+                    ProviderTurnsUiState.Error -> Column(
+                        Modifier.fillMaxSize().testTag("provider_turns_error"),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(stringResource(R.string.provider_turns_error),
+                            style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+                        Button(onClick = onRetry, modifier = Modifier.padding(top = 12.dp)) {
+                            Text(stringResource(R.string.provider_home_retry))
+                        }
                     }
                     is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
                         Column(

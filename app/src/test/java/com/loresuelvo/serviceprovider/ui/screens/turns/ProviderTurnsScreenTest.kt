@@ -49,6 +49,21 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("Reintentar").assertDoesNotExist()
     }
 
+    @Test fun error_shows_retry_and_clears_when_orders_arrive() {
+        var retries = 0
+        var state: ProviderTurnsUiState by androidx.compose.runtime.mutableStateOf(ProviderTurnsUiState.Error)
+        compose.setContent { LoresuelvoTheme { ProviderTurnsScreen(state, {}, {
+            retries++
+            state = ProviderTurnsUiState.Ready(listOf(WorkOrder(8, "Ana", "Work", 1, WorkOrderStatus.Scheduled)))
+        }) } }
+        compose.onNodeWithTag("provider_turns_error").assertExists()
+        compose.onNodeWithText("No pudimos cargar tus turnos.").assertExists()
+        compose.onNodeWithText("Reintentar").performClick()
+        compose.onNodeWithTag("provider_turn_8").assertExists()
+        compose.onNodeWithTag("provider_turns_error").assertDoesNotExist()
+        compose.runOnIdle { org.junit.Assert.assertEquals(1, retries) }
+    }
+
     @Test fun shows_real_local_data_and_initials_without_category_space() {
         showOrder(null)
 

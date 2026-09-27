@@ -6,6 +6,7 @@
     <string name="provider_turns_empty">You have no appointments yet.</string>
     <string name="provider_turns_empty_body">When a job is scheduled, you’ll see it here.</string>
     <string name="provider_turns_loading">Loading appointments…</string>
+    <string name="provider_turns_error">We couldn’t load your appointments.</string>
     <string name="provider_turns_view_all">View all</string>
     <string name="provider_turns_visit_pattern">MMMM d \'at\' HH:mm</string>
     <string name="provider_turns_status_scheduled">Confirmed</string>
