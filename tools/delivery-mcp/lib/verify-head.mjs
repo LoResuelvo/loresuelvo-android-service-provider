@@ -4,6 +4,7 @@ import { findRepoRoot, assertSafeRepoPath } from "./repo-root.mjs";
 import { loadDeliveryPolicy } from "./policy-loader.mjs";
 import { captureGitSnapshot, extractUsId } from "./git-snapshot.mjs";
 import { runGate } from "./run-gate.mjs";
+import { buildGate } from "./select-gate.mjs";
 import {
   recordCommitEvidence,
   verifyCommitEvidence,
@@ -273,7 +274,6 @@ export async function verifyHeadDelivery({
 
   const effectiveUsId =
     requestedUsId || inferredUsId || snapshot.proposedUsId || snapshot.primaryRecentUsId || null;
-  const gateDefinition = policy.gates.D;
   const reasonCode = intent === "close_batch" ? "INTENT_CLOSE_BATCH" : "INTENT_CLOSE_US";
 
   const inspection = {
@@ -288,15 +288,7 @@ export async function verifyHeadDelivery({
       version: policy.version,
       hash: policyHash,
     },
-    gate: {
-      id: "D",
-      reasonCodes: [reasonCode],
-      checkIds: gateDefinition.checkIds,
-      parameters: {
-        scopeFeatures: resolvedScope,
-      },
-      postPushChecks: gateDefinition.postPushChecks || ["ci_green"],
-    },
+    gate: buildGate(policy, "D", [reasonCode], { scopeFeatures: resolvedScope }, [], intent),
     diagnostics: [],
   };
 

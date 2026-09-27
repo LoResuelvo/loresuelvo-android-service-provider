@@ -26,8 +26,11 @@ Choose one batch granularity:
 - `SCENARIO_GROUP`: complete two or three related, low-coupling scenarios,
   making each GREEN before starting the next.
 
-Use `MICROSTEP` for ambiguity or high risk, `SCENARIO` ordinarily, and
-`SCENARIO_GROUP` only when continuation conditions are predictable.
+Prefer `SCENARIO_GROUP` for two or three related scenarios when continuation
+conditions are predictable, retaining the developer across them. Use
+`SCENARIO` for an isolated or uncertain scope and `MICROSTEP` for validation
+without commit delivery. Follow already approved batch scope until it is
+deliberately updated; never rotate merely because a commit is complete.
 
 Granularity limits behavioral scope and reporting cadence; it never fixes the
 number of commits. `SCENARIO` and `SCENARIO_GROUP` authorize every atomic,
@@ -73,6 +76,12 @@ commit boundaries for that scenario before implementation, each with its
 result, required dependencies, focused GREEN proof, Delivery intent, and
 subject. Revisit the map when the implementation reveals a dependency.
 
+Require the smallest independently working commit boundaries within the
+scenario. A forecast of one complete journey must explain why its constituent
+results cannot stand alone. Do not accept a whole-scenario default merely
+because the batch uses `SCENARIO`; review this before dispatch, not after the
+large diff has been written.
+
 Keep RED, GREEN, and a small refactor with the same developer. A task or layer
 is not automatically a commit. Commit when its complete logical boundary is
 coherent, compilable, testable, and independently reversible; a scenario may
@@ -103,6 +112,12 @@ and the next permitted action.
 Follow that contract's progress/resource protocol, including immediate blocker
 reports and controller reconciliation of idle workers. Serialize Gradle/device
 jobs and do not launch an emulator without authorization.
+
+Do not query devices or run instrumented tests during implementation batches.
+Carry a short list of required device coverage and mark Android verification
+pending. Add the needed instrumented tests in the final coverage phase if they
+were deferred. Run the full suite only after the approved scenarios are GREEN,
+then retain the developer to fix failures before User Story closure.
 
 If HEAD or staging changes externally, inspect again, preserve unrelated work,
 and regenerate preparation evidence.

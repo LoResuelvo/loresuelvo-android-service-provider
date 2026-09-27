@@ -47,6 +47,7 @@ Next boundary:
 - Required input/output interfaces and dependencies:
 - Focused RED test and expected failure; GREEN proof and exclusions:
 - Expected artifacts and review checkpoint:
+- Required device coverage deferred to final User Story verification:
 
 Ownership and close:
 - Editing, staging, commit, and push owners:
@@ -73,6 +74,9 @@ dependency when it cannot compile or pass its focused tests alone; split a
 newly discovered independent concern. Do not build the whole scenario and
 divide its uncommitted diff retrospectively. A boundary map is a forecast, not
 a commit quota or permission for layer-only commits.
+Do not default that map to one scenario-sized commit. If no smaller result can
+stand alone, record the concrete dependency that prevents it. Intermediate
+proof is device-free; carry missing instrumented coverage to the final phase.
 
 When graph evidence informs the task, include its project and generation,
 evidence tier and bounded scope, queries/pagination, qualified symbols and
@@ -106,6 +110,7 @@ Active causal diagnosis (if any):
 Verified device/UI lesson and interaction recipe for the next developer:
 Tree state:
 Known CI state by SHA and pending window count:
+Pending final device coverage and verification:
 Next permitted action:
 Blocking prerequisite and owner, or none:
 Running job ID, or none:
@@ -136,6 +141,7 @@ blocked, resolve the prerequisite or narrow the task before redispatch. Keep
 the user informed at least once per minute during active work. No replacement
 worker may race the existing writer or a running gate.
 
-Run only one Gradle/device job at a time. Reuse an available physical device;
+Run only one Gradle/device job at a time. Do not query or use a device until
+final User Story verification. Then reuse an available physical device;
 report a missing device instead of starting an emulator unless authorized.
 Keep the plan and handoff in persistent local storage; never copy receipts.

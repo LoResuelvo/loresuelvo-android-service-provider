@@ -32,7 +32,7 @@ test("every gate stops on a failed check even without optional diagnostics", asy
     assert.equal(result.summary.skipped, gate.checkIds.length - 1, gateId);
     assert.deepEqual(result.gate.postPushChecks, policy.gates[gateId].postPushChecks);
     assert.throws(() => validateExecutionResult({ ...result, status: "passed" }, root), /failed check/);
-    if (["C", "D", "R"].includes(gateId)) {
+    if (gateId === "D") {
       const executed = [];
       const blocked = await runGate({ inspection, snapshot: { stagedFiles: [feature], cacheable: false }, policy, repoRoot: root,
         executeCheck: async ({ check }) => {

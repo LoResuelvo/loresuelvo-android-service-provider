@@ -37,6 +37,10 @@ scope, or an invented story number.
 
 - One commit represents one complete logical boundary. A scenario may need
   one or several commits; task size and batch granularity never set the count.
+- Small independently working commits are mandatory. Do not use the scenario
+  itself as the default boundary. If a whole scenario must be one commit,
+  record why its presentation, behavior, adapter, or integration results
+  cannot compile and pass focused tests independently.
 - Each commit leaves the repository compilable and testable, includes the
   dependencies required by its boundary, and is independently reversible.
 - An independently testable Composable, use case, or adapter may form its own
@@ -61,6 +65,19 @@ proof, and whether it is intermediate or closes the scenario. Revise the map
 as the code reveals coupling. Complete and commit each independent boundary
 before building the next; do not finish a large uncommitted scenario and then
 split its diff into commits that cannot stand alone.
+
+For a new read journey, inspect whether isolated presentation with immutable
+input, typed query/mapping behavior, and route integration can each stand
+alone with focused tests. Deliver the viable results in order; omit any
+unneeded seam. A final instrumented-coverage commit may add the required UI
+tests across completed scenarios. Device execution belongs to final User Story
+verification, not intermediate commit preparation.
+
+Put `Delivery-Verify-US: <numeric ID>` in the last functional or coverage
+commit's Git trailers. Its ID must match the subject. That push automatically
+requests the full instrumented CI suite; no manual dispatch or empty trigger
+commit is needed. Include the trailer again on final verification fixes so
+the replacement SHA receives full CI verification.
 
 Before preparing a partial staged diff, compare it with the remaining
 unstaged changes. Delivery checks run in the checkout, so a passing gate can

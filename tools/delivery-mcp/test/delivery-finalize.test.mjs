@@ -83,6 +83,25 @@ test("finalizeDelivery requires exact Gate D evidence for HEAD", async (t) => {
   assert.equal(result.reason, "INVALID_HEAD_EVIDENCE");
 });
 
+test("batch verification is device-free and cannot substitute for full User Story verification", async (t) => {
+  const repoRoot = await createTempRepo(t);
+  const feature = "app/src/test/resources/features/provider.feature";
+  const sha = await commitFeature(repoRoot, feature, "Feature: Provider\n  Scenario: ready\n    Given the provider is open\n", "test[33]: complete provider flow");
+  const checks = [];
+  const executeCheck = async args => { checks.push(args.check.id); return passingCheck(args); };
+  const batch = await verifyHeadDelivery({ repoRoot, intent: "close_batch", usId: "33", scopeFiles: [feature], executeCheck });
+  assert.equal(batch.verified, true);
+  assert.deepEqual(checks, ["no_wip_in_scope", "lint_dev", "jvm_test_dev", "build_dev"]);
+  const premature = await finalizeLocally({ repoRoot, intent: "close_us", usId: "33", scopeFiles: [feature],
+    ciProvider: new MockCiProvider({ [sha]: { status: "passed" } }) });
+  assert.equal(premature.finalized, false);
+  checks.length = 0;
+  const story = await verifyHeadDelivery({ repoRoot, intent: "close_us", usId: "33", scopeFiles: [feature], executeCheck });
+  assert.equal(story.verified, true);
+  assert.equal(story.cached, false);
+  assert.deepEqual(checks, ["no_wip_in_scope", "android_device", "lint_dev", "jvm_test_dev", "build_dev", "e2e_dev"]);
+});
+
 test("verifyHeadDelivery records Gate D without creating a commit, then finalization closes [33]", async (t) => {
   const repoRoot = await createTempRepo(t);
   const feature = "app/src/test/resources/features/provider.feature";

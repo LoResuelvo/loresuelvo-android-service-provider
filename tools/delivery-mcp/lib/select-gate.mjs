@@ -15,9 +15,13 @@ function substituteDisplay(display, parameters = {}) {
   });
 }
 
-function buildGate(policy, gateId, reasonCodes, parameters = {}, extraCheckIds = []) {
+export function buildGate(policy, gateId, reasonCodes, parameters = {}, extraCheckIds = [], intent = "prepare_commit") {
   const definition = policyGate(policy, gateId);
-  const configuredChecks = definition.checkIds || [];
+  // A batch proves its completed scope without paying for device execution.
+  // Full instrumented regression belongs exclusively to User Story closure.
+  const configuredChecks = gateId === "D" && intent === "close_batch"
+    ? ["no_wip_in_scope", ...policyGate(policy, "C").checkIds]
+    : definition.checkIds || [];
   const checkIds = [...new Set([
     ...configuredChecks.filter((id) => id === "no_wip_in_scope"),
     ...extraCheckIds,
@@ -139,7 +143,7 @@ export function selectGate({
   } else if (intent === "close_batch" || intent === "close_us") {
     const scope = resolveFeatureScope({ featureFile, scopeFiles, snapshot });
     const reason = intent === "close_batch" ? "INTENT_CLOSE_BATCH" : "INTENT_CLOSE_US";
-    gate = buildGate(policy, "D", [reason], { scopeFeatures: scope });
+    gate = buildGate(policy, "D", [reason], { scopeFeatures: scope }, [], intent);
     if (!scope.length && status !== "blocked") {
       status = "needs_input";
       diagnostic(diagnostics, "MISSING_SCOPE_FOR_GATE_D", "Gate D requires at least one feature path to verify completed scope");
@@ -148,7 +152,7 @@ export function selectGate({
       dependencyImpact?.scope === "production_feature") {
     gate = buildGate(policy, "B", [dependencyImpact.reason], { featureFile: dependencyImpact.featureFile || featureFile,
       runnerClass: dependencyImpact.runnerClass, testClasses: dependencyImpact.testClasses,
-      deviceTestClasses: dependencyImpact.deviceTestClasses }, ["android_device", "lint_dev", "feature_jvm_dev", "feature_device_dev"]);
+      deviceTestClasses: dependencyImpact.deviceTestClasses }, ["lint_dev", "feature_jvm_dev", "build_dev"]);
     gate.checkIds = gate.checkIds.filter((id) => id !== "jvm_test_dev");
     gate.checks = gate.checkIds.map((id) => substituteDisplay(policy.checkCatalog[id].display, gate.parameters));
   } else if (classified.hasGateCTrigger) {
@@ -195,7 +199,7 @@ export function selectGate({
   }
 
   if (classified.hasDeliveryTooling && !gate.checkIds.includes("delivery_unit")) {
-    gate = buildGate(policy, gate.id, [...gate.reasonCodes, "DELIVERY_TOOLING_CHANGED"], gate.parameters, ["delivery_unit"]);
+    gate = buildGate(policy, gate.id, [...gate.reasonCodes, "DELIVERY_TOOLING_CHANGED"], gate.parameters, ["delivery_unit"], intent);
   }
 
   if (maintainability?.operationalDiagnostic) {

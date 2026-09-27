@@ -1,6 +1,6 @@
 # AGENTS.md — LoResuelvo Android Service Provider
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-26.
 
 This is the repository-wide agent contract. Read it before work, then load only
 the skills relevant to the task. Use [`README.md`](README.md) for human setup,
@@ -55,6 +55,16 @@ specifications; device tests verify Android UI boundaries. Use the BDD and
 testability skills for test design, and the testing-gates skill for delivery
 validation.
 
+Device execution is reserved for final User Story verification. Commit,
+scenario, CI-repair, and intermediate batch gates must not query a device or
+run instrumented tests. Keep JVM/BDD proof and the selected lint/build checks
+GREEN throughout implementation. Track required Android UI coverage for the
+final phase; new instrumented tests may be delivered in a final coverage
+commit. Full instrumented regression must pass before `close_us` can finish.
+The final meaningful commit carries `Delivery-Verify-US: <numeric ID>` as a
+Git trailer to trigger full instrumented CI automatically. Ordinary pushes
+retain Delivery, lint, JVM, and build checks without emulator execution.
+
 Delivery MCP selects checks from `.delivery/policy.v1.json`; do not infer a
 weaker gate or replace it with a focused test. Use `delivery_test` for focused
 RED/GREEN, `delivery_prepare` for the exact staged snapshot, and
@@ -81,7 +91,12 @@ Stage only the intended files and prepare that exact snapshot before committing;
 changing HEAD, stage, policy, intent, or scope invalidates its receipt.
 
 Each commit must be coherent, compilable, testable, and independently
-reversible. Batch or scenario granularity does not set the commit count. Do
+reversible. Plan and deliver the smallest independently working boundary;
+never default to one commit per scenario. Before editing, identify separable
+presentation, behavior, adapter, and integration results that the active
+scenario needs, with focused proof for each. A whole-scenario commit is valid
+only when those results cannot stand alone; record that dependency reason.
+Batch or scenario granularity does not set the commit count. Do
 not split mechanically by file or layer, and do not accumulate independent
 boundaries into a mega-commit. Intermediate commits may keep the active
 scenario `@wip`; remove it with the functional commit that makes the scenario

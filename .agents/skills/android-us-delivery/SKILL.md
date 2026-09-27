@@ -40,10 +40,21 @@ TDD checks never replace it.
 
 ## Closing a batch or User Story
 
+After all approved scenarios are JVM GREEN, complete any deferred instrumented
+tests in a coherent coverage commit. Include `Delivery-Verify-US: <numeric ID>`
+in that final meaningful commit to trigger instrumented CI automatically; the agent owns the trigger
+and checks the final SHA's result. Repeat the trailer on final verification
+fixes. No manual human dispatch or empty trigger commit is required. Run the
+full local device suite and fix its failures before closing. This is the only
+phase for device queries and instrumented execution; do not add intermediate
+device checkpoints. Passing commit or batch gates does not prove Android UI
+verification. Keep the pending coverage explicit in the canonical plan.
+
 Close a batch only when its declared feature scope has no `@wip`. For a clean
 HEAD, call `delivery_verify_head` and `delivery_finalize` with the same
 `close_batch` or `close_us` intent and exact scope. A batch may finish with
 `passed_pending_ci`; a User Story requires `finalized: true, status: passed`.
+Batch verification is device-free; `close_us` requires full instrumented proof.
 
 If a feature still contains future `@wip` scenarios, report the completed
 scenario or batch and do not claim formal batch closure.

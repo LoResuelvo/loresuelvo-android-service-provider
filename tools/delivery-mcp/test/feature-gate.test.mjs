@@ -190,7 +190,8 @@ test("US-53 regression corpus never downgrades high-risk closures or CI repairs"
       [historicalTreesAvailable ? "feature_jvm_dev" : "jvm_test_dev"]);
     for (const intent of ["close_batch", "close_us"]) {
       const closure = selectGate({ policy, intent, featureFile: proposal, snapshot: { stagedFiles: files }, cucumberImpact: impact });
-      assert.deepEqual(closure.gate.checkIds, policy.gates.D.checkIds);
+      assert.deepEqual(closure.gate.checkIds, intent === "close_batch"
+        ? ["no_wip_in_scope", ...policy.gates.C.checkIds] : policy.gates.D.checkIds);
       assert.deepEqual(closure.gate.postPushChecks, ["ci_green"]);
     }
   }

@@ -648,20 +648,18 @@
     },
     "C": {
       "id": "C",
-      "description": "Shared Android architecture, UI, resources, build, and instrumented verification, including individual high-risk scenario closure",
+      "description": "Device-free Dev lint, JVM and build verification for shared Android changes and scenario closure",
       "priority": 4,
       "checkIds": [
-        "android_device",
         "lint_dev",
         "jvm_test_dev",
-        "build_dev",
-        "e2e_dev"
+        "build_dev"
       ],
       "postPushChecks": []
     },
     "D": {
       "id": "D",
-      "description": "Batch or User Story closure with complete Dev regression",
+      "description": "Full Dev regression at User Story closure; batch closure uses no_wip_in_scope plus Gate C checks",
       "priority": 5,
       "checkIds": [
         "no_wip_in_scope",
@@ -677,15 +675,13 @@
     },
     "R": {
       "id": "R",
-      "description": "CI repair path with complete Staging verification",
+      "description": "Device-free CI repair with Staging lint, JVM and build verification; instrumented regression remains mandatory at User Story closure",
       "priority": 6,
       "checkIds": [
-        "android_device",
         "delivery_unit",
         "lint_staging",
         "jvm_test_staging",
-        "build_staging",
-        "e2e_staging"
+        "build_staging"
       ],
       "postPushChecks": [
         "ci_green"

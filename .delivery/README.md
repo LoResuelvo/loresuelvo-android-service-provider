@@ -19,7 +19,8 @@ these tools:
 
 ## Policy
 
-policy.v1.json is the Android provider policy. It keeps the first release conservative:
+policy.v1.json is the Android provider policy. Classification remains conservative;
+device execution is reserved for final User Story verification:
 
 - isolated domain Kotlin and other production Kotlin outside Gate C categories
   use Gate A
@@ -34,9 +35,17 @@ Android integration changes. It does not require future scenarios in the same
 feature to be complete. Gate D is reserved for `close_batch` and `close_us`;
 only actual `@wip` tags, not comments or doc strings, block scope completion.
 
+Commit preparation, scenario closure, CI repairs, and intermediate batch
+verification must not query devices or execute instrumented tests. Keep the
+selected JVM, lint, and build checks GREEN. New instrumented coverage may be
+delivered in a final test commit after the scenarios are JVM GREEN. Then run
+the full suite through `delivery_verify_head(intent="close_us")`, repair
+failures, and verify the final HEAD before finalizing. Device diagnostics are
+reserved for that final verification phase as well.
+
 The JVM feature-gate and Android feature-impact analyzers are enabled for
-scenario closures. Proven isolated production changes can use scoped JVM and
-device checks. Shared or uncertain Android impact retains Gate C.
+scenario closures. Proven isolated production changes can use scoped JVM
+checks. Shared or uncertain Android impact retains Gate C.
 Maintainability analysis remains disabled (`not_applicable`).
 
 | Gate | Checks | Typical scope |
@@ -44,15 +53,16 @@ Maintainability analysis remains disabled (`not_applicable`).
 | `NONE` | None | Documentation-only or empty diff |
 | `0` | Complete Dev JVM task | BDD feature/glue compatibility |
 | `A` | Dev JVM task; delivery tooling also runs its unit tests | Isolated domain Kotlin or delivery tooling |
-| `B` | Scoped JVM tests, or full JVM fallback; isolated production features additionally require a device, lint, and scoped device tests | Closing a low-risk or proven isolated production scenario |
-| `C` | Device prerequisite, Dev lint, JVM tests, build, and instrumented UI | UI, DI, data, resources, manifest, or build changes |
-| `D` | No `@wip`, Gate C checks, and post-push CI green | Complete batch or User Story |
-| `R` | Device prerequisite, Delivery tests, Staging lint/JVM/build/instrumented UI, and post-push CI green | One-time repair of `repairsSha` |
+| `B` | Scoped JVM tests, or full JVM fallback; isolated production features additionally require lint and build | Closing a low-risk or proven isolated production scenario |
+| `C` | Dev lint, JVM tests, and build; no device | UI, DI, data, resources, manifest, or build changes |
+| `D` / `close_batch` | No `@wip`, Gate C checks, and post-push CI policy; no device | Completed intermediate feature scope |
+| `D` / `close_us` | No `@wip`, device prerequisite, Dev lint/JVM/build, full instrumented suite, and green CI | Final User Story verification |
+| `R` | Delivery tests, Staging lint/JVM/build, and post-push CI green; no device | One-time repair of `repairsSha` |
 
 This table explains the current policy; `policy.v1.json` and Delivery MCP
 select the actual gate. Unknown functional paths fall back to Gate C.
 
-C/D/R and production Gate B query ADB through the Android wrapper before expensive Android checks.
+Only final `close_us` verification queries ADB through the Android wrapper.
 No device, offline/unauthorized devices, an unavailable `ANDROID_SERIAL`, or a
 failed query produces `blocked`, not a test pass. This prerequisite never starts
 an emulator. Keep the device unlocked and unused during instrumented tests;
@@ -95,9 +105,10 @@ duration includes attempted focused checks and fallback. Inspect `gate.checkIds`
 `gate.parameters`, and `impact.reasonCodes` for the selected scope. This is
 fresh staged-gate evidence, never reuse of a focused TDD result.
 
-Gate 0/A and C/D/R retain their existing checks, including device prerequisites
-and post-push CI requirements. Restart a connected Delivery MCP after changing
-its implementation; the CLI starts a fresh process with the checked-out code.
+Gate classification and post-push CI requirements remain enforced. Only final
+User Story verification executes devices. Restart a connected Delivery MCP
+after changing its implementation; the CLI starts a fresh process with the
+checked-out code.
 
 ### Android production C-to-B selection
 
@@ -129,18 +140,18 @@ Changed SavedStateHandle contracts, reflective consumers, custom source sets,
 unsupported operators/resources and unowned code also retain C. Features without
 registered device coverage retain C. Inspect `impact.reasonCodes` for the fallback.
 
-Production B runs the device prerequisite, Dev lint, scoped JVM and device tests.
-Instrumentation builds the Dev app and test APK. Each complete device class runs
-serially with an exact filter, so another class cannot hide an empty selection.
-A successful process without a positive test count falls back to the full device
-suite; assertion failures remain failures. JVM empty-selection fallback remains
-intact. Missing devices block. D/R and post-push CI requirements remain full.
+Production B runs Dev lint, scoped JVM tests, and a Dev build. Its registered
+device classes remain coverage metadata, not instructions to execute a device
+per commit. Keep the existing conservative missing-coverage fallback to C;
+do not fabricate registrations to get B. Add new coverage during final
+verification and confirm it with the full suite. JVM empty-selection fallback
+remains intact. A missing device blocks final `close_us`, not implementation.
 
 Ownership/coverage records must be reviewed when adding feature entry points or
 changing integration boundaries. Add negative shared/unknown cases and real scoped
 proof when extending support; keep the US-53 regression corpus conservative.
-The earlier paired warm proposal benchmark saved 47.3 seconds (32.1%) of local
-preparation wall time; it does not predict whole-story delivery time or every B run.
+Historical benchmarks using per-commit device execution do not describe the
+current device-free commit policy or predict whole-story delivery time.
 
 ## Safe checks
 
@@ -263,13 +274,31 @@ The allowed types are `feat`, `fix`, `refactor`, `test`, `chore`, `docs`,
 
 ## CI and Android topology
 
-The checked-in CI workflow runs the delivery package tests and smoke check in
-parallel with Java 17, Staging lint/JVM/build checks, and instrumented tests on
-a prewarmed Pixel 6/API 34 x86_64 emulator. The checked-in
-`.github/workflows/avd-bootstrap.yml` workflow regenerates the AVD cache when
-needed. Gate C and Gate D use Dev
-instrumented tests; Gate R reproduces the Staging checks and requires the
-failed CI SHA plus Staging credentials. Do not substitute Dev for Gate R.
+Ordinary pushes run Delivery tests/smoke plus Java 17 Staging lint/JVM/build
+checks automatically, without emulator tests. Include this Git trailer in the
+last functional or instrumented-coverage commit to request final CI verification:
+
+```text
+test[54]: cover proposal navigation and compact layouts
+
+Delivery-Verify-US: 54
+```
+
+The numeric trailer must match the User Story in the commit subject. CI reads
+the actual commit's trailers and automatically runs the full Staging suite on
+a prewarmed Pixel 6/API 34 x86_64 emulator for that SHA. No human dispatch is
+needed. Missing trailers keep ordinary pushes device-free; malformed, duplicate,
+or mismatched trailers fail the detection job. Do not add an empty/tag-only
+commit to trigger tests: plan this trailer on the final meaningful boundary.
+Final verification fixes must carry the same trailer on their new SHA.
+The agent owns this final trigger and must confirm its CI result before
+`delivery_finalize(close_us)`; an earlier device-free CI pass is insufficient.
+
+The checked-in `.github/workflows/avd-bootstrap.yml` workflow regenerates the AVD cache when
+needed. Final Gate D (`close_us`) uses the complete Dev instrumented suite.
+Gate R reproduces Staging lint/JVM/build checks and requires the failed CI SHA
+plus Staging credentials. Do not substitute Dev for Gate R or claim its
+device-free receipt proves instrumented CI parity.
 
 Gate D also requires no `@wip` tags in the declared feature scope and a green
 post-push CI result. Gate R is a single-use repair path. If no emulator,

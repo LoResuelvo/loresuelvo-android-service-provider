@@ -44,8 +44,11 @@ One provider example is `features/auth/provider-welcome.feature`, with glue in
    smallest production change. Use a stateless Composable, pure use case,
    repository adapter, or ViewModel as needed. Test each relevant boundary
    with Robolectric/Compose, JUnit4, MockWebServer, or Turbine.
-4. Refactor while focused tests stay GREEN. Add an instrumented UI test when
-   the change crosses Activity, navigation, or real Android boundaries.
+4. Refactor while focused tests stay GREEN. Record required instrumented UI
+   coverage for Activity, navigation, or real Android boundaries. New device
+   tests may be added in the final coverage commit; do not run them or query
+   a device until the User Story's final verification phase. Scenario GREEN
+   here means JVM acceptance proof; full Android verification remains pending.
 5. For the final functional boundary, remove `@wip` in the working tree so
    the active Cucumber scenario runs. Verify focused GREEN
    with `delivery_test(mode="scenario", featureFile=<feature path>)`. Confirm

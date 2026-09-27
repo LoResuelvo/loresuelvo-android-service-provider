@@ -99,7 +99,7 @@ test("closing one Android scenario retains Gate C without closing future scenari
       snapshot: { stagedFiles: [`app/src/main/java/com/loresuelvo/serviceprovider/${area}/Profile.kt`, feature] },
     });
     assert.equal(result.gate.id, "C", area);
-    assert.deepEqual(result.gate.checkIds, ["android_device", "lint_dev", "jvm_test_dev", "build_dev", "e2e_dev"]);
+    assert.deepEqual(result.gate.checkIds, ["lint_dev", "jvm_test_dev", "build_dev"]);
     assert.deepEqual(result.gate.postPushChecks, []);
   }
 });
@@ -126,12 +126,29 @@ test("mixed Delivery tooling snapshots check tooling before their Android gate",
 
   const batch = selected("close_batch", [feature, tooling], { scopeFiles: [feature] });
   assert.equal(batch.id, "D");
-  assert.deepEqual(batch.checkIds, ["no_wip_in_scope", "delivery_unit", ...policy.gates.D.checkIds.slice(1)]);
+  assert.deepEqual(batch.checkIds, ["no_wip_in_scope", "delivery_unit", ...policy.gates.C.checkIds]);
   assert.deepEqual(batch.postPushChecks, policy.gates.D.postPushChecks);
 
   const repair = selected("repair_ci", [ui, tooling], { repairsSha: "abc1234" });
   assert.equal(repair.id, "R");
   assert.deepEqual(repair.checkIds, policy.gates.R.checkIds);
+});
+
+test("only User Story closure selects device checks, including shared and repair boundaries", () => {
+  const feature = "app/src/test/resources/features/example.feature";
+  const files = [
+    "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/Host.kt",
+    "app/src/androidTest/java/com/loresuelvo/serviceprovider/NavigationTest.kt",
+    "tools/delivery-mcp/lib/select-gate.mjs",
+    feature,
+  ];
+  for (const intent of ["prepare_commit", "close_scenario", "repair_ci", "close_batch", "close_us"]) {
+    const { gate } = selectGate({ policy, intent, featureFile: feature,
+      repairsSha: "a".repeat(40), snapshot: { stagedFiles: files } });
+    const deviceChecks = gate.checkIds.filter(id => /^(android_device|feature_device_dev|e2e_)/.test(id));
+    assert.deepEqual(deviceChecks, intent === "close_us" ? ["android_device", "e2e_dev"] : [], intent);
+    assert.ok(gate.checkIds.includes(intent === "repair_ci" ? "jvm_test_staging" : "jvm_test_dev"));
+  }
 });
 
 test("policy and executor accept only exact Android commands", () => {

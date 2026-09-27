@@ -10,36 +10,36 @@ permissions:
   contents: read
 
 jobs:
-  # The emulator has a substantial startup cost, so only run device tests when
-  # Android production/test code or the device-test configuration changes.
+  # Only the final functional/coverage commit requests instrumented verification.
+  # Ordinary implementation pushes remain device-free, including Android changes.
   changes:
-    name: Detect changes
+    name: Detect final User Story verification
     runs-on: ubuntu-latest
     outputs:
       instrumented: ${{ steps.filter.outputs.instrumented }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            instrumented:
-              - 'app/src/main/**'
-              - 'app/src/androidTest/**'
-              - 'app/build.gradle.kts'
-              - 'build.gradle.kts'
-              - 'settings.gradle.kts'
-              - 'gradle/**'
-              - 'gradle.properties'
-              - 'gradlew'
-              - 'app/src/main/AndroidManifest.xml'
-              - 'Makefile'
-              - 'scripts/run_acceptance_tests.sh'
-              - 'scripts/with-android-env.sh'
-              - '.github/workflows/ci.yml'
-              - '.github/workflows/avd-bootstrap.yml'
+        shell: bash
+        run: |
+          verification_us="$(git log -1 --format='%(trailers:key=Delivery-Verify-US,valueonly)')"
+          if [[ -z "$verification_us" ]]; then
+            echo "instrumented=false" >> "$GITHUB_OUTPUT"
+          elif [[ "$verification_us" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            subject="$(git log -1 --format=%s)"
+            if [[ ! "$subject" =~ ^[a-z]+\[([0-9]+(\.[0-9]+)?)\]:[[:space:]] || "${BASH_REMATCH[1]}" != "$verification_us" ]]; then
+              echo "Delivery-Verify-US must match the User Story in the commit subject" >&2
+              exit 1
+            fi
+            echo "instrumented=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Delivery-Verify-US must contain one numeric User Story ID" >&2
+            exit 1
+          fi
 
   # Delivery tooling is independent of Android verification. Keeping it as a
   # separate job preserves the checks without adding them to the Android path.

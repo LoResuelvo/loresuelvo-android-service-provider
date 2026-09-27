@@ -33,7 +33,7 @@ function trace(data, files = [helper, unit]) {
   return traceAndroidImpact({ graph, other: graph, files, features: data.features, runners: [], featureFile });
 }
 
-test('production and test changes use feature ownership rather than file-body hashes; D/R remain full', async () => {
+test('isolated production retains scoped JVM proof and defers devices until User Story closure', async () => {
   const impact = { ...trace(fixture()), featureFile, scope: 'production_feature', reason: 'ANDROID_ISOLATED_FEATURE', runnerClass: 'example.ExampleCucumberTest' };
   assert.deepEqual(impact.testClasses, ['example.ScreenTest']);
   assert.deepEqual(impact.deviceTestClasses, ['example.ScreenDeviceTest']);
@@ -41,7 +41,9 @@ test('production and test changes use feature ownership rather than file-body ha
   for (const [intent, expected] of [['close_scenario', 'B'], ['prepare_commit', 'C'], ['close_batch', 'D'], ['close_us', 'D'], ['repair_ci', 'R']]) {
     const result = selectGate({ policy, intent, featureFile, repairsSha: 'a'.repeat(40), snapshot: { stagedFiles: [sourceFile, unit] }, dependencyImpact: impact });
     assert.equal(result.gate.id, expected);
-    assert.deepEqual(result.gate.checkIds, expected === 'B' ? ['android_device', 'lint_dev', 'feature_jvm_dev', 'feature_device_dev'] : policy.gates[expected].checkIds);
+    const expectedChecks = expected === 'B' ? ['lint_dev', 'feature_jvm_dev', 'build_dev']
+      : intent === 'close_batch' ? ['no_wip_in_scope', ...policy.gates.C.checkIds] : policy.gates[expected].checkIds;
+    assert.deepEqual(result.gate.checkIds, expectedChecks);
     assert.deepEqual(result.gate.postPushChecks, policy.gates[expected].postPushChecks);
   }
   const inferred = selectGate({ policy, intent: 'close_scenario', snapshot: { stagedFiles: [sourceFile, featureFile] }, dependencyImpact: impact });
