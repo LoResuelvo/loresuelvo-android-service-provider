@@ -67,6 +67,12 @@ class ProviderTurnsScreenTest {
         compose.runOnIdle { org.junit.Assert.assertEquals(1, retries) }
     }
 
+    @Test @Config(qualifiers = "en") fun english_error_uses_english_retry_action() {
+        compose.setContent { LoresuelvoTheme { ProviderTurnsScreen(ProviderTurnsUiState.Error, {}, {}) } }
+        compose.onNodeWithText("We couldn’t load your appointments.").assertExists()
+        compose.onNodeWithText("Retry").assertExists()
+    }
+
     @Test fun shows_real_local_data_and_initials_without_category_space() {
         showOrder(null)
 

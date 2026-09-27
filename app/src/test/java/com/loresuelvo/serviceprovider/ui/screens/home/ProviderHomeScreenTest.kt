@@ -74,6 +74,21 @@ class ProviderHomeScreenTest {
         assertEquals(1, proposalOpens)
     }
 
+    @Test @Config(qualifiers = "en")
+    fun english_scheduled_section_uses_english_heading_action_and_link() {
+        composeTestRule.setContent { LoresuelvoTheme {
+            ProviderHomeScreen(provider(), ProviderHomeUiState(
+                jobRequests = ActivitySectionState.Ready(emptyList()),
+                scheduledWork = ActivitySectionState.Ready(listOf(workOrder())),
+            ), {}, {}, {}, {})
+        } }
+        composeTestRule.onNodeWithTag("scheduled_view_all_turns").performScrollTo().assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Scheduled work").assertCountEquals(3)
+        assertEquals("Scheduled work", context.getString(R.string.provider_home_scheduled_count_label))
+        assertEquals("Scheduled work", context.getString(R.string.provider_home_scheduled_action))
+        assertEquals("View all", context.getString(R.string.provider_turns_view_all))
+    }
+
     @Test
     fun home_turn_card_details_selects_order_while_view_all_opens_list() {
         var selected: WorkOrder? = null

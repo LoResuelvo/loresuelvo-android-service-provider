@@ -80,18 +80,18 @@
     <string name="provider_home_greeting">Hola, %1$s</string>
     <string name="provider_home_photo_description">Foto de perfil de %1$s</string>
     <string name="provider_home_requests_count_label">Solicitudes pendientes</string>
-    <string name="provider_home_scheduled_count_label">Trabajos agendados</string>
+    <string name="provider_home_scheduled_count_label">Scheduled work</string>
     <string name="provider_home_actions_title">Acciones</string>
     <string name="provider_home_requests_action">Solicitudes</string>
-    <string name="provider_home_scheduled_action">Trabajos agendados</string>
+    <string name="provider_home_scheduled_action">Scheduled work</string>
     <string name="provider_home_mercadopago_action">Mercado Pago</string>
     <string name="provider_home_view_request">Ver solicitud</string>
     <string name="provider_home_requests_title">Solicitudes pendientes</string>
     <string name="provider_home_requests_empty">No tenés solicitudes pendientes.</string>
-    <string name="provider_home_scheduled_title">Trabajos agendados</string>
-    <string name="provider_home_scheduled_empty">No tenés trabajos agendados.</string>
-    <string name="provider_home_section_error">No pudimos cargar esta sección.</string>
-    <string name="provider_home_retry">Reintentar</string>
+    <string name="provider_home_scheduled_title">Scheduled work</string>
+    <string name="provider_home_scheduled_empty">You have no scheduled work yet.</string>
+    <string name="provider_home_section_error">We couldn’t load this section.</string>
+    <string name="provider_home_retry">Retry</string>
     <string name="provider_home_scheduled_on">Programado para %1$s</string>
 
     <!-- Provider messages -->
