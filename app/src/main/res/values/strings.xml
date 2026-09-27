@@ -27,6 +27,11 @@
     <string name="provider_completion_too_early">Todavía no podés informar la finalización de este turno.</string>
     <string name="provider_completion_already_reported">Esta orden ya tiene un reporte de finalización.</string>
     <string name="provider_completion_forbidden">No tenés permiso para informar la finalización de esta orden.</string>
+    <string name="provider_completion_changed">Los datos de esta orden cambiaron. Volvé al resumen para actualizarlos.</string>
+    <string name="provider_completion_unavailable">Esta orden no está disponible para informar finalización.</string>
+    <string name="provider_completion_missing">No encontramos esta orden.</string>
+    <string name="provider_completion_error">No pudimos consultar esta orden.</string>
+    <string name="provider_completion_session_expired">Tu sesión terminó. Iniciá sesión nuevamente.</string>
     <string name="provider_completion_description">Descripción de la entrega</string>
     <string name="provider_completion_add_photos">Agregar fotos</string>
     <string name="provider_completion_submit">Confirmar finalización</string>

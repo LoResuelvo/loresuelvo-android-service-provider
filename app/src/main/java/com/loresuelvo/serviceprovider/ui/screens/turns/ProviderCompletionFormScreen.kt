@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 
-enum class CompletionFormAvailability { Checking, Eligible, TooEarly, AlreadyReported, Forbidden }
+enum class CompletionFormAvailability {
+    Checking, Eligible, TooEarly, AlreadyReported, Forbidden, ChangedOrder, Unavailable, NotFound, Error,
+}
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,6 +38,8 @@ fun ProviderCompletionFormScreen(
     onDescriptionChange: (String) -> Unit,
     onAddPhotos: () -> Unit,
     onBack: () -> Unit,
+    onRetry: () -> Unit = {},
+    canAddPhotos: Boolean = false,
 ) {
     Scaffold(topBar = { TopAppBar(
         title = { Text(stringResource(R.string.provider_completion_title)) },
@@ -54,11 +58,23 @@ fun ProviderCompletionFormScreen(
                 CompletionFormAvailability.TooEarly -> Text(stringResource(R.string.provider_completion_too_early))
                 CompletionFormAvailability.AlreadyReported -> Text(stringResource(R.string.provider_completion_already_reported))
                 CompletionFormAvailability.Forbidden -> Text(stringResource(R.string.provider_completion_forbidden))
+                CompletionFormAvailability.ChangedOrder,
+                CompletionFormAvailability.Unavailable,
+                CompletionFormAvailability.NotFound,
+                CompletionFormAvailability.Error -> {
+                    Text(stringResource(when (availability) {
+                        CompletionFormAvailability.ChangedOrder -> R.string.provider_completion_changed
+                        CompletionFormAvailability.Unavailable -> R.string.provider_completion_unavailable
+                        CompletionFormAvailability.NotFound -> R.string.provider_completion_missing
+                        else -> R.string.provider_completion_error
+                    }))
+                    Button(onClick = onRetry) { Text(stringResource(R.string.provider_home_retry)) }
+                }
                 CompletionFormAvailability.Eligible -> {
                     OutlinedTextField(value = description, onValueChange = onDescriptionChange,
                         label = { Text(stringResource(R.string.provider_completion_description)) },
                         modifier = Modifier.fillMaxWidth().testTag("completion_description"), minLines = 3)
-                    OutlinedButton(onClick = onAddPhotos) {
+                    OutlinedButton(onClick = onAddPhotos, enabled = canAddPhotos) {
                         Text(stringResource(R.string.provider_completion_add_photos))
                     }
                     Button(onClick = {}, enabled = false, modifier = Modifier.testTag("completion_submit")) {

@@ -27,6 +27,11 @@
     <string name="provider_completion_too_early">You can’t report completion for this appointment yet.</string>
     <string name="provider_completion_already_reported">This order already has a completion report.</string>
     <string name="provider_completion_forbidden">You don’t have permission to report completion for this order.</string>
+    <string name="provider_completion_changed">This order changed. Return to the summary to refresh it.</string>
+    <string name="provider_completion_unavailable">This order is unavailable for completion reporting.</string>
+    <string name="provider_completion_missing">We couldn’t find this order.</string>
+    <string name="provider_completion_error">We couldn’t check this order.</string>
+    <string name="provider_completion_session_expired">Your session ended. Sign in again.</string>
     <string name="provider_completion_description">Completion description</string>
     <string name="provider_completion_add_photos">Add photos</string>
     <string name="provider_completion_submit">Confirm completion</string>

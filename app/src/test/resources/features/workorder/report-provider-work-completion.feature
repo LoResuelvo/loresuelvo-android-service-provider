@@ -3,7 +3,6 @@ Característica: Informar finalización con evidencia como prestador
   Antecedentes:
     Dado que inicié sesión como prestador
 
-  @wip
   Esquema del escenario: 01-PIF Abrir el reporte según la orden vigente
     Dado que consulto el resumen de un turno real de Ana Pérez desde Turnos
     Y la consulta vigente de esa orden indica "<situación>"

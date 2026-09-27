@@ -168,6 +168,35 @@ class ProviderTurnsScreenTest {
         org.junit.Assert.assertEquals(1, conversations)
     }
 
+    @Test fun completion_action_uses_selected_real_order_from_turns_list() {
+        val order = WorkOrder(7, "Ana Pérez", "Full reason", 1, WorkOrderStatus.Scheduled)
+        var openedId: Int? = null
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), {}, {},
+                onCompletion = { openedId = it })
+        } }
+
+        compose.onNodeWithTag("provider_turn_details_7").performClick()
+        compose.onNodeWithTag("provider_turn_completion").performScrollTo().performClick()
+        compose.runOnIdle { org.junit.Assert.assertEquals(7, openedId) }
+        compose.onNodeWithText("Full reason").assertExists()
+        compose.onNodeWithTag("provider_turn_conversation").assertExists()
+
+    }
+
+    @Test fun completion_action_uses_selected_real_order_from_separate_detail_route() {
+        val order = WorkOrder(7, "Ana Pérez", "Full reason", 1, WorkOrderStatus.Scheduled)
+        var openedId: Int? = null
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), {}, {},
+                initialSelectedId = 7, onCompletion = { openedId = it })
+        } }
+        compose.onNodeWithTag("provider_turn_completion").performScrollTo().performClick()
+        compose.runOnIdle { org.junit.Assert.assertEquals(7, openedId) }
+        compose.onNodeWithText("Full reason").assertExists()
+        compose.onNodeWithTag("provider_turn_conversation").assertExists()
+    }
+
     @Test fun enlarged_detail_keeps_full_reason_and_conversation_reachable() {
         val reason = "Repair the kitchen tap and replace the worn valve while preserving the original fittings"
         val order = WorkOrder(7, "Ana Pérez", reason, 1, WorkOrderStatus.Scheduled)

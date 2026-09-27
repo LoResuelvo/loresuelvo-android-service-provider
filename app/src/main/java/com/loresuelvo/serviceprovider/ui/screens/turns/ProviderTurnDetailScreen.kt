@@ -31,7 +31,7 @@ import java.util.TimeZone
 fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversation: () -> Unit,
     missingConversation: Boolean = false, proposalFailure: ServiceProposalListOutcome.Failure? = null,
     resolvingConversation: Boolean = false,
-    onRetryConversation: () -> Unit = {}) {
+    onRetryConversation: () -> Unit = {}, onCompletion: (() -> Unit)? = null) {
     Scaffold(
         topBar = { TopAppBar(
             title = { Text(stringResource(R.string.provider_turns_detail_title)) },
@@ -49,6 +49,11 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
                 providerTurnStatusBadge(order.status)?.label?.let { stringResource(it) }
                     ?: stringResource(R.string.provider_turns_status_unknown))
             DetailField(R.string.provider_turns_detail_reason, order.description)
+            if (onCompletion != null) {
+                Button(onClick = onCompletion, modifier = Modifier.testTag("provider_turn_completion")) {
+                    Text(stringResource(R.string.provider_completion_title))
+                }
+            }
             Button(onClick = onConversation, modifier = Modifier.testTag("provider_turn_conversation")) {
                 Text(stringResource(R.string.provider_turns_view_conversation))
             }

@@ -39,6 +39,8 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversati
 import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
 import com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListRoute
 import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnsRoute
+import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderCompletionRoute
+import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
 import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailRoute
 import com.loresuelvo.serviceprovider.ui.screens.messages.ProviderMessagesRoute
 import com.loresuelvo.serviceprovider.ui.screens.identity.OptionalIdentityVerificationRoute
@@ -149,6 +151,9 @@ fun LoResuelvoNav(
                             },
                             providerTurns = {
                                 ProviderTurnsRoute(onBack = { navController.popBackStack() },
+                                    onCompletion = { orderId ->
+                                        navController.navigate(Route.ProviderCompletion.buildPath(orderId)) { launchSingleTop = true }
+                                    },
                                     onConversation = { conversationId ->
                                         navController.navigate(Route.Conversation.buildPath(conversationId)) { launchSingleTop = true }
                                     })
@@ -156,9 +161,22 @@ fun LoResuelvoNav(
                             providerTurnDetail = { turnId ->
                                 ProviderTurnsRoute(onBack = { navController.popBackStack() },
                                     initialSelectedId = turnId,
+                                    onCompletion = { orderId ->
+                                        navController.navigate(Route.ProviderCompletion.buildPath(orderId)) { launchSingleTop = true }
+                                    },
                                     onConversation = { conversationId ->
                                         navController.navigate(Route.Conversation.buildPath(conversationId)) { launchSingleTop = true }
                                     })
+                            },
+                            providerCompletion = { orderId ->
+                                val turnsEntry = navController.previousBackStackEntry
+                                if (turnsEntry != null) {
+                                    val turnsViewModel: ProviderTurnsViewModel = hiltViewModel(turnsEntry)
+                                    val turnsState by turnsViewModel.uiState.collectAsStateWithLifecycle()
+                                    ProviderCompletionRoute(orderId, turnsState,
+                                        onBack = { navController.popBackStack() },
+                                        onRetryTurns = turnsViewModel::load)
+                                }
                             },
                             messages = {
                                 ProviderMessagesRoute(

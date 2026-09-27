@@ -56,6 +56,14 @@ sealed class Route(val path: String) {
         }
     }
 
+    data object ProviderCompletion : Route("provider_turns/{turnId}/completion") {
+        const val argument = "turnId"
+        fun buildPath(turnId: Int): String {
+            require(turnId > 0) { "turnId must be positive" }
+            return "provider_turns/$turnId/completion"
+        }
+    }
+
     /**
      * Provider conversation summaries. The detail route remains a separate
      * destination so the bottom bar can be hidden while a conversation is

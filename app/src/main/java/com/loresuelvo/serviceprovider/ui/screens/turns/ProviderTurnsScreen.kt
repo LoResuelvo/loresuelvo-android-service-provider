@@ -60,6 +60,7 @@ import java.util.TimeZone
 
 @Composable
 fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {}, initialSelectedId: Int? = null,
+    onCompletion: (Int) -> Unit = {},
     viewModel: ProviderTurnsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
@@ -72,14 +73,15 @@ fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {}, i
     }
     ProviderTurnsScreen(state, onBack, viewModel::load, onConversation = onConversation,
         initialSelectedId = initialSelectedId,
-        onRetryConversation = viewModel::retryConversation)
+        onRetryConversation = viewModel::retryConversation, onCompletion = onCompletion)
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit,
     onDetails: (WorkOrder) -> Unit = {}, onConversation: (Int) -> Unit = {},
-    onRetryConversation: (Int) -> Unit = { onRetry() }, initialSelectedId: Int? = null) {
+    onRetryConversation: (Int) -> Unit = { onRetry() }, initialSelectedId: Int? = null,
+    onCompletion: (Int) -> Unit = {}) {
     var selectedId by rememberSaveable { mutableStateOf(initialSelectedId) }
     var missingConversation by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -90,6 +92,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
     }
     BackHandler(selectedOrder != null) { closeDetail() }
     if (selectedOrder != null) {
+        val openCompletion = onCompletion
         ProviderTurnDetailScreen(selectedOrder, onBack = closeDetail,
             onConversation = {
                 val conversationId = (state as? ProviderTurnsUiState.Ready)?.conversationIds?.get(selectedOrder.id)
@@ -98,7 +101,8 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                 (state as ProviderTurnsUiState.Ready).conversationIds[selectedOrder.id] == null,
             proposalFailure = (state as ProviderTurnsUiState.Ready).proposalFailure,
             resolvingConversation = state.resolvingConversation,
-            onRetryConversation = { onRetryConversation(selectedOrder.id) })
+            onRetryConversation = { onRetryConversation(selectedOrder.id) },
+            onCompletion = { openCompletion(selectedOrder.id) })
         return
     }
     Surface(Modifier.fillMaxSize()) {

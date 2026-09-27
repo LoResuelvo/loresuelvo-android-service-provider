@@ -88,11 +88,48 @@ class ProviderCompletionViewModelTest {
     }
 
     @Test fun unauthorized_clears_session_and_private_order() = runTest(dispatcher.scheduler) {
-        orders.next = { WorkOrderDetailOutcome.Failure.Unauthorized }
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
         val viewModel = viewModel()
         viewModel.open(selected)
         advanceUntilIdle()
+        viewModel.onDescriptionChange("Private delivery note")
+        orders.next = { WorkOrderDetailOutcome.Failure.Unauthorized }
+        viewModel.retry()
+        advanceUntilIdle()
         assertEquals(null, sessionStore.getSession())
+        assertEquals(ProviderCompletionUiState.SessionExpired, viewModel.uiState.value)
+        assertEquals("", viewModel.description.value)
+    }
+
+    @Test fun draft_survives_retry_but_clears_on_new_order_and_session_change() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val viewModel = viewModel()
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Private delivery note")
+
+        orders.next = { WorkOrderDetailOutcome.Failure.Network(Exception("offline")) }
+        viewModel.retry()
+        advanceUntilIdle()
+        assertEquals("Private delivery note", viewModel.description.value)
+
+        viewModel.open(selected.copy(id = 43))
+        assertEquals("", viewModel.description.value)
+        sessionStore.clearSession()
+        advanceUntilIdle()
+        assertEquals("", viewModel.description.value)
+    }
+
+    @Test fun session_change_clears_an_existing_private_draft() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val viewModel = viewModel()
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Private delivery note")
+
+        sessionStore.clearSession()
+        advanceUntilIdle()
+        assertEquals("", viewModel.description.value)
         assertEquals(ProviderCompletionUiState.SessionExpired, viewModel.uiState.value)
     }
 

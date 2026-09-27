@@ -28,8 +28,11 @@ class ProviderCompletionViewModel @Inject constructor(
 ) : ViewModel() {
     private var activeSession = sessionStore.getSession()
     private var queryJob: Job? = null
+    private var draftOrderId: Int? = null
     private val _uiState = MutableStateFlow<ProviderCompletionUiState>(ProviderCompletionUiState.Closed)
     val uiState: StateFlow<ProviderCompletionUiState> = _uiState.asStateFlow()
+    private val _description = MutableStateFlow("")
+    val description: StateFlow<String> = _description.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -37,6 +40,7 @@ class ProviderCompletionViewModel @Inject constructor(
                 if (session != activeSession) {
                     activeSession = session
                     queryJob?.cancel()
+                    clearDraft()
                     _uiState.value = ProviderCompletionUiState.SessionExpired
                 }
             }
@@ -45,8 +49,13 @@ class ProviderCompletionViewModel @Inject constructor(
 
     fun open(order: WorkOrder) {
         queryJob?.cancel()
+        if (draftOrderId != order.id) {
+            _description.value = ""
+            draftOrderId = order.id
+        }
         val requestSession = sessionStore.getSession()
         if (requestSession == null) {
+            clearDraft()
             _uiState.value = ProviderCompletionUiState.SessionExpired
             return
         }
@@ -55,6 +64,7 @@ class ProviderCompletionViewModel @Inject constructor(
             val eligibility = getEligibility(order)
             if (sessionStore.getSession() != requestSession) return@launch
             if (eligibility == CompletionEligibility.Failure.Unauthorized) {
+                clearDraft()
                 _uiState.value = ProviderCompletionUiState.SessionExpired
                 sessionStore.clearSession()
             } else {
@@ -66,5 +76,15 @@ class ProviderCompletionViewModel @Inject constructor(
     fun retry() {
         val order = (_uiState.value as? ProviderCompletionUiState.Ready)?.order ?: return
         open(order)
+    }
+
+    fun onDescriptionChange(value: String) {
+        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility == CompletionEligibility.Eligible)
+            _description.value = value
+    }
+
+    private fun clearDraft() {
+        _description.value = ""
+        draftOrderId = null
     }
 }
