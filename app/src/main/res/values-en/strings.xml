@@ -5,6 +5,7 @@
     <string name="provider_turns_back">Back</string>
     <string name="provider_turns_empty">You have no appointments yet.</string>
     <string name="provider_turns_view_all">View all</string>
+    <string name="provider_turns_visit_pattern">MMMM d \'at\' HH:mm</string>
     <string name="proposal_home_view_all">View all</string>
     <string name="proposal_list_title">Proposals</string>
     <string name="proposal_list_back">Back to Home</string>

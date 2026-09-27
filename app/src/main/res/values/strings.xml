@@ -5,6 +5,7 @@
     <string name="provider_turns_back">Volver</string>
     <string name="provider_turns_empty">No tenés turnos todavía.</string>
     <string name="provider_turns_view_all">Ver todos</string>
+    <string name="provider_turns_visit_pattern">\'el\' d \'de\' MMMM \'a las\' HH:mm</string>
     <string name="proposal_home_view_all">Ver todas</string>
     <string name="proposal_list_title">Propuestas</string>
     <string name="proposal_list_back">Volver a Inicio</string>

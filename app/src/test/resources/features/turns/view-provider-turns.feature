@@ -24,7 +24,6 @@ Característica: Visualizar turnos como prestador
     Entonces veo las órdenes 40, 30, 11 y 12 en ese orden
     Y no veo propuestas pendientes o rechazadas como órdenes de trabajo
 
-  @wip
   Esquema del escenario: 03-PVT Mostrar la contraparte y los datos reales
     Dado que una orden de Ana Pérez tiene un monto de 1500050 centavos
     Y su fecha es "2026-10-05T00:30:00Z" y su motivo es "Reparar la canilla"

@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.screens.turns
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -27,6 +29,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
+import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
+import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalAmount
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import androidx.compose.foundation.shape.RoundedCornerShape
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun ProviderTurnsRoute(onBack: () -> Unit, viewModel: ProviderTurnsViewModel = hiltViewModel()) {
@@ -56,10 +66,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                         Text(stringResource(R.string.provider_turns_empty))
                     } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list")) {
                         items(state.orders, key = { it.id }) { order ->
-                            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("provider_turn_${order.id}")) {
-                                Text(order.consumerName, style = MaterialTheme.typography.titleMedium)
-                                Text(order.description)
-                            }
+                            ProviderTurnCard(order)
                         }
                     }
                 }
@@ -67,3 +74,33 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
         }
     }
 }
+
+@Composable
+private fun ProviderTurnCard(order: WorkOrder) {
+    val locale = LocalConfiguration.current.locales[0]
+    val datePattern = stringResource(R.string.provider_turns_visit_pattern)
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag("provider_turn_${order.id}"),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                ProviderAvatar(
+                    name = order.consumerGivenName,
+                    surname = order.consumerSurname,
+                    profilePhotoUrl = order.consumerPhotoUrl,
+                    contentDescription = stringResource(R.string.proposal_list_avatar, order.consumerGivenName),
+                    size = 56.dp,
+                )
+                Text(order.consumerName, style = MaterialTheme.typography.titleMedium)
+            }
+            Text(order.description)
+            Text(proposalAmount(order.amountCents))
+            Text(formatTurnDate(order.scheduledOn, datePattern, locale, TimeZone.getDefault()))
+        }
+    }
+}
+
+internal fun formatTurnDate(epochMillis: Long, pattern: String, locale: Locale, timeZone: TimeZone): String =
+    SimpleDateFormat(pattern, locale).apply { this.timeZone = timeZone }.format(Date(epochMillis))

@@ -8,6 +8,8 @@ import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUs
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
+import com.loresuelvo.serviceprovider.ui.components.providerInitials
+import com.loresuelvo.serviceprovider.ui.screens.turns.formatTurnDate
 import io.cucumber.java.After
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.When
@@ -15,6 +17,8 @@ import io.cucumber.java.en.Then
 import io.cucumber.java.en.And
 import io.cucumber.datatable.DataTable
 import java.time.Instant
+import java.util.Locale
+import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -35,6 +39,7 @@ class ProviderTurnsSteps {
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(orders)
     }
     private lateinit var viewModel: ProviderTurnsViewModel
+    private var photoCase = ""
 
     @Given("que inicié sesión como prestador")
     fun signedIn() { Dispatchers.setMain(dispatcher) }
@@ -81,6 +86,53 @@ class ProviderTurnsSteps {
     @And("no veo propuestas pendientes o rechazadas como órdenes de trabajo")
     fun noProposalsInOrders() {
         assertEquals(4, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.size)
+    }
+
+    @Given("que una orden de Ana Pérez tiene un monto de 1500050 centavos")
+    fun orderHasAmount() {
+        orders = listOf(WorkOrder(7, "Ana Pérez", "", 0, WorkOrderStatus.Scheduled,
+            amountCents = 1500050, consumerGivenName = "Ana", consumerSurname = "Pérez"))
+    }
+
+    @And("su fecha es {string} y su motivo es {string}")
+    fun orderHasDateAndReason(date: String, reason: String) {
+        orders = listOf(orders.single().copy(scheduledOn = Instant.parse(date).toEpochMilli(), description = reason))
+    }
+
+    @And("su foto está {string} y no tiene rubro")
+    fun orderHasPhoto(photo: String) {
+        photoCase = photo
+        val url = when (photo) {
+            "disponible" -> "https://cdn.example/ana.jpg"
+            "ausente" -> null
+            "inaccesible" -> "invalid://photo"
+            else -> error("Unexpected photo case")
+        }
+        orders = listOf(orders.single().copy(consumerPhotoUrl = url))
+    }
+
+    @And("uso español de Argentina y la zona {string}")
+    fun useArgentineTimeZone(zone: String) {
+        assertEquals("America/Argentina/Buenos_Aires", zone)
+    }
+
+    @Then("veo Ana Pérez, ARS 15.000,50, el 4 de octubre a las 21:30 y el motivo")
+    fun seesLocalData() {
+        val order = (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.single()
+        assertEquals("Ana Pérez", order.consumerName)
+        assertEquals(1500050, order.amountCents)
+        assertEquals("Reparar la canilla", order.description)
+        assertEquals("el 4 de octubre a las 21:30", formatTurnDate(
+            order.scheduledOn, "'el' d 'de' MMMM 'a las' HH:mm", Locale.forLanguageTag("es-AR"),
+            TimeZone.getTimeZone("America/Argentina/Buenos_Aires"),
+        ))
+    }
+
+    @And("veo {string} sin rubro ni espacio reservado para él")
+    fun seesAvatarWithoutCategory(avatar: String) {
+        val order = (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.single()
+        assertEquals("AP", providerInitials(order.consumerGivenName, order.consumerSurname))
+        assertEquals(if (photoCase == "disponible") "la foto de Ana" else "las iniciales AP", avatar)
     }
 
     @Then("veo el listado completo de mis órdenes de trabajo")
