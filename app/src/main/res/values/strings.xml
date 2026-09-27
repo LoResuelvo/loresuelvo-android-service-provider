@@ -49,6 +49,10 @@
     <string name="provider_completion_photo_bad_file">El archivo no es una foto válida.</string>
     <string name="provider_completion_photo_unreadable">No pudimos abrir la foto. Seleccioná otra.</string>
     <string name="provider_completion_submit">Confirmar finalización</string>
+    <string name="provider_completion_description_required">Escribí una descripción de la entrega.</string>
+    <string name="provider_completion_photo_required">Agregá al menos una foto.</string>
+    <string name="provider_completion_photo_unconfirmed">Esperá a que se confirme la fotografía antes de enviar.</string>
+    <string name="provider_completion_photo_duplicate_ids">Hay fotografías repetidas. Quitá una para continuar.</string>
     <string name="proposal_home_view_all">Ver todas</string>
     <string name="proposal_list_title">Propuestas</string>
     <string name="proposal_list_back">Volver a Inicio</string>

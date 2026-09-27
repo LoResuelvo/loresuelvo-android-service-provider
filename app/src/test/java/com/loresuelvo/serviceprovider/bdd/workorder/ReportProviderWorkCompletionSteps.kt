@@ -26,6 +26,8 @@ import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.ValidateCompletionReportDraftUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionUiState
@@ -91,6 +93,10 @@ class ReportProviderWorkCompletionSteps {
     private lateinit var initialDetail: WorkOrderDetail
     private var expectedPhotos = emptyList<String>()
     private var photoAction = ""
+    private val validateDraft = ValidateCompletionReportDraftUseCase()
+    private var draftProblem = ""
+    private var expectedDescription = ""
+    private var attemptedValidation: CompletionDraftValidation? = null
     private val evidencePreparer = object : CompletionEvidencePreparer {
         override suspend fun prepare(source: String): EvidenceImagePreparation = when (source) {
             "photo://empty.jpg" -> EvidenceImagePreparation.Invalid.EmptyFile
@@ -139,7 +145,7 @@ class ReportProviderWorkCompletionSteps {
             object : CompletionEvidencePreparer {
                 override suspend fun prepare(source: String): EvidenceImagePreparation = error("No photo selected in 01-PIF")
                 override suspend fun clean(image: PreparedEvidenceImage) = Unit
-            })
+            }, validateDraft)
         completion.open((turns.uiState.value as ProviderTurnsUiState.Ready).orders.single())
         advanceUntilIdle()
     }
@@ -177,7 +183,7 @@ class ReportProviderWorkCompletionSteps {
     @Given("que escribí la descripción de entrega")
     fun wroteCompletionDescription() = runTest(dispatcher.scheduler) {
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
-            session, evidencePreparer)
+            session, evidencePreparer, validateDraft)
         completion.open(selected)
         advanceUntilIdle()
         assertEquals(CompletionEligibility.Eligible,
@@ -258,6 +264,75 @@ class ReportProviderWorkCompletionSteps {
         })
         assertTrue(photoAction.isNotEmpty())
         assertEquals(1, detailCalls)
+    }
+
+    @Given("que abrí el formulario de una orden habilitada")
+    fun openedEligibleForm() = runTest(dispatcher.scheduler) {
+        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
+            session, evidencePreparer, validateDraft)
+        completion.open(selected)
+        advanceUntilIdle()
+        assertEquals(CompletionEligibility.Eligible,
+            (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+    }
+
+    @And("el borrador tiene {string}")
+    fun draftHasProblem(problem: String) = runTest(dispatcher.scheduler) {
+        draftProblem = problem
+        expectedDescription = when (problem) {
+            "descripción vacía" -> ""
+            "descripción formada sólo por espacios" -> " \n  "
+            else -> "Trabajo terminado"
+        }
+        completion.onDescriptionChange(expectedDescription)
+        val sources = when (problem) {
+            "descripción vacía", "descripción formada sólo por espacios",
+            "una fotografía todavía sin confirmar" -> listOf("photo://first.jpg")
+            "ninguna fotografía" -> emptyList()
+            "identificadores de archivo repetidos" -> listOf("photo://first.jpg", "photo://second.jpg")
+            else -> error("Unapproved draft problem: $problem")
+        }
+        completion.selectEvidence(sources)
+        expectedPhotos = sources.map { it.substringAfterLast('/') }
+        advanceUntilIdle()
+    }
+
+    @When("intento confirmar la finalización")
+    fun attemptCompletionReport() {
+        attemptedValidation = if (draftProblem == "identificadores de archivo repetidos") {
+            // B2 will connect real confirmed IDs to this guard; B1 selections have local files only.
+            validateDraft(expectedDescription, listOf("confirmed-file-1", "confirmed-file-1"))
+        } else {
+            completion.attemptSubmit()
+        }
+    }
+
+    @Then("el envío permanece bloqueado con una explicación del problema")
+    fun submissionIsBlockedWithExplanation() {
+        val expected = when (draftProblem) {
+            "descripción vacía", "descripción formada sólo por espacios" ->
+                CompletionDraftValidation.Invalid.DescriptionRequired
+            "ninguna fotografía" -> CompletionDraftValidation.Invalid.PhotoRequired
+            "una fotografía todavía sin confirmar" -> CompletionDraftValidation.Invalid.UnconfirmedPhoto
+            "identificadores de archivo repetidos" -> CompletionDraftValidation.Invalid.DuplicatePhotoIds
+            else -> error("Unapproved draft problem: $draftProblem")
+        }
+        assertEquals(expected, attemptedValidation)
+        if (draftProblem == "identificadores de archivo repetidos")
+            assertEquals(null, completion.validationIssue.value)
+        else
+            assertEquals(expected, completion.validationIssue.value)
+    }
+
+    @And("no se registra un reporte ni se pierde el resto del borrador")
+    fun noReportAndDraftRetained() {
+        assertEquals(1, detailCalls)
+        assertEquals(null, detail.completionReportId)
+        assertEquals(WorkOrderStatus.Scheduled, detail.status)
+        assertEquals(expectedDescription, completion.description.value)
+        assertEquals(expectedPhotos, completion.evidence.value.mapNotNull {
+            (it.status as? EvidenceSelectionStatus.Ready)?.image?.originalName
+        })
     }
 
     @After fun tearDown() { Dispatchers.resetMain() }

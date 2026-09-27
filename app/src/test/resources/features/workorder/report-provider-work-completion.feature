@@ -36,7 +36,6 @@ Característica: Informar finalización con evidencia como prestador
       | una foto válida   | seleccionar una foto mayor a 5 MiB        | un aviso de tamaño excedido                  |
       | una foto válida   | seleccionar un archivo inaccesible        | un aviso para seleccionar otra foto          |
 
-  @wip
   Esquema del escenario: 03-PIF Impedir un reporte incompleto
     Dado que abrí el formulario de una orden habilitada
     Y el borrador tiene "<problema>"

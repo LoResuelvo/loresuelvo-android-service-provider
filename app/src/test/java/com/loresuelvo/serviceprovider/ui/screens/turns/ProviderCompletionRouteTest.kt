@@ -27,6 +27,7 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.ValidateCompletionReportDraftUseCase
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionViewModel
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
@@ -89,7 +90,7 @@ class ProviderCompletionRouteTest {
         compose.onNodeWithText("Ana Pérez").assertExists()
         compose.onNodeWithText("Reparar la canilla").assertExists()
         compose.onNodeWithText("Descripción de la entrega").assertExists()
-        compose.onNodeWithTag("completion_submit").assertIsNotEnabled()
+        compose.onNodeWithTag("completion_submit").assertExists()
         compose.onNodeWithText("Volver").performClick()
         compose.runOnIdle { assertEquals(1, backs) }
     }
@@ -177,9 +178,21 @@ class ProviderCompletionRouteTest {
         }
     }
 
+    @Test fun confirm_attempt_shows_localized_error_and_preserves_draft() {
+        val viewModel = showRoute {}
+        compose.onNodeWithTag("completion_description").performTextInput("Done")
+        compose.runOnIdle { onCompletionImagesPicked(viewModel, listOf(Uri.parse("photo://first.jpg"))) }
+        compose.onNodeWithText("Confirmar finalización").performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithText("Esperá a que se confirme la fotografía antes de enviar.").assertExists()
+        compose.runOnIdle {
+            assertEquals("Done", viewModel.description.value)
+            assertEquals(1, viewModel.evidence.value.size)
+        }
+    }
+
     private fun showRoute(pickPhotos: (() -> Unit)? = null, onBack: () -> Unit): ProviderCompletionViewModel {
         val viewModel = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { 1_000 }, session,
-            evidencePort)
+            evidencePort, ValidateCompletionReportDraftUseCase())
         compose.setContent { LoresuelvoTheme {
             ProviderCompletionRoute(42, ProviderTurnsUiState.Ready(listOf(order)), onBack, {}, viewModel, pickPhotos)
         } }

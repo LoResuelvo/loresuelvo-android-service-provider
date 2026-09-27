@@ -49,6 +49,10 @@
     <string name="provider_completion_photo_bad_file">The file is not a valid photo.</string>
     <string name="provider_completion_photo_unreadable">We couldn’t open the photo. Select another.</string>
     <string name="provider_completion_submit">Confirm completion</string>
+    <string name="provider_completion_description_required">Enter a completion description.</string>
+    <string name="provider_completion_photo_required">Add at least one photo.</string>
+    <string name="provider_completion_photo_unconfirmed">Wait for the photo to be confirmed before sending.</string>
+    <string name="provider_completion_photo_duplicate_ids">There are duplicate photos. Remove one to continue.</string>
     <string name="proposal_home_view_all">View all</string>
     <string name="proposal_list_title">Proposals</string>
     <string name="proposal_list_back">Back to Home</string>

@@ -16,6 +16,7 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.domain.activity.PreparedEvidenceImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
@@ -98,5 +99,17 @@ class ProviderCompletionFormScreenTest {
             assertEquals(12L, removed)
             assertEquals(1, additions)
         }
+    }
+
+    @Test fun duplicate_confirmed_ids_show_localized_explanation_without_hiding_draft() {
+        compose.setContent { LoresuelvoTheme {
+            ProviderCompletionFormScreen(order, CompletionFormAvailability.Eligible,
+                "Trabajo terminado", {}, {}, {},
+                validationIssue = CompletionDraftValidation.Invalid.DuplicatePhotoIds)
+        } }
+
+        compose.onNodeWithText("Hay fotografías repetidas. Quitá una para continuar.").assertExists()
+        compose.onNodeWithText("Trabajo terminado").assertExists()
+        compose.onNodeWithTag("completion_description").assertExists()
     }
 }

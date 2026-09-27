@@ -44,6 +44,7 @@ fun ProviderCompletionRoute(
     val description by viewModel.description.collectAsStateWithLifecycle()
     val evidence by viewModel.evidence.collectAsStateWithLifecycle()
     val evidenceIssue by viewModel.evidenceIssue.collectAsStateWithLifecycle()
+    val validationIssue by viewModel.validationIssue.collectAsStateWithLifecycle()
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(3)) { uris ->
         onCompletionImagesPicked(viewModel, uris)
     }
@@ -74,7 +75,9 @@ fun ProviderCompletionRoute(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 exit, onRetry = viewModel::retry, canAddPhotos = availability == CompletionFormAvailability.Eligible,
                 evidence = evidence, evidenceIssue = evidenceIssue,
-                onRemoveEvidence = viewModel::removeEvidence)
+                onRemoveEvidence = viewModel::removeEvidence,
+                validationIssue = validationIssue, onSubmitAttempt = { viewModel.attemptSubmit() },
+                canAttemptSubmit = availability == CompletionFormAvailability.Eligible)
         }
     }
 }

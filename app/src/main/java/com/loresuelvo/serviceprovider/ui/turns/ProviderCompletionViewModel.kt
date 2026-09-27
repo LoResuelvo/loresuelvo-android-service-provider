@@ -9,6 +9,8 @@ import com.loresuelvo.serviceprovider.domain.activity.PreparedEvidenceImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
+import com.loresuelvo.serviceprovider.domain.usecase.activity.ValidateCompletionReportDraftUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -44,6 +46,7 @@ class ProviderCompletionViewModel @Inject constructor(
     private val getEligibility: GetCompletionEligibilityUseCase,
     private val sessionStore: AuthSessionStore,
     private val evidencePreparer: CompletionEvidencePreparer,
+    private val validateDraft: ValidateCompletionReportDraftUseCase,
 ) : ViewModel() {
     private var activeSession = sessionStore.getSession()
     private var queryJob: Job? = null
@@ -58,6 +61,8 @@ class ProviderCompletionViewModel @Inject constructor(
     val evidence: StateFlow<List<CompletionEvidenceSelection>> = _evidence.asStateFlow()
     private val _evidenceIssue = MutableStateFlow<EvidenceSelectionIssue?>(null)
     val evidenceIssue: StateFlow<EvidenceSelectionIssue?> = _evidenceIssue.asStateFlow()
+    private val _validationIssue = MutableStateFlow<CompletionDraftValidation.Invalid?>(null)
+    val validationIssue: StateFlow<CompletionDraftValidation.Invalid?> = _validationIssue.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -104,14 +109,17 @@ class ProviderCompletionViewModel @Inject constructor(
     }
 
     fun onDescriptionChange(value: String) {
-        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility == CompletionEligibility.Eligible)
+        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility == CompletionEligibility.Eligible) {
             _description.value = value
+            _validationIssue.value = null
+        }
     }
 
     fun selectEvidence(sources: List<String>) {
         if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility != CompletionEligibility.Eligible)
             return
         _evidenceIssue.value = null
+        _validationIssue.value = null
         sources.forEach { source ->
             if (_evidence.value.size >= 3) {
                 _evidenceIssue.value = EvidenceSelectionIssue.MaximumReached
@@ -150,6 +158,7 @@ class ProviderCompletionViewModel @Inject constructor(
         evidenceJobs.remove(id)?.cancel()
         _evidence.value = _evidence.value.filterNot { it.id == id }
         _evidenceIssue.value = null
+        _validationIssue.value = null
         if (selected.status is EvidenceSelectionStatus.Ready) {
             viewModelScope.launch { evidencePreparer.clean(selected.status.image) }
         }
@@ -161,6 +170,15 @@ class ProviderCompletionViewModel @Inject constructor(
         _uiState.value = ProviderCompletionUiState.Closed
     }
 
+    fun attemptSubmit(): CompletionDraftValidation? {
+        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility != CompletionEligibility.Eligible)
+            return null
+        // Local prepared images have no server-confirmed file IDs yet.
+        val result = validateDraft(_description.value, _evidence.value.map { null })
+        _validationIssue.value = result as? CompletionDraftValidation.Invalid
+        return result
+    }
+
     private fun clearDraft() {
         _description.value = ""
         draftOrderId = null
@@ -169,6 +187,7 @@ class ProviderCompletionViewModel @Inject constructor(
         val prepared = _evidence.value.mapNotNull { (it.status as? EvidenceSelectionStatus.Ready)?.image }
         _evidence.value = emptyList()
         _evidenceIssue.value = null
+        _validationIssue.value = null
         prepared.forEach { image -> viewModelScope.launch { evidencePreparer.clean(image) } }
     }
 }

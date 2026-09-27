@@ -18,6 +18,8 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.ValidateCompletionReportDraftUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -268,11 +270,36 @@ class ProviderCompletionViewModelTest {
         assertEquals(listOf("one"), evidence.cleaned)
     }
 
+    @Test fun submit_attempt_blocks_incomplete_draft_without_losing_private_state() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val viewModel = viewModel()
+        viewModel.open(selected)
+        advanceUntilIdle()
+        assertEquals(CompletionDraftValidation.Invalid.DescriptionRequired, viewModel.attemptSubmit())
+        viewModel.onDescriptionChange("Done")
+        assertEquals(CompletionDraftValidation.Invalid.PhotoRequired, viewModel.attemptSubmit())
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        assertEquals(CompletionDraftValidation.Invalid.UnconfirmedPhoto, viewModel.attemptSubmit())
+        assertEquals("Done", viewModel.description.value)
+        assertEquals(listOf("one"), viewModel.evidence.value.map { it.source })
+        assertEquals(CompletionDraftValidation.Invalid.UnconfirmedPhoto, viewModel.validationIssue.value)
+    }
+
+    @Test fun submit_attempt_is_ignored_when_order_is_not_eligible() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Failure.Forbidden }
+        val viewModel = viewModel()
+        viewModel.open(selected)
+        advanceUntilIdle()
+        assertEquals(null, viewModel.attemptSubmit())
+        assertEquals(null, viewModel.validationIssue.value)
+    }
+
     private fun viewModel() = ProviderCompletionViewModel(
         GetCompletionEligibilityUseCase(orders, object : CurrentAccountRepository {
             override suspend fun getCurrentAccount() = CurrentAccountOutcome.Success(
                 CurrentAccount.Provider(7, "Juan", "Gómez", "juan@example.com", Category(1, "Plumbing"), null))
-        }) { 1_000 }, sessionStore, evidence,
+        }) { 1_000 }, sessionStore, evidence, ValidateCompletionReportDraftUseCase(),
     )
 
     private inner class FakeSession : AuthSessionStore {

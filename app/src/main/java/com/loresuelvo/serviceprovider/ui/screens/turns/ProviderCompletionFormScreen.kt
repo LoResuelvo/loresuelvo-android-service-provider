@@ -40,6 +40,7 @@ import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import coil3.compose.AsyncImage
 import java.io.File
 
@@ -61,6 +62,9 @@ fun ProviderCompletionFormScreen(
     evidence: List<CompletionEvidenceSelection> = emptyList(),
     evidenceIssue: EvidenceSelectionIssue? = null,
     onRemoveEvidence: (Long) -> Unit = {},
+    validationIssue: CompletionDraftValidation.Invalid? = null,
+    onSubmitAttempt: () -> Unit = {},
+    canAttemptSubmit: Boolean = false,
 ) {
     Scaffold(topBar = { TopAppBar(
         title = { Text(stringResource(R.string.provider_completion_title)) },
@@ -116,13 +120,27 @@ fun ProviderCompletionFormScreen(
                         Text(stringResource(R.string.provider_completion_add_photos))
                     }
                     TextButton(onClick = onBack) { Text(stringResource(R.string.provider_completion_cancel)) }
-                    Button(onClick = {}, enabled = false, modifier = Modifier.testTag("completion_submit")) {
+                    if (validationIssue != null) {
+                        Text(stringResource(validationIssue.messageResource()),
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testTag("completion_validation_issue"))
+                    }
+                    Button(onClick = onSubmitAttempt, enabled = canAttemptSubmit,
+                        modifier = Modifier.testTag("completion_submit")) {
                         Text(stringResource(R.string.provider_completion_submit))
                     }
                 }
             }
         }
     }
+}
+
+private fun CompletionDraftValidation.Invalid.messageResource(): Int = when (this) {
+    CompletionDraftValidation.Invalid.DescriptionRequired -> R.string.provider_completion_description_required
+    CompletionDraftValidation.Invalid.PhotoRequired -> R.string.provider_completion_photo_required
+    CompletionDraftValidation.Invalid.TooManyPhotos -> R.string.provider_completion_photo_maximum
+    CompletionDraftValidation.Invalid.UnconfirmedPhoto -> R.string.provider_completion_photo_unconfirmed
+    CompletionDraftValidation.Invalid.DuplicatePhotoIds -> R.string.provider_completion_photo_duplicate_ids
 }
 
 @Composable
