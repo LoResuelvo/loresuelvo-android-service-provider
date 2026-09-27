@@ -40,6 +40,8 @@ class ActivityMapperTest {
         assertEquals("López", scheduled.consumerSurname)
         assertEquals(25000, scheduled.amountCents)
         assertEquals("https://cdn.example/carlos.jpg", scheduled.consumerPhotoUrl)
+        assertEquals(10, scheduled.serviceProposalId)
+        assertEquals(11, scheduled.consumerId)
         assertEquals(WorkOrderStatus.Scheduled, scheduled.status)
         assertEquals(WorkOrderStatus.AwaitingPayment, awaitingPayment.status)
     }

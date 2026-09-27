@@ -10,6 +10,8 @@ data class WorkOrder(
     val consumerGivenName: String = consumerName,
     val consumerSurname: String = "",
     val consumerPhotoUrl: String? = null,
+    val serviceProposalId: Int = 0,
+    val consumerId: Int = 0,
 )
 
 sealed interface WorkOrderStatus {

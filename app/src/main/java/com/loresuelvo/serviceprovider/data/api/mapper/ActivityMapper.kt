@@ -33,6 +33,8 @@ internal fun WorkOrderSummaryDto.toDomain(): WorkOrder = WorkOrder(
     consumerGivenName = counterpart.name,
     consumerSurname = counterpart.surname,
     consumerPhotoUrl = counterpart.profilePhotoUrl,
+    serviceProposalId = serviceProposalId,
+    consumerId = counterpart.id,
 )
 
 private fun String.toDomainStatus(): WorkOrderStatus = when (lowercase()) {
