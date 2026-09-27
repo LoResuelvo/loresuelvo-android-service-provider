@@ -81,7 +81,6 @@ Característica: Visualizar turnos como prestador
       | falta de red   |
       | respuesta 500  |
 
-  @wip
   Escenario: 09-PVT Mostrar en Inicio solamente turnos próximos
     Dado que el reloj indica "2026-09-26T12:00:00Z"
     Y tengo órdenes scheduled anteriores, iguales y posteriores a ese instante

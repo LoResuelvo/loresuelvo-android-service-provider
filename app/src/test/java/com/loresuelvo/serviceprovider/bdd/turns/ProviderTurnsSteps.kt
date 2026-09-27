@@ -5,6 +5,11 @@ import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.activity.JobRequest
+import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
+import com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome
+import com.loresuelvo.serviceprovider.domain.usecase.activity.GetPendingJobRequestsUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.GetScheduledWorkUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
@@ -18,6 +23,8 @@ import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
+import com.loresuelvo.serviceprovider.ui.home.ProviderHomeViewModel
+import com.loresuelvo.serviceprovider.ui.home.ActivitySectionState
 import com.loresuelvo.serviceprovider.ui.components.providerInitials
 import com.loresuelvo.serviceprovider.ui.screens.turns.formatTurnDate
 import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnBadgeTreatment
@@ -70,6 +77,8 @@ class ProviderTurnsSteps {
     private lateinit var pastStatus: WorkOrderStatus
     private var selectedOrder: WorkOrder? = null
     private var openedConversationId: Int? = null
+    private lateinit var homeViewModel: ProviderHomeViewModel
+    private lateinit var now: Instant
 
     @Given("que inicié sesión como prestador")
     fun signedIn() { Dispatchers.setMain(dispatcher) }
@@ -261,6 +270,59 @@ class ProviderTurnsSteps {
         assertEquals(null, (viewModel.uiState.value as ProviderTurnsUiState.Ready).proposalFailure)
         assertEquals(2, proposalListCalls)
         assertEquals(0, proposalCreateCalls)
+    }
+
+    @Given("que el reloj indica {string}")
+    fun fixedClock(instant: String) { now = Instant.parse(instant) }
+
+    @And("tengo órdenes scheduled anteriores, iguales y posteriores a ese instante")
+    fun ordersAroundNow() {
+        orders = listOf(
+            WorkOrder(5, "Ana", "Later", now.plusSeconds(60).toEpochMilli(), WorkOrderStatus.Scheduled),
+            WorkOrder(9, "Ana", "Equal", now.toEpochMilli(), WorkOrderStatus.Scheduled),
+            WorkOrder(2, "Ana", "Equal", now.toEpochMilli(), WorkOrderStatus.Scheduled),
+            WorkOrder(1, "Ana", "Past", now.minusMillis(1).toEpochMilli(), WorkOrderStatus.Scheduled),
+        )
+    }
+
+    @And("tengo órdenes futuras awaiting_payment y paid y propuestas pendientes")
+    fun futureNonScheduledAndPendingProposal() {
+        orders = orders + listOf(
+            WorkOrder(3, "Ana", "Paid", now.plusSeconds(60).toEpochMilli(), WorkOrderStatus.Paid),
+            WorkOrder(4, "Ana", "Awaiting", now.plusSeconds(60).toEpochMilli(), WorkOrderStatus.AwaitingPayment),
+        )
+        proposalReferencesConversation()
+        proposals = proposals.map { it.copy(status = ServiceProposalStatus.Pending) }
+    }
+
+    @When("abro Inicio")
+    fun openHome() {
+        val requests = object : JobRequestRepository {
+            override suspend fun getPendingJobRequests(): ActivityLoadOutcome<JobRequest> = ActivityLoadOutcome.Success(emptyList())
+            override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome = error("Not used")
+        }
+        homeViewModel = ProviderHomeViewModel(GetPendingJobRequestsUseCase(requests),
+            GetScheduledWorkUseCase(repository) { now.toEpochMilli() })
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("Trabajos agendados muestra sólo órdenes scheduled desde ese instante inclusive")
+    fun homeShowsOnlyUpcomingScheduled() {
+        assertEquals(setOf(2, 5, 9),
+            (homeViewModel.uiState.value.scheduledWork as ActivitySectionState.Ready).items.map { it.id }.toSet())
+    }
+
+    @And("las ordena por fecha ascendente y luego por ID ascendente")
+    fun homeOrdersByDateAndId() {
+        assertEquals(listOf(2, 9, 5),
+            (homeViewModel.uiState.value.scheduledWork as ActivitySectionState.Ready).items.map { it.id })
+    }
+
+    @And("Ver todos permite consultar también las órdenes excluidas del resumen")
+    fun viewAllKeepsFullOrderHistory() {
+        enterTurns()
+        assertEquals(setOf(1, 2, 3, 4, 5, 9),
+            (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.map { it.id }.toSet())
     }
 
     @Then("veo las órdenes 40, 30, 11 y 12 en ese orden")
