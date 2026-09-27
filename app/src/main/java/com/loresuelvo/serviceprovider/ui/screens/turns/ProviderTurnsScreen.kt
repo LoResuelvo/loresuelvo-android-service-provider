@@ -38,6 +38,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
@@ -55,6 +57,7 @@ import java.util.TimeZone
 fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {},
     viewModel: ProviderTurnsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
     val conversationToOpen = (state as? ProviderTurnsUiState.Ready)?.conversationToOpen
     LaunchedEffect(conversationToOpen) {
         if (conversationToOpen != null) {

@@ -205,6 +205,27 @@ class ProviderTurnsScreenTest {
         }
     }
 
+    @Test fun returning_from_chat_updates_selected_order_and_keeps_scrolled_list() {
+        val orders = (1..20).map { WorkOrder(it, "Consumer $it", "Work", it.toLong(), WorkOrderStatus.Scheduled) }
+        var state: ProviderTurnsUiState.Ready by androidx.compose.runtime.mutableStateOf(
+            ProviderTurnsUiState.Ready(orders, mapOf(20 to 93)))
+        var opened = 0
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(state, {}, {}, onConversation = { opened = it })
+        } }
+        compose.onNodeWithTag("provider_turns_list").performScrollToIndex(19)
+        compose.onNodeWithTag("provider_turn_details_20").performClick()
+        compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
+        compose.runOnIdle {
+            org.junit.Assert.assertEquals(93, opened)
+            state = state.copy(orders = orders.map { if (it.id == 20) it.copy(status = WorkOrderStatus.AwaitingPayment) else it })
+        }
+        compose.onNodeWithText("Pendiente de pago").assertExists()
+        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithTag("provider_turn_20").assertExists()
+        compose.onNodeWithTag("provider_turn_1").assertDoesNotExist()
+    }
+
 
     private fun showOrder(photo: String?) {
         val order = WorkOrder(

@@ -464,5 +464,40 @@ class ProviderTurnsSteps {
         assertNotEquals(Route.ProviderTurns.path, Route.ServiceProposals.path)
     }
 
+    @Given("que abrí el chat desde una orden después de desplazar el listado")
+    fun openedChatAfterScrollingTurns() {
+        orderReferencesProposal()
+        orders = (1..20).map { WorkOrder(it, "Consumer $it", "Work", it.toLong(), WorkOrderStatus.Scheduled) } + orders
+        proposalReferencesConversation()
+        enterTurns()
+        viewModel.onResume()
+        openedConversationId = (viewModel.uiState.value as ProviderTurnsUiState.Ready).conversationIds[40]
+        assertEquals(93, openedConversationId)
+    }
+
+    @And("la API cambió esa orden de scheduled a awaiting_payment")
+    fun orderStatusChangedOnApi() {
+        orders = orders.map { if (it.id == 40) it.copy(status = WorkOrderStatus.AwaitingPayment) else it }
+    }
+
+    @When("vuelvo desde el chat")
+    fun returnFromChat() {
+        viewModel.onResume()
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("veo el estado actualizado de esa orden")
+    fun seesUpdatedOrderStatus() {
+        val ready = viewModel.uiState.value as ProviderTurnsUiState.Ready
+        assertEquals(WorkOrderStatus.AwaitingPayment, ready.orders.single { it.id == 40 }.status)
+        assertEquals(2, orderCalls)
+    }
+
+    @And("conservo la posición del listado")
+    fun keepsListPosition() {
+        // Compose owns the saved LazyListState; its scroll restoration is covered by ProviderTurnsScreenTest.
+        assertEquals(21, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.size)
+    }
+
     @After fun tearDown() { pendingOrders?.cancel(); Dispatchers.resetMain() }
 }

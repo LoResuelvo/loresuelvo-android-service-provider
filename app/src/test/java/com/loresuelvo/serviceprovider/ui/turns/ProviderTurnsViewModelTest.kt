@@ -114,6 +114,34 @@ class ProviderTurnsViewModelTest {
         assertEquals(2, proposalCalls)
     }
 
+    @Test fun returning_from_conversation_refreshes_order_without_clearing_visible_list() = runTest(dispatcher.scheduler) {
+        var status: WorkOrderStatus = WorkOrderStatus.Scheduled
+        var calls = 0
+        val workOrders = object : WorkOrderRepository {
+            override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> {
+                calls++
+                return ActivityLoadOutcome.Success(listOf(WorkOrder(40, "Ana", "Work", 1, status)))
+            }
+        }
+        val proposals = object : ServiceProposalRepository {
+            override suspend fun list() = ServiceProposalListOutcome.Success(emptyList())
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = error("Not used")
+        }
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(workOrders), GetServiceProposalsUseCase(proposals))
+        advanceUntilIdle()
+        viewModel.onResume()
+        advanceUntilIdle()
+        assertEquals(1, calls)
+
+        status = WorkOrderStatus.AwaitingPayment
+        viewModel.onResume()
+        assertTrue(viewModel.uiState.value is ProviderTurnsUiState.Ready)
+        advanceUntilIdle()
+        assertEquals(2, calls)
+        assertEquals(WorkOrderStatus.AwaitingPayment,
+            (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.single().status)
+    }
+
     private fun proposal(id: Int, consumerId: Int, conversationId: Int) = ServiceProposalSummary(
         id = id, conversationId = conversationId, amountCents = 100, scheduledOnEpochMillis = 1,
         description = "Work", estimatedDurationMinutes = 60, status = ServiceProposalStatus.Accepted,

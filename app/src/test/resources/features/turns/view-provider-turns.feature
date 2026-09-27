@@ -112,7 +112,6 @@ Característica: Visualizar turnos como prestador
       | falta de red   |
       | respuesta 500  |
 
-  @wip
   Escenario: 13-PVT Refrescar al reingresar conservando la posición
     Dado que abrí el chat desde una orden después de desplazar el listado
     Y la API cambió esa orden de scheduled a awaiting_payment

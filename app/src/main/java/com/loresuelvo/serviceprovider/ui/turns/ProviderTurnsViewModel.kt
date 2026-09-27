@@ -29,13 +29,24 @@ class ProviderTurnsViewModel @Inject constructor(
     private val getProviderTurns: GetProviderTurnsUseCase,
     private val getServiceProposals: GetServiceProposalsUseCase,
 ) : ViewModel() {
+    private var initialResumePending = true
     private val _uiState = MutableStateFlow<ProviderTurnsUiState>(ProviderTurnsUiState.Loading)
     val uiState: StateFlow<ProviderTurnsUiState> = _uiState.asStateFlow()
 
     init { load() }
 
-    fun load() {
-        _uiState.value = ProviderTurnsUiState.Loading
+    fun onResume() {
+        if (initialResumePending) {
+            initialResumePending = false
+            return
+        }
+        load(preserveContent = true)
+    }
+
+    fun load(preserveContent: Boolean = false) {
+        if (!preserveContent || _uiState.value !is ProviderTurnsUiState.Ready) {
+            _uiState.value = ProviderTurnsUiState.Loading
+        }
         viewModelScope.launch {
             _uiState.value = when (val result = getProviderTurns()) {
                 is ActivityLoadOutcome.Success -> {
