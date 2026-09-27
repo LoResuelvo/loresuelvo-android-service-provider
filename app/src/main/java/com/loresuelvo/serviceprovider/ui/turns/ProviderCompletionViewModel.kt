@@ -46,6 +46,7 @@ data class CompletionEvidenceSelection(
 
 sealed interface EvidenceUploadStatus {
     data object NotStarted : EvidenceUploadStatus
+    data object Interrupted : EvidenceUploadStatus
     data object Uploading : EvidenceUploadStatus
     data class Confirmed(val fileId: String) : EvidenceUploadStatus
     data class Failed(val failure: CompletionEvidenceUpload.Failure) : EvidenceUploadStatus
@@ -85,6 +86,7 @@ class ProviderCompletionViewModel @Inject constructor(
     private var submitJob: Job? = null
     private var draftOrderId: Int? = null
     private var nextEvidenceId = 0L
+    private var restoredDraft = false
     private val evidenceJobs = mutableMapOf<Long, Job>()
     private val uploadJobs = mutableMapOf<Long, Job>()
     private val _uiState = MutableStateFlow<ProviderCompletionUiState>(ProviderCompletionUiState.Closed)
@@ -123,8 +125,10 @@ class ProviderCompletionViewModel @Inject constructor(
             _submission.value == CompletionSubmissionState.Reconciling) return
         queryJob?.cancel()
         if (draftOrderId != order.id) {
-            clearDraft()
+            clearDraft(savedStateHandle.get<Int>("completion_draft_order_id") != order.id ||
+                savedStateHandle.get<String>("completion_draft_owner_id") != sessionStore.getSession()?.user?.id)
             draftOrderId = order.id
+            restoredDraft = false
         }
         val requestSession = sessionStore.getSession()
         if (requestSession == null) {
@@ -144,12 +148,16 @@ class ProviderCompletionViewModel @Inject constructor(
             return
         }
         _uiState.value = ProviderCompletionUiState.Checking(order)
-        if (savedStateHandle.get<Int>("completion_pending_order_id") == order.id) {
-            _submission.value = CompletionSubmissionState.Reconciling
-            queryJob = viewModelScope.launch { reconcile(order, requestSession) }
-            return
-        }
         queryJob = viewModelScope.launch {
+            if (!restoredDraft) {
+                restoreDraft(order, requestSession)
+                restoredDraft = true
+            }
+            if (savedStateHandle.get<Int>("completion_pending_order_id") == order.id) {
+                _submission.value = CompletionSubmissionState.Reconciling
+                reconcile(order, requestSession)
+                return@launch
+            }
             val eligibility = getEligibility(order)
             if (sessionStore.getSession() != requestSession) return@launch
             if (eligibility == CompletionEligibility.Failure.Unauthorized) {
@@ -170,6 +178,7 @@ class ProviderCompletionViewModel @Inject constructor(
     fun onDescriptionChange(value: String) {
         if (canEdit()) {
             _description.value = value
+            saveDraft()
             _validationIssue.value = null
         }
     }
@@ -190,6 +199,7 @@ class ProviderCompletionViewModel @Inject constructor(
             }
             val id = ++nextEvidenceId
             _evidence.value += CompletionEvidenceSelection(id, source, EvidenceSelectionStatus.Preparing)
+            saveDraft()
             evidenceJobs[id] = viewModelScope.launch {
                 val result = try {
                     evidencePreparer.prepare(source)
@@ -208,6 +218,7 @@ class ProviderCompletionViewModel @Inject constructor(
                     is EvidenceImagePreparation.Invalid -> EvidenceSelectionStatus.Invalid(result)
                 }
                 _evidence.value = _evidence.value.map { if (it.id == id) it.copy(status = status) else it }
+                saveDraft()
             }
         }
     }
@@ -218,6 +229,7 @@ class ProviderCompletionViewModel @Inject constructor(
         evidenceJobs.remove(id)?.cancel()
         uploadJobs.remove(id)?.cancel()
         _evidence.value = _evidence.value.filterNot { it.id == id }
+        saveDraft()
         _evidenceIssue.value = null
         _validationIssue.value = null
         if (selected.status is EvidenceSelectionStatus.Ready) {
@@ -233,7 +245,8 @@ class ProviderCompletionViewModel @Inject constructor(
 
     fun retryEvidence(id: Long) {
         val selected = _evidence.value.firstOrNull { it.id == id } ?: return
-        if (selected.uploadStatus !is EvidenceUploadStatus.Failed) return
+        if (selected.uploadStatus !is EvidenceUploadStatus.Failed &&
+            selected.uploadStatus != EvidenceUploadStatus.Interrupted) return
         startUpload(selected)
     }
 
@@ -243,6 +256,7 @@ class ProviderCompletionViewModel @Inject constructor(
         val session = sessionStore.getSession() ?: return
         val orderId = draftOrderId
         _evidence.value = _evidence.value.map { if (it.id == selected.id) it.copy(uploadStatus = EvidenceUploadStatus.Uploading) else it }
+        saveDraft()
         uploadJobs[selected.id] = viewModelScope.launch {
             val outcome = try {
                 uploadEvidence(image)
@@ -265,6 +279,7 @@ class ProviderCompletionViewModel @Inject constructor(
                 is CompletionEvidenceUpload.Failure -> EvidenceUploadStatus.Failed(outcome)
             }
             _evidence.value = _evidence.value.map { if (it.id == selected.id) it.copy(uploadStatus = status) else it }
+            saveDraft()
             _validationIssue.value = null
         }
     }
@@ -431,7 +446,49 @@ class ProviderCompletionViewModel @Inject constructor(
         savedStateHandle.remove<Int>("completion_known_report_id")
     }
 
-    private fun clearDraft() {
+    private fun saveDraft() {
+        val orderId = draftOrderId ?: return
+        val owner = sessionStore.getSession()?.user?.id ?: return
+        savedStateHandle["completion_draft_order_id"] = orderId
+        savedStateHandle["completion_draft_owner_id"] = owner
+        savedStateHandle["completion_draft_description"] = _description.value
+        savedStateHandle["completion_draft_photos"] = ArrayList(_evidence.value.flatMap { selection ->
+            val image = (selection.status as? EvidenceSelectionStatus.Ready)?.image
+            listOf(selection.source, image?.originalName.orEmpty(), image?.mimeType.orEmpty(),
+                image?.sizeBytes?.toString().orEmpty(), image?.localPath.orEmpty(),
+                (selection.uploadStatus as? EvidenceUploadStatus.Confirmed)?.fileId.orEmpty())
+        })
+    }
+
+    private suspend fun restoreDraft(order: WorkOrder, session: AuthSession) {
+        if (savedStateHandle.get<Int>("completion_draft_order_id") != order.id ||
+            savedStateHandle.get<String>("completion_draft_owner_id") != session.user.id) return
+        val fields = savedStateHandle.get<ArrayList<String>>("completion_draft_photos") ?: return
+        if (fields.size > 18 || fields.size % 6 != 0) return
+        val restored = fields.chunked(6).map { entry ->
+            val image = entry[3].toLongOrNull()?.let {
+                PreparedEvidenceImage(entry[1], entry[2], it, entry[4])
+            }
+            val available = image != null && evidencePreparer.isAvailable(image)
+            val status = if (available) EvidenceSelectionStatus.Ready(image!!) else
+                EvidenceSelectionStatus.Invalid(EvidenceImagePreparation.Invalid.Unreadable)
+            CompletionEvidenceSelection(++nextEvidenceId, entry[0], status,
+                if (available && entry[5].isNotBlank()) EvidenceUploadStatus.Confirmed(entry[5])
+                else EvidenceUploadStatus.Interrupted)
+        }
+        if (!isCurrent(order, session)) return
+        _description.value = savedStateHandle.get<String>("completion_draft_description").orEmpty()
+        _evidence.value = restored
+        saveDraft()
+    }
+
+    private fun clearDraft(clearSaved: Boolean = true) {
+        if (clearSaved) {
+            savedStateHandle.remove<Int>("completion_draft_order_id")
+            savedStateHandle.remove<String>("completion_draft_owner_id")
+            savedStateHandle.remove<String>("completion_draft_description")
+            savedStateHandle.remove<ArrayList<String>>("completion_draft_photos")
+        }
         _description.value = ""
         _refreshedOrderStatus.value = null
         draftOrderId = null

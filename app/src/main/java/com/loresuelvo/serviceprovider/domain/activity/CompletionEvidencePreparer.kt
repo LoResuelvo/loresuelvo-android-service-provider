@@ -21,5 +21,6 @@ sealed interface EvidenceImagePreparation {
 
 interface CompletionEvidencePreparer {
     suspend fun prepare(source: String): EvidenceImagePreparation
+    suspend fun isAvailable(image: PreparedEvidenceImage): Boolean = false
     suspend fun clean(image: PreparedEvidenceImage)
 }

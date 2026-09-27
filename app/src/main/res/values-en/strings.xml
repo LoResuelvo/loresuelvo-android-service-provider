@@ -48,6 +48,7 @@
     <string name="provider_completion_photo_transfer_failed">Couldn’t transfer the photo.</string>
     <string name="provider_completion_photo_confirm_failed">Couldn’t confirm the photo.</string>
     <string name="provider_completion_photo_retry">Retry</string>
+    <string name="provider_completion_photo_interrupted">The upload was interrupted. Retry the photo.</string>
     <string name="provider_completion_photo_retry_description">Retry photo %1$d</string>
     <string name="provider_completion_photo_remove">Remove</string>
     <string name="provider_completion_photo_remove_description">Remove photo %1$d</string>

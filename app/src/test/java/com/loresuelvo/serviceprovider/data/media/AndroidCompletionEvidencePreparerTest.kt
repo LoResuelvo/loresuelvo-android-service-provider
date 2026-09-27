@@ -25,7 +25,7 @@ class AndroidCompletionEvidencePreparerTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        preparer = AndroidCompletionEvidencePreparer(AndroidProfilePhotoPreparer(context))
+        preparer = AndroidCompletionEvidencePreparer(AndroidProfilePhotoPreparer(context), context)
     }
 
     @Test
@@ -41,8 +41,13 @@ class AndroidCompletionEvidencePreparerTest {
             assertEquals(mime, image.mimeType)
             assertTrue(image.sizeBytes in 1..5_242_880)
             assertTrue(File(image.localPath).exists())
+            assertTrue(preparer.isAvailable(image))
+            assertFalse(preparer.isAvailable(image.copy(sizeBytes = image.sizeBytes + 1)))
+            assertFalse(preparer.isAvailable(image.copy(localPath = File(context.cacheDir, name).absolutePath)))
+            assertFalse(preparer.isAvailable(image.copy(localPath = File(image.localPath).parent)))
             preparer.clean(image)
             assertFalse(File(image.localPath).exists())
+            assertFalse(preparer.isAvailable(image))
         }
     }
 

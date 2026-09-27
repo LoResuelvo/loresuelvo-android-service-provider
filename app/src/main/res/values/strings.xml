@@ -48,6 +48,7 @@
     <string name="provider_completion_photo_transfer_failed">No se pudo transferir la foto.</string>
     <string name="provider_completion_photo_confirm_failed">No se pudo confirmar la foto.</string>
     <string name="provider_completion_photo_retry">Reintentar</string>
+    <string name="provider_completion_photo_interrupted">La carga se interrumpió. Reintentá la foto.</string>
     <string name="provider_completion_photo_retry_description">Reintentar foto %1$d</string>
     <string name="provider_completion_photo_remove">Quitar</string>
     <string name="provider_completion_photo_remove_description">Quitar foto %1$d</string>

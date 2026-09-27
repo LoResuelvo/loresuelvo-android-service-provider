@@ -262,8 +262,9 @@ private fun CompletionEvidenceItem(
                     style = MaterialTheme.typography.bodySmall)
                 is EvidenceUploadStatus.Confirmed -> Text(stringResource(R.string.provider_completion_photo_confirmed),
                     style = MaterialTheme.typography.bodySmall)
-                is EvidenceUploadStatus.Failed -> {
-                    Text(stringResource(upload.failure.stage.messageResource()),
+                EvidenceUploadStatus.Interrupted, is EvidenceUploadStatus.Failed -> {
+                    Text(stringResource(if (upload is EvidenceUploadStatus.Failed)
+                        upload.failure.stage.messageResource() else R.string.provider_completion_photo_interrupted),
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     val retryDescription = stringResource(R.string.provider_completion_photo_retry_description, index + 1)
                     TextButton(onClick = { onRetry(selection.id) }, enabled = editable,

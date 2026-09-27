@@ -744,6 +744,57 @@ class ProviderCompletionViewModelTest {
         orders, handle,
     )
 
+    @Test fun restored_draft_keeps_verified_confirmed_photo_and_requires_explicit_retry_for_interrupted_one() =
+        runTest(dispatcher.scheduler) {
+            orders.next = { WorkOrderDetailOutcome.Success(detail) }
+            val files = UploadFiles()
+            val handle = SavedStateHandle()
+            val first = viewModel(files.useCase(), handle)
+            first.open(selected)
+            advanceUntilIdle()
+            first.onDescriptionChange("Done")
+            first.selectEvidence(listOf("one", "two"))
+            advanceUntilIdle()
+            first.uploadEvidence(first.evidence.value.first().id)
+            advanceUntilIdle()
+
+            val restored = viewModel(files.useCase(), handle)
+            restored.open(selected)
+            advanceUntilIdle()
+            assertEquals("Done", restored.description.value)
+            assertEquals(listOf(EvidenceUploadStatus.Confirmed("file-one"), EvidenceUploadStatus.Interrupted),
+                restored.evidence.value.map { it.uploadStatus })
+            assertEquals(listOf("one", "two"), restored.evidence.value.map { it.source })
+            assertEquals(listOf("one"), files.presignedNames)
+            assertEquals(CompletionDraftValidation.Invalid.UnconfirmedPhoto, restored.attemptSubmit())
+            restored.retryEvidence(restored.evidence.value[1].id)
+            advanceUntilIdle()
+            assertEquals(listOf("one", "two"), files.presignedNames)
+            assertEquals(CompletionDraftValidation.Valid("Done", listOf("file-one", "file-two")), restored.attemptSubmit())
+            assertEquals(0, orders.postCalls)
+        }
+
+    @Test fun restored_missing_photo_keeps_description_and_requires_reselection() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val handle = SavedStateHandle()
+        val first = viewModel(handle = handle)
+        first.open(selected)
+        advanceUntilIdle()
+        first.onDescriptionChange("Done")
+        first.selectEvidence(listOf("one", "two"))
+        advanceUntilIdle()
+        evidence.unavailable += "two"
+
+        val restored = viewModel(handle = handle)
+        restored.open(selected)
+        advanceUntilIdle()
+        assertEquals("Done", restored.description.value)
+        assertEquals(EvidenceSelectionStatus.Invalid(EvidenceImagePreparation.Invalid.Unreadable),
+            restored.evidence.value[1].status)
+        assertEquals(CompletionDraftValidation.Invalid.UnconfirmedPhoto, restored.attemptSubmit())
+        assertEquals(0, orders.postCalls)
+    }
+
     private class UploadFiles : FileRepository {
         val presignedNames = mutableListOf<String>()
         var failNextPresign = false
@@ -812,6 +863,7 @@ class ProviderCompletionViewModelTest {
     private class FakeEvidence : CompletionEvidencePreparer {
         val prepared = mutableListOf<String>()
         val cleaned = mutableListOf<String>()
+        val unavailable = mutableSetOf<String>()
         var next: suspend (String) -> EvidenceImagePreparation = { ready(it) }
         fun ready(source: String) = EvidenceImagePreparation.Ready(
             PreparedEvidenceImage(source, "image/jpeg", 12, source),
@@ -820,6 +872,7 @@ class ProviderCompletionViewModelTest {
             prepared += source
             return next(source)
         }
+        override suspend fun isAvailable(image: PreparedEvidenceImage) = image.localPath !in unavailable
         override suspend fun clean(image: PreparedEvidenceImage) { cleaned += image.localPath }
     }
 }
