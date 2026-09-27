@@ -1,13 +1,17 @@
 package com.loresuelvo.serviceprovider.ui.turns
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.activity.CompletionEligibility
 import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidencePreparer
 import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.domain.activity.PreparedEvidenceImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
+import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import com.loresuelvo.serviceprovider.domain.usecase.activity.ValidateCompletionReportDraftUseCase
@@ -53,6 +57,17 @@ sealed interface EvidenceSelectionStatus {
 
 enum class EvidenceSelectionIssue { MaximumReached, AlreadySelected }
 
+sealed interface CompletionSubmissionState {
+    data object Idle : CompletionSubmissionState
+    data object Checking : CompletionSubmissionState
+    data object Sending : CompletionSubmissionState
+    data object Reconciling : CompletionSubmissionState
+    data object QueryFailed : CompletionSubmissionState
+    data class Confirmed(val reportId: Int?, val serverConfirmed: Boolean) : CompletionSubmissionState
+    data class Rejected(val outcome: PostCompletionReportOutcome.Rejected) : CompletionSubmissionState
+    data class Blocked(val eligibility: CompletionEligibility) : CompletionSubmissionState
+}
+
 @HiltViewModel
 class ProviderCompletionViewModel @Inject constructor(
     private val getEligibility: GetCompletionEligibilityUseCase,
@@ -60,9 +75,12 @@ class ProviderCompletionViewModel @Inject constructor(
     private val evidencePreparer: CompletionEvidencePreparer,
     private val validateDraft: ValidateCompletionReportDraftUseCase,
     private val uploadEvidence: UploadCompletionEvidenceUseCase,
+    private val workOrders: WorkOrderRepository,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private var activeSession = sessionStore.getSession()
     private var queryJob: Job? = null
+    private var submitJob: Job? = null
     private var draftOrderId: Int? = null
     private var nextEvidenceId = 0L
     private val evidenceJobs = mutableMapOf<Long, Job>()
@@ -77,6 +95,8 @@ class ProviderCompletionViewModel @Inject constructor(
     val evidenceIssue: StateFlow<EvidenceSelectionIssue?> = _evidenceIssue.asStateFlow()
     private val _validationIssue = MutableStateFlow<CompletionDraftValidation.Invalid?>(null)
     val validationIssue: StateFlow<CompletionDraftValidation.Invalid?> = _validationIssue.asStateFlow()
+    private val _submission = MutableStateFlow<CompletionSubmissionState>(CompletionSubmissionState.Idle)
+    val submission: StateFlow<CompletionSubmissionState> = _submission.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -84,7 +104,9 @@ class ProviderCompletionViewModel @Inject constructor(
                 if (session != activeSession) {
                     activeSession = session
                     queryJob?.cancel()
+                    submitJob?.cancel()
                     clearDraft()
+                    _submission.value = CompletionSubmissionState.Idle
                     _uiState.value = ProviderCompletionUiState.SessionExpired
                 }
             }
@@ -92,6 +114,9 @@ class ProviderCompletionViewModel @Inject constructor(
     }
 
     fun open(order: WorkOrder) {
+        if (_submission.value == CompletionSubmissionState.Checking ||
+            _submission.value == CompletionSubmissionState.Sending ||
+            _submission.value == CompletionSubmissionState.Reconciling) return
         queryJob?.cancel()
         if (draftOrderId != order.id) {
             clearDraft()
@@ -103,7 +128,23 @@ class ProviderCompletionViewModel @Inject constructor(
             _uiState.value = ProviderCompletionUiState.SessionExpired
             return
         }
+        val pendingOrder = savedStateHandle.get<Int>("completion_pending_order_id")
+        val pendingOwner = savedStateHandle.get<String>("completion_pending_owner_id")
+        if (pendingOrder != null && pendingOwner != requestSession.user.id) {
+            clearSubmissionMarker()
+            _submission.value = CompletionSubmissionState.Idle
+        }
+        if (pendingOrder != null && pendingOwner == requestSession.user.id && pendingOrder != order.id) {
+            _submission.value = CompletionSubmissionState.Blocked(CompletionEligibility.ChangedOrder)
+            _uiState.value = ProviderCompletionUiState.Ready(order, CompletionEligibility.ChangedOrder)
+            return
+        }
         _uiState.value = ProviderCompletionUiState.Checking(order)
+        if (savedStateHandle.get<Int>("completion_pending_order_id") == order.id) {
+            _submission.value = CompletionSubmissionState.Reconciling
+            queryJob = viewModelScope.launch { reconcile(order, requestSession) }
+            return
+        }
         queryJob = viewModelScope.launch {
             val eligibility = getEligibility(order)
             if (sessionStore.getSession() != requestSession) return@launch
@@ -123,14 +164,14 @@ class ProviderCompletionViewModel @Inject constructor(
     }
 
     fun onDescriptionChange(value: String) {
-        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility == CompletionEligibility.Eligible) {
+        if (canEdit()) {
             _description.value = value
             _validationIssue.value = null
         }
     }
 
     fun selectEvidence(sources: List<String>) {
-        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility != CompletionEligibility.Eligible)
+        if (!canEdit())
             return
         _evidenceIssue.value = null
         _validationIssue.value = null
@@ -168,6 +209,7 @@ class ProviderCompletionViewModel @Inject constructor(
     }
 
     fun removeEvidence(id: Long) {
+        if (!canEdit()) return
         val selected = _evidence.value.firstOrNull { it.id == id } ?: return
         evidenceJobs.remove(id)?.cancel()
         uploadJobs.remove(id)?.cancel()
@@ -192,7 +234,7 @@ class ProviderCompletionViewModel @Inject constructor(
     }
 
     private fun startUpload(selected: CompletionEvidenceSelection) {
-        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility != CompletionEligibility.Eligible) return
+        if (!canEdit()) return
         val image = (selected.status as? EvidenceSelectionStatus.Ready)?.image ?: return
         val session = sessionStore.getSession() ?: return
         val orderId = draftOrderId
@@ -225,18 +267,126 @@ class ProviderCompletionViewModel @Inject constructor(
 
     fun discardDraft() {
         queryJob?.cancel()
+        submitJob?.cancel()
         clearDraft()
+        _submission.value = CompletionSubmissionState.Idle
         _uiState.value = ProviderCompletionUiState.Closed
     }
 
     fun attemptSubmit(): CompletionDraftValidation? {
-        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility != CompletionEligibility.Eligible)
+        if (!canEdit())
             return null
         val result = validateDraft(_description.value, _evidence.value.map {
             (it.uploadStatus as? EvidenceUploadStatus.Confirmed)?.fileId
         })
         _validationIssue.value = result as? CompletionDraftValidation.Invalid
         return result
+    }
+
+    fun confirmCompletion() {
+        val ready = _uiState.value as? ProviderCompletionUiState.Ready ?: return
+        val valid = attemptSubmit() as? CompletionDraftValidation.Valid ?: return
+        val session = sessionStore.getSession() ?: return
+        val order = ready.order
+        _submission.value = CompletionSubmissionState.Checking
+        submitJob = viewModelScope.launch {
+            val eligibility = getEligibility(order)
+            if (!isCurrent(order, session)) return@launch
+            if (eligibility == CompletionEligibility.Failure.Unauthorized) {
+                expireSession()
+                return@launch
+            }
+            if (eligibility != CompletionEligibility.Eligible) {
+                _uiState.value = ProviderCompletionUiState.Ready(order, eligibility)
+                _submission.value = CompletionSubmissionState.Idle
+                return@launch
+            }
+            savedStateHandle["completion_pending_order_id"] = order.id
+            savedStateHandle["completion_pending_owner_id"] = session.user.id
+            _submission.value = CompletionSubmissionState.Sending
+            val outcome = workOrders.postCompletionReport(order.id, valid.description, valid.confirmedFileIds)
+            if (!isCurrent(order, session)) return@launch
+            when (outcome) {
+                is PostCompletionReportOutcome.Success -> {
+                    savedStateHandle["completion_known_report_id"] = outcome.reportId
+                    _submission.value = CompletionSubmissionState.Confirmed(outcome.reportId, false)
+                    _uiState.value = ProviderCompletionUiState.Ready(order, CompletionEligibility.AlreadyReported)
+                    reconcile(order, session)
+                }
+                is PostCompletionReportOutcome.Uncertain -> {
+                    _submission.value = CompletionSubmissionState.Reconciling
+                    reconcile(order, session)
+                }
+                is PostCompletionReportOutcome.Rejected -> {
+                    clearSubmissionMarker()
+                    if (outcome == PostCompletionReportOutcome.Rejected.Unauthorized) expireSession()
+                    else _submission.value = CompletionSubmissionState.Rejected(outcome)
+                }
+            }
+        }
+    }
+
+    fun retryReconciliation() {
+        if (_submission.value != CompletionSubmissionState.QueryFailed &&
+            _submission.value !is CompletionSubmissionState.Confirmed) return
+        val order = (_uiState.value as? ProviderCompletionUiState.Ready)?.order ?: return
+        if (savedStateHandle.get<Int>("completion_pending_order_id") != order.id) return
+        val session = sessionStore.getSession() ?: return
+        _submission.value = CompletionSubmissionState.Reconciling
+        queryJob = viewModelScope.launch { reconcile(order, session) }
+    }
+
+    private suspend fun reconcile(order: WorkOrder, session: AuthSession) {
+        val eligibility = getEligibility(order)
+        if (!isCurrent(order, session)) return
+        if (eligibility == CompletionEligibility.Failure.Unauthorized) {
+            expireSession()
+            return
+        }
+        val knownReportId = savedStateHandle.get<Int>("completion_known_report_id")
+        when {
+            eligibility == CompletionEligibility.AlreadyReported -> {
+                clearSubmissionMarker()
+                _submission.value = CompletionSubmissionState.Confirmed(knownReportId, true)
+                _uiState.value = ProviderCompletionUiState.Ready(order, eligibility)
+            }
+            knownReportId != null -> {
+                _submission.value = CompletionSubmissionState.Confirmed(knownReportId, false)
+                _uiState.value = ProviderCompletionUiState.Ready(order, CompletionEligibility.AlreadyReported)
+            }
+            eligibility == CompletionEligibility.Eligible -> {
+                clearSubmissionMarker()
+                _submission.value = CompletionSubmissionState.Idle
+                _uiState.value = ProviderCompletionUiState.Ready(order, eligibility)
+            }
+            eligibility is CompletionEligibility.Failure -> {
+                _submission.value = CompletionSubmissionState.QueryFailed
+                _uiState.value = ProviderCompletionUiState.Ready(order, eligibility)
+            }
+            else -> {
+                _submission.value = CompletionSubmissionState.Blocked(eligibility)
+                _uiState.value = ProviderCompletionUiState.Ready(order, eligibility)
+            }
+        }
+    }
+
+    private fun canEdit(): Boolean = _submission.value == CompletionSubmissionState.Idle &&
+        (_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility == CompletionEligibility.Eligible
+
+    private fun isCurrent(order: WorkOrder, session: AuthSession): Boolean =
+        draftOrderId == order.id && sessionStore.getSession() == session
+
+    private fun expireSession() {
+        clearDraft()
+        _submission.value = CompletionSubmissionState.Idle
+        _uiState.value = ProviderCompletionUiState.SessionExpired
+        sessionStore.clearSession()
+    }
+
+    private fun clearSubmissionMarker() {
+        savedStateHandle.remove<Int>("completion_pending_order_id")
+        savedStateHandle.remove<String>("completion_pending_owner_id")
+        savedStateHandle.remove<Int>("completion_known_report_id")
     }
 
     private fun clearDraft() {

@@ -13,6 +13,8 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
+import androidx.lifecycle.SavedStateHandle
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -399,11 +401,177 @@ class ProviderCompletionViewModelTest {
         assertEquals(listOf("one"), evidence.cleaned)
     }
 
-    private fun viewModel(uploader: UploadCompletionEvidenceUseCase = unavailableCompletionUploadUseCase()) = ProviderCompletionViewModel(
+    @Test fun double_confirm_sends_one_snapshot_and_locks_success_when_refresh_fails() = runTest(dispatcher.scheduler) {
+        orders.next = { if (orders.queriedIds.size >= 3) WorkOrderDetailOutcome.Failure.Network(Exception("offline"))
+            else WorkOrderDetailOutcome.Success(detail) }
+        val pending = CompletableDeferred<PostCompletionReportOutcome>()
+        orders.postNext = { pending.await() }
+        val handle = SavedStateHandle()
+        val viewModel = viewModel(UploadFiles().useCase(), handle)
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("  Done  ")
+        viewModel.selectEvidence(listOf("one", "two"))
+        advanceUntilIdle()
+        viewModel.evidence.value.map { it.id }.forEach { viewModel.uploadEvidence(it) }
+        advanceUntilIdle()
+
+        viewModel.confirmCompletion()
+        viewModel.confirmCompletion()
+        viewModel.onDescriptionChange("changed")
+        viewModel.removeEvidence(viewModel.evidence.value.first().id)
+        runCurrent()
+        assertEquals(1, orders.postCalls)
+        assertEquals("Done", orders.postedDescription)
+        assertEquals(listOf("file-one", "file-two"), orders.postedFileIds)
+        assertEquals("  Done  ", viewModel.description.value)
+        assertEquals(2, viewModel.evidence.value.size)
+
+        pending.complete(PostCompletionReportOutcome.Success(17))
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.Confirmed(17, false), viewModel.submission.value)
+        assertEquals(1, orders.postCalls)
+        assertEquals(null, viewModel.attemptSubmit())
+        assertEquals(42, handle.get<Int>("completion_pending_order_id"))
+
+        orders.next = { WorkOrderDetailOutcome.Success(detail.copy(
+            status = WorkOrderStatus.AwaitingPayment, completionReportId = 17)) }
+        val recreated = viewModel(UploadFiles().useCase(), handle)
+        recreated.open(selected)
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.Confirmed(17, true), recreated.submission.value)
+        assertEquals(null, handle.get<Int>("completion_pending_order_id"))
+        assertEquals(1, orders.postCalls)
+    }
+
+    @Test fun uncertain_result_allows_only_get_retry_before_another_explicit_post() = runTest(dispatcher.scheduler) {
+        orders.next = { when (orders.queriedIds.size) {
+            3 -> WorkOrderDetailOutcome.Failure.Network(Exception("offline"))
+            else -> WorkOrderDetailOutcome.Success(detail)
+        } }
+        orders.postNext = { if (orders.postCalls == 1) PostCompletionReportOutcome.Uncertain.Network
+            else PostCompletionReportOutcome.Success(18) }
+        val viewModel = viewModel(UploadFiles().useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Done")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+        advanceUntilIdle()
+
+        viewModel.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.QueryFailed, viewModel.submission.value)
+        viewModel.confirmCompletion()
+        assertEquals(1, orders.postCalls)
+
+        viewModel.retryReconciliation()
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.Idle, viewModel.submission.value)
+        assertEquals(1, orders.postCalls)
+        viewModel.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(2, orders.postCalls)
+    }
+
+    @Test fun recreated_viewmodel_with_pending_marker_reconciles_before_post() = runTest(dispatcher.scheduler) {
+        val handle = SavedStateHandle(mapOf(
+            "completion_pending_order_id" to 42,
+            "completion_pending_owner_id" to "provider",
+        ))
+        orders.next = { WorkOrderDetailOutcome.Failure.Network(Exception("offline")) }
+        val viewModel = viewModel(UploadFiles().useCase(), handle)
+        viewModel.open(selected.copy(id = 43))
+        assertEquals(CompletionSubmissionState.Blocked(CompletionEligibility.ChangedOrder), viewModel.submission.value)
+        assertEquals(0, orders.queriedIds.size)
+        viewModel.open(selected)
+        advanceUntilIdle()
+        assertEquals(CompletionSubmissionState.QueryFailed, viewModel.submission.value)
+        assertEquals(0, orders.postCalls)
+        viewModel.confirmCompletion()
+        assertEquals(0, orders.postCalls)
+    }
+
+    @Test fun leaving_after_post_starts_keeps_marker_for_reconciliation() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val pending = CompletableDeferred<PostCompletionReportOutcome>()
+        orders.postNext = { pending.await() }
+        val handle = SavedStateHandle()
+        val viewModel = viewModel(UploadFiles().useCase(), handle)
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Done")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+        advanceUntilIdle()
+        viewModel.confirmCompletion()
+        runCurrent()
+        assertEquals(1, orders.postCalls)
+
+        viewModel.discardDraft()
+        advanceUntilIdle()
+        assertEquals(42, handle.get<Int>("completion_pending_order_id"))
+        val recreated = viewModel(UploadFiles().useCase(), handle)
+        recreated.open(selected)
+        advanceUntilIdle()
+        assertEquals(1, orders.postCalls)
+        assertEquals(CompletionSubmissionState.Idle, recreated.submission.value)
+    }
+
+    @Test fun fresh_preflight_rejects_changed_order_before_post() = runTest(dispatcher.scheduler) {
+        orders.next = { if (orders.queriedIds.size == 1) WorkOrderDetailOutcome.Success(detail)
+            else WorkOrderDetailOutcome.Success(detail.copy(status = WorkOrderStatus.AwaitingPayment,
+                completionReportId = 17)) }
+        val viewModel = viewModel(UploadFiles().useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Done")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+        advanceUntilIdle()
+        viewModel.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(0, orders.postCalls)
+        assertEquals(ProviderCompletionUiState.Ready(selected, CompletionEligibility.AlreadyReported), viewModel.uiState.value)
+    }
+
+    @Test fun session_change_discards_late_post_result_and_private_state() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val late = CompletableDeferred<PostCompletionReportOutcome>()
+        orders.postNext = { withContext(NonCancellable) { late.await() } }
+        val handle = SavedStateHandle()
+        val viewModel = viewModel(UploadFiles().useCase(), handle)
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Private note")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        viewModel.uploadEvidence(viewModel.evidence.value.single().id)
+        advanceUntilIdle()
+        viewModel.confirmCompletion()
+        runCurrent()
+        assertEquals(1, orders.postCalls)
+
+        sessionStore.clearSession()
+        late.complete(PostCompletionReportOutcome.Success(17))
+        advanceUntilIdle()
+        assertEquals(ProviderCompletionUiState.SessionExpired, viewModel.uiState.value)
+        assertEquals("", viewModel.description.value)
+        assertEquals(emptyList<CompletionEvidenceSelection>(), viewModel.evidence.value)
+        assertEquals(42, handle.get<Int>("completion_pending_order_id"))
+        assertEquals(listOf("one"), evidence.cleaned)
+    }
+
+    private fun viewModel(uploader: UploadCompletionEvidenceUseCase = unavailableCompletionUploadUseCase(),
+        handle: SavedStateHandle = SavedStateHandle()) = ProviderCompletionViewModel(
         GetCompletionEligibilityUseCase(orders, object : CurrentAccountRepository {
             override suspend fun getCurrentAccount() = CurrentAccountOutcome.Success(
                 CurrentAccount.Provider(7, "Juan", "Gómez", "juan@example.com", Category(1, "Plumbing"), null))
         }) { 1_000 }, sessionStore, evidence, ValidateCompletionReportDraftUseCase(), uploader,
+        orders, handle,
     )
 
     private class UploadFiles : FileRepository {
@@ -452,10 +620,22 @@ class ProviderCompletionViewModelTest {
     private class FakeOrders : WorkOrderRepository {
         var next: suspend () -> WorkOrderDetailOutcome = { error("No detail response") }
         val queriedIds = mutableListOf<Int>()
+        var postCalls = 0
+        var postedDescription: String? = null
+        var postedFileIds: List<String>? = null
+        var postNext: suspend () -> PostCompletionReportOutcome = { error("No post response") }
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = error("List must not be queried")
         override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
             queriedIds += id
             return next()
+        }
+        override suspend fun postCompletionReport(orderId: Int, description: String,
+            confirmedFileIds: List<String>): PostCompletionReportOutcome {
+            assertEquals(42, orderId)
+            postCalls++
+            postedDescription = description
+            postedFileIds = confirmedFileIds
+            return postNext()
         }
     }
 

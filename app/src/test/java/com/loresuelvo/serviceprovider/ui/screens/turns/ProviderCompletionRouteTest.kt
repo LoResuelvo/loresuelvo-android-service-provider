@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import androidx.lifecycle.SavedStateHandle
+
 import com.loresuelvo.serviceprovider.testing.unavailableCompletionUploadUseCase
 
 import android.net.Uri
@@ -196,7 +198,8 @@ class ProviderCompletionRouteTest {
 
     private fun showRoute(pickPhotos: (() -> Unit)? = null, onBack: () -> Unit): ProviderCompletionViewModel {
         val viewModel = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { 1_000 }, session,
-            evidencePort, ValidateCompletionReportDraftUseCase(), unavailableCompletionUploadUseCase())
+            evidencePort, ValidateCompletionReportDraftUseCase(), unavailableCompletionUploadUseCase(),
+            orders, SavedStateHandle())
         compose.setContent { LoresuelvoTheme {
             ProviderCompletionRoute(42, ProviderTurnsUiState.Ready(listOf(order)), onBack, {}, viewModel, pickPhotos)
         } }

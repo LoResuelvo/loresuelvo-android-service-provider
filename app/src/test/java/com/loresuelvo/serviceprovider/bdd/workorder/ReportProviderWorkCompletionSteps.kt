@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.bdd.workorder
 
+import androidx.lifecycle.SavedStateHandle
+
 import com.loresuelvo.serviceprovider.testing.unavailableCompletionUploadUseCase
 import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidenceReader
 import com.loresuelvo.serviceprovider.domain.file.*
@@ -186,7 +188,7 @@ class ReportProviderWorkCompletionSteps {
             object : CompletionEvidencePreparer {
                 override suspend fun prepare(source: String): EvidenceImagePreparation = error("No photo selected in 01-PIF")
                 override suspend fun clean(image: PreparedEvidenceImage) = Unit
-            }, validateDraft, unavailableCompletionUploadUseCase())
+            }, validateDraft, unavailableCompletionUploadUseCase(), orders, SavedStateHandle())
         completion.open((turns.uiState.value as ProviderTurnsUiState.Ready).orders.single())
         advanceUntilIdle()
     }
@@ -224,7 +226,7 @@ class ReportProviderWorkCompletionSteps {
     @Given("que escribí la descripción de entrega")
     fun wroteCompletionDescription() = runTest(dispatcher.scheduler) {
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
-            session, evidencePreparer, validateDraft, unavailableCompletionUploadUseCase())
+            session, evidencePreparer, validateDraft, unavailableCompletionUploadUseCase(), orders, SavedStateHandle())
         completion.open(selected)
         advanceUntilIdle()
         assertEquals(CompletionEligibility.Eligible,
@@ -310,7 +312,7 @@ class ReportProviderWorkCompletionSteps {
     @Given("que abrí el formulario de una orden habilitada")
     fun openedEligibleForm() = runTest(dispatcher.scheduler) {
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
-            session, evidencePreparer, validateDraft, completionUploader)
+            session, evidencePreparer, validateDraft, completionUploader, orders, SavedStateHandle())
         completion.open(selected)
         advanceUntilIdle()
         assertEquals(CompletionEligibility.Eligible,
@@ -383,7 +385,7 @@ class ReportProviderWorkCompletionSteps {
         }
         failurePending = true
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
-            session, evidencePreparer, validateDraft, completionUploader)
+            session, evidencePreparer, validateDraft, completionUploader, orders, SavedStateHandle())
         completion.open(selected)
         advanceUntilIdle()
         completion.onDescriptionChange("Trabajo terminado y revisado")
