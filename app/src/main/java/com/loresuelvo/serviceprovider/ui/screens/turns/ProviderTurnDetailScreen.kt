@@ -25,7 +25,8 @@ import java.util.TimeZone
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversation: () -> Unit) {
+fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversation: () -> Unit,
+    missingConversation: Boolean = false, onRetryConversation: () -> Unit = {}) {
     Scaffold(
         topBar = { TopAppBar(
             title = { Text(stringResource(R.string.provider_turns_detail_title)) },
@@ -44,6 +45,10 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
             DetailField(R.string.provider_turns_detail_reason, order.description)
             Button(onClick = onConversation, modifier = Modifier.testTag("provider_turn_conversation")) {
                 Text(stringResource(R.string.provider_turns_view_conversation))
+            }
+            if (missingConversation) {
+                Text(stringResource(R.string.provider_turns_conversation_missing))
+                Button(onClick = onRetryConversation) { Text(stringResource(R.string.provider_home_retry)) }
             }
         }
     }

@@ -18,6 +18,7 @@
     <string name="provider_turns_detail_reason">Reason</string>
     <string name="provider_turns_view_details">View details</string>
     <string name="provider_turns_view_conversation">View conversation</string>
+    <string name="provider_turns_conversation_missing">We couldn\'t find the conversation for this appointment.</string>
     <string name="proposal_home_view_all">View all</string>
     <string name="proposal_list_title">Proposals</string>
     <string name="proposal_list_back">Back to Home</string>

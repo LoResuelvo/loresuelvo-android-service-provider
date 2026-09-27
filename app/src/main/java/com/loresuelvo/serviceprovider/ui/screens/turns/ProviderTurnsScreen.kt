@@ -57,14 +57,16 @@ fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {},
 fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit,
     onDetails: (WorkOrder) -> Unit = {}, onConversation: (Int) -> Unit = {}) {
     var selectedId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var missingConversation by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val selectedOrder = (state as? ProviderTurnsUiState.Ready)?.orders?.firstOrNull { it.id == selectedId }
     BackHandler(selectedOrder != null) { selectedId = null }
     if (selectedOrder != null) {
-        ProviderTurnDetailScreen(selectedOrder, onBack = { selectedId = null },
+        ProviderTurnDetailScreen(selectedOrder, onBack = { selectedId = null; missingConversation = false },
             onConversation = {
-                (state as? ProviderTurnsUiState.Ready)?.conversationIds?.get(selectedOrder.id)?.let(onConversation)
-            })
+                val conversationId = (state as? ProviderTurnsUiState.Ready)?.conversationIds?.get(selectedOrder.id)
+                if (conversationId == null) missingConversation = true else onConversation(conversationId)
+            }, missingConversation = missingConversation, onRetryConversation = onRetry)
         return
     }
     Surface(Modifier.fillMaxSize()) {
@@ -86,7 +88,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                         Text(stringResource(R.string.provider_turns_empty))
                     } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list"), state = listState) {
                         items(state.orders, key = { it.id }) { order ->
-                            ProviderTurnCard(order) { selectedId = order.id; onDetails(it) }
+                            ProviderTurnCard(order) { selectedId = order.id; missingConversation = false; onDetails(it) }
                         }
                     }
                 }

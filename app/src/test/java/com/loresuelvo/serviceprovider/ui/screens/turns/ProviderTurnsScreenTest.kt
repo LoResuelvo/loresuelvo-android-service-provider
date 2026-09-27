@@ -132,14 +132,22 @@ class ProviderTurnsScreenTest {
         val order = WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled,
             serviceProposalId = 12, consumerId = 7)
         var opened = 0
+        var retries = 0
         compose.setContent { LoresuelvoTheme {
-            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), {}, {},
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), {}, { retries++ },
                 onConversation = { opened = it })
         } }
         compose.onNodeWithTag("provider_turn_details_40").performClick()
         compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
         org.junit.Assert.assertEquals(0, opened)
         compose.onNodeWithText("Detalle del turno").assertExists()
+        compose.onNodeWithText("No encontramos la conversación de este turno.").assertExists()
+        compose.onNodeWithText("Reintentar").assertExists()
+        compose.onNodeWithText("Reintentar").performScrollTo().performClick()
+        compose.runOnIdle {
+            org.junit.Assert.assertEquals(1, retries)
+            org.junit.Assert.assertEquals(0, opened)
+        }
     }
 
 

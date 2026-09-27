@@ -64,7 +64,6 @@ Característica: Visualizar turnos como prestador
     Entonces se abre la conversación 93
     Y no se crea una conversación ni se usan los IDs 40, 12 o 7 como chat
 
-  @wip
   Escenario: 07-PVT Recuperar un vínculo ausente sin abrir otro chat
     Dado que no se encontró la propuesta vinculada a una orden
     Cuando elijo Ver conversación para esa orden

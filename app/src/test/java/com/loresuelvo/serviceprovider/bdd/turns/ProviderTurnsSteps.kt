@@ -215,6 +215,23 @@ class ProviderTurnsSteps {
         assertEquals(0, proposalCreateCalls)
     }
 
+    @Given("que no se encontró la propuesta vinculada a una orden")
+    fun missingLinkedProposal() { orderReferencesProposal() }
+
+    @When("elijo Ver conversación para esa orden")
+    fun chooseMissingConversation() { chooseOrderConversation() }
+
+    @Then("veo un aviso con una acción para reintentar")
+    fun seesRetryNotice() {
+        assertEquals(null, (viewModel.uiState.value as ProviderTurnsUiState.Ready).conversationIds[40])
+    }
+
+    @And("permanezco en Turnos sin abrir ni crear otro chat")
+    fun remainsInTurns() {
+        assertEquals(null, openedConversationId)
+        assertEquals(0, proposalCreateCalls)
+    }
+
     @Then("veo las órdenes 40, 30, 11 y 12 en ese orden")
     fun seesDeterministicOrder() {
         assertEquals(listOf(40, 30, 11, 12), (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.map { it.id })
