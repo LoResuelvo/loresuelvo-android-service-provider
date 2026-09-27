@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="proposal_home_jobs">Jobs</string>
+    <string name="provider_turns_title">Appointments</string>
+    <string name="provider_turns_back">Back</string>
+    <string name="provider_turns_empty">You have no appointments yet.</string>
+    <string name="provider_turns_view_all">View all</string>
     <string name="proposal_home_view_all">View all</string>
     <string name="proposal_list_title">Proposals</string>
     <string name="proposal_list_back">Back to Home</string>

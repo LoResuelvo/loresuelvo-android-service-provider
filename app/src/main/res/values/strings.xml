@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="proposal_home_jobs">Trabajos</string>
+    <string name="provider_turns_title">Turnos</string>
+    <string name="provider_turns_back">Volver</string>
+    <string name="provider_turns_empty">No tenés turnos todavía.</string>
+    <string name="provider_turns_view_all">Ver todos</string>
     <string name="proposal_home_view_all">Ver todas</string>
     <string name="proposal_list_title">Propuestas</string>
     <string name="proposal_list_back">Volver a Inicio</string>
