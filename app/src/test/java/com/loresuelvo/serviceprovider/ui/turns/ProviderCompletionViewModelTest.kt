@@ -20,6 +20,13 @@ import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.ValidateCompletionReportDraftUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionEvidenceUpload
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadFailure
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadStage
+import com.loresuelvo.serviceprovider.domain.usecase.activity.UploadCompletionEvidenceUseCase
+import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidenceReader
+import com.loresuelvo.serviceprovider.domain.file.*
+import com.loresuelvo.serviceprovider.testing.unusedCompletionUploadUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -36,6 +43,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import org.junit.Assert.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderCompletionViewModelTest {
@@ -295,12 +303,144 @@ class ProviderCompletionViewModelTest {
         assertEquals(null, viewModel.validationIssue.value)
     }
 
-    private fun viewModel() = ProviderCompletionViewModel(
+    @Test fun failed_second_upload_retries_in_place_without_reuploading_confirmed_first() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val files = UploadFiles()
+        val viewModel = viewModel(files.useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Done")
+        viewModel.selectEvidence(listOf("one", "two"))
+        advanceUntilIdle()
+        val ids = viewModel.evidence.value.map { it.id }
+
+        viewModel.uploadEvidence(ids[0])
+        advanceUntilIdle()
+        files.failNextPresign = true
+        viewModel.uploadEvidence(ids[1])
+        advanceUntilIdle()
+        assertEquals(listOf("one", "two"), viewModel.evidence.value.map { it.source })
+        assertEquals("Done", viewModel.description.value)
+        assertEquals(EvidenceUploadStatus.Confirmed("file-one"), viewModel.evidence.value[0].uploadStatus)
+        assertEquals(EvidenceUploadStatus.Failed(
+            CompletionEvidenceUpload.Failure(CompletionUploadStage.PRESIGN, CompletionUploadFailure.SERVER, 503)),
+            viewModel.evidence.value[1].uploadStatus)
+        assertEquals(CompletionDraftValidation.Invalid.UnconfirmedPhoto, viewModel.attemptSubmit())
+
+        viewModel.retryEvidence(ids[0])
+        viewModel.retryEvidence(ids[1])
+        advanceUntilIdle()
+        assertEquals(listOf("one", "two"), viewModel.evidence.value.map { it.source })
+        assertEquals(listOf("file-one", "file-two"),
+            (viewModel.attemptSubmit() as CompletionDraftValidation.Valid).confirmedFileIds)
+        assertEquals(listOf("one", "two", "two"), files.presignedNames)
+    }
+
+    @Test fun duplicate_confirmed_ids_are_rejected_before_report_post() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val files = UploadFiles().apply { sameId = true }
+        val viewModel = viewModel(files.useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Done")
+        viewModel.selectEvidence(listOf("one", "two"))
+        advanceUntilIdle()
+        viewModel.evidence.value.map { it.id }.forEach { viewModel.uploadEvidence(it) }
+        advanceUntilIdle()
+        assertEquals(CompletionDraftValidation.Invalid.DuplicatePhotoIds, viewModel.attemptSubmit())
+        assertEquals(CompletionDraftValidation.Invalid.DuplicatePhotoIds, viewModel.validationIssue.value)
+    }
+
+    @Test fun presign_unauthorized_expires_session_but_storage_403_remains_retryable() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val files = UploadFiles().apply { failNextTransfer = true }
+        val viewModel = viewModel(files.useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        val id = viewModel.evidence.value.single().id
+        viewModel.uploadEvidence(id)
+        advanceUntilIdle()
+        assertTrue(viewModel.evidence.value.single().uploadStatus is EvidenceUploadStatus.Failed)
+        assertEquals(session, sessionStore.getSession())
+        viewModel.retryEvidence(id)
+        advanceUntilIdle()
+        assertTrue(viewModel.evidence.value.single().uploadStatus is EvidenceUploadStatus.Confirmed)
+
+        viewModel.selectEvidence(listOf("two"))
+        advanceUntilIdle()
+        files.unauthorizedNextPresign = true
+        viewModel.uploadEvidence(viewModel.evidence.value.last().id)
+        advanceUntilIdle()
+        assertEquals(ProviderCompletionUiState.SessionExpired, viewModel.uiState.value)
+        assertEquals(null, sessionStore.getSession())
+        assertEquals(emptyList<CompletionEvidenceSelection>(), viewModel.evidence.value)
+        assertEquals(listOf("one", "two"), evidence.cleaned)
+    }
+
+    @Test fun removed_upload_ignores_late_confirmation_and_cleans_private_file() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val files = UploadFiles().apply { lateConfirm = CompletableDeferred() }
+        val viewModel = viewModel(files.useCase())
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+        val id = viewModel.evidence.value.single().id
+        viewModel.uploadEvidence(id)
+        runCurrent()
+        assertEquals(EvidenceUploadStatus.Uploading, viewModel.evidence.value.single().uploadStatus)
+
+        viewModel.removeEvidence(id)
+        files.lateConfirm!!.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(emptyList<CompletionEvidenceSelection>(), viewModel.evidence.value)
+        assertEquals(listOf("one"), evidence.cleaned)
+    }
+
+    private fun viewModel(uploader: UploadCompletionEvidenceUseCase = unusedCompletionUploadUseCase()) = ProviderCompletionViewModel(
         GetCompletionEligibilityUseCase(orders, object : CurrentAccountRepository {
             override suspend fun getCurrentAccount() = CurrentAccountOutcome.Success(
                 CurrentAccount.Provider(7, "Juan", "Gómez", "juan@example.com", Category(1, "Plumbing"), null))
-        }) { 1_000 }, sessionStore, evidence, ValidateCompletionReportDraftUseCase(),
+        }) { 1_000 }, sessionStore, evidence, ValidateCompletionReportDraftUseCase(), uploader,
     )
+
+    private class UploadFiles : FileRepository {
+        val presignedNames = mutableListOf<String>()
+        var failNextPresign = false
+        var failNextTransfer = false
+        var unauthorizedNextPresign = false
+        var sameId = false
+        var lateConfirm: CompletableDeferred<Unit>? = null
+        fun useCase() = UploadCompletionEvidenceUseCase(this, object : CompletionEvidenceReader {
+            override suspend fun read(image: PreparedEvidenceImage) = ByteArray(image.sizeBytes.toInt())
+        })
+        override suspend fun presign(request: PresignUploadRequest): PresignUploadOutcome {
+            presignedNames += request.originalName
+            if (unauthorizedNextPresign) {
+                unauthorizedNextPresign = false
+                return PresignUploadOutcome.Failure.Unauthorized("private")
+            }
+            if (failNextPresign) {
+                failNextPresign = false
+                return PresignUploadOutcome.Failure.Server(503, "private")
+            }
+            val id = if (sameId) "shared" else "file-${request.originalName}"
+            return PresignUploadOutcome.Success(PresignUploadResult(id, request.originalName, "https://storage.example/put", emptyMap()))
+        }
+        override suspend fun uploadBytes(uploadUrl: String, headers: Map<String, String>, bytes: ByteArray): UploadBytesOutcome {
+            if (failNextTransfer) {
+                failNextTransfer = false
+                return UploadBytesOutcome.Failure.Server(403, "private")
+            }
+            return UploadBytesOutcome.Success
+        }
+        override suspend fun confirm(fileId: String, request: ConfirmUploadRequest): ConfirmUploadOutcome {
+            lateConfirm?.let { withContext(NonCancellable) { it.await() } }
+            return ConfirmUploadOutcome.Success(ConfirmedFile(fileId, mimeType = request.mimeType, originalName = request.key))
+        }
+    }
 
     private inner class FakeSession : AuthSessionStore {
         override val sessionFlow = MutableStateFlow<AuthSession?>(session)

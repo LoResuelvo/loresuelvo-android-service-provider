@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.bdd.workorder
 
+import com.loresuelvo.serviceprovider.testing.unusedCompletionUploadUseCase
+
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
@@ -145,7 +147,7 @@ class ReportProviderWorkCompletionSteps {
             object : CompletionEvidencePreparer {
                 override suspend fun prepare(source: String): EvidenceImagePreparation = error("No photo selected in 01-PIF")
                 override suspend fun clean(image: PreparedEvidenceImage) = Unit
-            }, validateDraft)
+            }, validateDraft, unusedCompletionUploadUseCase())
         completion.open((turns.uiState.value as ProviderTurnsUiState.Ready).orders.single())
         advanceUntilIdle()
     }
@@ -183,7 +185,7 @@ class ReportProviderWorkCompletionSteps {
     @Given("que escribí la descripción de entrega")
     fun wroteCompletionDescription() = runTest(dispatcher.scheduler) {
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
-            session, evidencePreparer, validateDraft)
+            session, evidencePreparer, validateDraft, unusedCompletionUploadUseCase())
         completion.open(selected)
         advanceUntilIdle()
         assertEquals(CompletionEligibility.Eligible,
@@ -269,7 +271,7 @@ class ReportProviderWorkCompletionSteps {
     @Given("que abrí el formulario de una orden habilitada")
     fun openedEligibleForm() = runTest(dispatcher.scheduler) {
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
-            session, evidencePreparer, validateDraft)
+            session, evidencePreparer, validateDraft, unusedCompletionUploadUseCase())
         completion.open(selected)
         advanceUntilIdle()
         assertEquals(CompletionEligibility.Eligible,

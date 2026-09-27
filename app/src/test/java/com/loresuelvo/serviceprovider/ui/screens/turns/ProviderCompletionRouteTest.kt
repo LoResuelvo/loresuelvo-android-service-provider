@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import com.loresuelvo.serviceprovider.testing.unusedCompletionUploadUseCase
+
 import android.net.Uri
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -192,7 +194,7 @@ class ProviderCompletionRouteTest {
 
     private fun showRoute(pickPhotos: (() -> Unit)? = null, onBack: () -> Unit): ProviderCompletionViewModel {
         val viewModel = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { 1_000 }, session,
-            evidencePort, ValidateCompletionReportDraftUseCase())
+            evidencePort, ValidateCompletionReportDraftUseCase(), unusedCompletionUploadUseCase())
         compose.setContent { LoresuelvoTheme {
             ProviderCompletionRoute(42, ProviderTurnsUiState.Ready(listOf(order)), onBack, {}, viewModel, pickPhotos)
         } }

@@ -11,6 +11,10 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import com.loresuelvo.serviceprovider.domain.usecase.activity.ValidateCompletionReportDraftUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionEvidenceUpload
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadFailure
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadStage
+import com.loresuelvo.serviceprovider.domain.usecase.activity.UploadCompletionEvidenceUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -31,7 +35,15 @@ data class CompletionEvidenceSelection(
     val id: Long,
     val source: String,
     val status: EvidenceSelectionStatus,
+    val uploadStatus: EvidenceUploadStatus = EvidenceUploadStatus.NotStarted,
 )
+
+sealed interface EvidenceUploadStatus {
+    data object NotStarted : EvidenceUploadStatus
+    data object Uploading : EvidenceUploadStatus
+    data class Confirmed(val fileId: String) : EvidenceUploadStatus
+    data class Failed(val failure: CompletionEvidenceUpload.Failure) : EvidenceUploadStatus
+}
 
 sealed interface EvidenceSelectionStatus {
     data object Preparing : EvidenceSelectionStatus
@@ -47,12 +59,14 @@ class ProviderCompletionViewModel @Inject constructor(
     private val sessionStore: AuthSessionStore,
     private val evidencePreparer: CompletionEvidencePreparer,
     private val validateDraft: ValidateCompletionReportDraftUseCase,
+    private val uploadEvidence: UploadCompletionEvidenceUseCase,
 ) : ViewModel() {
     private var activeSession = sessionStore.getSession()
     private var queryJob: Job? = null
     private var draftOrderId: Int? = null
     private var nextEvidenceId = 0L
     private val evidenceJobs = mutableMapOf<Long, Job>()
+    private val uploadJobs = mutableMapOf<Long, Job>()
     private val _uiState = MutableStateFlow<ProviderCompletionUiState>(ProviderCompletionUiState.Closed)
     val uiState: StateFlow<ProviderCompletionUiState> = _uiState.asStateFlow()
     private val _description = MutableStateFlow("")
@@ -156,11 +170,56 @@ class ProviderCompletionViewModel @Inject constructor(
     fun removeEvidence(id: Long) {
         val selected = _evidence.value.firstOrNull { it.id == id } ?: return
         evidenceJobs.remove(id)?.cancel()
+        uploadJobs.remove(id)?.cancel()
         _evidence.value = _evidence.value.filterNot { it.id == id }
         _evidenceIssue.value = null
         _validationIssue.value = null
         if (selected.status is EvidenceSelectionStatus.Ready) {
             viewModelScope.launch { evidencePreparer.clean(selected.status.image) }
+        }
+    }
+
+    fun uploadEvidence(id: Long) {
+        val selected = _evidence.value.firstOrNull { it.id == id } ?: return
+        if (selected.uploadStatus != EvidenceUploadStatus.NotStarted) return
+        startUpload(selected)
+    }
+
+    fun retryEvidence(id: Long) {
+        val selected = _evidence.value.firstOrNull { it.id == id } ?: return
+        if (selected.uploadStatus !is EvidenceUploadStatus.Failed) return
+        startUpload(selected)
+    }
+
+    private fun startUpload(selected: CompletionEvidenceSelection) {
+        if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility != CompletionEligibility.Eligible) return
+        val image = (selected.status as? EvidenceSelectionStatus.Ready)?.image ?: return
+        val session = sessionStore.getSession() ?: return
+        val orderId = draftOrderId
+        _evidence.value = _evidence.value.map { if (it.id == selected.id) it.copy(uploadStatus = EvidenceUploadStatus.Uploading) else it }
+        uploadJobs[selected.id] = viewModelScope.launch {
+            val outcome = try {
+                uploadEvidence(image)
+            } catch (e: CancellationException) {
+                return@launch
+            }
+            uploadJobs.remove(selected.id)
+            if (sessionStore.getSession() != session || draftOrderId != orderId ||
+                _evidence.value.none { it.id == selected.id && it.uploadStatus == EvidenceUploadStatus.Uploading }) return@launch
+            if (outcome is CompletionEvidenceUpload.Failure &&
+                outcome.reason == CompletionUploadFailure.UNAUTHORIZED &&
+                outcome.stage != CompletionUploadStage.TRANSFER) {
+                clearDraft()
+                _uiState.value = ProviderCompletionUiState.SessionExpired
+                sessionStore.clearSession()
+                return@launch
+            }
+            val status = when (outcome) {
+                is CompletionEvidenceUpload.Success -> EvidenceUploadStatus.Confirmed(outcome.confirmedFileId)
+                is CompletionEvidenceUpload.Failure -> EvidenceUploadStatus.Failed(outcome)
+            }
+            _evidence.value = _evidence.value.map { if (it.id == selected.id) it.copy(uploadStatus = status) else it }
+            _validationIssue.value = null
         }
     }
 
@@ -173,8 +232,9 @@ class ProviderCompletionViewModel @Inject constructor(
     fun attemptSubmit(): CompletionDraftValidation? {
         if ((_uiState.value as? ProviderCompletionUiState.Ready)?.eligibility != CompletionEligibility.Eligible)
             return null
-        // Local prepared images have no server-confirmed file IDs yet.
-        val result = validateDraft(_description.value, _evidence.value.map { null })
+        val result = validateDraft(_description.value, _evidence.value.map {
+            (it.uploadStatus as? EvidenceUploadStatus.Confirmed)?.fileId
+        })
         _validationIssue.value = result as? CompletionDraftValidation.Invalid
         return result
     }
@@ -184,6 +244,8 @@ class ProviderCompletionViewModel @Inject constructor(
         draftOrderId = null
         evidenceJobs.values.forEach { it.cancel() }
         evidenceJobs.clear()
+        uploadJobs.values.forEach { it.cancel() }
+        uploadJobs.clear()
         val prepared = _evidence.value.mapNotNull { (it.status as? EvidenceSelectionStatus.Ready)?.image }
         _evidence.value = emptyList()
         _evidenceIssue.value = null
