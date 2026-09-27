@@ -78,7 +78,6 @@ Característica: Informar finalización con evidencia como prestador
       | 1        |
       | 3        |
 
-  @wip
   Esquema del escenario: 06-PIF Recuperar un rechazo del reporte
     Dado que tengo un borrador válido para una orden que estaba habilitada
     Y la API rechaza el reporte con "<respuesta>"

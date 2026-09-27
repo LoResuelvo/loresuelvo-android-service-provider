@@ -100,7 +100,8 @@ fun ProviderCompletionRoute(
                 validationIssue = validationIssue, onSubmitAttempt = viewModel::confirmCompletion,
                 canAttemptSubmit = availability == CompletionFormAvailability.Eligible,
                 submission = submission, onRetryReconciliation = viewModel::retryReconciliation,
-                refreshedOrderStatus = refreshedOrderStatus)
+                refreshedOrderStatus = refreshedOrderStatus,
+                onRetryConflictQuery = viewModel::retryConflictQuery)
         }
     }
 }

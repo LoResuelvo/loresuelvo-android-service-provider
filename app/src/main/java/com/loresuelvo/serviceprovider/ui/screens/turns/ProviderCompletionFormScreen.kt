@@ -38,6 +38,7 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
+import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
 import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
@@ -73,8 +74,10 @@ fun ProviderCompletionFormScreen(
     submission: CompletionSubmissionState = CompletionSubmissionState.Idle,
     onRetryReconciliation: () -> Unit = {},
     refreshedOrderStatus: WorkOrderStatus? = null,
+    onRetryConflictQuery: () -> Unit = {},
 ) {
-    val editable = submission == CompletionSubmissionState.Idle
+    val editable = submission == CompletionSubmissionState.Idle ||
+        submission == CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData)
     Scaffold(topBar = { TopAppBar(
         title = { Text(stringResource(R.string.provider_completion_title)) },
         navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) } },
@@ -84,8 +87,8 @@ fun ProviderCompletionFormScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(order.consumerName, style = MaterialTheme.typography.titleLarge)
             Text(order.description, style = MaterialTheme.typography.bodyLarge)
-            when (submission) {
-                is CompletionSubmissionState.Confirmed -> {
+            when {
+                submission is CompletionSubmissionState.Confirmed -> {
                     Text(stringResource(R.string.provider_completion_report_success))
                     val statusLabel = if (submission.serverConfirmed)
                         refreshedOrderStatus?.let { providerTurnStatusBadge(it)?.label } else null
@@ -99,16 +102,44 @@ fun ProviderCompletionFormScreen(
                         }
                     }
                 }
-                CompletionSubmissionState.QueryFailed -> {
+                submission == CompletionSubmissionState.QueryFailed -> {
                     Text(stringResource(R.string.provider_completion_report_query_failed))
                     Button(onClick = onRetryReconciliation,
                         modifier = Modifier.testTag("completion_retry_query")) {
                         Text(stringResource(R.string.provider_completion_report_retry_query))
                     }
                 }
-                CompletionSubmissionState.Reconciling -> {
+                submission == CompletionSubmissionState.Reconciling -> {
                     CircularProgressIndicator()
                     Text(stringResource(R.string.provider_completion_report_reconciling))
+                }
+                submission is CompletionSubmissionState.Rejected &&
+                    submission.outcome != PostCompletionReportOutcome.Rejected.InvalidData -> {
+                    val outcome = submission.outcome
+                    Text(stringResource(when (outcome) {
+                        PostCompletionReportOutcome.Rejected.Forbidden -> R.string.provider_completion_forbidden
+                        PostCompletionReportOutcome.Rejected.NotFound -> R.string.provider_completion_missing
+                        PostCompletionReportOutcome.Rejected.Conflict -> when (availability) {
+                            CompletionFormAvailability.TooEarly -> R.string.provider_completion_too_early
+                            CompletionFormAvailability.AlreadyReported -> R.string.provider_completion_already_reported
+                            CompletionFormAvailability.Unavailable -> R.string.provider_completion_unavailable
+                            CompletionFormAvailability.Error -> R.string.provider_completion_report_query_failed
+                            else -> R.string.provider_completion_changed
+                        }
+                        else -> R.string.provider_completion_error
+                    }))
+                    if (outcome == PostCompletionReportOutcome.Rejected.Conflict &&
+                        availability == CompletionFormAvailability.Error) {
+                        Button(onClick = onRetryConflictQuery,
+                            modifier = Modifier.testTag("completion_retry_conflict_query")) {
+                            Text(stringResource(R.string.provider_completion_report_retry_query))
+                        }
+                    }
+                    if (outcome == PostCompletionReportOutcome.Rejected.NotFound) {
+                        Button(onClick = onBack, modifier = Modifier.testTag("completion_return_turns")) {
+                            Text(stringResource(R.string.provider_turns_back))
+                        }
+                    }
                 }
                 else -> when (availability) {
                 CompletionFormAvailability.Checking -> {
@@ -131,6 +162,10 @@ fun ProviderCompletionFormScreen(
                     Button(onClick = onRetry) { Text(stringResource(R.string.provider_home_retry)) }
                 }
                 CompletionFormAvailability.Eligible -> {
+                    if (submission == CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData)) {
+                        Text(stringResource(R.string.provider_completion_report_invalid_data),
+                            color = MaterialTheme.colorScheme.error)
+                    }
                     when (submission) {
                         CompletionSubmissionState.Checking -> Text(stringResource(R.string.provider_completion_report_checking))
                         CompletionSubmissionState.Sending -> Text(stringResource(R.string.provider_completion_report_sending))

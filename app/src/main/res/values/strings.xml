@@ -69,6 +69,7 @@
     <string name="provider_completion_report_success">Finalización informada correctamente.</string>
     <string name="provider_completion_report_refresh_pending">Estamos actualizando el estado del turno.</string>
     <string name="provider_completion_report_retry_query">Reintentar consulta</string>
+    <string name="provider_completion_report_invalid_data">Revisá los datos del reporte y volvé a confirmarlo.</string>
     <string name="proposal_home_view_all">Ver todas</string>
     <string name="proposal_list_title">Propuestas</string>
     <string name="proposal_list_back">Volver a Inicio</string>

@@ -69,6 +69,7 @@
     <string name="provider_completion_report_success">Completion reported successfully.</string>
     <string name="provider_completion_report_refresh_pending">We’re updating the turn status.</string>
     <string name="provider_completion_report_retry_query">Retry query</string>
+    <string name="provider_completion_report_invalid_data">Check the report details and confirm again.</string>
     <string name="proposal_home_view_all">View all</string>
     <string name="proposal_list_title">Proposals</string>
     <string name="proposal_list_back">Back to Home</string>

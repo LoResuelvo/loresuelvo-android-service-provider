@@ -87,6 +87,8 @@ class ReportProviderWorkCompletionSteps {
     private var detailCalls = 0
     private var listedOrder = selected
     private val submittedReports = mutableListOf<Triple<Int, String, List<String>>>()
+    private var rejectedReport: PostCompletionReportOutcome.Rejected? = null
+    private var conflictDetail: WorkOrderDetail? = null
     private val orders = object : WorkOrderRepository {
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(listOf(listedOrder))
         override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
@@ -97,6 +99,10 @@ class ReportProviderWorkCompletionSteps {
         override suspend fun postCompletionReport(orderId: Int, description: String,
             confirmedFileIds: List<String>): PostCompletionReportOutcome {
             submittedReports += Triple(orderId, description, confirmedFileIds)
+            rejectedReport?.let { rejection ->
+                conflictDetail?.let { detail = it }
+                return rejection
+            }
             detail = detail.copy(status = WorkOrderStatus.AwaitingPayment, completionReportId = 17)
             listedOrder = selected.copy(status = WorkOrderStatus.AwaitingPayment)
             return PostCompletionReportOutcome.Success(17)
@@ -314,7 +320,7 @@ class ReportProviderWorkCompletionSteps {
                 (photos.last().status as EvidenceSelectionStatus.Invalid).reason)
             "un aviso para seleccionar otra foto" -> assertEquals(EvidenceImagePreparation.Invalid.Unreadable,
                 (photos.last().status as EvidenceSelectionStatus.Invalid).reason)
-            else -> error("Unapproved photo result: $result")
+            else -> { seeRejectedRecovery(result); return }
         }
     }
 
@@ -528,6 +534,88 @@ class ReportProviderWorkCompletionSteps {
         assertEquals(WorkOrderStatus.AwaitingPayment, detail.status)
         assertEquals(CompletionEligibility.AlreadyReported,
             (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+    }
+
+    @Given("que tengo un borrador válido para una orden que estaba habilitada")
+    fun validDraftBeforeRejection() = runTest(dispatcher.scheduler) {
+        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
+            session, evidencePreparer, validateDraft, completionUploader, orders, SavedStateHandle())
+        completion.open(selected)
+        advanceUntilIdle()
+        completion.onDescriptionChange("Trabajo terminado y revisado")
+        completion.selectEvidence(listOf("photo://first.jpg"))
+        advanceUntilIdle()
+        completion.uploadEvidence(completion.evidence.value.single().id)
+        advanceUntilIdle()
+        assertEquals(listOf("file-first.jpg"),
+            (completion.attemptSubmit() as CompletionDraftValidation.Valid).confirmedFileIds)
+    }
+
+    @And("la API rechaza el reporte con {string}")
+    fun apiRejectsReport(response: String) {
+        rejectedReport = when (response) {
+            "400 por datos inválidos" -> PostCompletionReportOutcome.Rejected.InvalidData
+            "401 por sesión inválida" -> PostCompletionReportOutcome.Rejected.Unauthorized
+            "403 por falta de permisos" -> PostCompletionReportOutcome.Rejected.Forbidden
+            "404 por orden inexistente" -> PostCompletionReportOutcome.Rejected.NotFound
+            "409 por fecha o estado vigente" -> PostCompletionReportOutcome.Rejected.Conflict.also {
+                conflictDetail = detail.copy(scheduledOn = 2_000)
+            }
+            "409 por reporte existente" -> PostCompletionReportOutcome.Rejected.Conflict.also {
+                conflictDetail = detail.copy(status = WorkOrderStatus.AwaitingPayment, completionReportId = 17)
+            }
+            else -> error("Unapproved rejection: $response")
+        }
+    }
+
+    @When("confirmo la finalización")
+    fun confirmRejectedReport() = runTest(dispatcher.scheduler) {
+        completion.confirmCompletion()
+        advanceUntilIdle()
+    }
+
+    fun seeRejectedRecovery(recovery: String) {
+        when (recovery) {
+            "los datos conservados y un aviso para corregirlos" -> {
+                assertEquals(CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData),
+                    completion.submission.value)
+                assertEquals("Trabajo terminado y revisado", completion.description.value)
+                assertEquals(EvidenceUploadStatus.Confirmed("file-first.jpg"), completion.evidence.value.single().uploadStatus)
+            }
+            "el flujo de autenticación sin datos privados de la sesión previa" -> {
+                assertEquals(null, session.getSession())
+                assertEquals(ProviderCompletionUiState.SessionExpired, completion.uiState.value)
+                assertEquals("", completion.description.value)
+                assertTrue(completion.evidence.value.isEmpty())
+            }
+            "un aviso de falta de permisos sin permitir otro envío" ->
+                assertEquals(CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.Forbidden),
+                    completion.submission.value)
+            "un aviso de orden no disponible y la opción de volver a Turnos" ->
+                assertEquals(CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.NotFound),
+                    completion.submission.value)
+            "la orden consultada nuevamente y la explicación correspondiente" -> {
+                assertEquals(CompletionEligibility.TooEarly,
+                    (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+                assertTrue(detailCalls >= 3)
+            }
+            "la orden consultada nuevamente sin ofrecer otro reporte" -> {
+                assertEquals(CompletionEligibility.AlreadyReported,
+                    (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+                assertTrue(detailCalls >= 3)
+            }
+            else -> error("Unapproved recovery: $recovery")
+        }
+    }
+
+    @And("no se informa un éxito ni se repite automáticamente el envío")
+    fun rejectedReportIsNotRetried() = runTest(dispatcher.scheduler) {
+        assertEquals(1, submittedReports.size)
+        assertTrue(completion.submission.value !is CompletionSubmissionState.Confirmed)
+        if (session.getSession() != null && rejectedReport != PostCompletionReportOutcome.Rejected.InvalidData)
+            completion.confirmCompletion()
+        advanceUntilIdle()
+        assertEquals(1, submittedReports.size)
     }
 
     @After fun tearDown() { Dispatchers.resetMain() }

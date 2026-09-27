@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -16,6 +17,7 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.domain.activity.PreparedEvidenceImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
@@ -182,5 +184,62 @@ class ProviderCompletionFormScreenTest {
         compose.onNodeWithText("No pudimos consultar la orden. Reintentá la consulta.").assertExists()
         compose.onNodeWithTag("completion_retry_query").performSemanticsAction(SemanticsActions.OnClick)
         compose.runOnIdle { assertEquals(1, queryRetries) }
+    }
+
+    @Test fun invalid_data_rejection_keeps_confirmed_photo_and_allows_explicit_correction() {
+        var description by mutableStateOf("Done")
+        var submissions = 0
+        val photo = CompletionEvidenceSelection(1, "one", EvidenceSelectionStatus.Ready(
+            PreparedEvidenceImage("one.jpg", "image/jpeg", 100, "/missing/one.jpg")),
+            EvidenceUploadStatus.Confirmed("file-one"))
+        compose.setContent { LoresuelvoTheme {
+            ProviderCompletionFormScreen(order, CompletionFormAvailability.Eligible, description,
+                { description = it }, {}, {}, evidence = listOf(photo), canAttemptSubmit = true,
+                onSubmitAttempt = { submissions++ },
+                submission = CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData))
+        } }
+
+        compose.onNodeWithText("Revisá los datos del reporte y volvé a confirmarlo.").assertExists()
+        compose.onNodeWithText("Foto confirmada").assertExists()
+        compose.onNodeWithTag("completion_description").assertIsEnabled()
+        compose.onNodeWithTag("completion_submit").assertIsEnabled()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        compose.runOnIdle { assertEquals(1, submissions) }
+    }
+
+    @Test fun terminal_rejections_and_conflict_show_safe_actions_without_submit() {
+        var submission by mutableStateOf<CompletionSubmissionState>(
+            CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.Forbidden))
+        var availability by mutableStateOf(CompletionFormAvailability.Eligible)
+        var backs = 0
+        var queries = 0
+        compose.setContent { LoresuelvoTheme {
+            ProviderCompletionFormScreen(order, availability, "Done", {}, {}, { backs++ },
+                canAttemptSubmit = true, submission = submission, onRetryConflictQuery = { queries++ })
+        } }
+
+        compose.onNodeWithText("No tenés permiso para informar la finalización de esta orden.").assertExists()
+        compose.onNodeWithTag("completion_submit").assertDoesNotExist()
+        compose.runOnIdle {
+            submission = CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.NotFound)
+        }
+        compose.onNodeWithText("No encontramos esta orden.").assertExists()
+        compose.onNodeWithTag("completion_return_turns").assertExists()
+        compose.onNodeWithTag("completion_submit").assertDoesNotExist()
+        compose.runOnIdle {
+            submission = CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.Conflict)
+            availability = CompletionFormAvailability.TooEarly
+        }
+        compose.onNodeWithText("Todavía no podés informar la finalización de este turno.").assertExists()
+        compose.onNodeWithTag("completion_submit").assertDoesNotExist()
+        compose.runOnIdle { availability = CompletionFormAvailability.AlreadyReported }
+        compose.onNodeWithText("Esta orden ya tiene un reporte de finalización.").assertExists()
+        compose.runOnIdle { availability = CompletionFormAvailability.Error }
+        compose.onNodeWithTag("completion_retry_conflict_query")
+            .performSemanticsAction(SemanticsActions.OnClick)
+        compose.runOnIdle {
+            assertEquals(1, queries)
+            assertEquals(0, backs)
+        }
     }
 }
