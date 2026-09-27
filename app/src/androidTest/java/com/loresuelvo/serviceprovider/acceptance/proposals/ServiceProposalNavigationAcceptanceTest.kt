@@ -374,7 +374,7 @@ class ServiceProposalNavigationAcceptanceTest {
             )
         }
         val activity = compose.activity
-        compose.onNodeWithText(activity.getString(R.string.proposal_home_view_all)).performScrollTo().performClick()
+        compose.onNodeWithTag("jobs_view_all_proposals").performScrollTo().performClick()
         compose.onNode(
             hasText(activity.getString(R.string.proposal_list_pending)) and
                 SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab),
@@ -386,7 +386,7 @@ class ServiceProposalNavigationAcceptanceTest {
             compose.onNodeWithText(activity.getString(R.string.proposal_list_item, it)).assertIsDisplayed()
         }
         compose.onNodeWithText(activity.getString(R.string.proposal_list_back)).performClick()
-        compose.onNodeWithText(activity.getString(R.string.proposal_home_view_all)).assertIsDisplayed()
+        compose.onNodeWithTag("jobs_view_all_proposals").assertIsDisplayed()
     }
 
     @Test fun proposal_avatar_shows_photo_and_restores_initials_after_load_error() {

@@ -316,7 +316,7 @@ class ProviderProfileNavigationAcceptanceTest {
                 1100, 1499450, 1500550, 1L),
         ))
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.proposal_home_view_all))
+        composeTestRule.onNodeWithTag("jobs_view_all_proposals")
             .performScrollTo().performClick()
         composeTestRule.onNodeWithTag("proposal_detail_open_12").performClick()
         composeTestRule.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()

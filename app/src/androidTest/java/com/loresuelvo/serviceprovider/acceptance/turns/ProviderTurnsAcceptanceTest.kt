@@ -43,6 +43,7 @@ import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,7 +66,7 @@ class ProviderTurnsAcceptanceTest {
                         provider = CurrentAccount.Provider(1, "Carlos", "Gómez", "provider@example.com",
                             Category(1, "Plomería"), null),
                         uiState = ProviderHomeUiState(ActivitySectionState.Ready(emptyList()),
-                            ActivitySectionState.Ready(listOf(order))),
+                            ActivitySectionState.Ready(listOf(order, order.copy(id = 41)))),
                         onRetryJobRequests = {}, onRetryScheduledWork = {}, onJobRequestClick = {},
                         onMercadoPagoClick = {},
                         onAllTurnsClick = { nav.navigate(Route.ProviderTurns.path) },
@@ -82,7 +83,12 @@ class ProviderTurnsAcceptanceTest {
                 messages = {}, profile = {}, jobRequestDetail = {}, conversation = {},
             )
         }
-        compose.onNodeWithTag("provider_turn_details_40").performScrollTo().performClick()
+        compose.onNodeWithTag("jobs_view_turns").performScrollTo()
+        val cta = compose.onNodeWithTag("provider_turn_details_40").fetchSemanticsNode().boundsInRoot
+        val row = compose.onNodeWithTag("home_turns_row").fetchSemanticsNode().boundsInRoot
+        val card = compose.onNodeWithTag("provider_turn_40").fetchSemanticsNode().boundsInRoot
+        assertTrue("CTA $cta must be inside Home row $row and card $card", row.contains(cta.center))
+        compose.onNodeWithTag("provider_turn_details_40").performClick()
         compose.onNodeWithText(compose.activity.getString(R.string.provider_turns_detail_title)).assertIsDisplayed()
         compose.onNodeWithText(order.description).assertIsDisplayed()
         compose.onNodeWithText(compose.activity.getString(R.string.provider_turns_back)).performClick()
