@@ -115,6 +115,7 @@ fun ProviderCompletionFormScreen(
                     OutlinedButton(onClick = onAddPhotos, enabled = canAddPhotos) {
                         Text(stringResource(R.string.provider_completion_add_photos))
                     }
+                    TextButton(onClick = onBack) { Text(stringResource(R.string.provider_completion_cancel)) }
                     Button(onClick = {}, enabled = false, modifier = Modifier.testTag("completion_submit")) {
                         Text(stringResource(R.string.provider_completion_submit))
                     }

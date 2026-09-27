@@ -1,5 +1,10 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,30 +38,49 @@ fun ProviderCompletionRoute(
     onBack: () -> Unit,
     onRetryTurns: () -> Unit,
     viewModel: ProviderCompletionViewModel = hiltViewModel(),
+    pickPhotos: (() -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val description by viewModel.description.collectAsStateWithLifecycle()
+    val evidence by viewModel.evidence.collectAsStateWithLifecycle()
+    val evidenceIssue by viewModel.evidenceIssue.collectAsStateWithLifecycle()
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(3)) { uris ->
+        onCompletionImagesPicked(viewModel, uris)
+    }
+    val exit = {
+        viewModel.discardDraft()
+        onBack()
+    }
+    BackHandler(onBack = exit)
     val order = (turnsState as? ProviderTurnsUiState.Ready)?.orders?.firstOrNull { it.id == orderId }
     LaunchedEffect(order) { if (order != null) viewModel.open(order) }
 
     when {
         state == ProviderCompletionUiState.SessionExpired -> CompletionFallback(
-            R.string.provider_completion_session_expired, onBack)
+            R.string.provider_completion_session_expired, exit)
         turnsState == ProviderTurnsUiState.Loading -> CompletionFallback(
-            R.string.provider_turns_loading, onBack, loading = true)
+            R.string.provider_turns_loading, exit, loading = true)
         turnsState == ProviderTurnsUiState.Error -> CompletionFallback(
-            R.string.provider_turns_error, onBack, onRetryTurns)
-        order == null -> CompletionFallback(R.string.provider_completion_missing, onBack, onRetryTurns)
+            R.string.provider_turns_error, exit, onRetryTurns)
+        order == null -> CompletionFallback(R.string.provider_completion_missing, exit, onRetryTurns)
         else -> {
             val availability = when (val current = state) {
                 is ProviderCompletionUiState.Ready -> if (current.order.id == orderId)
                     current.eligibility.toFormAvailability() else CompletionFormAvailability.Checking
                 else -> CompletionFormAvailability.Checking
             }
-            ProviderCompletionFormScreen(order, availability, description, viewModel::onDescriptionChange, {},
-                onBack, onRetry = viewModel::retry)
+            ProviderCompletionFormScreen(order, availability, description, viewModel::onDescriptionChange,
+                { if (pickPhotos != null) pickPhotos() else picker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                exit, onRetry = viewModel::retry, canAddPhotos = availability == CompletionFormAvailability.Eligible,
+                evidence = evidence, evidenceIssue = evidenceIssue,
+                onRemoveEvidence = viewModel::removeEvidence)
         }
     }
+}
+
+internal fun onCompletionImagesPicked(viewModel: ProviderCompletionViewModel, uris: List<Uri>) {
+    if (uris.isNotEmpty()) viewModel.selectEvidence(uris.map(Uri::toString))
 }
 
 internal fun CompletionEligibility.toFormAvailability(): CompletionFormAvailability = when (this) {

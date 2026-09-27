@@ -30,6 +30,8 @@ import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUs
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionViewModel
+import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
+import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
 import io.cucumber.java.After
@@ -46,6 +48,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReportProviderWorkCompletionSteps {
@@ -86,6 +89,23 @@ class ReportProviderWorkCompletionSteps {
     private lateinit var turns: ProviderTurnsViewModel
     private lateinit var completion: ProviderCompletionViewModel
     private lateinit var initialDetail: WorkOrderDetail
+    private var expectedPhotos = emptyList<String>()
+    private var photoAction = ""
+    private val evidencePreparer = object : CompletionEvidencePreparer {
+        override suspend fun prepare(source: String): EvidenceImagePreparation = when (source) {
+            "photo://empty.jpg" -> EvidenceImagePreparation.Invalid.EmptyFile
+            "photo://unsupported.gif" -> EvidenceImagePreparation.Invalid.UnsupportedFormat
+            "photo://oversize.jpg" -> EvidenceImagePreparation.Invalid.ExceedsMaxSize
+            "photo://inaccessible.jpg" -> EvidenceImagePreparation.Invalid.Unreadable
+            else -> EvidenceImagePreparation.Ready(PreparedEvidenceImage(
+                source.substringAfterLast('/'), when {
+                    source.endsWith(".png") -> "image/png"
+                    source.endsWith(".webp") -> "image/webp"
+                    else -> "image/jpeg"
+                }, 100, source))
+        }
+        override suspend fun clean(image: PreparedEvidenceImage) = Unit
+    }
 
     @Given("que inicié sesión como prestador")
     fun signedIn() { Dispatchers.setMain(dispatcher) }
@@ -152,6 +172,92 @@ class ReportProviderWorkCompletionSteps {
     fun noCompletionRecorded() {
         assertEquals(1, detailCalls)
         assertEquals(initialDetail, detail)
+    }
+
+    @Given("que escribí la descripción de entrega")
+    fun wroteCompletionDescription() = runTest(dispatcher.scheduler) {
+        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
+            session, evidencePreparer)
+        completion.open(selected)
+        advanceUntilIdle()
+        assertEquals(CompletionEligibility.Eligible,
+            (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+        completion.onDescriptionChange("Trabajo terminado y revisado")
+    }
+
+    @And("el formulario contiene {string}")
+    fun initialPhotos(selection: String) = runTest(dispatcher.scheduler) {
+        expectedPhotos = when (selection) {
+            "ninguna foto" -> emptyList()
+            "una foto válida" -> listOf("first.jpg")
+            "tres fotos válidas" -> listOf("first.jpg", "second.jpg", "third.jpg")
+            else -> error("Unapproved initial selection: $selection")
+        }
+        completion.selectEvidence(expectedPhotos.map { "photo://$it" })
+        advanceUntilIdle()
+    }
+
+    @When("realizo {string} sobre las fotografías")
+    fun changePhotos(action: String) = runTest(dispatcher.scheduler) {
+        photoAction = action
+        when (action) {
+            "seleccionar una foto JPEG válida" -> {
+                completion.selectEvidence(listOf("photo://first.jpg"))
+                expectedPhotos = listOf("first.jpg")
+            }
+            "seleccionar una foto PNG y una WebP válidas" -> {
+                completion.selectEvidence(listOf("photo://second.png", "photo://third.webp"))
+                expectedPhotos += listOf("second.png", "third.webp")
+            }
+            "quitar la segunda foto" -> {
+                completion.removeEvidence(completion.evidence.value[1].id)
+                expectedPhotos = listOf("first.jpg", "third.jpg")
+            }
+            "intentar agregar una cuarta foto" -> completion.selectEvidence(listOf("photo://fourth.jpg"))
+            "seleccionar un archivo vacío" -> completion.selectEvidence(listOf("photo://empty.jpg"))
+            "seleccionar un formato no admitido" -> completion.selectEvidence(listOf("photo://unsupported.gif"))
+            "seleccionar una foto mayor a 5 MiB" -> completion.selectEvidence(listOf("photo://oversize.jpg"))
+            "seleccionar un archivo inaccesible" -> completion.selectEvidence(listOf("photo://inaccessible.jpg"))
+            else -> error("Unapproved photo action: $action")
+        }
+        advanceUntilIdle()
+    }
+
+    @Then("veo {string}")
+    fun seePhotoResult(result: String) {
+        val photos = completion.evidence.value
+        val ready = photos.mapNotNull { (it.status as? EvidenceSelectionStatus.Ready)?.image }
+        when (result) {
+            "la vista previa de la foto" -> assertEquals(listOf("first.jpg"), ready.map { it.originalName })
+            "las tres vistas previas en orden de selección" -> {
+                assertEquals(listOf("first.jpg", "second.png", "third.webp"), ready.map { it.originalName })
+                assertEquals(listOf("image/jpeg", "image/png", "image/webp"), ready.map { it.mimeType })
+            }
+            "sólo la primera y la tercera foto" -> assertEquals(listOf("first.jpg", "third.jpg"), ready.map { it.originalName })
+            "un aviso de máximo tres fotos" -> {
+                assertEquals(EvidenceSelectionIssue.MaximumReached, completion.evidenceIssue.value)
+                assertEquals(3, ready.size)
+            }
+            "un aviso de archivo inválido" -> assertEquals(EvidenceImagePreparation.Invalid.EmptyFile,
+                (photos.last().status as EvidenceSelectionStatus.Invalid).reason)
+            "un aviso de formato no admitido" -> assertEquals(EvidenceImagePreparation.Invalid.UnsupportedFormat,
+                (photos.last().status as EvidenceSelectionStatus.Invalid).reason)
+            "un aviso de tamaño excedido" -> assertEquals(EvidenceImagePreparation.Invalid.ExceedsMaxSize,
+                (photos.last().status as EvidenceSelectionStatus.Invalid).reason)
+            "un aviso para seleccionar otra foto" -> assertEquals(EvidenceImagePreparation.Invalid.Unreadable,
+                (photos.last().status as EvidenceSelectionStatus.Invalid).reason)
+            else -> error("Unapproved photo result: $result")
+        }
+    }
+
+    @And("conservo la descripción y el orden relativo de las fotografías restantes")
+    fun keepsDescriptionAndPhotoOrder() {
+        assertEquals("Trabajo terminado y revisado", completion.description.value)
+        assertEquals(expectedPhotos, completion.evidence.value.mapNotNull {
+            (it.status as? EvidenceSelectionStatus.Ready)?.image?.originalName
+        })
+        assertTrue(photoAction.isNotEmpty())
+        assertEquals(1, detailCalls)
     }
 
     @After fun tearDown() { Dispatchers.resetMain() }

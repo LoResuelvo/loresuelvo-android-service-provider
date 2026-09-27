@@ -19,7 +19,6 @@ Característica: Informar finalización con evidencia como prestador
       | la orden ya está paid con reporte                       | el estado vigente sin ofrecer otro reporte |
       | no soy el prestador asignado                            | un aviso de falta de permisos              |
 
-  @wip
   Esquema del escenario: 02-PIF Administrar las fotografías sin perder el formulario
     Dado que escribí la descripción de entrega
     Y el formulario contiene "<selección inicial>"

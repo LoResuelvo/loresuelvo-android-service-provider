@@ -155,6 +155,12 @@ class ProviderCompletionViewModel @Inject constructor(
         }
     }
 
+    fun discardDraft() {
+        queryJob?.cancel()
+        clearDraft()
+        _uiState.value = ProviderCompletionUiState.Closed
+    }
+
     private fun clearDraft() {
         _description.value = ""
         draftOrderId = null

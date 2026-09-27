@@ -34,6 +34,7 @@
     <string name="provider_completion_session_expired">Your session ended. Sign in again.</string>
     <string name="provider_completion_description">Completion description</string>
     <string name="provider_completion_add_photos">Add photos</string>
+    <string name="provider_completion_cancel">Cancel</string>
     <string name="provider_completion_photos">Photos</string>
     <string name="provider_completion_photo_limit">Up to 3 photos, 5 MiB each.</string>
     <string name="provider_completion_photo_preview">Preview of photo %1$d</string>

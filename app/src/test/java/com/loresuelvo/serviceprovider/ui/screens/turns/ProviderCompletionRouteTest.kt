@@ -1,11 +1,15 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import android.net.Uri
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountRepository
@@ -25,6 +29,7 @@ import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetCompletionEligibilityUseCase
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionViewModel
+import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +72,12 @@ class ProviderCompletionRouteTest {
         override fun getSession() = sessionFlow.value
         override fun saveSession(session: AuthSession) { sessionFlow.value = session }
         override fun clearSession() { sessionFlow.value = null }
+    }
+    private val cleaned = mutableListOf<String>()
+    private val evidencePort = object : CompletionEvidencePreparer {
+        override suspend fun prepare(source: String): EvidenceImagePreparation = EvidenceImagePreparation.Ready(
+            PreparedEvidenceImage(source.substringAfterLast('/'), "image/jpeg", 100, source))
+        override suspend fun clean(image: PreparedEvidenceImage) { cleaned += image.localPath }
     }
 
     @Before fun setUp() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
@@ -117,14 +128,60 @@ class ProviderCompletionRouteTest {
         compose.runOnIdle { assertEquals("", viewModel.description.value) }
     }
 
-    private fun showRoute(onBack: () -> Unit): ProviderCompletionViewModel {
+    @Test fun picker_callback_keeps_empty_result_and_enforces_app_limit() {
+        var pickerCalls = 0
+        val viewModel = showRoute(pickPhotos = { pickerCalls++ }) {}
+        compose.onNodeWithText("Agregar fotos").performSemanticsAction(SemanticsActions.OnClick)
+        compose.runOnIdle { assertEquals(1, pickerCalls) }
+        compose.runOnIdle {
+            onCompletionImagesPicked(viewModel, emptyList())
+            assertEquals(0, viewModel.evidence.value.size)
+            onCompletionImagesPicked(viewModel, listOf("first.jpg", "second.jpg", "third.jpg", "fourth.jpg")
+                .map { Uri.parse("photo://$it") })
+        }
+        compose.onNodeWithContentDescription("Vista previa de la foto 1").assertExists()
+        compose.onNodeWithText("No podés agregar más de 3 fotos.").assertExists()
+        compose.runOnIdle {
+            assertEquals(3, viewModel.evidence.value.size)
+            assertEquals(EvidenceSelectionIssue.MaximumReached, viewModel.evidenceIssue.value)
+        }
+    }
+
+    @Test fun cancel_discards_private_draft_and_returns_to_summary() {
+        var backs = 0
+        val viewModel = showRoute { backs++ }
+        compose.onNodeWithTag("completion_description").performTextInput("Private delivery note")
+        compose.runOnIdle { onCompletionImagesPicked(viewModel, listOf(Uri.parse("photo://first.jpg"))) }
+        compose.onNodeWithContentDescription("Vista previa de la foto 1").assertExists()
+
+        compose.onNodeWithText("Cancelar").performSemanticsAction(SemanticsActions.OnClick)
+        compose.runOnIdle {
+            assertEquals(1, backs)
+            assertEquals("", viewModel.description.value)
+            assertEquals(0, viewModel.evidence.value.size)
+            assertEquals(listOf("photo://first.jpg"), cleaned)
+        }
+    }
+
+    @Test fun back_discards_prepared_photo_before_returning() {
+        var backs = 0
+        val viewModel = showRoute { backs++ }
+        compose.runOnIdle { onCompletionImagesPicked(viewModel, listOf(Uri.parse("photo://back.jpg"))) }
+        compose.onNodeWithContentDescription("Vista previa de la foto 1").assertExists()
+
+        compose.onNodeWithText("Volver").performClick()
+        compose.runOnIdle {
+            assertEquals(1, backs)
+            assertEquals(0, viewModel.evidence.value.size)
+            assertEquals(listOf("photo://back.jpg"), cleaned)
+        }
+    }
+
+    private fun showRoute(pickPhotos: (() -> Unit)? = null, onBack: () -> Unit): ProviderCompletionViewModel {
         val viewModel = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { 1_000 }, session,
-            object : CompletionEvidencePreparer {
-                override suspend fun prepare(source: String): EvidenceImagePreparation = error("No photo selected")
-                override suspend fun clean(image: PreparedEvidenceImage) = Unit
-            })
+            evidencePort)
         compose.setContent { LoresuelvoTheme {
-            ProviderCompletionRoute(42, ProviderTurnsUiState.Ready(listOf(order)), onBack, {}, viewModel)
+            ProviderCompletionRoute(42, ProviderTurnsUiState.Ready(listOf(order)), onBack, {}, viewModel, pickPhotos)
         } }
         return viewModel
     }

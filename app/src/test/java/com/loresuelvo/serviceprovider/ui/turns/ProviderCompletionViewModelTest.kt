@@ -251,6 +251,23 @@ class ProviderCompletionViewModelTest {
         assertEquals(listOf("late"), evidence.cleaned)
     }
 
+    @Test fun intentional_exit_discards_description_and_prepared_images() = runTest(dispatcher.scheduler) {
+        orders.next = { WorkOrderDetailOutcome.Success(detail) }
+        val viewModel = viewModel()
+        viewModel.open(selected)
+        advanceUntilIdle()
+        viewModel.onDescriptionChange("Private delivery note")
+        viewModel.selectEvidence(listOf("one"))
+        advanceUntilIdle()
+
+        viewModel.discardDraft()
+        advanceUntilIdle()
+        assertEquals(ProviderCompletionUiState.Closed, viewModel.uiState.value)
+        assertEquals("", viewModel.description.value)
+        assertEquals(emptyList<CompletionEvidenceSelection>(), viewModel.evidence.value)
+        assertEquals(listOf("one"), evidence.cleaned)
+    }
+
     private fun viewModel() = ProviderCompletionViewModel(
         GetCompletionEligibilityUseCase(orders, object : CurrentAccountRepository {
             override suspend fun getCurrentAccount() = CurrentAccountOutcome.Success(
