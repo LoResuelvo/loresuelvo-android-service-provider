@@ -4,6 +4,7 @@
     <string name="provider_turns_title">Turnos</string>
     <string name="provider_turns_back">Volver</string>
     <string name="provider_turns_empty">No tenés turnos todavía.</string>
+    <string name="provider_turns_loading">Cargando turnos…</string>
     <string name="provider_turns_view_all">Ver todos</string>
     <string name="provider_turns_visit_pattern">\'el\' d \'de\' MMMM \'a las\' HH:mm</string>
     <string name="provider_turns_status_scheduled">Confirmado</string>

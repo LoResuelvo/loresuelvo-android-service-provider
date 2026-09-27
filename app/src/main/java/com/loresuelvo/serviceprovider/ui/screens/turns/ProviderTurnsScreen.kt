@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.ui.screens.turns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -94,7 +98,16 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (state) {
-                    ProviderTurnsUiState.Loading -> CircularProgressIndicator()
+                    ProviderTurnsUiState.Loading -> Column(
+                        Modifier.fillMaxWidth().fillMaxHeight(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        val loading = stringResource(R.string.provider_turns_loading)
+                        CircularProgressIndicator(Modifier.testTag("provider_turns_loading")
+                            .semantics { contentDescription = loading })
+                        Text(loading, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
                     ProviderTurnsUiState.Error -> Button(onClick = onRetry) {
                         Text(stringResource(R.string.provider_home_retry))
                     }

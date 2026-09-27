@@ -34,6 +34,13 @@ class ProviderTurnsScreenTest {
     @Before fun setUp() { TimeZone.setDefault(TimeZone.getTimeZone("America/Argentina/Buenos_Aires")) }
     @After fun tearDown() { TimeZone.setDefault(originalZone) }
 
+    @Test fun loading_shows_accessible_progress_and_text_without_empty_message() {
+        compose.setContent { LoresuelvoTheme { ProviderTurnsScreen(ProviderTurnsUiState.Loading, {}, {}) } }
+        compose.onNodeWithTag("provider_turns_loading").assertExists()
+        compose.onNodeWithText("Cargando turnos…").assertExists()
+        compose.onNodeWithText("No tenés turnos todavía.").assertDoesNotExist()
+    }
+
     @Test fun shows_real_local_data_and_initials_without_category_space() {
         showOrder(null)
 
