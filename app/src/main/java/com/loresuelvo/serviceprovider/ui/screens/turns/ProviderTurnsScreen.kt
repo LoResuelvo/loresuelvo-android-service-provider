@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -112,7 +113,17 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                         Text(stringResource(R.string.provider_home_retry))
                     }
                     is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
-                        Text(stringResource(R.string.provider_turns_empty))
+                        Column(
+                            Modifier.fillMaxSize().testTag("provider_turns_empty"),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(stringResource(R.string.provider_turns_empty),
+                                style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+                            Text(stringResource(R.string.provider_turns_empty_body),
+                                Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center)
+                        }
                     } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list"), state = listState) {
                         items(state.orders, key = { it.id }) { order ->
                             ProviderTurnCard(order) { selectedId = order.id; missingConversation = false; onDetails(it) }

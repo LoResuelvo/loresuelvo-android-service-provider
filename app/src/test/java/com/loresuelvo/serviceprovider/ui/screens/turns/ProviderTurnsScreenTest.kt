@@ -41,6 +41,14 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("No tenés turnos todavía.").assertDoesNotExist()
     }
 
+    @Test fun empty_orders_show_provider_message_without_loading_or_error() {
+        compose.setContent { LoresuelvoTheme { ProviderTurnsScreen(ProviderTurnsUiState.Ready(emptyList()), {}, {}) } }
+        compose.onNodeWithTag("provider_turns_empty").assertExists()
+        compose.onNodeWithText("Cuando se agende un trabajo, lo vas a ver acá.").assertExists()
+        compose.onNodeWithTag("provider_turns_loading").assertDoesNotExist()
+        compose.onNodeWithText("Reintentar").assertDoesNotExist()
+    }
+
     @Test fun shows_real_local_data_and_initials_without_category_space() {
         showOrder(null)
 
