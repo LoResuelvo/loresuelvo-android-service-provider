@@ -1,6 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
-import com.loresuelvo.serviceprovider.testing.unusedCompletionUploadUseCase
+import com.loresuelvo.serviceprovider.testing.unavailableCompletionUploadUseCase
 
 import android.net.Uri
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -184,6 +184,8 @@ class ProviderCompletionRouteTest {
         val viewModel = showRoute {}
         compose.onNodeWithTag("completion_description").performTextInput("Done")
         compose.runOnIdle { onCompletionImagesPicked(viewModel, listOf(Uri.parse("photo://first.jpg"))) }
+        compose.onNodeWithText("No se pudo preparar la subida.").assertExists()
+        compose.onNodeWithTag("completion_retry_1").assertExists()
         compose.onNodeWithText("Confirmar finalización").performSemanticsAction(SemanticsActions.OnClick)
         compose.onNodeWithText("Esperá a que se confirme la fotografía antes de enviar.").assertExists()
         compose.runOnIdle {
@@ -194,7 +196,7 @@ class ProviderCompletionRouteTest {
 
     private fun showRoute(pickPhotos: (() -> Unit)? = null, onBack: () -> Unit): ProviderCompletionViewModel {
         val viewModel = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { 1_000 }, session,
-            evidencePort, ValidateCompletionReportDraftUseCase(), unusedCompletionUploadUseCase())
+            evidencePort, ValidateCompletionReportDraftUseCase(), unavailableCompletionUploadUseCase())
         compose.setContent { LoresuelvoTheme {
             ProviderCompletionRoute(42, ProviderTurnsUiState.Ready(listOf(order)), onBack, {}, viewModel, pickPhotos)
         } }

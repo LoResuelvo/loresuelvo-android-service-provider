@@ -50,7 +50,6 @@ Característica: Informar finalización con evidencia como prestador
       | una fotografía todavía sin confirmar       |
       | identificadores de archivo repetidos       |
 
-  @wip
   Esquema del escenario: 04-PIF Recuperar la carga de una fotografía
     Dado que tengo una foto confirmada y otra cuya carga falló en "<etapa>"
     Y veo el estado de cada foto y la opción de reintentar la fallida

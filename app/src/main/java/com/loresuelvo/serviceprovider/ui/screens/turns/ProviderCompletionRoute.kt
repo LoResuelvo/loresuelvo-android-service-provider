@@ -29,6 +29,8 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.CompletionEligibility
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderCompletionViewModel
+import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
+import com.loresuelvo.serviceprovider.ui.turns.EvidenceUploadStatus
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 
 @Composable
@@ -55,6 +57,10 @@ fun ProviderCompletionRoute(
     BackHandler(onBack = exit)
     val order = (turnsState as? ProviderTurnsUiState.Ready)?.orders?.firstOrNull { it.id == orderId }
     LaunchedEffect(order) { if (order != null) viewModel.open(order) }
+    LaunchedEffect(evidence, state) {
+        evidence.filter { it.status is EvidenceSelectionStatus.Ready && it.uploadStatus == EvidenceUploadStatus.NotStarted }
+            .forEach { viewModel.uploadEvidence(it.id) }
+    }
 
     when {
         state == ProviderCompletionUiState.SessionExpired -> CompletionFallback(
@@ -76,6 +82,7 @@ fun ProviderCompletionRoute(
                 exit, onRetry = viewModel::retry, canAddPhotos = availability == CompletionFormAvailability.Eligible,
                 evidence = evidence, evidenceIssue = evidenceIssue,
                 onRemoveEvidence = viewModel::removeEvidence,
+                onRetryEvidence = viewModel::retryEvidence,
                 validationIssue = validationIssue, onSubmitAttempt = { viewModel.attemptSubmit() },
                 canAttemptSubmit = availability == CompletionFormAvailability.Eligible)
         }

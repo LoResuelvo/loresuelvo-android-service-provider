@@ -21,6 +21,10 @@ import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
+import com.loresuelvo.serviceprovider.ui.turns.EvidenceUploadStatus
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionEvidenceUpload
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadFailure
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadStage
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -111,5 +115,36 @@ class ProviderCompletionFormScreenTest {
         compose.onNodeWithText("Hay fotografías repetidas. Quitá una para continuar.").assertExists()
         compose.onNodeWithText("Trabajo terminado").assertExists()
         compose.onNodeWithTag("completion_description").assertExists()
+    }
+
+    @Test fun upload_states_show_status_and_retry_only_for_failed_photo() {
+        var retried: Long? = null
+        var selections by mutableStateOf(listOf(
+            CompletionEvidenceSelection(11, "one", EvidenceSelectionStatus.Ready(
+                PreparedEvidenceImage("one.jpg", "image/jpeg", 100, "/missing/one.jpg")),
+                EvidenceUploadStatus.Confirmed("file-one")),
+            CompletionEvidenceSelection(12, "two", EvidenceSelectionStatus.Ready(
+                PreparedEvidenceImage("two.jpg", "image/jpeg", 100, "/missing/two.jpg")),
+                EvidenceUploadStatus.Failed(CompletionEvidenceUpload.Failure(
+                    CompletionUploadStage.TRANSFER, CompletionUploadFailure.SERVER, 403))),
+        ))
+        compose.setContent { LoresuelvoTheme {
+            ProviderCompletionFormScreen(order, CompletionFormAvailability.Eligible, "Done", {}, {}, {},
+                evidence = selections, onRetryEvidence = { id ->
+                    retried = id
+                    selections = selections.map { if (it.id == id) it.copy(uploadStatus = EvidenceUploadStatus.Uploading) else it }
+                })
+        } }
+
+        compose.onNodeWithText("Foto confirmada").assertExists()
+        compose.onNodeWithText("No se pudo transferir la foto.").assertExists()
+        compose.onNodeWithTag("completion_evidence_1_12").performScrollTo()
+        compose.onNodeWithTag("completion_retry_12").performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithTag("completion_retry_11").assertDoesNotExist()
+        compose.runOnIdle {
+            assertEquals(12L, retried)
+            assertEquals(EvidenceUploadStatus.Uploading, selections[1].uploadStatus)
+        }
+        compose.onNodeWithText("Subiendo foto…").assertExists()
     }
 }

@@ -40,6 +40,8 @@ import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
+import com.loresuelvo.serviceprovider.ui.turns.EvidenceUploadStatus
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadStage
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import coil3.compose.AsyncImage
 import java.io.File
@@ -62,6 +64,7 @@ fun ProviderCompletionFormScreen(
     evidence: List<CompletionEvidenceSelection> = emptyList(),
     evidenceIssue: EvidenceSelectionIssue? = null,
     onRemoveEvidence: (Long) -> Unit = {},
+    onRetryEvidence: (Long) -> Unit = {},
     validationIssue: CompletionDraftValidation.Invalid? = null,
     onSubmitAttempt: () -> Unit = {},
     canAttemptSubmit: Boolean = false,
@@ -106,7 +109,7 @@ fun ProviderCompletionFormScreen(
                         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             evidence.forEachIndexed { index, selection ->
-                                CompletionEvidenceItem(index, selection, onRemoveEvidence)
+                                CompletionEvidenceItem(index, selection, onRemoveEvidence, onRetryEvidence)
                             }
                         }
                     }
@@ -148,6 +151,7 @@ private fun CompletionEvidenceItem(
     index: Int,
     selection: CompletionEvidenceSelection,
     onRemove: (Long) -> Unit,
+    onRetry: (Long) -> Unit,
 ) {
     Column(Modifier.width(96.dp).testTag("completion_evidence_${index}_${selection.id}"),
         verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -173,12 +177,39 @@ private fun CompletionEvidenceItem(
             is EvidenceSelectionStatus.Ready -> Text(status.image.originalName,
                 style = MaterialTheme.typography.bodySmall, maxLines = 1)
         }
+        if (selection.status is EvidenceSelectionStatus.Ready) {
+            when (val upload = selection.uploadStatus) {
+                EvidenceUploadStatus.NotStarted -> Text(stringResource(R.string.provider_completion_photo_ready),
+                    style = MaterialTheme.typography.bodySmall)
+                EvidenceUploadStatus.Uploading -> Text(stringResource(R.string.provider_completion_photo_uploading),
+                    style = MaterialTheme.typography.bodySmall)
+                is EvidenceUploadStatus.Confirmed -> Text(stringResource(R.string.provider_completion_photo_confirmed),
+                    style = MaterialTheme.typography.bodySmall)
+                is EvidenceUploadStatus.Failed -> {
+                    Text(stringResource(upload.failure.stage.messageResource()),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    val retryDescription = stringResource(R.string.provider_completion_photo_retry_description, index + 1)
+                    TextButton(onClick = { onRetry(selection.id) },
+                        modifier = Modifier.testTag("completion_retry_${selection.id}")
+                            .semantics { contentDescription = retryDescription }) {
+                        Text(stringResource(R.string.provider_completion_photo_retry))
+                    }
+                }
+            }
+        }
         val removeDescription = stringResource(R.string.provider_completion_photo_remove_description, index + 1)
         TextButton(onClick = { onRemove(selection.id) },
             modifier = Modifier.semantics { contentDescription = removeDescription }) {
             Text(stringResource(R.string.provider_completion_photo_remove))
         }
     }
+}
+
+private fun CompletionUploadStage.messageResource(): Int = when (this) {
+    CompletionUploadStage.PRESIGN -> R.string.provider_completion_photo_presign_failed
+    CompletionUploadStage.LOCAL_FILE -> R.string.provider_completion_photo_read_failed
+    CompletionUploadStage.TRANSFER -> R.string.provider_completion_photo_transfer_failed
+    CompletionUploadStage.CONFIRM -> R.string.provider_completion_photo_confirm_failed
 }
 
 private fun EvidenceImagePreparation.Invalid.messageResource(): Int = when (this) {

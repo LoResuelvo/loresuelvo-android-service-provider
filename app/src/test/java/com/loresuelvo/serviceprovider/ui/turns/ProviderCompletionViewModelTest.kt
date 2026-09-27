@@ -26,7 +26,7 @@ import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadSt
 import com.loresuelvo.serviceprovider.domain.usecase.activity.UploadCompletionEvidenceUseCase
 import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidenceReader
 import com.loresuelvo.serviceprovider.domain.file.*
-import com.loresuelvo.serviceprovider.testing.unusedCompletionUploadUseCase
+import com.loresuelvo.serviceprovider.testing.unavailableCompletionUploadUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -399,7 +399,7 @@ class ProviderCompletionViewModelTest {
         assertEquals(listOf("one"), evidence.cleaned)
     }
 
-    private fun viewModel(uploader: UploadCompletionEvidenceUseCase = unusedCompletionUploadUseCase()) = ProviderCompletionViewModel(
+    private fun viewModel(uploader: UploadCompletionEvidenceUseCase = unavailableCompletionUploadUseCase()) = ProviderCompletionViewModel(
         GetCompletionEligibilityUseCase(orders, object : CurrentAccountRepository {
             override suspend fun getCurrentAccount() = CurrentAccountOutcome.Success(
                 CurrentAccount.Provider(7, "Juan", "Gómez", "juan@example.com", Category(1, "Plumbing"), null))

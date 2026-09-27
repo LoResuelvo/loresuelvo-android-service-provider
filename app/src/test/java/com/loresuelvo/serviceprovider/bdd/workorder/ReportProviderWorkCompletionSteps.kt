@@ -1,6 +1,11 @@
 package com.loresuelvo.serviceprovider.bdd.workorder
 
-import com.loresuelvo.serviceprovider.testing.unusedCompletionUploadUseCase
+import com.loresuelvo.serviceprovider.testing.unavailableCompletionUploadUseCase
+import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidenceReader
+import com.loresuelvo.serviceprovider.domain.file.*
+import com.loresuelvo.serviceprovider.domain.usecase.activity.UploadCompletionEvidenceUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadStage
+import com.loresuelvo.serviceprovider.ui.turns.EvidenceUploadStatus
 
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
@@ -99,6 +104,40 @@ class ReportProviderWorkCompletionSteps {
     private var draftProblem = ""
     private var expectedDescription = ""
     private var attemptedValidation: CompletionDraftValidation? = null
+    private var failedUploadStage = CompletionUploadStage.PRESIGN
+    private var failurePending = false
+    private var duplicateFileIds = false
+    private val presignCalls = mutableListOf<String>()
+    private val completionFiles = object : FileRepository {
+        override suspend fun presign(request: PresignUploadRequest): PresignUploadOutcome {
+            assertEquals(FilePurpose.WORK_ORDER_COMPLETION_IMAGE, request.purpose)
+            presignCalls += request.originalName
+            if (request.originalName == "second.jpg" && failurePending && failedUploadStage == CompletionUploadStage.PRESIGN) {
+                failurePending = false
+                return PresignUploadOutcome.Failure.Server(503, "private")
+            }
+            return PresignUploadOutcome.Success(PresignUploadResult(if (duplicateFileIds) "confirmed-file-1" else "file-${request.originalName}",
+                "private/${request.originalName}", "https://storage.example/${request.originalName}", emptyMap()))
+        }
+        override suspend fun uploadBytes(uploadUrl: String, headers: Map<String, String>, bytes: ByteArray): UploadBytesOutcome {
+            if (uploadUrl.endsWith("second.jpg") && failurePending && failedUploadStage == CompletionUploadStage.TRANSFER) {
+                failurePending = false
+                return UploadBytesOutcome.Failure.Server(403, "private")
+            }
+            return UploadBytesOutcome.Success
+        }
+        override suspend fun confirm(fileId: String, request: ConfirmUploadRequest): ConfirmUploadOutcome {
+            if (fileId == "file-second.jpg" && failurePending && failedUploadStage == CompletionUploadStage.CONFIRM) {
+                failurePending = false
+                return ConfirmUploadOutcome.Failure.Server(503, "private")
+            }
+            return ConfirmUploadOutcome.Success(ConfirmedFile(fileId,
+                mimeType = request.mimeType, originalName = request.key.substringAfterLast('/')))
+        }
+    }
+    private val completionUploader = UploadCompletionEvidenceUseCase(completionFiles, object : CompletionEvidenceReader {
+        override suspend fun read(image: PreparedEvidenceImage): ByteArray? = ByteArray(image.sizeBytes.toInt())
+    })
     private val evidencePreparer = object : CompletionEvidencePreparer {
         override suspend fun prepare(source: String): EvidenceImagePreparation = when (source) {
             "photo://empty.jpg" -> EvidenceImagePreparation.Invalid.EmptyFile
@@ -147,7 +186,7 @@ class ReportProviderWorkCompletionSteps {
             object : CompletionEvidencePreparer {
                 override suspend fun prepare(source: String): EvidenceImagePreparation = error("No photo selected in 01-PIF")
                 override suspend fun clean(image: PreparedEvidenceImage) = Unit
-            }, validateDraft, unusedCompletionUploadUseCase())
+            }, validateDraft, unavailableCompletionUploadUseCase())
         completion.open((turns.uiState.value as ProviderTurnsUiState.Ready).orders.single())
         advanceUntilIdle()
     }
@@ -185,7 +224,7 @@ class ReportProviderWorkCompletionSteps {
     @Given("que escribí la descripción de entrega")
     fun wroteCompletionDescription() = runTest(dispatcher.scheduler) {
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
-            session, evidencePreparer, validateDraft, unusedCompletionUploadUseCase())
+            session, evidencePreparer, validateDraft, unavailableCompletionUploadUseCase())
         completion.open(selected)
         advanceUntilIdle()
         assertEquals(CompletionEligibility.Eligible,
@@ -271,7 +310,7 @@ class ReportProviderWorkCompletionSteps {
     @Given("que abrí el formulario de una orden habilitada")
     fun openedEligibleForm() = runTest(dispatcher.scheduler) {
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
-            session, evidencePreparer, validateDraft, unusedCompletionUploadUseCase())
+            session, evidencePreparer, validateDraft, completionUploader)
         completion.open(selected)
         advanceUntilIdle()
         assertEquals(CompletionEligibility.Eligible,
@@ -297,16 +336,16 @@ class ReportProviderWorkCompletionSteps {
         completion.selectEvidence(sources)
         expectedPhotos = sources.map { it.substringAfterLast('/') }
         advanceUntilIdle()
+        if (problem == "identificadores de archivo repetidos") {
+            duplicateFileIds = true
+            completion.evidence.value.forEach { completion.uploadEvidence(it.id) }
+            advanceUntilIdle()
+        }
     }
 
     @When("intento confirmar la finalización")
     fun attemptCompletionReport() {
-        attemptedValidation = if (draftProblem == "identificadores de archivo repetidos") {
-            // B2 will connect real confirmed IDs to this guard; B1 selections have local files only.
-            validateDraft(expectedDescription, listOf("confirmed-file-1", "confirmed-file-1"))
-        } else {
-            completion.attemptSubmit()
-        }
+        attemptedValidation = completion.attemptSubmit()
     }
 
     @Then("el envío permanece bloqueado con una explicación del problema")
@@ -320,10 +359,7 @@ class ReportProviderWorkCompletionSteps {
             else -> error("Unapproved draft problem: $draftProblem")
         }
         assertEquals(expected, attemptedValidation)
-        if (draftProblem == "identificadores de archivo repetidos")
-            assertEquals(null, completion.validationIssue.value)
-        else
-            assertEquals(expected, completion.validationIssue.value)
+        assertEquals(expected, completion.validationIssue.value)
     }
 
     @And("no se registra un reporte ni se pierde el resto del borrador")
@@ -335,6 +371,69 @@ class ReportProviderWorkCompletionSteps {
         assertEquals(expectedPhotos, completion.evidence.value.mapNotNull {
             (it.status as? EvidenceSelectionStatus.Ready)?.image?.originalName
         })
+    }
+
+    @Given("que tengo una foto confirmada y otra cuya carga falló en {string}")
+    fun confirmedAndFailedPhoto(stage: String) = runTest(dispatcher.scheduler) {
+        failedUploadStage = when (stage) {
+            "preparación de la subida" -> CompletionUploadStage.PRESIGN
+            "transferencia del archivo" -> CompletionUploadStage.TRANSFER
+            "confirmación del archivo" -> CompletionUploadStage.CONFIRM
+            else -> error("Unapproved upload stage: $stage")
+        }
+        failurePending = true
+        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
+            session, evidencePreparer, validateDraft, completionUploader)
+        completion.open(selected)
+        advanceUntilIdle()
+        completion.onDescriptionChange("Trabajo terminado y revisado")
+        completion.selectEvidence(listOf("photo://first.jpg", "photo://second.jpg"))
+        advanceUntilIdle()
+        completion.uploadEvidence(completion.evidence.value[0].id)
+        completion.uploadEvidence(completion.evidence.value[1].id)
+        advanceUntilIdle()
+    }
+
+    @And("veo el estado de cada foto y la opción de reintentar la fallida")
+    fun statusesAndRetry() {
+        assertEquals(EvidenceUploadStatus.Confirmed("file-first.jpg"), completion.evidence.value[0].uploadStatus)
+        assertTrue(completion.evidence.value[1].uploadStatus is EvidenceUploadStatus.Failed)
+        assertEquals(failedUploadStage,
+            (completion.evidence.value[1].uploadStatus as EvidenceUploadStatus.Failed).failure.stage)
+    }
+
+    @And("el próximo intento de esa carga puede completarse")
+    fun nextUploadCanComplete() { assertEquals(false, failurePending) }
+
+    @When("reintento la fotografía fallida")
+    fun retryFailedPhoto() = runTest(dispatcher.scheduler) {
+        completion.retryEvidence(completion.evidence.value[1].id)
+        advanceUntilIdle()
+    }
+
+    @Then("ambas fotografías quedan confirmadas en su orden original")
+    fun bothConfirmedInOrder() {
+        assertEquals(listOf("first.jpg", "second.jpg"), completion.evidence.value.map {
+            (it.status as EvidenceSelectionStatus.Ready).image.originalName
+        })
+        assertEquals(listOf("file-first.jpg", "file-second.jpg"), completion.evidence.value.map {
+            (it.uploadStatus as EvidenceUploadStatus.Confirmed).fileId
+        })
+    }
+
+    @And("se conserva la descripción sin volver a subir la foto ya confirmada")
+    fun descriptionAndFirstUploadPreserved() {
+        assertEquals("Trabajo terminado y revisado", completion.description.value)
+        assertEquals(1, presignCalls.count { it == "first.jpg" })
+        assertEquals(2, presignCalls.count { it == "second.jpg" })
+    }
+
+    @And("no se registra la finalización hasta que la confirme")
+    fun noReportBeforeConfirmation() {
+        assertEquals(WorkOrderStatus.Scheduled, detail.status)
+        assertEquals(null, detail.completionReportId)
+        assertEquals(listOf("file-first.jpg", "file-second.jpg"),
+            (completion.attemptSubmit() as CompletionDraftValidation.Valid).confirmedFileIds)
     }
 
     @After fun tearDown() { Dispatchers.resetMain() }

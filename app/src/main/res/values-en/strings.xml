@@ -40,6 +40,15 @@
     <string name="provider_completion_photo_preview">Preview of photo %1$d</string>
     <string name="provider_completion_photo_invalid">Invalid photo</string>
     <string name="provider_completion_photo_preparing">Preparing photo…</string>
+    <string name="provider_completion_photo_ready">Ready to upload</string>
+    <string name="provider_completion_photo_uploading">Uploading photo…</string>
+    <string name="provider_completion_photo_confirmed">Photo confirmed</string>
+    <string name="provider_completion_photo_presign_failed">Couldn’t prepare the upload.</string>
+    <string name="provider_completion_photo_read_failed">We couldn’t read the photo.</string>
+    <string name="provider_completion_photo_transfer_failed">Couldn’t transfer the photo.</string>
+    <string name="provider_completion_photo_confirm_failed">Couldn’t confirm the photo.</string>
+    <string name="provider_completion_photo_retry">Retry</string>
+    <string name="provider_completion_photo_retry_description">Retry photo %1$d</string>
     <string name="provider_completion_photo_remove">Remove</string>
     <string name="provider_completion_photo_remove_description">Remove photo %1$d</string>
     <string name="provider_completion_photo_maximum">You can’t add more than 3 photos.</string>
