@@ -8,6 +8,9 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestRepository
 import com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetPendingJobRequestsUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetScheduledWorkUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
@@ -41,6 +44,7 @@ import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -51,6 +55,12 @@ import org.junit.Assert.assertNotEquals
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderTurnsSteps {
     private val dispatcher = StandardTestDispatcher()
+    private val sessionStore = object : AuthSessionStore {
+        override val sessionFlow = MutableStateFlow<AuthSession?>(AuthSession(User("provider", "provider@example.com"), "token"))
+        override fun getSession() = sessionFlow.value
+        override fun saveSession(session: AuthSession) { sessionFlow.value = session }
+        override fun clearSession() { sessionFlow.value = null }
+    }
     private var orders = listOf(
         WorkOrder(1, "Ana Pérez", "Reparar canilla", 1, WorkOrderStatus.Scheduled),
         WorkOrder(2, "Bea Silva", "Pintar pared", 2, WorkOrderStatus.Paid),
@@ -122,7 +132,7 @@ class ProviderTurnsSteps {
 
     @When("entro a Turnos")
     fun enterTurns() {
-        viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposalRepository))
+        viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposalRepository), sessionStore)
         dispatcher.scheduler.advanceUntilIdle()
     }
 

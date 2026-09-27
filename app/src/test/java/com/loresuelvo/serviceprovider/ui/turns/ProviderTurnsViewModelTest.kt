@@ -4,6 +4,9 @@ import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
@@ -21,6 +24,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -30,6 +34,12 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderTurnsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
+    private val sessionStore = object : AuthSessionStore {
+        override val sessionFlow = MutableStateFlow<AuthSession?>(AuthSession(User("provider", "provider@example.com"), "token"))
+        override fun getSession() = sessionFlow.value
+        override fun saveSession(session: AuthSession) { sessionFlow.value = session }
+        override fun clearSession() { sessionFlow.value = null }
+    }
 
     @Before fun setUp() { Dispatchers.setMain(dispatcher) }
     @After fun tearDown() { Dispatchers.resetMain() }
@@ -48,7 +58,7 @@ class ProviderTurnsViewModelTest {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Not used by turns")
         }
-        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposals))
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposals), sessionStore)
         assertEquals(ProviderTurnsUiState.Loading, viewModel.uiState.value)
         advanceUntilIdle()
 
@@ -72,7 +82,7 @@ class ProviderTurnsViewModelTest {
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
                 error("Must not create a proposal")
         }
-        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(workOrders), GetServiceProposalsUseCase(proposals))
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(workOrders), GetServiceProposalsUseCase(proposals), sessionStore)
         advanceUntilIdle()
 
         assertEquals(mapOf(40 to 93), (viewModel.uiState.value as ProviderTurnsUiState.Ready).conversationIds)
@@ -96,7 +106,7 @@ class ProviderTurnsViewModelTest {
             else ServiceProposalListOutcome.Success(listOf(proposal(12, 7, 93)))
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = error("Must not create")
         }
-        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(workOrders), GetServiceProposalsUseCase(proposals))
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(workOrders), GetServiceProposalsUseCase(proposals), sessionStore)
         advanceUntilIdle()
         assertEquals(ServiceProposalListOutcome.Failure.Unavailable,
             (viewModel.uiState.value as ProviderTurnsUiState.Ready).proposalFailure)
@@ -127,7 +137,7 @@ class ProviderTurnsViewModelTest {
             override suspend fun list() = ServiceProposalListOutcome.Success(emptyList())
             override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = error("Not used")
         }
-        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(workOrders), GetServiceProposalsUseCase(proposals))
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(workOrders), GetServiceProposalsUseCase(proposals), sessionStore)
         advanceUntilIdle()
         viewModel.onResume()
         advanceUntilIdle()
@@ -140,6 +150,58 @@ class ProviderTurnsViewModelTest {
         assertEquals(2, calls)
         assertEquals(WorkOrderStatus.AwaitingPayment,
             (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.single().status)
+    }
+
+    @Test fun order_401_clears_session_and_visible_orders() = runTest(dispatcher.scheduler) {
+        var unauthorized = false
+        val repository = object : WorkOrderRepository {
+            override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = if (unauthorized)
+                ActivityLoadOutcome.Failure.Unauthorized
+            else ActivityLoadOutcome.Success(listOf(WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled)))
+        }
+        val proposals = object : ServiceProposalRepository {
+            override suspend fun list() = ServiceProposalListOutcome.Success(listOf(proposal(12, 7, 93)))
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = error("Not used")
+        }
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposals), sessionStore)
+        advanceUntilIdle()
+        unauthorized = true
+        viewModel.load()
+        advanceUntilIdle()
+        assertEquals(null, sessionStore.getSession())
+        assertEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
+    }
+
+    @Test fun initial_proposal_401_clears_session_and_order_links() = runTest(dispatcher.scheduler) {
+        val repository = object : WorkOrderRepository {
+            override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(listOf(
+                WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled, serviceProposalId = 12, consumerId = 7)))
+        }
+        val proposals = object : ServiceProposalRepository {
+            override suspend fun list() = ServiceProposalListOutcome.Failure.SessionExpired
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = error("Not used")
+        }
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposals), sessionStore)
+        advanceUntilIdle()
+        assertEquals(null, sessionStore.getSession())
+        assertEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
+    }
+
+    @Test fun switching_sessions_purges_previous_orders_and_links() = runTest(dispatcher.scheduler) {
+        val repository = object : WorkOrderRepository {
+            override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(listOf(
+                WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled, serviceProposalId = 12, consumerId = 7)))
+        }
+        val proposals = object : ServiceProposalRepository {
+            override suspend fun list() = ServiceProposalListOutcome.Success(listOf(proposal(12, 7, 93)))
+            override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome = error("Not used")
+        }
+        val viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposals), sessionStore)
+        advanceUntilIdle()
+        assertEquals(93, (viewModel.uiState.value as ProviderTurnsUiState.Ready).conversationIds[40])
+        sessionStore.saveSession(AuthSession(User("other", "other@example.com"), "other-token"))
+        advanceUntilIdle()
+        assertEquals(ProviderTurnsUiState.Error, viewModel.uiState.value)
     }
 
     private fun proposal(id: Int, consumerId: Int, conversationId: Int) = ServiceProposalSummary(
