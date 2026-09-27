@@ -133,6 +133,22 @@ class ApiFileRepositoryTest {
         assertTrue(request.body.readUtf8().contains("\"purpose\":\"work_order_completion_image\""))
         assertTrue(outcome is PresignUploadOutcome.Success)
         assertEquals(FilePurpose.WORK_ORDER_COMPLETION_IMAGE, purposeFromWire("work_order_completion_image"))
+
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("""{"id":"file-26","original_name":"completion.jpg","mime_type":"image/jpeg","type":"image"}"""),
+        )
+        val confirmation = repository.confirm("file-26", ConfirmUploadRequest("private/completion.jpg", "image/jpeg", 42))
+        val confirmRequest = server.takeRequest()
+        assertEquals("POST", confirmRequest.method)
+        assertEquals("/files/file-26/confirm", confirmRequest.path)
+        val confirmBody = confirmRequest.body.readUtf8()
+        assertTrue(confirmBody.contains("\"key\":\"private/completion.jpg\""))
+        assertTrue(confirmBody.contains("\"mime_type\":\"image/jpeg\""))
+        assertTrue(confirmBody.contains("\"size_bytes\":42"))
+        assertTrue(confirmation is ConfirmUploadOutcome.Success)
     }
 
     @Test

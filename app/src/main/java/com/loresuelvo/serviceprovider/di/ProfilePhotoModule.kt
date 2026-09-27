@@ -2,7 +2,9 @@ package com.loresuelvo.serviceprovider.di
 
 import com.loresuelvo.serviceprovider.data.media.AndroidProfilePhotoPreparer
 import com.loresuelvo.serviceprovider.data.media.AndroidCompletionEvidencePreparer
+import com.loresuelvo.serviceprovider.data.media.AndroidCompletionEvidenceReader
 import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidencePreparer
+import com.loresuelvo.serviceprovider.domain.activity.CompletionEvidenceReader
 import com.loresuelvo.serviceprovider.domain.profile.ProfilePhotoPreparer
 import dagger.Binds
 import dagger.Module
@@ -26,4 +28,10 @@ abstract class ProfilePhotoModule {
     abstract fun bindCompletionEvidencePreparer(
         impl: AndroidCompletionEvidencePreparer,
     ): CompletionEvidencePreparer
+
+    @Binds
+    @Singleton
+    abstract fun bindCompletionEvidenceReader(
+        impl: AndroidCompletionEvidenceReader,
+    ): CompletionEvidenceReader
 }
