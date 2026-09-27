@@ -47,6 +47,7 @@ internal fun purposeToWire(purpose: FilePurpose): String =
         FilePurpose.CONVERSATION_MESSAGE_IMAGE -> "conversation_message_image"
         FilePurpose.CONVERSATION_MESSAGE_AUDIO -> "conversation_message_audio"
         FilePurpose.CONVERSATION_MESSAGE_VIDEO -> "conversation_message_video"
+        FilePurpose.WORK_ORDER_COMPLETION_IMAGE -> "work_order_completion_image"
     }
 
 internal fun purposeFromWire(value: String): FilePurpose =
@@ -55,5 +56,6 @@ internal fun purposeFromWire(value: String): FilePurpose =
         "conversation_message_image" -> FilePurpose.CONVERSATION_MESSAGE_IMAGE
         "conversation_message_audio" -> FilePurpose.CONVERSATION_MESSAGE_AUDIO
         "conversation_message_video" -> FilePurpose.CONVERSATION_MESSAGE_VIDEO
+        "work_order_completion_image" -> FilePurpose.WORK_ORDER_COMPLETION_IMAGE
         else -> throw IllegalArgumentException("Unknown file purpose: $value")
     }

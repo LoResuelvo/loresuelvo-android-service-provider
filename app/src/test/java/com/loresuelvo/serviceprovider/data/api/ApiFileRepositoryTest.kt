@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.data.api
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.loresuelvo.serviceprovider.data.api.upload.FileUploader
+import com.loresuelvo.serviceprovider.data.api.mapper.purposeFromWire
 import com.loresuelvo.serviceprovider.domain.file.ConfirmUploadOutcome
 import com.loresuelvo.serviceprovider.domain.file.ConfirmUploadRequest
 import com.loresuelvo.serviceprovider.domain.file.FilePurpose
@@ -106,6 +107,32 @@ class ApiFileRepositoryTest {
         assertEquals("files/2026/09/profile_photo/photo.jpg", result.key)
         assertEquals("https://storage.example/upload-url", result.uploadUrl)
         assertEquals("image/jpeg", result.headers["Content-Type"])
+    }
+
+    @Test
+    fun completion_image_purpose_round_trips_and_presigns_privately() = runBlocking {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("""{"file_id":"file-26","key":"private/completion.jpg","upload_url":"https://storage.example/upload","headers":{}}"""),
+        )
+
+        val outcome = repository.presign(
+            PresignUploadRequest(
+                originalName = "completion.jpg",
+                mimeType = "image/jpeg",
+                sizeBytes = 42L,
+                purpose = FilePurpose.WORK_ORDER_COMPLETION_IMAGE,
+            ),
+        )
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/files/presign", request.path)
+        assertTrue(request.body.readUtf8().contains("\"purpose\":\"work_order_completion_image\""))
+        assertTrue(outcome is PresignUploadOutcome.Success)
+        assertEquals(FilePurpose.WORK_ORDER_COMPLETION_IMAGE, purposeFromWire("work_order_completion_image"))
     }
 
     @Test
