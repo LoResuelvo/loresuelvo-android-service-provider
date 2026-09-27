@@ -46,6 +46,8 @@ sealed class Route(val path: String) {
 
     data object ServiceProposals : Route("service_proposals")
 
+    data object ProviderTurns : Route("provider_turns")
+
     /**
      * Provider conversation summaries. The detail route remains a separate
      * destination so the bottom bar can be hidden while a conversation is

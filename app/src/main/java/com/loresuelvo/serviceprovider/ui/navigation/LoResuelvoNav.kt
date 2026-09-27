@@ -38,6 +38,7 @@ import com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationRoute
 import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
 import com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListRoute
+import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnsRoute
 import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailRoute
 import com.loresuelvo.serviceprovider.ui.screens.messages.ProviderMessagesRoute
 import com.loresuelvo.serviceprovider.ui.screens.identity.OptionalIdentityVerificationRoute
@@ -145,6 +146,9 @@ fun LoResuelvoNav(
                                         }
                                     },
                                 )
+                            },
+                            providerTurns = {
+                                ProviderTurnsRoute(onBack = { navController.popBackStack() })
                             },
                             messages = {
                                 ProviderMessagesRoute(

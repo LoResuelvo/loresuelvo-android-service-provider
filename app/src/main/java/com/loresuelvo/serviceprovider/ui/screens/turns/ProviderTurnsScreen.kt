@@ -10,9 +10,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -32,23 +35,31 @@ fun ProviderTurnsRoute(onBack: () -> Unit, viewModel: ProviderTurnsViewModel = h
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit) {
     Surface(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) }
-            Text(stringResource(R.string.provider_turns_title), style = MaterialTheme.typography.headlineSmall)
-            when (state) {
-                ProviderTurnsUiState.Loading -> CircularProgressIndicator()
-                ProviderTurnsUiState.Error -> Button(onClick = onRetry) {
-                    Text(stringResource(R.string.provider_home_retry))
-                }
-                is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
-                    Text(stringResource(R.string.provider_turns_empty))
-                } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list")) {
-                    items(state.orders, key = { it.id }) { order ->
-                        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("provider_turn_${order.id}")) {
-                            Text(order.consumerName, style = MaterialTheme.typography.titleMedium)
-                            Text(order.description)
+        Scaffold(topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.provider_turns_title)) },
+                navigationIcon = {
+                    TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) }
+                },
+            )
+        }) { padding ->
+            Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (state) {
+                    ProviderTurnsUiState.Loading -> CircularProgressIndicator()
+                    ProviderTurnsUiState.Error -> Button(onClick = onRetry) {
+                        Text(stringResource(R.string.provider_home_retry))
+                    }
+                    is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
+                        Text(stringResource(R.string.provider_turns_empty))
+                    } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list")) {
+                        items(state.orders, key = { it.id }) { order ->
+                            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("provider_turn_${order.id}")) {
+                                Text(order.consumerName, style = MaterialTheme.typography.titleMedium)
+                                Text(order.description)
+                            }
                         }
                     }
                 }

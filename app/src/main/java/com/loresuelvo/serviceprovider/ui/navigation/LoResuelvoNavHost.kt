@@ -35,6 +35,7 @@ fun LoResuelvoNavHost(
     optionalIdentityVerification: @Composable () -> Unit,
     home: @Composable () -> Unit,
     serviceProposals: @Composable () -> Unit = {},
+    providerTurns: @Composable () -> Unit = {},
     messages: @Composable () -> Unit,
     profile: @Composable () -> Unit,
     jobRequestDetail: @Composable (Int) -> Unit,
@@ -51,6 +52,7 @@ fun LoResuelvoNavHost(
             composable(Route.OptionalIdentityVerification.path) { optionalIdentityVerification() }
             composable(Route.Home.path) { home() }
             composable(Route.ServiceProposals.path) { serviceProposals() }
+            composable(Route.ProviderTurns.path) { providerTurns() }
             composable(Route.Messages.path) { messages() }
             composable(Route.Profile.path) { profile() }
             composable(

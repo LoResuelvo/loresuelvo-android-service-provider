@@ -3,7 +3,6 @@ Característica: Visualizar turnos como prestador
   Antecedentes:
     Dado que inicié sesión como prestador
 
-  @wip
   Esquema del escenario: 01-PVT Acceder al mismo listado desde ambos accesos
     Dado que tengo órdenes de trabajo registradas
     Cuando abro Turnos desde "<acceso>"

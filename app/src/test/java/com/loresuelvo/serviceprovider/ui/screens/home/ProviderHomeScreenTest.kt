@@ -40,6 +40,39 @@ class ProviderHomeScreenTest {
         get() = ApplicationProvider.getApplicationContext()
 
     @Test
+    fun opens_same_turns_list_from_scheduled_work_and_jobs_while_proposals_stay_separate() {
+        var turnsOpens = 0
+        var proposalOpens = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderHomeScreen(
+                    provider = provider(),
+                    uiState = ProviderHomeUiState(
+                        jobRequests = ActivitySectionState.Ready(emptyList()),
+                        scheduledWork = ActivitySectionState.Ready(listOf(workOrder())),
+                    ),
+                    onRetryJobRequests = {},
+                    onRetryScheduledWork = {},
+                    onJobRequestClick = {},
+                    onMercadoPagoClick = {},
+                    onAllTurnsClick = { turnsOpens++ },
+                    onAllProposalsClick = { proposalOpens++ },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("scheduled_view_all_turns")
+            .performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("jobs_view_turns")
+            .performScrollTo().performClick()
+        composeTestRule.onNodeWithTag("jobs_view_all_proposals")
+            .performScrollTo().performClick()
+
+        assertEquals(2, turnsOpens)
+        assertEquals(1, proposalOpens)
+    }
+
+    @Test
     fun renders_provider_identity_photo_fallback_activity_and_real_counts() {
         composeTestRule.setContent {
             LoresuelvoTheme {

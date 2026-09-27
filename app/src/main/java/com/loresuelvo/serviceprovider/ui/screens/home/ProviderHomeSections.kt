@@ -11,8 +11,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -49,10 +51,12 @@ internal fun JobRequestsSection(
 internal fun ScheduledWorkSection(
     state: ActivitySectionState<WorkOrder>,
     onRetry: () -> Unit,
+    onAllTurnsClick: () -> Unit,
 ) {
     ActivitySectionHeader(
         title = stringResource(R.string.provider_home_scheduled_title),
         count = state.countOrPlaceholder(),
+        onViewAll = onAllTurnsClick,
     )
     when (state) {
         ActivitySectionState.Loading -> SectionLoading()
@@ -66,27 +70,35 @@ internal fun ScheduledWorkSection(
 }
 
 @Composable
-internal fun ProposalsSection(onAllProposalsClick: () -> Unit) {
+internal fun ProposalsSection(onAllProposalsClick: () -> Unit, onAllTurnsClick: () -> Unit) {
     Text(
         text = stringResource(R.string.proposal_home_jobs),
         style = MaterialTheme.typography.titleLarge,
         modifier = Modifier.semantics { heading() },
     )
-    OutlinedButton(onClick = onAllProposalsClick) {
+    OutlinedButton(onClick = onAllProposalsClick, modifier = Modifier.testTag("jobs_view_all_proposals")) {
         Text(stringResource(R.string.proposal_home_view_all))
+    }
+    OutlinedButton(onClick = onAllTurnsClick, modifier = Modifier.testTag("jobs_view_turns")) {
+        Text(stringResource(R.string.provider_turns_title))
     }
 }
 
 @Composable
-private fun ActivitySectionHeader(title: String, count: String) {
+private fun ActivitySectionHeader(title: String, count: String, onViewAll: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .semantics { heading() },
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(text = title, style = MaterialTheme.typography.titleLarge)
+        Text(text = title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         Text(text = count, style = MaterialTheme.typography.titleLarge)
+        if (onViewAll != null) {
+            TextButton(onClick = onViewAll, modifier = Modifier.testTag("scheduled_view_all_turns")) {
+                Text(stringResource(R.string.provider_turns_view_all))
+            }
+        }
     }
 }
 

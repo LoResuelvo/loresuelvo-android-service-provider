@@ -40,6 +40,7 @@ fun ProviderHomeRoute(
         onRetryScheduledWork = viewModel::retryScheduledWork,
         onJobRequestClick = onJobRequestClick,
         onAllProposalsClick = { navController.navigate(Route.ServiceProposals.path) { launchSingleTop = true } },
+        onAllTurnsClick = { navController.navigate(Route.ProviderTurns.path) { launchSingleTop = true } },
         onMercadoPagoClick = {
             navController.navigate(Route.MercadoPagoConnect.path) {
                 launchSingleTop = true
