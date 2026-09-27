@@ -5,6 +5,8 @@ import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
+import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
+import com.loresuelvo.serviceprovider.data.api.dto.PostCompletionReportRequestDto
 import com.loresuelvo.serviceprovider.domain.api.ApiError
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,6 +44,35 @@ class ApiWorkOrderRepository @Inject constructor(
                 else -> WorkOrderDetailOutcome.Failure.Server(error.code)
             }
             is ApiError.Unknown -> WorkOrderDetailOutcome.Failure.Invalid
+        }
+    }
+
+    override suspend fun postCompletionReport(
+        orderId: Int,
+        description: String,
+        confirmedFileIds: List<String>,
+    ): PostCompletionReportOutcome = try {
+        val report = backendApi.postCompletionReport(
+            orderId,
+            PostCompletionReportRequestDto(description, confirmedFileIds),
+        )
+        if (report.id > 0) PostCompletionReportOutcome.Success(report.id)
+        else PostCompletionReportOutcome.Uncertain.InvalidResponse
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        when (val error = e.toApiError()) {
+            is ApiError.Network -> PostCompletionReportOutcome.Uncertain.Network
+            is ApiError.Unauthorized -> PostCompletionReportOutcome.Rejected.Unauthorized
+            is ApiError.Server -> when (error.code) {
+                400 -> PostCompletionReportOutcome.Rejected.InvalidData
+                403 -> PostCompletionReportOutcome.Rejected.Forbidden
+                404 -> PostCompletionReportOutcome.Rejected.NotFound
+                409 -> PostCompletionReportOutcome.Rejected.Conflict
+                in 500..599 -> PostCompletionReportOutcome.Uncertain.Server(error.code)
+                else -> PostCompletionReportOutcome.Rejected.Other(error.code)
+            }
+            is ApiError.Unknown -> PostCompletionReportOutcome.Uncertain.InvalidResponse
         }
     }
 }

@@ -55,6 +55,7 @@ object NetworkModule {
         .readTimeout(ApiConfig.READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .writeTimeout(ApiConfig.WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .callTimeout(ApiConfig.CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(false)
         .addInterceptor(authInterceptor)
         .build()
 

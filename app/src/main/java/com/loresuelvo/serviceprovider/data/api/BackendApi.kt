@@ -20,6 +20,8 @@ import com.loresuelvo.serviceprovider.data.api.dto.RegisterProviderRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.SendMessageRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderSummaryDto
 import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderDetailDto
+import com.loresuelvo.serviceprovider.data.api.dto.WorkOrderCompletionReportDto
+import com.loresuelvo.serviceprovider.data.api.dto.PostCompletionReportRequestDto
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -51,6 +53,12 @@ interface BackendApi {
 
     @GET("work-orders/{workOrderID}")
     suspend fun getWorkOrder(@Path("workOrderID") workOrderId: Int): WorkOrderDetailDto
+
+    @POST("work-orders/{workOrderID}/completion-reports")
+    suspend fun postCompletionReport(
+        @Path("workOrderID") workOrderId: Int,
+        @Body request: PostCompletionReportRequestDto,
+    ): WorkOrderCompletionReportDto
 
     @GET("conversations")
     suspend fun getConversations(): List<ConversationDto>
