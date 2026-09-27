@@ -106,19 +106,26 @@ private fun ProviderTurnCard(order: WorkOrder) {
 
 @Composable
 private fun ProviderTurnStatusBadge(orderId: Int, status: WorkOrderStatus) {
-    val (label, background, foreground) = when (status) {
-        WorkOrderStatus.Scheduled -> Triple(R.string.provider_turns_status_scheduled,
-            MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
-        WorkOrderStatus.AwaitingPayment -> Triple(R.string.provider_turns_status_awaiting_payment,
-            MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.onError)
-        WorkOrderStatus.Paid -> Triple(R.string.provider_turns_status_paid,
-            MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-        is WorkOrderStatus.Unsupported -> return
+    val badge = providerTurnStatusBadge(status) ?: return
+    val (background, foreground) = when (badge.treatment) {
+        ProviderTurnBadgeTreatment.Primary -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
+        ProviderTurnBadgeTreatment.Error -> MaterialTheme.colorScheme.error to MaterialTheme.colorScheme.onError
+        ProviderTurnBadgeTreatment.Neutral -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
     }
     Surface(modifier = Modifier.testTag("provider_turn_status_$orderId"), shape = RoundedCornerShape(50), color = background) {
-        Text(stringResource(label), Modifier.padding(horizontal = 10.dp, vertical = 4.dp), color = foreground,
+        Text(stringResource(badge.label), Modifier.padding(horizontal = 10.dp, vertical = 4.dp), color = foreground,
             style = MaterialTheme.typography.labelSmall)
     }
+}
+
+internal enum class ProviderTurnBadgeTreatment { Primary, Error, Neutral }
+internal data class ProviderTurnBadge(val label: Int, val treatment: ProviderTurnBadgeTreatment)
+
+internal fun providerTurnStatusBadge(status: WorkOrderStatus): ProviderTurnBadge? = when (status) {
+    WorkOrderStatus.Scheduled -> ProviderTurnBadge(R.string.provider_turns_status_scheduled, ProviderTurnBadgeTreatment.Primary)
+    WorkOrderStatus.AwaitingPayment -> ProviderTurnBadge(R.string.provider_turns_status_awaiting_payment, ProviderTurnBadgeTreatment.Error)
+    WorkOrderStatus.Paid -> ProviderTurnBadge(R.string.provider_turns_status_paid, ProviderTurnBadgeTreatment.Neutral)
+    is WorkOrderStatus.Unsupported -> null
 }
 
 internal fun formatTurnDate(epochMillis: Long, pattern: String, locale: Locale, timeZone: TimeZone): String =

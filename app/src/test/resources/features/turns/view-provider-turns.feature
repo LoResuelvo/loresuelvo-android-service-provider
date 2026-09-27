@@ -38,7 +38,6 @@ Característica: Visualizar turnos como prestador
       | ausente      | las iniciales AP |
       | inaccesible  | las iniciales AP |
 
-  @wip
   Esquema del escenario: 04-PVT Distinguir estados publicados sin inferencias
     Dado que una orden pasada tiene estado "<estado>"
     Cuando entro a Turnos

@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.bdd.turns
 
+import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
@@ -10,6 +11,8 @@ import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
 import com.loresuelvo.serviceprovider.ui.components.providerInitials
 import com.loresuelvo.serviceprovider.ui.screens.turns.formatTurnDate
+import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnBadgeTreatment
+import com.loresuelvo.serviceprovider.ui.screens.turns.providerTurnStatusBadge
 import io.cucumber.java.After
 import io.cucumber.java.en.Given
 import io.cucumber.java.en.When
@@ -40,6 +43,7 @@ class ProviderTurnsSteps {
     }
     private lateinit var viewModel: ProviderTurnsViewModel
     private var photoCase = ""
+    private lateinit var pastStatus: WorkOrderStatus
 
     @Given("que inicié sesión como prestador")
     fun signedIn() { Dispatchers.setMain(dispatcher) }
@@ -76,6 +80,42 @@ class ProviderTurnsSteps {
     fun enterTurns() {
         viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository))
         dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Given("que una orden pasada tiene estado {string}")
+    fun pastOrderHasStatus(status: String) {
+        pastStatus = when (status) {
+            "scheduled" -> WorkOrderStatus.Scheduled
+            "awaiting_payment" -> WorkOrderStatus.AwaitingPayment
+            "paid" -> WorkOrderStatus.Paid
+            else -> error("Unexpected status")
+        }
+        orders = listOf(WorkOrder(40, "Ana Pérez", "Existing work order",
+            Instant.parse("2020-01-01T00:00:00Z").toEpochMilli(), pastStatus))
+    }
+
+    @Then("veo la etiqueta {string} con el tratamiento {string}")
+    fun seesPublishedStatus(label: String, treatment: String) {
+        val order = (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.single()
+        val expectedLabel = when (label) {
+            "Confirmado" -> R.string.provider_turns_status_scheduled
+            "Pendiente de pago" -> R.string.provider_turns_status_awaiting_payment
+            "Pagado" -> R.string.provider_turns_status_paid
+            else -> error("Unexpected label")
+        }
+        val expectedTreatment = when (treatment) {
+            "principal" -> ProviderTurnBadgeTreatment.Primary
+            "error" -> ProviderTurnBadgeTreatment.Error
+            "superficie neutra" -> ProviderTurnBadgeTreatment.Neutral
+            else -> error("Unexpected treatment")
+        }
+        assertEquals(expectedLabel, providerTurnStatusBadge(order.status)?.label)
+        assertEquals(expectedTreatment, providerTurnStatusBadge(order.status)?.treatment)
+    }
+
+    @And("su estado no cambia por tener fecha pasada")
+    fun pastDateDoesNotChangeStatus() {
+        assertEquals(pastStatus, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.single().status)
     }
 
     @Then("veo las órdenes 40, 30, 11 y 12 en ese orden")
