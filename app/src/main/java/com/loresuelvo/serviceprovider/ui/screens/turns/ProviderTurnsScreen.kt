@@ -59,7 +59,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 @Composable
-fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {},
+fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {}, initialSelectedId: Int? = null,
     viewModel: ProviderTurnsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
@@ -71,6 +71,7 @@ fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {},
         }
     }
     ProviderTurnsScreen(state, onBack, viewModel::load, onConversation = onConversation,
+        initialSelectedId = initialSelectedId,
         onRetryConversation = viewModel::retryConversation)
 }
 
@@ -78,14 +79,18 @@ fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {},
 @OptIn(ExperimentalMaterial3Api::class)
 fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit,
     onDetails: (WorkOrder) -> Unit = {}, onConversation: (Int) -> Unit = {},
-    onRetryConversation: (Int) -> Unit = { onRetry() }) {
-    var selectedId by rememberSaveable { mutableStateOf<Int?>(null) }
+    onRetryConversation: (Int) -> Unit = { onRetry() }, initialSelectedId: Int? = null) {
+    var selectedId by rememberSaveable { mutableStateOf(initialSelectedId) }
     var missingConversation by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val selectedOrder = (state as? ProviderTurnsUiState.Ready)?.orders?.firstOrNull { it.id == selectedId }
-    BackHandler(selectedOrder != null) { selectedId = null }
+    val closeDetail = {
+        if (initialSelectedId == null) selectedId = null else onBack()
+        missingConversation = false
+    }
+    BackHandler(selectedOrder != null) { closeDetail() }
     if (selectedOrder != null) {
-        ProviderTurnDetailScreen(selectedOrder, onBack = { selectedId = null; missingConversation = false },
+        ProviderTurnDetailScreen(selectedOrder, onBack = closeDetail,
             onConversation = {
                 val conversationId = (state as? ProviderTurnsUiState.Ready)?.conversationIds?.get(selectedOrder.id)
                 if (conversationId == null) missingConversation = true else onConversation(conversationId)
@@ -155,7 +160,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
 }
 
 @Composable
-private fun ProviderTurnCard(order: WorkOrder, modifier: Modifier = Modifier, onDetails: (WorkOrder) -> Unit) {
+internal fun ProviderTurnCard(order: WorkOrder, modifier: Modifier = Modifier, onDetails: (WorkOrder) -> Unit) {
     val locale = LocalConfiguration.current.locales[0]
     val datePattern = stringResource(R.string.provider_turns_visit_pattern)
     Surface(

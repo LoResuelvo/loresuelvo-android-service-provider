@@ -41,6 +41,9 @@ fun ProviderHomeRoute(
         onJobRequestClick = onJobRequestClick,
         onAllProposalsClick = { navController.navigate(Route.ServiceProposals.path) { launchSingleTop = true } },
         onAllTurnsClick = { navController.navigate(Route.ProviderTurns.path) { launchSingleTop = true } },
+        onTurnDetailsClick = { order ->
+            navController.navigate(Route.ProviderTurnDetail.buildPath(order.id)) { launchSingleTop = true }
+        },
         onMercadoPagoClick = {
             navController.navigate(Route.MercadoPagoConnect.path) {
                 launchSingleTop = true

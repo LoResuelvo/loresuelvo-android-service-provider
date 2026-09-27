@@ -190,6 +190,19 @@ class ProviderTurnsScreenTest {
         org.junit.Assert.assertEquals(0, retries)
     }
 
+    @Test fun home_selected_detail_back_returns_to_home_without_showing_list() {
+        val order = WorkOrder(7, "Ana Pérez", "Complete reason", 1, WorkOrderStatus.Scheduled)
+        var homeBackCalls = 0
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), { homeBackCalls++ }, {},
+                initialSelectedId = order.id)
+        } }
+        compose.onNodeWithText("Detalle del turno").assertExists()
+        compose.onNodeWithText("Volver").performClick()
+        compose.runOnIdle { org.junit.Assert.assertEquals(1, homeBackCalls) }
+        compose.onNodeWithTag("provider_turns_list").assertDoesNotExist()
+    }
+
     @Test fun conversation_action_uses_only_resolved_conversation_id() {
         val order = WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled,
             serviceProposalId = 12, consumerId = 7)

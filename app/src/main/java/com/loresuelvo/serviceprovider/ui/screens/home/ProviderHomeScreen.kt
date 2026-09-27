@@ -38,6 +38,7 @@ fun ProviderHomeScreen(
     onMercadoPagoClick: () -> Unit,
     onAllProposalsClick: () -> Unit = {},
     onAllTurnsClick: () -> Unit = {},
+    onTurnDetailsClick: (com.loresuelvo.serviceprovider.domain.activity.WorkOrder) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -73,6 +74,7 @@ fun ProviderHomeScreen(
                 state = uiState.scheduledWork,
                 onRetry = onRetryScheduledWork,
                 onAllTurnsClick = onAllTurnsClick,
+                onTurnDetailsClick = onTurnDetailsClick,
             )
             ProposalsSection(onAllProposalsClick, onAllTurnsClick)
         }

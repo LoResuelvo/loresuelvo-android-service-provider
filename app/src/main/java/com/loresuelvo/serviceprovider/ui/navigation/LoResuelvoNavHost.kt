@@ -36,6 +36,7 @@ fun LoResuelvoNavHost(
     home: @Composable () -> Unit,
     serviceProposals: @Composable () -> Unit = {},
     providerTurns: @Composable () -> Unit = {},
+    providerTurnDetail: @Composable (Int) -> Unit = {},
     messages: @Composable () -> Unit,
     profile: @Composable () -> Unit,
     jobRequestDetail: @Composable (Int) -> Unit,
@@ -53,6 +54,9 @@ fun LoResuelvoNavHost(
             composable(Route.Home.path) { home() }
             composable(Route.ServiceProposals.path) { serviceProposals() }
             composable(Route.ProviderTurns.path) { providerTurns() }
+            composable(Route.ProviderTurnDetail.path,
+                arguments = listOf(navArgument(Route.ProviderTurnDetail.argument) { type = NavType.IntType }),
+            ) { entry -> providerTurnDetail(requireNotNull(entry.arguments).getInt(Route.ProviderTurnDetail.argument)) }
             composable(Route.Messages.path) { messages() }
             composable(Route.Profile.path) { profile() }
             composable(

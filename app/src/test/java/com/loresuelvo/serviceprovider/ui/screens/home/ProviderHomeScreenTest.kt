@@ -10,6 +10,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
@@ -70,6 +72,27 @@ class ProviderHomeScreenTest {
 
         assertEquals(2, turnsOpens)
         assertEquals(1, proposalOpens)
+    }
+
+    @Test
+    fun home_turn_card_details_selects_order_while_view_all_opens_list() {
+        var selected: WorkOrder? = null
+        var listOpens = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderHomeScreen(provider(), ProviderHomeUiState(
+                    jobRequests = ActivitySectionState.Ready(emptyList()),
+                    scheduledWork = ActivitySectionState.Ready(listOf(workOrder())),
+                ), {}, {}, {}, {}, onAllTurnsClick = { listOpens++ },
+                    onTurnDetailsClick = { selected = it })
+            }
+        }
+        composeTestRule.onNodeWithTag("provider_turn_details_${workOrder().id}").performScrollTo()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.runOnIdle { assertEquals(workOrder(), selected) }
+        assertEquals(0, listOpens)
+        composeTestRule.onNodeWithTag("scheduled_view_all_turns").performScrollTo().performClick()
+        assertEquals(1, listOpens)
     }
 
     @Test

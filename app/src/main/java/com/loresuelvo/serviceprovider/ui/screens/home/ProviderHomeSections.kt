@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -14,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -23,8 +27,7 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.ui.home.ActivitySectionState
-import java.text.DateFormat
-import java.util.Date
+import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnCard
 
 @Composable
 internal fun JobRequestsSection(
@@ -52,6 +55,7 @@ internal fun ScheduledWorkSection(
     state: ActivitySectionState<WorkOrder>,
     onRetry: () -> Unit,
     onAllTurnsClick: () -> Unit,
+    onTurnDetailsClick: (WorkOrder) -> Unit,
 ) {
     ActivitySectionHeader(
         title = stringResource(R.string.provider_home_scheduled_title),
@@ -64,7 +68,13 @@ internal fun ScheduledWorkSection(
         is ActivitySectionState.Ready -> if (state.items.isEmpty()) {
             SectionEmpty(stringResource(R.string.provider_home_scheduled_empty))
         } else {
-            state.items.forEach { WorkOrderCard(it) }
+            val cardWidth = minOf(370.dp, (LocalConfiguration.current.screenWidthDp - 48).dp)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("home_turns_row"),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                state.items.forEach { order ->
+                    ProviderTurnCard(order, Modifier.width(cardWidth)) { onTurnDetailsClick(it) }
+                }
+            }
         }
     }
 }
@@ -130,30 +140,6 @@ private fun JobRequestCard(
 }
 
 @Composable
-private fun WorkOrderCard(workOrder: WorkOrder) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(text = workOrder.consumerName, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = workOrder.description,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = stringResource(
-                    R.string.provider_home_scheduled_on,
-                    formatScheduledDate(workOrder),
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
 private fun SectionLoading() {
     CircularProgressIndicator()
 }
@@ -182,7 +168,3 @@ private fun <T> ActivitySectionState<T>.countOrPlaceholder(): String = when (thi
     is ActivitySectionState.Ready -> items.size.toString()
     ActivitySectionState.Error, ActivitySectionState.Loading -> "—"
 }
-
-private fun formatScheduledDate(workOrder: WorkOrder): String =
-    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
-        .format(Date(workOrder.scheduledOn))
