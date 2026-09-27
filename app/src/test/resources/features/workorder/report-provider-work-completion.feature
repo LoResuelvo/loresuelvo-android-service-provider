@@ -93,7 +93,6 @@ Característica: Informar finalización con evidencia como prestador
       | 409 por fecha o estado vigente | la orden consultada nuevamente y la explicación correspondiente  |
       | 409 por reporte existente      | la orden consultada nuevamente sin ofrecer otro reporte          |
 
-  @wip
   Esquema del escenario: 07-PIF Resolver un envío de resultado incierto antes de reintentar
     Dado que envié un reporte y la conexión se interrumpió sin conocer el resultado
     Y la consulta posterior de esa misma orden obtiene "<resultado de consulta>"

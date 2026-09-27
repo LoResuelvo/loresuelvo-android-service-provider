@@ -60,10 +60,12 @@ import io.cucumber.java.en.When
 import io.cucumber.java.en.Then
 import io.cucumber.java.en.And
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -89,16 +91,27 @@ class ReportProviderWorkCompletionSteps {
     private val submittedReports = mutableListOf<Triple<Int, String, List<String>>>()
     private var rejectedReport: PostCompletionReportOutcome.Rejected? = null
     private var conflictDetail: WorkOrderDetail? = null
+    private var uncertainReport = false
+    private val reconciliationResult = CompletableDeferred<String>()
+    private val completionHandle = SavedStateHandle()
     private val orders = object : WorkOrderRepository {
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(listOf(listedOrder))
         override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
             assertEquals(selected.id, id)
             detailCalls++
+            if (uncertainReport && submittedReports.isNotEmpty()) return when (reconciliationResult.await()) {
+                "el reporte ya está registrado" -> WorkOrderDetailOutcome.Success(
+                    detail.copy(status = WorkOrderStatus.AwaitingPayment, completionReportId = 17))
+                "sigue habilitada y no tiene reporte" -> WorkOrderDetailOutcome.Success(detail)
+                "no se pudo consultar el estado" -> WorkOrderDetailOutcome.Failure.Network(Exception("offline"))
+                else -> error("Unapproved reconciliation result")
+            }
             return WorkOrderDetailOutcome.Success(detail)
         }
         override suspend fun postCompletionReport(orderId: Int, description: String,
             confirmedFileIds: List<String>): PostCompletionReportOutcome {
             submittedReports += Triple(orderId, description, confirmedFileIds)
+            if (uncertainReport) return PostCompletionReportOutcome.Uncertain.Network
             rejectedReport?.let { rejection ->
                 conflictDetail?.let { detail = it }
                 return rejection
@@ -320,7 +333,10 @@ class ReportProviderWorkCompletionSteps {
                 (photos.last().status as EvidenceSelectionStatus.Invalid).reason)
             "un aviso para seleccionar otra foto" -> assertEquals(EvidenceImagePreparation.Invalid.Unreadable,
                 (photos.last().status as EvidenceSelectionStatus.Invalid).reason)
-            else -> { seeRejectedRecovery(result); return }
+            else -> {
+                if (uncertainReport) seeReconciliationRecovery(result) else seeRejectedRecovery(result)
+                return
+            }
         }
     }
 
@@ -616,6 +632,81 @@ class ReportProviderWorkCompletionSteps {
             completion.confirmCompletion()
         advanceUntilIdle()
         assertEquals(1, submittedReports.size)
+    }
+
+    @Given("que envié un reporte y la conexión se interrumpió sin conocer el resultado")
+    fun uncertainReportWasSent() = runTest(dispatcher.scheduler) {
+        uncertainReport = true
+        completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
+            session, evidencePreparer, validateDraft, completionUploader, orders, completionHandle)
+        completion.open(selected)
+        advanceUntilIdle()
+        completion.onDescriptionChange("Trabajo terminado y revisado")
+        completion.selectEvidence(listOf("photo://first.jpg"))
+        advanceUntilIdle()
+        completion.uploadEvidence(completion.evidence.value.single().id)
+        advanceUntilIdle()
+        assertEquals(CompletionDraftValidation.Valid("Trabajo terminado y revisado", listOf("file-first.jpg")),
+            completion.attemptSubmit())
+        completion.confirmCompletion()
+        runCurrent()
+        assertEquals(1, submittedReports.size)
+        assertEquals(selected.id, completionHandle.get<Int>("completion_pending_order_id"))
+    }
+
+    @And("la consulta posterior de esa misma orden obtiene {string}")
+    fun subsequentQueryReturns(result: String) { reconciliationResult.complete(result) }
+
+    @When("se reconcilia el estado de la orden")
+    fun reconcileUncertainReport() = runTest(dispatcher.scheduler) {
+        advanceUntilIdle()
+    }
+
+    fun seeReconciliationRecovery(recovery: String) {
+        when (recovery) {
+            "la finalización registrada y el estado vigente sin otro envío" -> {
+                assertEquals(CompletionSubmissionState.Confirmed(null, true), completion.submission.value)
+                assertEquals(CompletionEligibility.AlreadyReported,
+                    (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+                assertEquals(WorkOrderStatus.AwaitingPayment, completion.refreshedOrderStatus.value)
+                assertEquals(null, completionHandle.get<Int>("completion_pending_order_id"))
+            }
+            "el borrador conservado y la opción de confirmar un nuevo intento" -> {
+                assertEquals(CompletionSubmissionState.Idle, completion.submission.value)
+                assertEquals(CompletionEligibility.Eligible,
+                    (completion.uiState.value as ProviderCompletionUiState.Ready).eligibility)
+                assertEquals(null, completionHandle.get<Int>("completion_pending_order_id"))
+                assertEquals(CompletionDraftValidation.Valid("Trabajo terminado y revisado", listOf("file-first.jpg")),
+                    completion.attemptSubmit())
+            }
+            "el borrador conservado y la opción de reintentar sólo la consulta" -> {
+                assertEquals(CompletionSubmissionState.QueryFailed, completion.submission.value)
+                assertEquals(selected.id, completionHandle.get<Int>("completion_pending_order_id"))
+                assertEquals(CompletionDraftValidation.Valid("Trabajo terminado y revisado", listOf("file-first.jpg")),
+                    validateDraft(completion.description.value, completion.evidence.value.map {
+                        (it.uploadStatus as EvidenceUploadStatus.Confirmed).fileId
+                    }))
+            }
+            else -> error("Unapproved recovery: $recovery")
+        }
+        assertEquals(1, submittedReports.size)
+    }
+
+    @And("no se envía automáticamente otro reporte")
+    fun uncertainReportIsNotAutomaticallyRetried() = runTest(dispatcher.scheduler) {
+        if (completion.submission.value != CompletionSubmissionState.Idle) {
+            completion.confirmCompletion()
+            advanceUntilIdle()
+        }
+        assertEquals(1, submittedReports.size)
+        if (completion.submission.value == CompletionSubmissionState.QueryFailed) {
+            val queries = detailCalls
+            completion.retryReconciliation()
+            advanceUntilIdle()
+            assertTrue(detailCalls > queries)
+            assertEquals(1, submittedReports.size)
+            assertEquals(selected.id, completionHandle.get<Int>("completion_pending_order_id"))
+        }
     }
 
     @After fun tearDown() { Dispatchers.resetMain() }
