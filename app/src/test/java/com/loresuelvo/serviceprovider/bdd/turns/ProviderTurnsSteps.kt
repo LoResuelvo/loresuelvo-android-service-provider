@@ -44,6 +44,7 @@ class ProviderTurnsSteps {
     private lateinit var viewModel: ProviderTurnsViewModel
     private var photoCase = ""
     private lateinit var pastStatus: WorkOrderStatus
+    private var selectedOrder: WorkOrder? = null
 
     @Given("que inicié sesión como prestador")
     fun signedIn() { Dispatchers.setMain(dispatcher) }
@@ -116,6 +117,44 @@ class ProviderTurnsSteps {
     @And("su estado no cambia por tener fecha pasada")
     fun pastDateDoesNotChangeStatus() {
         assertEquals(pastStatus, (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.single().status)
+    }
+
+    @Given("que el motivo de una orden supera la vista previa de la tarjeta")
+    fun longOrderReason() {
+        orders = listOf(WorkOrder(40, "Ana Pérez", "Repair the kitchen tap and replace the worn valve while preserving the original fittings",
+            Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), WorkOrderStatus.Scheduled,
+            amountCents = 1500050))
+    }
+
+    @When("elijo Ver detalles en esa tarjeta")
+    fun chooseDetails() {
+        enterTurns()
+        selectedOrder = (viewModel.uiState.value as ProviderTurnsUiState.Ready).orders.single()
+    }
+
+    @Then("veo el motivo completo, consumidor, monto, fecha local y estado")
+    fun seesFullSummary() {
+        val order = requireNotNull(selectedOrder)
+        assertEquals(orders.single().description, order.description)
+        assertEquals("Ana Pérez", order.consumerName)
+        assertEquals(1500050, order.amountCents)
+        assertEquals(Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), order.scheduledOn)
+        assertEquals(WorkOrderStatus.Scheduled, order.status)
+    }
+
+    @And("puedo elegir Ver conversación")
+    fun conversationActionAvailable() {
+        assertEquals(40, requireNotNull(selectedOrder).id)
+    }
+
+    @And("no necesito cargar un reporte de finalización para consultar el motivo")
+    fun noCompletionReportNeeded() {
+        assertEquals(orders.single().description, requireNotNull(selectedOrder).description)
+    }
+
+    @And("no puedo pagar, aceptar, rechazar, calificar, cancelar o reprogramar")
+    fun noMutatingActions() {
+        assertEquals(WorkOrderStatus.Scheduled, requireNotNull(selectedOrder).status)
     }
 
     @Then("veo las órdenes 40, 30, 11 y 12 en ese orden")

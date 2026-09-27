@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.hasClickAction
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
@@ -96,8 +97,22 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("ARS 15.000,50").assertExists()
         compose.onNodeWithText("el 4 de octubre a las 21:30").assertExists()
         compose.onNodeWithText("Confirmado").assertExists()
+        org.junit.Assert.assertEquals(2, compose.onAllNodes(hasClickAction()).fetchSemanticsNodes().size)
         compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
         org.junit.Assert.assertEquals(1, conversations)
+    }
+
+    @Test fun details_back_returns_to_loaded_list_without_refetch() {
+        val order = WorkOrder(7, "Ana Pérez", "Complete reason", 1, WorkOrderStatus.Scheduled)
+        var retries = 0
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), {}, { retries++ })
+        } }
+        compose.onNodeWithTag("provider_turn_details_7").performClick()
+        compose.onNodeWithText("Detalle del turno").assertExists()
+        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithTag("provider_turn_7").assertExists()
+        org.junit.Assert.assertEquals(0, retries)
     }
 
 

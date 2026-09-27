@@ -49,7 +49,6 @@ Característica: Visualizar turnos como prestador
       | awaiting_payment | Pendiente de pago| error            |
       | paid             | Pagado           | superficie neutra|
 
-  @wip
   Escenario: 05-PVT Consultar el motivo completo en un resumen móvil
     Dado que el motivo de una orden supera la vista previa de la tarjeta
     Cuando elijo Ver detalles en esa tarjeta

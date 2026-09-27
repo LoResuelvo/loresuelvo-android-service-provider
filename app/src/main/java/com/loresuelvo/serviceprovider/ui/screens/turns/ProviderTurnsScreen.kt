@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +21,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
@@ -41,15 +46,25 @@ import java.util.Locale
 import java.util.TimeZone
 
 @Composable
-fun ProviderTurnsRoute(onBack: () -> Unit, viewModel: ProviderTurnsViewModel = hiltViewModel()) {
+fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (WorkOrder) -> Unit = {},
+    viewModel: ProviderTurnsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ProviderTurnsScreen(state, onBack, viewModel::load)
+    ProviderTurnsScreen(state, onBack, viewModel::load, onConversation = onConversation)
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit,
-    onDetails: (WorkOrder) -> Unit = {}) {
+    onDetails: (WorkOrder) -> Unit = {}, onConversation: (WorkOrder) -> Unit = {}) {
+    var selectedId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val listState = rememberLazyListState()
+    val selectedOrder = (state as? ProviderTurnsUiState.Ready)?.orders?.firstOrNull { it.id == selectedId }
+    BackHandler(selectedOrder != null) { selectedId = null }
+    if (selectedOrder != null) {
+        ProviderTurnDetailScreen(selectedOrder, onBack = { selectedId = null },
+            onConversation = { onConversation(selectedOrder) })
+        return
+    }
     Surface(Modifier.fillMaxSize()) {
         Scaffold(topBar = {
             TopAppBar(
@@ -67,9 +82,9 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                     }
                     is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
                         Text(stringResource(R.string.provider_turns_empty))
-                    } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list")) {
+                    } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list"), state = listState) {
                         items(state.orders, key = { it.id }) { order ->
-                            ProviderTurnCard(order, onDetails)
+                            ProviderTurnCard(order) { selectedId = order.id; onDetails(it) }
                         }
                     }
                 }
