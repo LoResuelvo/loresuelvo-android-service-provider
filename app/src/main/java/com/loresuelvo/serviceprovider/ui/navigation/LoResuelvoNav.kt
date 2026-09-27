@@ -148,7 +148,10 @@ fun LoResuelvoNav(
                                 )
                             },
                             providerTurns = {
-                                ProviderTurnsRoute(onBack = { navController.popBackStack() })
+                                ProviderTurnsRoute(onBack = { navController.popBackStack() },
+                                    onConversation = { conversationId ->
+                                        navController.navigate(Route.Conversation.buildPath(conversationId)) { launchSingleTop = true }
+                                    })
                             },
                             messages = {
                                 ProviderMessagesRoute(

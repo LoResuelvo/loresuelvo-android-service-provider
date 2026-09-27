@@ -6,6 +6,15 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
+import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
@@ -41,10 +50,24 @@ class ProviderTurnsSteps {
     private val repository = object : WorkOrderRepository {
         override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(orders)
     }
+    private var proposals = emptyList<ServiceProposalSummary>()
+    private var proposalListCalls = 0
+    private var proposalCreateCalls = 0
+    private val proposalRepository = object : ServiceProposalRepository {
+        override suspend fun list(): ServiceProposalListOutcome {
+            proposalListCalls++
+            return ServiceProposalListOutcome.Success(proposals)
+        }
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome {
+            proposalCreateCalls++
+            error("Must not create a proposal")
+        }
+    }
     private lateinit var viewModel: ProviderTurnsViewModel
     private var photoCase = ""
     private lateinit var pastStatus: WorkOrderStatus
     private var selectedOrder: WorkOrder? = null
+    private var openedConversationId: Int? = null
 
     @Given("que inicié sesión como prestador")
     fun signedIn() { Dispatchers.setMain(dispatcher) }
@@ -79,7 +102,7 @@ class ProviderTurnsSteps {
 
     @When("entro a Turnos")
     fun enterTurns() {
-        viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository))
+        viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposalRepository))
         dispatcher.scheduler.advanceUntilIdle()
     }
 
@@ -155,6 +178,41 @@ class ProviderTurnsSteps {
     @And("no puedo pagar, aceptar, rechazar, calificar, cancelar o reprogramar")
     fun noMutatingActions() {
         assertEquals(WorkOrderStatus.Scheduled, requireNotNull(selectedOrder).status)
+    }
+
+    @Given("que la orden 40 referencia la propuesta 12 del consumidor 7")
+    fun orderReferencesProposal() {
+        orders = listOf(WorkOrder(40, "Ana Pérez", "Work", 1, WorkOrderStatus.Scheduled,
+            serviceProposalId = 12, consumerId = 7))
+    }
+
+    @And("la propuesta 12 referencia la conversación 93")
+    fun proposalReferencesConversation() {
+        proposals = listOf(ServiceProposalSummary(
+            id = 12, conversationId = 93, amountCents = 100, scheduledOnEpochMillis = 1,
+            description = "Work", estimatedDurationMinutes = 60, status = ServiceProposalStatus.Accepted,
+            createdOnEpochMillis = 1,
+            counterpart = ServiceProposalCounterpart(7, "consumer", "Ana", "Pérez", null, null),
+            bookingTerms = ServiceProposalBookingTerms("ARS", 100, 1, 99, 1, 1, 0, 2, 99, 101, 1),
+        ))
+    }
+
+    @When("elijo Ver conversación para la orden 40")
+    fun chooseOrderConversation() {
+        enterTurns()
+        openedConversationId = (viewModel.uiState.value as ProviderTurnsUiState.Ready).conversationIds[40]
+    }
+
+    @Then("se abre la conversación 93")
+    fun opensLinkedConversation() {
+        assertEquals("conversation/93", Route.Conversation.buildPath(requireNotNull(openedConversationId)))
+    }
+
+    @And("no se crea una conversación ni se usan los IDs 40, 12 o 7 como chat")
+    fun usesOnlyLinkedConversationId() {
+        assertEquals(93, openedConversationId)
+        assertEquals(1, proposalListCalls)
+        assertEquals(0, proposalCreateCalls)
     }
 
     @Then("veo las órdenes 40, 30, 11 y 12 en ese orden")

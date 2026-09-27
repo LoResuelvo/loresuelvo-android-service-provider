@@ -46,7 +46,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 @Composable
-fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (WorkOrder) -> Unit = {},
+fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {},
     viewModel: ProviderTurnsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ProviderTurnsScreen(state, onBack, viewModel::load, onConversation = onConversation)
@@ -55,14 +55,16 @@ fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (WorkOrder) -> Unit =
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit,
-    onDetails: (WorkOrder) -> Unit = {}, onConversation: (WorkOrder) -> Unit = {}) {
+    onDetails: (WorkOrder) -> Unit = {}, onConversation: (Int) -> Unit = {}) {
     var selectedId by rememberSaveable { mutableStateOf<Int?>(null) }
     val listState = rememberLazyListState()
     val selectedOrder = (state as? ProviderTurnsUiState.Ready)?.orders?.firstOrNull { it.id == selectedId }
     BackHandler(selectedOrder != null) { selectedId = null }
     if (selectedOrder != null) {
         ProviderTurnDetailScreen(selectedOrder, onBack = { selectedId = null },
-            onConversation = { onConversation(selectedOrder) })
+            onConversation = {
+                (state as? ProviderTurnsUiState.Ready)?.conversationIds?.get(selectedOrder.id)?.let(onConversation)
+            })
         return
     }
     Surface(Modifier.fillMaxSize()) {

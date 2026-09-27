@@ -57,7 +57,6 @@ Característica: Visualizar turnos como prestador
     Y no necesito cargar un reporte de finalización para consultar el motivo
     Y no puedo pagar, aceptar, rechazar, calificar, cancelar o reprogramar
 
-  @wip
   Escenario: 06-PVT Abrir únicamente la conversación vinculada
     Dado que la orden 40 referencia la propuesta 12 del consumidor 7
     Y la propuesta 12 referencia la conversación 93

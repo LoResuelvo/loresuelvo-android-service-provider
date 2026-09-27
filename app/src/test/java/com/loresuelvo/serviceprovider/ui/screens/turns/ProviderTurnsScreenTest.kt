@@ -115,6 +115,33 @@ class ProviderTurnsScreenTest {
         org.junit.Assert.assertEquals(0, retries)
     }
 
+    @Test fun conversation_action_uses_only_resolved_conversation_id() {
+        val order = WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled,
+            serviceProposalId = 12, consumerId = 7)
+        var opened = 0
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order), mapOf(40 to 93)), {}, {},
+                onConversation = { opened = it })
+        } }
+        compose.onNodeWithTag("provider_turn_details_40").performClick()
+        compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
+        org.junit.Assert.assertEquals(93, opened)
+    }
+
+    @Test fun conversation_action_without_resolved_link_stays_on_turns() {
+        val order = WorkOrder(40, "Ana", "Work", 1, WorkOrderStatus.Scheduled,
+            serviceProposalId = 12, consumerId = 7)
+        var opened = 0
+        compose.setContent { LoresuelvoTheme {
+            ProviderTurnsScreen(ProviderTurnsUiState.Ready(listOf(order)), {}, {},
+                onConversation = { opened = it })
+        } }
+        compose.onNodeWithTag("provider_turn_details_40").performClick()
+        compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
+        org.junit.Assert.assertEquals(0, opened)
+        compose.onNodeWithText("Detalle del turno").assertExists()
+    }
+
 
     private fun showOrder(photo: String?) {
         val order = WorkOrder(

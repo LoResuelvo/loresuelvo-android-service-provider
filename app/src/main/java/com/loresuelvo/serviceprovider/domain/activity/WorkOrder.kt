@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.domain.activity
 
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+
 data class WorkOrder(
     val id: Int,
     val consumerName: String,
@@ -20,3 +22,8 @@ sealed interface WorkOrderStatus {
     data object AwaitingPayment : WorkOrderStatus
     data class Unsupported(val value: String) : WorkOrderStatus
 }
+
+fun WorkOrder.linkedConversationId(proposals: List<ServiceProposalSummary>): Int? =
+    if (serviceProposalId <= 0 || consumerId <= 0) null else proposals
+        .firstOrNull { it.id == serviceProposalId && it.counterpart.id == consumerId }
+        ?.conversationId?.takeIf { it > 0 }
