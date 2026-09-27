@@ -90,7 +90,6 @@ Característica: Visualizar turnos como prestador
     Y las ordena por fecha ascendente y luego por ID ascendente
     Y Ver todos permite consultar también las órdenes excluidas del resumen
 
-  @wip
   Escenario: 10-PVT Mostrar carga sin inventar un vacío
     Dado que la consulta de órdenes todavía no respondió
     Cuando entro a Turnos

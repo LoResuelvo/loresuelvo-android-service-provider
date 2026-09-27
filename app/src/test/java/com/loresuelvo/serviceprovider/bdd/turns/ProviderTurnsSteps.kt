@@ -39,6 +39,7 @@ import java.time.Instant
 import java.util.Locale
 import java.util.TimeZone
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -54,8 +55,13 @@ class ProviderTurnsSteps {
         WorkOrder(1, "Ana Pérez", "Reparar canilla", 1, WorkOrderStatus.Scheduled),
         WorkOrder(2, "Bea Silva", "Pintar pared", 2, WorkOrderStatus.Paid),
     )
+    private var pendingOrders: CompletableDeferred<ActivityLoadOutcome<WorkOrder>>? = null
+    private var orderCalls = 0
     private val repository = object : WorkOrderRepository {
-        override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(orders)
+        override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> {
+            orderCalls++
+            return pendingOrders?.await() ?: ActivityLoadOutcome.Success(orders)
+        }
     }
     private var proposals = emptyList<ServiceProposalSummary>()
     private var proposalListCalls = 0
@@ -115,6 +121,23 @@ class ProviderTurnsSteps {
     fun enterTurns() {
         viewModel = ProviderTurnsViewModel(GetProviderTurnsUseCase(repository), GetServiceProposalsUseCase(proposalRepository))
         dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Given("que la consulta de órdenes todavía no respondió")
+    fun ordersArePending() {
+        Dispatchers.setMain(dispatcher)
+        pendingOrders = CompletableDeferred()
+    }
+
+    @Then("veo un indicador y texto de carga accesibles")
+    fun seesLoading() {
+        assertEquals(1, orderCalls)
+        assertEquals(ProviderTurnsUiState.Loading, viewModel.uiState.value)
+    }
+
+    @And("no veo un mensaje de lista vacía")
+    fun noPrematureEmptyState() {
+        assertNotEquals(ProviderTurnsUiState.Ready(emptyList()), viewModel.uiState.value)
     }
 
     @Given("que una orden pasada tiene estado {string}")
@@ -392,5 +415,5 @@ class ProviderTurnsSteps {
         assertNotEquals(Route.ProviderTurns.path, Route.ServiceProposals.path)
     }
 
-    @After fun tearDown() { Dispatchers.resetMain() }
+    @After fun tearDown() { pendingOrders?.cancel(); Dispatchers.resetMain() }
 }
