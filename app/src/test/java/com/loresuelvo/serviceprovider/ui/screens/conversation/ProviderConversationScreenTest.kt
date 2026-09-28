@@ -43,6 +43,43 @@ class ProviderConversationScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    @Test fun top_bar_opens_only_verified_order_id_without_proposal_sheet() {
+        var openedId: Int? = null
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(""),
+                    orderLinkState = ConversationOrderLinkUiState.Linked(42),
+                    onOrderDetail = { openedId = it },
+                    onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                    onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("provider_chat_order_detail").assertIsDisplayed().performClick()
+        assertEquals(42, openedId)
+        composeTestRule.onNodeWithTag("proposal_detail_reason").assertDoesNotExist()
+    }
+
+    @Test fun failed_order_lookup_keeps_messages_and_offers_retry() {
+        var retries = 0
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState(""),
+                    orderLinkState = ConversationOrderLinkUiState.Error,
+                    onRetryOrderLink = { retries++ },
+                    onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                    onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag("provider_chat_order_detail").assertDoesNotExist()
+        composeTestRule.onNodeWithTag(PROVIDER_CONVERSATION_MESSAGES_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Reintentar").performClick()
+        assertEquals(1, retries)
+    }
+
     @Test fun proposal_failure_keeps_chat_and_offers_retry() {
         var retries = 0
         composeTestRule.setContent {

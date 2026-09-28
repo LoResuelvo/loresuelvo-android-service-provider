@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -91,6 +92,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProviderConversationScreen(
     state: ProviderConversationUiState,
+    orderLinkState: ConversationOrderLinkUiState = ConversationOrderLinkUiState.Missing,
+    onOrderDetail: (Int) -> Unit = {},
+    onRetryOrderLink: () -> Unit = {},
     serviceProposal: ServiceProposalSummary? = null,
     serviceProposalLoading: Boolean = false,
     serviceProposalFailure: ServiceProposalListOutcome.Failure? = null,
@@ -166,7 +170,22 @@ fun ProviderConversationScreen(
                         )
                     }
                 },
+                actions = {
+                    if (state is ProviderConversationUiState.Ready &&
+                        orderLinkState is ConversationOrderLinkUiState.Linked) {
+                        TextButton(onClick = { onOrderDetail(orderLinkState.orderId) },
+                            modifier = Modifier.testTag("provider_chat_order_detail")) {
+                            Text(stringResource(R.string.provider_chat_order_detail))
+                        }
+                    }
+                },
             )
+            if (state is ProviderConversationUiState.Ready && orderLinkState == ConversationOrderLinkUiState.Error) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                    Text(stringResource(R.string.provider_chat_order_link_error))
+                    Button(onClick = onRetryOrderLink) { Text(stringResource(R.string.provider_home_retry)) }
+                }
+            }
             if (state is ProviderConversationUiState.Ready && serviceProposalLoading) {
                 val loadingLabel = stringResource(R.string.proposal_list_loading)
                 Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {

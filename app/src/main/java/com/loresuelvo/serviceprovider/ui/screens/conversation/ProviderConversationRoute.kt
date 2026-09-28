@@ -58,6 +58,8 @@ fun ProviderConversationRoute(
 ) {
     val viewModel: ProviderConversationViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val orderLinkViewModel: ConversationOrderLinkViewModel = hiltViewModel()
+    val orderLinkState by orderLinkViewModel.uiState.collectAsStateWithLifecycle()
     val proposalListViewModel: ServiceProposalListViewModel = hiltViewModel()
     val proposalListState by proposalListViewModel.uiState.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { proposalListViewModel.onResume() }
@@ -121,6 +123,11 @@ fun ProviderConversationRoute(
 
     ProviderConversationScreen(
         state = state,
+        orderLinkState = orderLinkState,
+        onOrderDetail = { orderId ->
+            navController.navigate(Route.ProviderTurnDetail.buildPath(orderId)) { launchSingleTop = true }
+        },
+        onRetryOrderLink = orderLinkViewModel::load,
         serviceProposal = proposalListState.proposalInConversation(conversationId),
         serviceProposalLoading = proposalListState.loading,
         serviceProposalFailure = proposalListState.failure,

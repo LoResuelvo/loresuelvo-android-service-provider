@@ -11,13 +11,21 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
+import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderTurnsUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderWorkOrderDetailUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.activity.ResolveConversationWorkOrderUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import com.loresuelvo.serviceprovider.ui.components.providerInitials
 import com.loresuelvo.serviceprovider.ui.navigation.Route
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ConversationOrderLinkUiState
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ConversationOrderLinkViewModel
 import com.loresuelvo.serviceprovider.ui.screens.turns.formatTurnDate
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnDetailUiState
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnDetailViewModel
@@ -57,6 +65,7 @@ class ViewProviderWorkOrderDetailSteps {
     private var origin = ""
     private var detailCalls = 0
     private var listCalls = 0
+    private var linkedProposals = emptyList<ServiceProposalSummary>()
     private val orders = object : WorkOrderRepository {
         override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
             detailCalls++
@@ -69,11 +78,12 @@ class ViewProviderWorkOrderDetailSteps {
         }
     }
     private val proposals = object : ServiceProposalRepository {
-        override suspend fun list() = ServiceProposalListOutcome.Success(emptyList())
+        override suspend fun list() = ServiceProposalListOutcome.Success(linkedProposals)
         override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
             error("No proposal should be created")
     }
     private lateinit var model: ProviderTurnDetailViewModel
+    private lateinit var linkModel: ConversationOrderLinkViewModel
 
     @Given("que estoy autenticado como prestador")
     fun signedIn() { Dispatchers.setMain(dispatcher) }
@@ -127,6 +137,52 @@ class ViewProviderWorkOrderDetailSteps {
     @And("no veo acciones para pagar ni escribir una reseña")
     fun noConsumerActions() { assertEquals(WorkOrderStatus.Scheduled,
         (ready().result.detail as WorkOrderDetailOutcome.Success).order.status) }
+
+    @Given("que estoy en la conversación 70 con Ana Pérez")
+    fun inConversation() { origin = "chat" }
+
+    @And("esa conversación tiene vinculada la orden 42 de la propuesta 10")
+    fun conversationHasOrder() {
+        linkedProposals = listOf(ServiceProposalSummary(10, 70, 123456, scheduledOn, "Work", 60,
+            ServiceProposalStatus.Accepted, 1,
+            ServiceProposalCounterpart(3, "consumer", "Ana", "Pérez", null, null),
+            ServiceProposalBookingTerms("ARS", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+    }
+
+    @And("veo la acción Ver detalle de la orden en la barra superior del chat")
+    fun seesDirectAction() {
+        linkModel = ConversationOrderLinkViewModel(SavedStateHandle(mapOf("conversationId" to 70)),
+            ResolveConversationWorkOrderUseCase(GetServiceProposalsUseCase(proposals),
+                GetProviderTurnsUseCase(orders)), session)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(ConversationOrderLinkUiState.Linked(42), linkModel.uiState.value)
+    }
+
+    @When("elijo Ver detalle de la orden")
+    fun opensOrderFromChat() {
+        val orderId = (linkModel.uiState.value as ConversationOrderLinkUiState.Linked).orderId
+        assertEquals("provider_turns/42", Route.ProviderTurnDetail.buildPath(orderId))
+        model = ProviderTurnDetailViewModel(SavedStateHandle(mapOf("turnId" to orderId)),
+            GetProviderWorkOrderDetailUseCase(orders), GetServiceProposalsUseCase(proposals), session)
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("veo el detalle vigente de la orden 42 con la identidad de su consumidor")
+    fun seesChatOrder() {
+        val current = (ready().result.detail as WorkOrderDetailOutcome.Success).order
+        assertEquals(42, current.id)
+        assertEquals("Ana Pérez", ready().result.consumer?.consumerName)
+    }
+
+    @And("no necesito abrir el detalle de una propuesta")
+    fun directDestination() { assertEquals("chat", origin) }
+
+    @And("no se usa el número de la propuesta ni de la conversación como número de orden")
+    fun idsStayDistinct() {
+        val id = (ready().result.detail as WorkOrderDetailOutcome.Success).order.id
+        assertEquals(42, id)
+        assertTrue(id != linkedProposals.single().id && id != linkedProposals.single().conversationId)
+    }
 
     private fun ready() = model.uiState.value as ProviderTurnDetailUiState.Ready
 

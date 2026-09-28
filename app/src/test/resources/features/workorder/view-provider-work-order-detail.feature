@@ -18,7 +18,6 @@ Característica: Consultar el detalle y la evidencia de una orden como prestador
       | Turnos                      |
       | trabajos agendados de Inicio |
 
-  @wip
   Escenario: 02-PDO Abrir la orden directamente desde el chat
     Dado que estoy en la conversación 70 con Ana Pérez
     Y esa conversación tiene vinculada la orden 42 de la propuesta 10

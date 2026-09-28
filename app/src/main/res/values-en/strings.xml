@@ -16,6 +16,8 @@
     <string name="provider_turns_detail_title">Appointment details</string>
     <string name="provider_order_consumer_unavailable">Customer unavailable</string>
     <string name="provider_order_detail_error">We couldn’t load the order details.</string>
+    <string name="provider_chat_order_detail">View order details</string>
+    <string name="provider_chat_order_link_error">We couldn’t find the order for this conversation.</string>
     <string name="provider_turns_detail_consumer">Customer</string>
     <string name="provider_turns_detail_amount">Amount</string>
     <string name="provider_turns_detail_date">Date</string>

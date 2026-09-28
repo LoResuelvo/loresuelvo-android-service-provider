@@ -16,6 +16,8 @@
     <string name="provider_turns_detail_title">Detalle del turno</string>
     <string name="provider_order_consumer_unavailable">Consumidor no disponible</string>
     <string name="provider_order_detail_error">No pudimos cargar el detalle de la orden.</string>
+    <string name="provider_chat_order_detail">Ver detalle de la orden</string>
+    <string name="provider_chat_order_link_error">No pudimos buscar la orden de esta conversación.</string>
     <string name="provider_turns_detail_consumer">Consumidor</string>
     <string name="provider_turns_detail_amount">Monto</string>
     <string name="provider_turns_detail_date">Fecha</string>
