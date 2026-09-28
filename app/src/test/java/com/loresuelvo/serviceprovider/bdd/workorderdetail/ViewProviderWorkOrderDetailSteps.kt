@@ -262,6 +262,7 @@ class ViewProviderWorkOrderDetailSteps {
     private fun ready() = model.uiState.value as ProviderTurnDetailUiState.Ready
 
     @After fun tearDown() {
+        Dispatchers.setMain(dispatcher)
         session.clearSession()
         dispatcher.scheduler.advanceUntilIdle()
         Dispatchers.resetMain()
