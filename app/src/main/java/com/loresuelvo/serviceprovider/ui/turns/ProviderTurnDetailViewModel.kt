@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.activity.linkedConversationId
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
@@ -25,12 +26,13 @@ sealed interface ProviderTurnDetailUiState {
 
 @HiltViewModel
 class ProviderTurnDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val getDetail: GetProviderWorkOrderDetailUseCase,
     private val getProposals: GetServiceProposalsUseCase,
     private val sessions: AuthSessionStore,
 ) : ViewModel() {
     val orderId: Int = savedStateHandle["turnId"] ?: 0
+    val selectedFileId = savedStateHandle.getStateFlow<String?>("selectedFileId", null)
     private var initialResumePending = true
     private var loadJob: Job? = null
     private var activeSession = sessions.getSession()
@@ -43,6 +45,7 @@ class ProviderTurnDetailViewModel @Inject constructor(
                 if (session != activeSession) {
                     activeSession = session
                     loadJob?.cancel()
+                    savedStateHandle["selectedFileId"] = null
                     _uiState.value = ProviderTurnDetailUiState.Error(WorkOrderDetailOutcome.Failure.Unauthorized)
                 }
             }
@@ -63,6 +66,10 @@ class ProviderTurnDetailViewModel @Inject constructor(
             if (sessions.getSession() != requestSession) return@launch
             _uiState.value = when (val detail = result.detail) {
                 is WorkOrderDetailOutcome.Success -> {
+                    if (selectedFileId.value != null && detail.order.completionReport?.images
+                            ?.count { it.fileId == selectedFileId.value } != 1) {
+                        savedStateHandle["selectedFileId"] = null
+                    }
                     val proposals = getProposals()
                     if (sessions.getSession() != requestSession) return@launch
                     if (proposals == ServiceProposalListOutcome.Failure.SessionExpired) {
@@ -83,4 +90,16 @@ class ProviderTurnDetailViewModel @Inject constructor(
     fun onResume() {
         if (initialResumePending) initialResumePending = false else load()
     }
+
+    fun selectFile(fileId: String) {
+        val current = (_uiState.value as? ProviderTurnDetailUiState.Ready)?.result?.detail
+            as? WorkOrderDetailOutcome.Success ?: return
+        if (current.order.status != WorkOrderStatus.AwaitingPayment &&
+            current.order.status != WorkOrderStatus.Paid) return
+        if (current.order.completionReport?.images?.count { it.fileId == fileId } == 1) {
+            savedStateHandle["selectedFileId"] = fileId
+        }
+    }
+
+    fun closeViewer() { savedStateHandle["selectedFileId"] = null }
 }

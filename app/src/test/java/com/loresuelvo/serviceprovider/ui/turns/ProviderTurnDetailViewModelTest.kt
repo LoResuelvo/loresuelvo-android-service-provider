@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionImage
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionReport
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
@@ -87,5 +89,53 @@ class ProviderTurnDetailViewModelTest {
         pending.complete(WorkOrderDetailOutcome.Success(detail))
         advanceUntilIdle()
         assertTrue(model.uiState.value is ProviderTurnDetailUiState.Ready)
+    }
+
+    @Test fun saves_only_selected_file_id_and_uses_refreshed_url_after_requery() = runTest(dispatcher.scheduler) {
+        val saved = SavedStateHandle(mapOf("turnId" to 42))
+        var url = "https://storage.test/old"
+        val orders = object : WorkOrderRepository {
+            override suspend fun getWorkOrder(id: Int) = WorkOrderDetailOutcome.Success(detail.copy(
+                status = WorkOrderStatus.Paid, completionReportId = 17,
+                completionReport = WorkOrderCompletionReport(17, "Done", 1000,
+                    listOf(WorkOrderCompletionImage("file-2", "two.jpg", url)))))
+            override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(emptyList<WorkOrder>())
+        }
+        val model = ProviderTurnDetailViewModel(saved, GetProviderWorkOrderDetailUseCase(orders), proposals, session)
+        advanceUntilIdle()
+        model.selectFile("unknown")
+        assertEquals(null, model.selectedFileId.value)
+        model.selectFile("file-2")
+        assertEquals("file-2", saved.get<String>("selectedFileId"))
+        url = "https://storage.test/fresh"
+        model.load()
+        advanceUntilIdle()
+        assertEquals("file-2", model.selectedFileId.value)
+        val current = ((model.uiState.value as ProviderTurnDetailUiState.Ready).result.detail
+            as WorkOrderDetailOutcome.Success).order
+        assertEquals(url, current.completionReport?.images?.single()?.url)
+        model.closeViewer()
+        assertEquals(null, saved.get<String>("selectedFileId"))
+    }
+
+    @Test fun restores_selected_file_id_only_after_current_detail_arrives() = runTest(dispatcher.scheduler) {
+        val saved = SavedStateHandle(mapOf("turnId" to 42, "selectedFileId" to "file-2"))
+        val pending = CompletableDeferred<WorkOrderDetailOutcome>()
+        val orders = object : WorkOrderRepository {
+            override suspend fun getWorkOrder(id: Int) = pending.await()
+            override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(emptyList<WorkOrder>())
+        }
+        val model = ProviderTurnDetailViewModel(saved, GetProviderWorkOrderDetailUseCase(orders), proposals, session)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ProviderTurnDetailUiState.Loading, model.uiState.value)
+        pending.complete(WorkOrderDetailOutcome.Success(detail.copy(status = WorkOrderStatus.Paid,
+            completionReportId = 17, completionReport = WorkOrderCompletionReport(17, "Done", 1000,
+                listOf(WorkOrderCompletionImage("file-2", "two.jpg", "https://storage.test/fresh"))))))
+        advanceUntilIdle()
+        assertEquals("file-2", model.selectedFileId.value)
+        assertTrue(model.uiState.value is ProviderTurnDetailUiState.Ready)
+        session.clearSession()
+        advanceUntilIdle()
+        assertEquals(null, model.selectedFileId.value)
     }
 }
