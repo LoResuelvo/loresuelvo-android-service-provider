@@ -73,6 +73,21 @@ class ApiWorkOrderDetailRepositoryTest {
         assertEquals(emptyList<String>(), current.completionReport?.images?.map { it.fileId })
     }
 
+    @Test fun maps_optional_paid_time_and_review_without_inventing_missing_values() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody(detail(status = "paid", report =
+            ",\"paid_on\":\"2026-08-15T13:00:00-03:00\",\"review\":{\"rating\":5,\"description\":\"Excellent\"}")))
+        val paid = (repository().getWorkOrder(42) as WorkOrderDetailOutcome.Success).order
+        assertEquals(Instant.parse("2026-08-15T16:00:00Z").toEpochMilli(), paid.paidOn)
+        assertEquals(5, paid.review?.rating)
+        assertEquals("Excellent", paid.review?.description)
+
+        server.enqueue(MockResponse().setResponseCode(200).setBody(detail(status = "paid", report =
+            ",\"paid_on\":\"bad-date\",\"review\":null")))
+        val missing = (repository().getWorkOrder(42) as WorkOrderDetailOutcome.Success).order
+        assertEquals(null, missing.paidOn)
+        assertEquals(null, missing.review)
+    }
+
     @Test fun maps_auth_permission_missing_server_and_network_failures() = runTest {
         val expected = listOf(
             401 to WorkOrderDetailOutcome.Failure.Unauthorized,

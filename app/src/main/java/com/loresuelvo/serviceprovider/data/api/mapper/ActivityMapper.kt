@@ -12,6 +12,7 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionReport
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderReview
 
 internal fun JobRequestSummaryDto.toDomain(): JobRequest = JobRequest(
     id = id,
@@ -59,6 +60,10 @@ internal fun WorkOrderDetailDto.toDomain(): WorkOrderDetail = WorkOrderDetail(
             images = report.images.filter { it.fileId.isNotBlank() && it.url.isNotBlank() }
                 .map { WorkOrderCompletionImage(it.fileId, it.originalName, it.url) },
         )
+    },
+    paidOn = paidOn?.let { runCatching { it.toEpochMillis() }.getOrNull() },
+    review = review?.takeIf { it.rating in 1..5 }?.let {
+        WorkOrderReview(it.rating, it.description.takeIf(String::isNotBlank))
     },
 )
 

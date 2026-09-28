@@ -11,9 +11,13 @@ data class WorkOrderDetail(
     val status: WorkOrderStatus,
     val completionReportId: Int?,
     val completionReport: WorkOrderCompletionReport? = null,
+    val paidOn: Long? = null,
+    val review: WorkOrderReview? = null,
 ) {
     init { require(completionReport == null || completionReport.id == completionReportId) }
 }
+
+data class WorkOrderReview(val rating: Int, val description: String?)
 
 data class WorkOrderCompletionReport(
     val id: Int,
