@@ -136,7 +136,7 @@ class ProviderTurnsScreenTest {
         compose.onAllNodesWithTag("provider_turn_status_4").fetchSemanticsNodes().isEmpty().let { org.junit.Assert.assertTrue(it) }
     }
 
-    @Test fun details_action_only_opens_summary() {
+    @Test fun details_action_dispatches_selected_order_for_navigation() {
         val order = WorkOrder(7, "Ana Pérez", "A long reason that must remain fully visible in detail",
             Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), WorkOrderStatus.Scheduled,
             amountCents = 1500050)
@@ -175,6 +175,20 @@ class ProviderTurnsScreenTest {
 
         compose.onNodeWithText("AP").assertExists()
         compose.onNodeWithText("Ana Pérez").assertExists()
+    }
+
+    @Test fun current_scheduled_detail_shows_exact_amount_and_no_consumer_actions() {
+        val order = WorkOrder(42, "Ana Pérez", "Repair the kitchen tap and preserve the fittings",
+            Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), WorkOrderStatus.Scheduled,
+            amountCents = 123456, consumerGivenName = "Ana", consumerSurname = "Pérez")
+        compose.setContent { LoresuelvoTheme { ProviderTurnDetailScreen(order, {}, {}) } }
+
+        compose.onNodeWithText("ARS 1.234,56").assertExists()
+        compose.onNodeWithText("el 4 de octubre a las 21:30").assertExists()
+        compose.onNodeWithText(order.description).assertExists()
+        compose.onNodeWithText("Confirmado").assertExists()
+        compose.onNodeWithText("Pagar").assertDoesNotExist()
+        compose.onNodeWithText("Escribir reseña").assertDoesNotExist()
     }
 
     @Test fun completion_action_uses_selected_real_order_from_turns_list() {

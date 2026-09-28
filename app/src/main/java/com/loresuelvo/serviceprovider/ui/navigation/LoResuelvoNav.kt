@@ -40,7 +40,13 @@ import com.loresuelvo.serviceprovider.ui.screens.home.ProviderHomeRoute
 import com.loresuelvo.serviceprovider.ui.screens.proposals.ServiceProposalListRoute
 import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnsRoute
 import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderCompletionRoute
-import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsViewModel
+import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnDetailRoute
+import com.loresuelvo.serviceprovider.ui.screens.turns.toDisplayOrder
+import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnDetailUiState
+import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnDetailViewModel
+import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
+import androidx.compose.ui.res.stringResource
+import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailRoute
 import com.loresuelvo.serviceprovider.ui.screens.messages.ProviderMessagesRoute
 import com.loresuelvo.serviceprovider.ui.screens.identity.OptionalIdentityVerificationRoute
@@ -151,6 +157,9 @@ fun LoResuelvoNav(
                             },
                             providerTurns = {
                                 ProviderTurnsRoute(onBack = { navController.popBackStack() },
+                                    onDetails = { order ->
+                                        navController.navigate(Route.ProviderTurnDetail.buildPath(order.id)) { launchSingleTop = true }
+                                    },
                                     onCompletion = { orderId ->
                                         navController.navigate(Route.ProviderCompletion.buildPath(orderId)) { launchSingleTop = true }
                                     },
@@ -159,8 +168,7 @@ fun LoResuelvoNav(
                                     })
                             },
                             providerTurnDetail = { turnId ->
-                                ProviderTurnsRoute(onBack = { navController.popBackStack() },
-                                    initialSelectedId = turnId,
+                                ProviderTurnDetailRoute(onBack = { navController.popBackStack() },
                                     onCompletion = { orderId ->
                                         navController.navigate(Route.ProviderCompletion.buildPath(orderId)) { launchSingleTop = true }
                                     },
@@ -169,15 +177,20 @@ fun LoResuelvoNav(
                                     })
                             },
                             providerCompletion = { orderId ->
-                                val turnsEntry = navController.previousBackStackEntry
-                                if (turnsEntry != null) {
-                                    val turnsViewModel: ProviderTurnsViewModel = hiltViewModel(turnsEntry)
-                                    val turnsState by turnsViewModel.uiState.collectAsStateWithLifecycle()
-                                    ProviderCompletionRoute(orderId, turnsState,
+                                val detailEntry = navController.previousBackStackEntry
+                                if (detailEntry != null) {
+                                    val detailViewModel: ProviderTurnDetailViewModel = hiltViewModel(detailEntry)
+                                    val detailState by detailViewModel.uiState.collectAsStateWithLifecycle()
+                                    val order = (detailState as? ProviderTurnDetailUiState.Ready)
+                                        ?.takeIf { it.result.consumer != null }
+                                        ?.toDisplayOrder(stringResource(R.string.provider_order_consumer_unavailable))
+                                    val completionState = if (order == null) ProviderTurnsUiState.Error
+                                        else ProviderTurnsUiState.Ready(listOf(order))
+                                    ProviderCompletionRoute(orderId, completionState,
                                         onBack = { navController.popBackStack() },
-                                        onRetryTurns = turnsViewModel::load,
+                                        onRetryTurns = detailViewModel::load,
                                         onReportConfirmed = {
-                                            turnsViewModel.load(preserveContent = true)
+                                            detailViewModel.load()
                                             runCatching { navController.getBackStackEntry(Route.Home.path) }.getOrNull()
                                                 ?.savedStateHandle?.set(Route.ProviderCompletion.reportedOrderId, orderId)
                                         })

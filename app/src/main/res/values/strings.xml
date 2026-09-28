@@ -14,6 +14,8 @@
     <string name="provider_turns_status_paid">Pagado</string>
     <string name="provider_turns_status_unknown">Estado no disponible</string>
     <string name="provider_turns_detail_title">Detalle del turno</string>
+    <string name="provider_order_consumer_unavailable">Consumidor no disponible</string>
+    <string name="provider_order_detail_error">No pudimos cargar el detalle de la orden.</string>
     <string name="provider_turns_detail_consumer">Consumidor</string>
     <string name="provider_turns_detail_amount">Monto</string>
     <string name="provider_turns_detail_date">Fecha</string>

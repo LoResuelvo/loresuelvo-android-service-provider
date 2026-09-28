@@ -4,9 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
+import com.loresuelvo.serviceprovider.domain.activity.linkedConversationId
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderWorkOrderDetailUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.activity.ProviderWorkOrderDetailResult
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -16,7 +19,7 @@ import kotlinx.coroutines.launch
 
 sealed interface ProviderTurnDetailUiState {
     data object Loading : ProviderTurnDetailUiState
-    data class Ready(val result: ProviderWorkOrderDetailResult) : ProviderTurnDetailUiState
+    data class Ready(val result: ProviderWorkOrderDetailResult, val conversationId: Int?) : ProviderTurnDetailUiState
     data class Error(val failure: WorkOrderDetailOutcome.Failure) : ProviderTurnDetailUiState
 }
 
@@ -24,9 +27,11 @@ sealed interface ProviderTurnDetailUiState {
 class ProviderTurnDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getDetail: GetProviderWorkOrderDetailUseCase,
+    private val getProposals: GetServiceProposalsUseCase,
     private val sessions: AuthSessionStore,
 ) : ViewModel() {
     val orderId: Int = savedStateHandle["turnId"] ?: 0
+    private var initialResumePending = true
     private var loadJob: Job? = null
     private var activeSession = sessions.getSession()
     private val _uiState = MutableStateFlow<ProviderTurnDetailUiState>(ProviderTurnDetailUiState.Loading)
@@ -57,12 +62,25 @@ class ProviderTurnDetailViewModel @Inject constructor(
             val result = getDetail(orderId)
             if (sessions.getSession() != requestSession) return@launch
             _uiState.value = when (val detail = result.detail) {
-                is WorkOrderDetailOutcome.Success -> ProviderTurnDetailUiState.Ready(result)
+                is WorkOrderDetailOutcome.Success -> {
+                    val proposals = getProposals()
+                    if (sessions.getSession() != requestSession) return@launch
+                    if (proposals == ServiceProposalListOutcome.Failure.SessionExpired) {
+                        sessions.clearSession()
+                        ProviderTurnDetailUiState.Error(WorkOrderDetailOutcome.Failure.Unauthorized)
+                    } else ProviderTurnDetailUiState.Ready(result,
+                        result.consumer?.linkedConversationId(
+                            (proposals as? ServiceProposalListOutcome.Success)?.proposals.orEmpty()))
+                }
                 is WorkOrderDetailOutcome.Failure -> {
                     if (detail == WorkOrderDetailOutcome.Failure.Unauthorized) sessions.clearSession()
                     ProviderTurnDetailUiState.Error(detail)
                 }
             }
         }
+    }
+
+    fun onResume() {
+        if (initialResumePending) initialResumePending = false else load()
     }
 }

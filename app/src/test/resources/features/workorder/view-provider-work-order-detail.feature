@@ -4,7 +4,6 @@ Característica: Consultar el detalle y la evidencia de una orden como prestador
   Antecedentes:
     Dado que estoy autenticado como prestador
 
-  @wip
   Esquema del escenario: 01-PDO Abrir el detalle actualizado desde un trabajo agendado
     Dado que la orden 42 de la propuesta 10 aparece en "<origen>"
     Y pertenece al consumidor Ana Pérez sin fotografía de perfil

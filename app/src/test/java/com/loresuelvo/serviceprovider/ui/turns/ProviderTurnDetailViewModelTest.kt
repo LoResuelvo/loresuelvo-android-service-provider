@@ -10,7 +10,12 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
+import com.loresuelvo.serviceprovider.domain.proposal.CreateServiceProposalOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalRepository
+import com.loresuelvo.serviceprovider.domain.proposal.ValidatedServiceProposal
 import com.loresuelvo.serviceprovider.domain.usecase.activity.GetProviderWorkOrderDetailUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.proposal.GetServiceProposalsUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,6 +42,11 @@ class ProviderTurnDetailViewModelTest {
     }
     private val detail = WorkOrderDetail(42, 10, 3, 7, 123456, 1000, "Current reason",
         WorkOrderStatus.Scheduled, null)
+    private val proposals = GetServiceProposalsUseCase(object : ServiceProposalRepository {
+        override suspend fun list() = ServiceProposalListOutcome.Success(emptyList())
+        override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+            error("Not used")
+    })
 
     @Before fun setUp() { Dispatchers.setMain(dispatcher) }
     @After fun tearDown() { Dispatchers.resetMain() }
@@ -49,7 +59,7 @@ class ProviderTurnDetailViewModelTest {
                     serviceProposalId = 10, consumerId = 3)))
         }
         val model = ProviderTurnDetailViewModel(SavedStateHandle(mapOf("turnId" to 42)),
-            GetProviderWorkOrderDetailUseCase(orders), session)
+            GetProviderWorkOrderDetailUseCase(orders), proposals, session)
         assertEquals(ProviderTurnDetailUiState.Loading, model.uiState.value)
         advanceUntilIdle()
         val ready = model.uiState.value as ProviderTurnDetailUiState.Ready
@@ -69,7 +79,7 @@ class ProviderTurnDetailViewModelTest {
             override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(emptyList<WorkOrder>())
         }
         val model = ProviderTurnDetailViewModel(SavedStateHandle(mapOf("turnId" to 42)),
-            GetProviderWorkOrderDetailUseCase(orders), session)
+            GetProviderWorkOrderDetailUseCase(orders), proposals, session)
         dispatcher.scheduler.runCurrent()
         model.load()
         assertEquals(1, calls)

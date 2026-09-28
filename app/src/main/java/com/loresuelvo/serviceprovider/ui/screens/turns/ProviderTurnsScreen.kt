@@ -59,7 +59,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 @Composable
-fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {}, initialSelectedId: Int? = null,
+fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {}, onDetails: (WorkOrder) -> Unit = {},
+    initialSelectedId: Int? = null,
     onCompletion: (Int) -> Unit = {},
     viewModel: ProviderTurnsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,6 +73,7 @@ fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {}, i
         }
     }
     ProviderTurnsScreen(state, onBack, viewModel::load, onConversation = onConversation,
+        onDetails = onDetails,
         initialSelectedId = initialSelectedId,
         onRetryConversation = viewModel::retryConversation, onCompletion = onCompletion)
 }
@@ -79,7 +81,7 @@ fun ProviderTurnsRoute(onBack: () -> Unit, onConversation: (Int) -> Unit = {}, i
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry: () -> Unit,
-    onDetails: (WorkOrder) -> Unit = {}, onConversation: (Int) -> Unit = {},
+    onDetails: ((WorkOrder) -> Unit)? = null, onConversation: (Int) -> Unit = {},
     onRetryConversation: (Int) -> Unit = { onRetry() }, initialSelectedId: Int? = null,
     onCompletion: (Int) -> Unit = {}) {
     var selectedId by rememberSaveable { mutableStateOf(initialSelectedId) }
@@ -153,7 +155,10 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                         contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(state.orders, key = { it.id }) { order ->
                             ProviderTurnCard(order, Modifier.padding(horizontal = 20.dp)) {
-                                selectedId = order.id; missingConversation = false; onDetails(it)
+                                if (onDetails == null) {
+                                    selectedId = order.id
+                                    missingConversation = false
+                                } else onDetails(it)
                             }
                         }
                     }
