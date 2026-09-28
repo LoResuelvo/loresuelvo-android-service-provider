@@ -49,6 +49,7 @@ fun ProviderTurnDetailRoute(
             val fallback = stringResource(R.string.provider_order_consumer_unavailable)
             val displayOrder = current.toDisplayOrder(fallback)
             ProviderTurnDetailScreen(displayOrder, onBack = onBack,
+                detail = detail,
                 onConversation = {
                     val conversationId = current.conversationId
                     if (conversationId == null) missingConversation = true else onConversation(conversationId)

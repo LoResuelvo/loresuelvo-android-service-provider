@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import com.loresuelvo.serviceprovider.domain.activity.ActivityLoadOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionImage
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionReport
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
@@ -60,8 +62,9 @@ class ViewProviderWorkOrderDetailSteps {
     private val scheduledOn = Instant.parse("2026-10-05T00:30:00Z").toEpochMilli()
     private val summary = WorkOrder(42, "Ana Pérez", "Stale summary", 1, WorkOrderStatus.Paid,
         consumerGivenName = "Ana", consumerSurname = "Pérez", serviceProposalId = 10, consumerId = 3)
-    private val detail = WorkOrderDetail(42, 10, 3, 7, 123456, scheduledOn,
+    private var detail = WorkOrderDetail(42, 10, 3, 7, 123456, scheduledOn,
         "Repair the kitchen tap and preserve the original fittings", WorkOrderStatus.Scheduled, null)
+    private var evidenceCase = ""
     private var origin = ""
     private var detailCalls = 0
     private var listCalls = 0
@@ -182,6 +185,78 @@ class ViewProviderWorkOrderDetailSteps {
         val id = (ready().result.detail as WorkOrderDetailOutcome.Success).order.id
         assertEquals(42, id)
         assertTrue(id != linkedProposals.single().id && id != linkedProposals.single().conversationId)
+    }
+
+    @Given("que mi orden está en estado {string}")
+    fun orderHasStatus(status: String) {
+        detail = detail.copy(status = when (status) {
+            "scheduled" -> WorkOrderStatus.Scheduled
+            "awaiting_payment" -> WorkOrderStatus.AwaitingPayment
+            "paid" -> WorkOrderStatus.Paid
+            else -> error("Unexpected status")
+        })
+    }
+
+    @And("su detalle contiene {string}")
+    fun detailContainsEvidence(case: String) {
+        evidenceCase = case
+        val report = when (case) {
+            "ningún reporte disponible" -> null
+            else -> {
+                val count = when {
+                    "tres fotos" in case -> 3
+                    "una foto" in case -> 1
+                    else -> 0
+                }
+                WorkOrderCompletionReport(17, "Delivered work as agreed",
+                    Instant.parse("2026-08-15T16:00:00Z").toEpochMilli(),
+                    (1..count).map { WorkOrderCompletionImage("file-$it", "$it.jpg", "https://storage.test/$it") })
+            }
+        }
+        detail = detail.copy(completionReportId = report?.id, completionReport = report)
+    }
+
+    @When("abro el detalle de la orden")
+    fun openCurrentOrder() {
+        model = ProviderTurnDetailViewModel(SavedStateHandle(mapOf("turnId" to 42)),
+            GetProviderWorkOrderDetailUseCase(orders), GetServiceProposalsUseCase(proposals), session)
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("veo {string}")
+    fun seesEvidence(result: String) {
+        val current = (ready().result.detail as WorkOrderDetailOutcome.Success).order
+        when {
+            result.startsWith("Evidencia de finalización") -> {
+                assertTrue(current.status == WorkOrderStatus.AwaitingPayment || current.status == WorkOrderStatus.Paid)
+                val report = requireNotNull(current.completionReport)
+                assertEquals("Delivered work as agreed", report.description)
+                assertEquals(Instant.parse("2026-08-15T16:00:00Z").toEpochMilli(), report.reportedOn)
+                assertEquals(if ("tres fotos" in evidenceCase) 3 else 1, report.images.size)
+                assertEquals((1..report.images.size).map { "file-$it" }, report.images.map { it.fileId })
+            }
+            result == "un aviso de evidencia no disponible" -> assertNull(current.completionReport)
+            result.startsWith("la descripción y fecha") -> {
+                assertEquals("Delivered work as agreed", current.completionReport?.description)
+                assertTrue(current.completionReport?.images?.isEmpty() == true)
+            }
+            result.startsWith("sólo los datos") -> assertEquals(WorkOrderStatus.Scheduled, current.status)
+            else -> error("Unexpected result")
+        }
+    }
+
+    @And("conservo los datos válidos del servicio y su descripción original separada de la entrega")
+    fun keepsOriginalService() {
+        val current = (ready().result.detail as WorkOrderDetailOutcome.Success).order
+        assertEquals(detail.description, current.description)
+        assertTrue(current.description != current.completionReport?.description)
+    }
+
+    @And("no se inventan fechas, fotografías ni descripciones ausentes")
+    fun absentEvidenceStaysAbsent() {
+        val current = (ready().result.detail as WorkOrderDetailOutcome.Success).order
+        if (evidenceCase == "ningún reporte disponible") assertNull(current.completionReport)
+        if ("sin fotos" in evidenceCase) assertTrue(current.completionReport?.images?.isEmpty() == true)
     }
 
     private fun ready() = model.uiState.value as ProviderTurnDetailUiState.Ready

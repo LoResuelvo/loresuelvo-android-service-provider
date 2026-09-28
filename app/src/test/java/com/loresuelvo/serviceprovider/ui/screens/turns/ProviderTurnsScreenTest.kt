@@ -14,6 +14,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionReport
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
@@ -189,6 +191,30 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("Confirmado").assertExists()
         compose.onNodeWithText("Pagar").assertDoesNotExist()
         compose.onNodeWithText("Escribir reseña").assertDoesNotExist()
+    }
+
+    @Test fun post_service_detail_keeps_original_reason_and_shows_missing_report() {
+        val order = WorkOrder(42, "Ana Pérez", "Original repair request", 1,
+            WorkOrderStatus.AwaitingPayment)
+        val detail = WorkOrderDetail(42, 10, 3, 7, 123456, 1, order.description,
+            WorkOrderStatus.AwaitingPayment, null)
+        compose.setContent { LoresuelvoTheme { ProviderTurnDetailScreen(order, {}, {}, detail = detail) } }
+
+        compose.onNodeWithText("Original repair request").assertExists()
+        compose.onNodeWithText("Evidencia de finalización").assertExists()
+        compose.onNodeWithText("La evidencia todavía no está disponible.").assertExists()
+    }
+
+    @Test fun scheduled_detail_hides_residual_completion_report() {
+        val order = WorkOrder(42, "Ana Pérez", "Original repair request", 1,
+            WorkOrderStatus.Scheduled)
+        val detail = WorkOrderDetail(42, 10, 3, 7, 123456, 1, order.description,
+            WorkOrderStatus.Scheduled, 17, WorkOrderCompletionReport(17, "Old delivery", 1, emptyList()))
+        compose.setContent { LoresuelvoTheme { ProviderTurnDetailScreen(order, {}, {}, detail = detail) } }
+
+        compose.onNodeWithText("Original repair request").assertExists()
+        compose.onNodeWithText("Evidencia de finalización").assertDoesNotExist()
+        compose.onNodeWithText("Old delivery").assertDoesNotExist()
     }
 
     @Test fun completion_action_uses_selected_real_order_from_turns_list() {

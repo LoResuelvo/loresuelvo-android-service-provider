@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalAmount
@@ -32,7 +34,8 @@ import java.util.TimeZone
 fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversation: () -> Unit,
     missingConversation: Boolean = false, proposalFailure: ServiceProposalListOutcome.Failure? = null,
     resolvingConversation: Boolean = false,
-    onRetryConversation: () -> Unit = {}, onCompletion: (() -> Unit)? = null) {
+    onRetryConversation: () -> Unit = {}, onCompletion: (() -> Unit)? = null,
+    detail: WorkOrderDetail? = null) {
     Scaffold(
         topBar = { TopAppBar(
             title = { Text(stringResource(R.string.provider_turns_detail_title)) },
@@ -56,6 +59,11 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
                 providerTurnStatusBadge(order.status)?.label?.let { stringResource(it) }
                     ?: stringResource(R.string.provider_turns_status_unknown))
             DetailField(R.string.provider_turns_detail_reason, order.description)
+            detail?.let {
+                if (it.status == WorkOrderStatus.AwaitingPayment || it.status == WorkOrderStatus.Paid) {
+                    ProviderCompletionEvidenceSection(it.completionReport)
+                }
+            }
             if (onCompletion != null) {
                 Button(onClick = onCompletion, modifier = Modifier.testTag("provider_turn_completion")) {
                     Text(stringResource(R.string.provider_completion_title))

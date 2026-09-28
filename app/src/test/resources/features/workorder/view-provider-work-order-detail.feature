@@ -27,7 +27,6 @@ Característica: Consultar el detalle y la evidencia de una orden como prestador
     Y no necesito abrir el detalle de una propuesta
     Y no se usa el número de la propuesta ni de la conversación como número de orden
 
-  @wip
   Esquema del escenario: 04-PDO Consultar la evidencia disponible de la entrega
     Dado que mi orden está en estado "<estado>"
     Y su detalle contiene "<evidencia>"
