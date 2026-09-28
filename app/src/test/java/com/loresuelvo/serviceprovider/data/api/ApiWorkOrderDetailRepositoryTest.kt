@@ -48,6 +48,31 @@ class ApiWorkOrderDetailRepositoryTest {
         assertEquals(com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus.AwaitingPayment, result.order.status)
     }
 
+    @Test fun maps_completion_description_time_and_images_in_received_order() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody(detail(status = "paid", report = """,
+            "completion_report":{"id":17,"description":"Installed the new valve","reported_on":"2026-08-15T13:00:00-03:00",
+            "images":[{"file_id":"first","original_name":"one.jpg","url":"https://storage.test/one"},
+            {"file_id":"second","original_name":"two.jpg","url":"https://storage.test/two"}]}
+        """.trimIndent())))
+
+        val current = (repository().getWorkOrder(42) as WorkOrderDetailOutcome.Success).order
+        assertEquals(17, current.completionReportId)
+        assertEquals("Installed the new valve", current.completionReport?.description)
+        assertEquals(Instant.parse("2026-08-15T16:00:00Z").toEpochMilli(), current.completionReport?.reportedOn)
+        assertEquals(listOf("first", "second"), current.completionReport?.images?.map { it.fileId })
+        assertEquals(listOf("one.jpg", "two.jpg"), current.completionReport?.images?.map { it.originalName })
+    }
+
+    @Test fun malformed_optional_report_time_does_not_discard_valid_order_or_report_identity() = runTest {
+        server.enqueue(MockResponse().setResponseCode(200).setBody(detail(status = "awaiting_payment",
+            report = ",\"completion_report\":{\"id\":17,\"description\":\"Done\",\"reported_on\":\"bad-date\",\"images\":[]}")))
+
+        val current = (repository().getWorkOrder(42) as WorkOrderDetailOutcome.Success).order
+        assertEquals(17, current.completionReportId)
+        assertEquals(null, current.completionReport?.reportedOn)
+        assertEquals(emptyList<String>(), current.completionReport?.images?.map { it.fileId })
+    }
+
     @Test fun maps_auth_permission_missing_server_and_network_failures() = runTest {
         val expected = listOf(
             401 to WorkOrderDetailOutcome.Failure.Unauthorized,

@@ -9,6 +9,8 @@ import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.JobRequestImage
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionImage
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionReport
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
 
 internal fun JobRequestSummaryDto.toDomain(): JobRequest = JobRequest(
@@ -49,6 +51,15 @@ internal fun WorkOrderDetailDto.toDomain(): WorkOrderDetail = WorkOrderDetail(
     description = description,
     status = status.toDomainStatus(),
     completionReportId = completionReport?.id,
+    completionReport = completionReport?.takeIf { it.id > 0 }?.let { report ->
+        WorkOrderCompletionReport(
+            id = report.id,
+            description = report.description.takeIf(String::isNotBlank),
+            reportedOn = runCatching { report.reportedOn.toEpochMillis() }.getOrNull(),
+            images = report.images.filter { it.fileId.isNotBlank() && it.url.isNotBlank() }
+                .map { WorkOrderCompletionImage(it.fileId, it.originalName, it.url) },
+        )
+    },
 )
 
 private fun String.toDomainStatus(): WorkOrderStatus = when (lowercase()) {

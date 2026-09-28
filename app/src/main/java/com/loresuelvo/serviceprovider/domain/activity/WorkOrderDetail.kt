@@ -10,6 +10,22 @@ data class WorkOrderDetail(
     val description: String,
     val status: WorkOrderStatus,
     val completionReportId: Int?,
+    val completionReport: WorkOrderCompletionReport? = null,
+) {
+    init { require(completionReport == null || completionReport.id == completionReportId) }
+}
+
+data class WorkOrderCompletionReport(
+    val id: Int,
+    val description: String?,
+    val reportedOn: Long?,
+    val images: List<WorkOrderCompletionImage>,
+)
+
+data class WorkOrderCompletionImage(
+    val fileId: String,
+    val originalName: String,
+    val url: String,
 )
 
 sealed interface WorkOrderDetailOutcome {
