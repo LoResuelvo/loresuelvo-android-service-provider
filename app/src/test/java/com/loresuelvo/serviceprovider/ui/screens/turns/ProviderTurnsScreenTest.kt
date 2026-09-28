@@ -168,6 +168,15 @@ class ProviderTurnsScreenTest {
         org.junit.Assert.assertEquals(1, conversations)
     }
 
+    @Test fun detail_uses_consumer_initials_when_no_photo_is_available() {
+        val order = WorkOrder(7, "Ana Pérez", "Full reason", 1, WorkOrderStatus.Scheduled,
+            consumerGivenName = "Ana", consumerSurname = "Pérez")
+        compose.setContent { LoresuelvoTheme { ProviderTurnDetailScreen(order, {}, {}) } }
+
+        compose.onNodeWithText("AP").assertExists()
+        compose.onNodeWithText("Ana Pérez").assertExists()
+    }
+
     @Test fun completion_action_uses_selected_real_order_from_turns_list() {
         val order = WorkOrder(7, "Ana Pérez", "Full reason", 1, WorkOrderStatus.Scheduled)
         var openedId: Int? = null

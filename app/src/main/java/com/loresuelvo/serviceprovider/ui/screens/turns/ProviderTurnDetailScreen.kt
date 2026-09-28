@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
+import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 import com.loresuelvo.serviceprovider.ui.screens.proposals.proposalAmount
 import java.util.TimeZone
 
@@ -41,6 +42,12 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            ProviderAvatar(
+                name = order.consumerGivenName,
+                surname = order.consumerSurname,
+                profilePhotoUrl = order.consumerPhotoUrl,
+                contentDescription = stringResource(R.string.proposal_list_avatar, order.consumerGivenName),
+            )
             DetailField(R.string.provider_turns_detail_consumer, order.consumerName)
             DetailField(R.string.provider_turns_detail_amount, proposalAmount(order.amountCents))
             DetailField(R.string.provider_turns_detail_date, formatTurnDate(order.scheduledOn,
