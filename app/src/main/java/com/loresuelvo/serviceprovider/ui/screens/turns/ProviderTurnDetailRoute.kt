@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.screens.turns
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -40,8 +41,10 @@ fun ProviderTurnDetailRoute(
     viewModel: ProviderTurnDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val selectedFileId by viewModel.selectedFileId.collectAsStateWithLifecycle()
     var missingConversation by rememberSaveable(viewModel.orderId) { mutableStateOf(false) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
+    Box(Modifier.fillMaxSize()) {
     when (val current = state) {
         is ProviderTurnDetailUiState.Ready -> {
             val detail = (current.result.detail as WorkOrderDetailOutcome.Success).order
@@ -50,6 +53,7 @@ fun ProviderTurnDetailRoute(
             val displayOrder = current.toDisplayOrder(fallback)
             ProviderTurnDetailScreen(displayOrder, onBack = onBack,
                 detail = detail,
+                onPhotoClick = viewModel::selectFile,
                 onConversation = {
                     val conversationId = current.conversationId
                     if (conversationId == null) missingConversation = true else onConversation(conversationId)
@@ -61,6 +65,15 @@ fun ProviderTurnDetailRoute(
         ProviderTurnDetailUiState.Loading -> DetailFallback(onBack, R.string.provider_turns_loading, loading = true)
         is ProviderTurnDetailUiState.Error -> DetailFallback(onBack, R.string.provider_order_detail_error,
             onRetry = viewModel::load)
+    }
+    val current = state as? ProviderTurnDetailUiState.Ready
+    val image = (current?.result?.detail as? WorkOrderDetailOutcome.Success)?.order
+        ?.completionReport?.images?.singleOrNull { it.fileId == selectedFileId }
+    if (image != null) {
+        ProviderEvidenceViewer(image.url,
+            image.originalName.ifBlank { stringResource(R.string.provider_order_evidence_title) },
+            viewModel::closeViewer)
+    }
     }
 }
 

@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +30,8 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionReport
 import java.util.TimeZone
 
 @Composable
-internal fun ProviderCompletionEvidenceSection(report: WorkOrderCompletionReport?) {
+internal fun ProviderCompletionEvidenceSection(report: WorkOrderCompletionReport?,
+    onPhotoClick: ((String) -> Unit)? = null) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.provider_order_evidence_title),
             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -52,7 +54,10 @@ internal fun ProviderCompletionEvidenceSection(report: WorkOrderCompletionReport
                 report.images.forEachIndexed { index, image ->
                     val label = stringResource(R.string.provider_order_evidence_photo,
                         index + 1, image.originalName.ifBlank { (index + 1).toString() })
-                    Box(Modifier.size(96.dp).testTag("provider_evidence_photo_${index + 1}"),
+                    Box(Modifier.size(96.dp).testTag("provider_evidence_photo_${index + 1}")
+                        .then(if (onPhotoClick == null) Modifier else Modifier.clickable(onClickLabel = label) {
+                            onPhotoClick(image.fileId)
+                        }),
                         contentAlignment = Alignment.Center) {
                         SubcomposeAsyncImage(model = image.url, contentDescription = label,
                             contentScale = ContentScale.Crop, modifier = Modifier.size(96.dp),

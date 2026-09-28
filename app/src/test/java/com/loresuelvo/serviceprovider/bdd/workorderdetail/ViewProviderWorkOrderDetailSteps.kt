@@ -223,7 +223,7 @@ class ViewProviderWorkOrderDetailSteps {
         dispatcher.scheduler.advanceUntilIdle()
     }
 
-    @Then("veo {string}")
+    @Then("""^veo "(Evidencia de finalización.*|un aviso de evidencia no disponible|la descripción y fecha.*|sólo los datos.*)"$""")
     fun seesEvidence(result: String) {
         val current = (ready().result.detail as WorkOrderDetailOutcome.Success).order
         when {

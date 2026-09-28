@@ -42,7 +42,6 @@ Característica: Consultar el detalle y la evidencia de una orden como prestador
       | paid             | reporte con descripción y fecha, pero sin fotos | la descripción y fecha del reporte con un aviso de fotos ausentes |
       | scheduled        | reporte residual de una respuesta antigua        | sólo los datos del servicio sin evidencia ni fecha de pago        |
 
-  @wip
   Esquema del escenario: 05-PDO Ampliar una fotografía y conservar el lugar de regreso
     Dado que abrí una orden con tres fotografías desde "<origen>" después de desplazar su contenido
     Y estoy en "<vista>"
