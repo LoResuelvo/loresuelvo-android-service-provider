@@ -130,6 +130,7 @@ class ViewProviderWorkOrderViewerSteps {
         GetProviderWorkOrderDetailUseCase(orders), GetServiceProposalsUseCase(proposals), session)
 
     @After fun tearDown() {
+        if (!::model.isInitialized) return
         Dispatchers.setMain(dispatcher)
         session.clearSession()
         dispatcher.scheduler.advanceUntilIdle()
