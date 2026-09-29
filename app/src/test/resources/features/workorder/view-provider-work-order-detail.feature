@@ -57,7 +57,6 @@ Característica: Consultar el detalle y la evidencia de una orden como prestador
       | Turnos   | el detalle sin visor             | pulso Atrás                  | el listado de Turnos en su posición anterior                |
       | chat     | el detalle sin visor             | elijo Volver                 | la conversación de origen en su posición anterior          |
 
-  @wip
   Esquema del escenario: 06-PDO Consultar el pago y la reseña recibida
     Dado que mi orden paid tiene "<pago>" y "<reseña>"
     Cuando abro su detalle

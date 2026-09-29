@@ -17,6 +17,7 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetail
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionReport
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderReview
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalListOutcome
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
 import com.loresuelvo.serviceprovider.ui.turns.ProviderTurnsUiState
@@ -215,6 +216,21 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("Original repair request").assertExists()
         compose.onNodeWithText("Evidencia de finalización").assertDoesNotExist()
         compose.onNodeWithText("Old delivery").assertDoesNotExist()
+    }
+
+    @Test fun paid_detail_shows_received_review_without_consumer_actions() {
+        val order = WorkOrder(42, "Ana Pérez", "Original repair request", 1, WorkOrderStatus.Paid)
+        val detail = WorkOrderDetail(42, 10, 3, 7, 123456, 1, order.description,
+            WorkOrderStatus.Paid, null, paidOn = Instant.parse("2026-08-15T16:00:00Z").toEpochMilli(),
+            review = WorkOrderReview(5, "Excellent work"))
+        compose.setContent { LoresuelvoTheme { ProviderTurnDetailScreen(order, {}, {}, detail = detail) } }
+
+        compose.onNodeWithText("Pagado").assertExists()
+        compose.onNodeWithText("Pago recibido").assertExists()
+        compose.onNodeWithText("Calificación: 5 de 5").assertExists()
+        compose.onNodeWithText("Excellent work").assertExists()
+        compose.onNodeWithText("Pagar").assertDoesNotExist()
+        compose.onNodeWithText("Escribir reseña").assertDoesNotExist()
     }
 
     @Test fun completion_action_uses_selected_real_order_from_turns_list() {

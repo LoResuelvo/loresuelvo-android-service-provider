@@ -63,6 +63,9 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
                 if (it.status == WorkOrderStatus.AwaitingPayment || it.status == WorkOrderStatus.Paid) {
                     ProviderCompletionEvidenceSection(it.completionReport, onPhotoClick)
                 }
+                if (it.status == WorkOrderStatus.Paid) {
+                    ProviderPaidHistorySection(it.paidOn, it.review)
+                }
             }
             if (onCompletion != null) {
                 Button(onClick = onCompletion, modifier = Modifier.testTag("provider_turn_completion")) {

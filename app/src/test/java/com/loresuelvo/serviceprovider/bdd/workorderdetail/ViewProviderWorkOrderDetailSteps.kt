@@ -9,6 +9,7 @@ import com.loresuelvo.serviceprovider.domain.activity.WorkOrderCompletionReport
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderRepository
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
+import com.loresuelvo.serviceprovider.domain.activity.WorkOrderReview
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -65,6 +66,8 @@ class ViewProviderWorkOrderDetailSteps {
     private var detail = WorkOrderDetail(42, 10, 3, 7, 123456, scheduledOn,
         "Repair the kitchen tap and preserve the original fittings", WorkOrderStatus.Scheduled, null)
     private var evidenceCase = ""
+    private var paymentCase = ""
+    private var reviewCase = ""
     private var origin = ""
     private var detailCalls = 0
     private var listCalls = 0
@@ -257,6 +260,44 @@ class ViewProviderWorkOrderDetailSteps {
         val current = (ready().result.detail as WorkOrderDetailOutcome.Success).order
         if (evidenceCase == "ningún reporte disponible") assertNull(current.completionReport)
         if ("sin fotos" in evidenceCase) assertTrue(current.completionReport?.images?.isEmpty() == true)
+    }
+
+    @Given("que mi orden paid tiene {string} y {string}")
+    fun paidOrderHas(payment: String, review: String) {
+        paymentCase = payment
+        reviewCase = review
+        detail = detail.copy(status = WorkOrderStatus.Paid,
+            paidOn = if (payment == "fecha de pago informada")
+                Instant.parse("2026-10-05T00:30:00Z").toEpochMilli() else null,
+            review = if (review == "calificación 5 y comentario") WorkOrderReview(5, "Excellent work") else null)
+    }
+
+    @When("abro su detalle")
+    fun openPaidDetail() {
+        model = ProviderTurnDetailViewModel(SavedStateHandle(mapOf("turnId" to detail.id)),
+            GetProviderWorkOrderDetailUseCase(orders), GetServiceProposalsUseCase(proposals), session)
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("veo el estado Pagado y {string}")
+    fun seesPaidHistory(result: String) {
+        val current = (ready().result.detail as WorkOrderDetailOutcome.Success).order
+        assertEquals(WorkOrderStatus.Paid, current.status)
+        if (paymentCase == "fecha de pago informada") {
+            assertTrue(result.contains("fecha local del pago"))
+            assertTrue(formatTurnDate(current.paidOn!!, "'el' d 'de' MMMM 'a las' HH:mm",
+                Locale("es", "AR"), TimeZone.getTimeZone("America/Argentina/Buenos_Aires")).contains("21:30"))
+        } else assertNull(current.paidOn)
+        if (reviewCase == "calificación 5 y comentario") {
+            assertEquals(5, current.review?.rating)
+            assertEquals("Excellent work", current.review?.description)
+        } else assertNull(current.review)
+    }
+
+    @And("no puedo pagar, crear ni editar la reseña del consumidor")
+    fun noPaidActions() {
+        assertEquals(WorkOrderStatus.Paid,
+            (ready().result.detail as WorkOrderDetailOutcome.Success).order.status)
     }
 
     private fun ready() = model.uiState.value as ProviderTurnDetailUiState.Ready
