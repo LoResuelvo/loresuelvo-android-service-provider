@@ -63,7 +63,7 @@ fun ProviderTurnDetailRoute(
                 onCompletion = if (consumer != null) ({ onCompletion(detail.id) }) else null)
         }
         ProviderTurnDetailUiState.Loading -> DetailFallback(onBack, R.string.provider_turns_loading, loading = true)
-        is ProviderTurnDetailUiState.Error -> DetailFallback(onBack, R.string.provider_order_detail_error,
+        is ProviderTurnDetailUiState.Error -> DetailFallback(onBack, failure = current.failure,
             onRetry = viewModel::load)
     }
     val current = state as? ProviderTurnDetailUiState.Ready
@@ -92,8 +92,18 @@ internal fun ProviderTurnDetailUiState.Ready.toDisplayOrder(fallbackName: String
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun DetailFallback(onBack: () -> Unit, message: Int, loading: Boolean = false,
+internal fun DetailFallback(onBack: () -> Unit, message: Int = R.string.provider_order_detail_error,
+    loading: Boolean = false, failure: WorkOrderDetailOutcome.Failure? = null,
     onRetry: (() -> Unit)? = null) {
+    val resolvedMessage = when (failure) {
+        WorkOrderDetailOutcome.Failure.Forbidden -> R.string.provider_order_detail_forbidden
+        WorkOrderDetailOutcome.Failure.NotFound -> R.string.provider_order_detail_missing
+        WorkOrderDetailOutcome.Failure.Unauthorized -> R.string.provider_order_detail_session_expired
+        is WorkOrderDetailOutcome.Failure.Network -> R.string.provider_order_detail_network_error
+        else -> message
+    }
+    val canRetry = failure == null || failure is WorkOrderDetailOutcome.Failure.Network ||
+        failure is WorkOrderDetailOutcome.Failure.Server || failure == WorkOrderDetailOutcome.Failure.Invalid
     Scaffold(topBar = { TopAppBar(
         title = { Text(stringResource(R.string.provider_turns_detail_title)) },
         navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) } },
@@ -102,8 +112,10 @@ private fun DetailFallback(onBack: () -> Unit, message: Int, loading: Boolean = 
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center) {
             if (loading) CircularProgressIndicator()
-            Text(stringResource(message))
-            if (onRetry != null) Button(onClick = onRetry) { Text(stringResource(R.string.provider_home_retry)) }
+            Text(stringResource(resolvedMessage))
+            if (canRetry && onRetry != null) Button(onClick = onRetry) {
+                Text(stringResource(R.string.provider_home_retry))
+            }
         }
     }
 }

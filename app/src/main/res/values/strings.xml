@@ -16,6 +16,10 @@
     <string name="provider_turns_detail_title">Detalle del turno</string>
     <string name="provider_order_consumer_unavailable">Consumidor no disponible</string>
     <string name="provider_order_detail_error">No pudimos cargar el detalle de la orden.</string>
+    <string name="provider_order_detail_network_error">No pudimos conectar para cargar la orden.</string>
+    <string name="provider_order_detail_forbidden">No tenés permiso para ver esta orden.</string>
+    <string name="provider_order_detail_missing">Esta orden ya no está disponible.</string>
+    <string name="provider_order_detail_session_expired">Tu sesión terminó. Iniciá sesión nuevamente.</string>
     <string name="provider_order_evidence_title">Evidencia de finalización</string>
     <string name="provider_order_evidence_missing">La evidencia todavía no está disponible.</string>
     <string name="provider_order_evidence_photos_missing">No hay fotografías de la entrega.</string>

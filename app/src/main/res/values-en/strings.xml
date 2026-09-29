@@ -16,6 +16,10 @@
     <string name="provider_turns_detail_title">Appointment details</string>
     <string name="provider_order_consumer_unavailable">Customer unavailable</string>
     <string name="provider_order_detail_error">We couldn’t load the order details.</string>
+    <string name="provider_order_detail_network_error">Could not connect to load the order.</string>
+    <string name="provider_order_detail_forbidden">You do not have permission to view this order.</string>
+    <string name="provider_order_detail_missing">This order is no longer available.</string>
+    <string name="provider_order_detail_session_expired">Your session ended. Sign in again.</string>
     <string name="provider_order_evidence_title">Completion evidence</string>
     <string name="provider_order_evidence_missing">Completion evidence isn’t available yet.</string>
     <string name="provider_order_evidence_photos_missing">No delivery photos are available.</string>
