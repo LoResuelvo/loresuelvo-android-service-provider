@@ -67,4 +67,15 @@ class ProviderCompletionEvidenceSectionTest {
         compose.onNodeWithTag("provider_evidence_photo_2").performClick()
         assertEquals("second", selected)
     }
+
+    @Test fun failed_thumbnail_retries_only_its_file_id() {
+        var retried: String? = null
+        compose.setContent { LoresuelvoTheme {
+            ProviderCompletionEvidenceSection(WorkOrderCompletionReport(17, "Done", null,
+                listOf(WorkOrderCompletionImage("file-2", "two.jpg", "invalid://photo"))),
+                onPhotoRetry = { retried = it })
+        } }
+        compose.onNodeWithText("Reintentar foto").performClick()
+        assertEquals("file-2", retried)
+    }
 }

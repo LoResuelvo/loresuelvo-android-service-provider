@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +32,7 @@ import java.util.TimeZone
 
 @Composable
 internal fun ProviderCompletionEvidenceSection(report: WorkOrderCompletionReport?,
-    onPhotoClick: ((String) -> Unit)? = null) {
+    onPhotoClick: ((String) -> Unit)? = null, onPhotoRetry: ((String) -> Unit)? = null) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.provider_order_evidence_title),
             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -62,9 +63,16 @@ internal fun ProviderCompletionEvidenceSection(report: WorkOrderCompletionReport
                         SubcomposeAsyncImage(model = image.url, contentDescription = label,
                             contentScale = ContentScale.Crop, modifier = Modifier.size(96.dp),
                             loading = { CircularProgressIndicator(Modifier.size(32.dp)) },
-                            error = { Icon(Icons.Filled.BrokenImage,
-                                contentDescription = stringResource(R.string.provider_order_evidence_photo_error),
-                                tint = MaterialTheme.colorScheme.error) })
+                            error = {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Filled.BrokenImage,
+                                        contentDescription = stringResource(R.string.provider_order_evidence_photo_error),
+                                        tint = MaterialTheme.colorScheme.error)
+                                    if (onPhotoRetry != null) TextButton(onClick = { onPhotoRetry(image.fileId) }) {
+                                        Text(stringResource(R.string.provider_order_evidence_retry))
+                                    }
+                                }
+                            })
                     }
                 }
             }

@@ -12,6 +12,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +28,8 @@ import coil3.compose.SubcomposeAsyncImage
 import com.loresuelvo.serviceprovider.R
 
 @Composable
-internal fun ProviderEvidenceViewer(imageUrl: String, imageName: String, onClose: () -> Unit) {
+internal fun ProviderEvidenceViewer(imageUrl: String, imageName: String, onClose: () -> Unit,
+    onRetry: (() -> Unit)? = null) {
     BackHandler(onBack = onClose)
     Box(Modifier.fillMaxSize().background(Color.Black).testTag("provider_evidence_viewer")
         .semantics { contentDescription = imageName }) {
@@ -34,9 +37,14 @@ internal fun ProviderEvidenceViewer(imageUrl: String, imageName: String, onClose
             contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize(),
             loading = { CircularProgressIndicator(color = Color.White) },
             error = {
-                Icon(Icons.Filled.BrokenImage,
-                    contentDescription = stringResource(R.string.provider_order_evidence_photo_error),
-                    tint = Color.White)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Filled.BrokenImage,
+                        contentDescription = stringResource(R.string.provider_order_evidence_photo_error),
+                        tint = Color.White)
+                    if (onRetry != null) TextButton(onClick = onRetry) {
+                        Text(stringResource(R.string.provider_order_evidence_retry))
+                    }
+                }
             })
         IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd)
             .padding(16.dp).testTag("provider_evidence_close")) {
