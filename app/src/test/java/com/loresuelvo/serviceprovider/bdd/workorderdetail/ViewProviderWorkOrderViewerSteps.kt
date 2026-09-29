@@ -48,10 +48,14 @@ class ViewProviderWorkOrderViewerSteps {
     }
     private val report = WorkOrderCompletionReport(17, "Done", 1000,
         listOf("first", "second", "third").map { WorkOrderCompletionImage(it, "$it.jpg", "https://storage.test/$it") })
-    private val detail = WorkOrderDetail(42, 10, 3, 7, 123456, 1000, "Original work",
+    private var detail = WorkOrderDetail(42, 10, 3, 7, 123456, 1000, "Original work",
         WorkOrderStatus.Paid, 17, report)
+    private var detailCalls = 0
     private val orders = object : WorkOrderRepository {
-        override suspend fun getWorkOrder(id: Int) = WorkOrderDetailOutcome.Success(detail)
+        override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
+            detailCalls++
+            return WorkOrderDetailOutcome.Success(detail)
+        }
         override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(listOf(
             WorkOrder(42, "Ana Pérez", "Original work", 1000, WorkOrderStatus.Paid,
                 serviceProposalId = 10, consumerId = 3)))
@@ -124,6 +128,62 @@ class ViewProviderWorkOrderViewerSteps {
         assertEquals("provider_turns/42", Route.ProviderTurnDetail.buildPath(detail.id))
         assertEquals(42, ((model.uiState.value as ProviderTurnDetailUiState.Ready).result.detail
             as WorkOrderDetailOutcome.Success).order.id)
+    }
+
+    @Given("que veo una orden con reporte y tres fotografías")
+    fun seesThreePhotos() {
+        Dispatchers.setMain(dispatcher)
+        model = newModel()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(3, detail.completionReport?.images?.size)
+    }
+
+    @And("una fotografía falla al cargar mientras las otras siguen disponibles")
+    fun onePhotoFails() {
+        model.selectFile("second")
+        assertEquals("second", model.selectedFileId.value)
+        assertEquals(listOf("first", "second", "third"), detail.completionReport?.images?.map { it.fileId })
+    }
+
+    @And("una nueva consulta de la misma orden devuelve direcciones temporales vigentes")
+    fun renewedUrlsExist() {
+        detail = detail.copy(completionReport = report.copy(images = report.images.map {
+            it.copy(url = "https://storage.test/new-${it.fileId}")
+        }))
+    }
+
+    @When("elijo Reintentar la fotografía fallida")
+    fun retriesFailedPhoto() {
+        model.retryPhoto("second")
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("se consulta nuevamente el detalle y puedo ver la fotografía con su dirección vigente")
+    fun seesRenewedPhoto() {
+        assertEquals(2, detailCalls)
+        val current = ((model.uiState.value as ProviderTurnDetailUiState.Ready).result.detail
+            as WorkOrderDetailOutcome.Success).order
+        assertEquals("https://storage.test/new-second", current.completionReport?.images?.get(1)?.url)
+    }
+
+    @And("se conservan el reporte, el orden de las fotos y la selección del visor si estaba abierto")
+    fun keepsReportAndViewer() {
+        val current = ((model.uiState.value as ProviderTurnDetailUiState.Ready).result.detail
+            as WorkOrderDetailOutcome.Success).order
+        assertEquals(17, current.completionReportId)
+        assertEquals(listOf("first", "second", "third"), current.completionReport?.images?.map { it.fileId })
+        assertEquals("second", model.selectedFileId.value)
+    }
+
+    @And("las demás fotografías y los datos del servicio siguen utilizables")
+    fun otherDataRemains() {
+        val current = ((model.uiState.value as ProviderTurnDetailUiState.Ready).result.detail
+            as WorkOrderDetailOutcome.Success).order
+        assertEquals("Original work", current.description)
+        assertEquals(3, current.completionReport?.images?.size)
+        assertEquals("https://storage.test/new-first", current.completionReport?.images?.first()?.url)
+        assertEquals("https://storage.test/new-third", current.completionReport?.images?.last()?.url)
+        assertEquals(WorkOrderStatus.Paid, current.status)
     }
 
     private fun newModel() = ProviderTurnDetailViewModel(saved,

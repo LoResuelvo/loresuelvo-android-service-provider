@@ -94,7 +94,6 @@ Característica: Consultar el detalle y la evidencia de una orden como prestador
       | orden inexistente 404 | aviso de orden no disponible y una salida accesible|
       | sesión inválida 401   | el flujo de autenticación sin detalle ni visor privados |
 
-  @wip
   Escenario: 09-PDO Recuperar una fotografía cuya dirección temporal dejó de funcionar
     Dado que veo una orden con reporte y tres fotografías
     Y una fotografía falla al cargar mientras las otras siguen disponibles

@@ -35,7 +35,8 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
     missingConversation: Boolean = false, proposalFailure: ServiceProposalListOutcome.Failure? = null,
     resolvingConversation: Boolean = false,
     onRetryConversation: () -> Unit = {}, onCompletion: (() -> Unit)? = null,
-    detail: WorkOrderDetail? = null, onPhotoClick: ((String) -> Unit)? = null) {
+    detail: WorkOrderDetail? = null, onPhotoClick: ((String) -> Unit)? = null,
+    onPhotoRetry: ((String) -> Unit)? = null) {
     Scaffold(
         topBar = { TopAppBar(
             title = { Text(stringResource(R.string.provider_turns_detail_title)) },
@@ -61,7 +62,7 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
             DetailField(R.string.provider_turns_detail_reason, order.description)
             detail?.let {
                 if (it.status == WorkOrderStatus.AwaitingPayment || it.status == WorkOrderStatus.Paid) {
-                    ProviderCompletionEvidenceSection(it.completionReport, onPhotoClick)
+                    ProviderCompletionEvidenceSection(it.completionReport, onPhotoClick, onPhotoRetry)
                 }
                 if (it.status == WorkOrderStatus.Paid) {
                     ProviderPaidHistorySection(it.paidOn, it.review)

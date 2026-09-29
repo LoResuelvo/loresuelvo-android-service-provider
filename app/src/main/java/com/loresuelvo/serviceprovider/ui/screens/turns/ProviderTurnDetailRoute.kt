@@ -54,6 +54,7 @@ fun ProviderTurnDetailRoute(
             ProviderTurnDetailScreen(displayOrder, onBack = onBack,
                 detail = detail,
                 onPhotoClick = viewModel::selectFile,
+                onPhotoRetry = viewModel::retryPhoto,
                 onConversation = {
                     val conversationId = current.conversationId
                     if (conversationId == null) missingConversation = true else onConversation(conversationId)
@@ -72,7 +73,7 @@ fun ProviderTurnDetailRoute(
     if (image != null) {
         ProviderEvidenceViewer(image.url,
             image.originalName.ifBlank { stringResource(R.string.provider_order_evidence_title) },
-            viewModel::closeViewer)
+            viewModel::closeViewer, onRetry = { viewModel.retryPhoto(image.fileId) })
     }
     }
 }
