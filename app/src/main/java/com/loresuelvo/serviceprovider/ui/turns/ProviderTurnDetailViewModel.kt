@@ -66,10 +66,7 @@ class ProviderTurnDetailViewModel @Inject constructor(
             if (sessions.getSession() != requestSession) return@launch
             _uiState.value = when (val detail = result.detail) {
                 is WorkOrderDetailOutcome.Success -> {
-                    if (selectedFileId.value != null && detail.order.completionReport?.images
-                            ?.count { it.fileId == selectedFileId.value } != 1) {
-                        savedStateHandle["selectedFileId"] = null
-                    }
+                    keepSelectedFileIfPresent(detail)
                     val proposals = getProposals()
                     if (sessions.getSession() != requestSession) return@launch
                     if (proposals == ServiceProposalListOutcome.Failure.SessionExpired) {
@@ -102,4 +99,33 @@ class ProviderTurnDetailViewModel @Inject constructor(
     }
 
     fun closeViewer() { savedStateHandle["selectedFileId"] = null }
+
+    fun retryPhoto(fileId: String) {
+        val current = _uiState.value as? ProviderTurnDetailUiState.Ready ?: return
+        val order = (current.result.detail as? WorkOrderDetailOutcome.Success)?.order ?: return
+        if (order.completionReport?.images?.count { it.fileId == fileId } != 1 ||
+            loadJob?.isActive == true) return
+        val requestSession = sessions.getSession() ?: return
+        loadJob = viewModelScope.launch {
+            val result = getDetail(orderId)
+            if (sessions.getSession() != requestSession) return@launch
+            when (val detail = result.detail) {
+                is WorkOrderDetailOutcome.Success -> {
+                    keepSelectedFileIfPresent(detail)
+                    _uiState.value = current.copy(result = result)
+                }
+                WorkOrderDetailOutcome.Failure.Unauthorized -> sessions.clearSession()
+                WorkOrderDetailOutcome.Failure.Forbidden, WorkOrderDetailOutcome.Failure.NotFound ->
+                    _uiState.value = ProviderTurnDetailUiState.Error(detail as WorkOrderDetailOutcome.Failure)
+                else -> Unit
+            }
+        }
+    }
+
+    private fun keepSelectedFileIfPresent(detail: WorkOrderDetailOutcome.Success) {
+        if (selectedFileId.value != null && detail.order.completionReport?.images
+                ?.count { it.fileId == selectedFileId.value } != 1) {
+            savedStateHandle["selectedFileId"] = null
+        }
+    }
 }

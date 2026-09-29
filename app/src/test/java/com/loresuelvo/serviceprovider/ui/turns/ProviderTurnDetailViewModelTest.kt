@@ -138,4 +138,40 @@ class ProviderTurnDetailViewModelTest {
         advanceUntilIdle()
         assertEquals(null, model.selectedFileId.value)
     }
+
+    @Test fun photo_retry_keeps_other_evidence_available_and_uses_fresh_url() = runTest(dispatcher.scheduler) {
+        val oldImages = (1..3).map { WorkOrderCompletionImage("file-$it", "$it.jpg", "https://storage.test/old-$it") }
+        val old = detail.copy(status = WorkOrderStatus.Paid, completionReportId = 17,
+            completionReport = WorkOrderCompletionReport(17, "Done", 1000, oldImages))
+        val pending = CompletableDeferred<WorkOrderDetailOutcome>()
+        var calls = 0
+        val orders = object : WorkOrderRepository {
+            override suspend fun getWorkOrder(id: Int): WorkOrderDetailOutcome {
+                calls++
+                return if (calls == 1) WorkOrderDetailOutcome.Success(old) else pending.await()
+            }
+            override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(emptyList<WorkOrder>())
+        }
+        val model = ProviderTurnDetailViewModel(SavedStateHandle(mapOf("turnId" to 42)),
+            GetProviderWorkOrderDetailUseCase(orders), proposals, session)
+        advanceUntilIdle()
+        model.selectFile("file-2")
+        model.retryPhoto("file-2")
+        dispatcher.scheduler.runCurrent()
+        assertEquals(2, calls)
+        assertEquals(old, ((model.uiState.value as ProviderTurnDetailUiState.Ready).result.detail
+            as WorkOrderDetailOutcome.Success).order)
+
+        val fresh = old.copy(completionReport = old.completionReport?.copy(images = oldImages.map {
+            it.copy(url = it.url.replace("old", "fresh"))
+        }))
+        pending.complete(WorkOrderDetailOutcome.Success(fresh))
+        advanceUntilIdle()
+        val current = ((model.uiState.value as ProviderTurnDetailUiState.Ready).result.detail
+            as WorkOrderDetailOutcome.Success).order
+        assertEquals("file-2", model.selectedFileId.value)
+        assertEquals(listOf("file-1", "file-2", "file-3"), current.completionReport?.images?.map { it.fileId })
+        assertEquals("https://storage.test/fresh-2", current.completionReport?.images?.get(1)?.url)
+        assertEquals("Done", current.completionReport?.description)
+    }
 }
