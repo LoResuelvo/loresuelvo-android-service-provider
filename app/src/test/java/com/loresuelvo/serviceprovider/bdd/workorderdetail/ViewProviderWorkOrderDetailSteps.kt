@@ -68,6 +68,7 @@ class ViewProviderWorkOrderDetailSteps {
     private var evidenceCase = ""
     private var paymentCase = ""
     private var reviewCase = ""
+    private var reentryCase = ""
     private var origin = ""
     private var detailCalls = 0
     private var listCalls = 0
@@ -298,6 +299,66 @@ class ViewProviderWorkOrderDetailSteps {
     fun noPaidActions() {
         assertEquals(WorkOrderStatus.Paid,
             (ready().result.detail as WorkOrderDetailOutcome.Success).order.status)
+    }
+
+    @Given("que abrí una orden scheduled cuyo turno ya comenzó y podía informar finalización")
+    fun openedScheduledOrder() {
+        origin = "Turnos"
+        openDetail()
+        model.onResume()
+        assertEquals(WorkOrderStatus.Scheduled,
+            (ready().result.detail as WorkOrderDetailOutcome.Success).order.status)
+    }
+
+    @And("""^"(informé la finalización.*|cancelé el formulario.*|dejé la app.*)"$""")
+    fun reentrySituation(situation: String) {
+        reentryCase = situation
+        val report = WorkOrderCompletionReport(17, "Delivered work as agreed", scheduledOn,
+            listOf(WorkOrderCompletionImage("file-1", "one.jpg", "https://storage.test/one")))
+        detail = when {
+            situation.startsWith("informé") -> detail.copy(status = WorkOrderStatus.AwaitingPayment,
+                completionReportId = 17, completionReport = report)
+            situation.startsWith("cancelé") -> detail
+            situation.startsWith("dejé") -> detail.copy(status = WorkOrderStatus.Paid,
+                completionReportId = 17, completionReport = report,
+                paidOn = scheduledOn, review = WorkOrderReview(5, "Excellent work"))
+            else -> error("Unexpected reentry situation")
+        }
+    }
+
+    @When("regreso al detalle de esa orden")
+    fun returnToDetail() {
+        model.onResume()
+        dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    @Then("veo {string} confirmado por una nueva consulta")
+    fun seesReentryResult(result: String) {
+        val current = (ready().result.detail as WorkOrderDetailOutcome.Success).order
+        assertEquals(2, detailCalls)
+        when {
+            result.startsWith("Pendiente de pago") -> {
+                assertEquals(WorkOrderStatus.AwaitingPayment, current.status)
+                assertEquals(17, current.completionReportId)
+            }
+            result.startsWith("Confirmado") -> {
+                assertEquals(WorkOrderStatus.Scheduled, current.status)
+                assertNull(current.completionReport)
+            }
+            result.startsWith("Pagado") -> {
+                assertEquals(WorkOrderStatus.Paid, current.status)
+                assertEquals(17, current.completionReportId)
+                assertEquals(5, current.review?.rating)
+            }
+            else -> error("Unexpected reentry result")
+        }
+    }
+
+    @And("Turnos e Inicio conservan su navegación y reflejan el estado confirmado al regresar")
+    fun reentryKeepsNavigation() {
+        assertEquals("provider_turns/42", Route.ProviderTurnDetail.buildPath(detail.id))
+        assertTrue(reentryCase.isNotBlank())
+        assertEquals(detail.status, (ready().result.detail as WorkOrderDetailOutcome.Success).order.status)
     }
 
     private fun ready() = model.uiState.value as ProviderTurnDetailUiState.Ready

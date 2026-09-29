@@ -68,7 +68,6 @@ Característica: Consultar el detalle y la evidencia de una orden como prestador
       | fecha de pago informada | ninguna reseña              | fecha local del pago y aviso de que aún no hay reseña              |
       | fecha de pago ausente   | ninguna reseña              | aviso de que aún no hay reseña, sin inventar fecha ni calificación |
 
-  @wip
   Esquema del escenario: 07-PDO Consultar el resultado vigente al regresar al detalle
     Dado que abrí una orden scheduled cuyo turno ya comenzó y podía informar finalización
     Y "<situación>"

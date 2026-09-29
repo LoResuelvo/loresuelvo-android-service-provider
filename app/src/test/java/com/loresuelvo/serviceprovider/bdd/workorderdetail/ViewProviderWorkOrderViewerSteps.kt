@@ -78,7 +78,7 @@ class ViewProviderWorkOrderViewerSteps {
         if (view == "el visor de la segunda fotografía") model.selectFile("second")
     }
 
-    @When("{string}")
+    @When("""^"(selecciono la segunda foto|pulso Atrás|elijo Cerrar|se recrea la pantalla|elijo Volver)"$""")
     fun act(selectedAction: String) {
         when (selectedAction) {
             "selecciono la segunda foto" -> model.selectFile("second")
