@@ -22,6 +22,10 @@
     <string name="provider_order_evidence_photo">Delivery photo %1$d: %2$s</string>
     <string name="provider_order_evidence_photo_error">The photo couldn’t be loaded.</string>
     <string name="provider_order_evidence_close">Close photo</string>
+    <string name="provider_order_paid_title">Payment received</string>
+    <string name="provider_order_review_title">Consumer review</string>
+    <string name="provider_order_review_missing">No review yet.</string>
+    <string name="provider_order_review_rating">Rating: %1$d out of 5</string>
     <string name="provider_chat_order_detail">View order details</string>
     <string name="provider_chat_order_link_error">We couldn’t find the order for this conversation.</string>
     <string name="provider_turns_detail_consumer">Customer</string>

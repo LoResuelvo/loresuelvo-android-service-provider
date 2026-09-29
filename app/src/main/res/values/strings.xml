@@ -22,6 +22,10 @@
     <string name="provider_order_evidence_photo">Foto de la entrega %1$d: %2$s</string>
     <string name="provider_order_evidence_photo_error">No se pudo cargar la fotografía.</string>
     <string name="provider_order_evidence_close">Cerrar fotografía</string>
+    <string name="provider_order_paid_title">Pago recibido</string>
+    <string name="provider_order_review_title">Reseña del consumidor</string>
+    <string name="provider_order_review_missing">Todavía no hay reseña.</string>
+    <string name="provider_order_review_rating">Calificación: %1$d de 5</string>
     <string name="provider_chat_order_detail">Ver detalle de la orden</string>
     <string name="provider_chat_order_link_error">No pudimos buscar la orden de esta conversación.</string>
     <string name="provider_turns_detail_consumer">Consumidor</string>
