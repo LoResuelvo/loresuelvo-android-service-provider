@@ -80,7 +80,6 @@ Característica: Consultar el detalle y la evidencia de una orden como prestador
       | cancelé el formulario existente de US-26 sin enviar                      | Confirmado y la posibilidad de informar finalización         |
       | dejé la app en segundo plano y la orden pasó a paid con reporte y reseña | Pagado, la evidencia y la reseña recibida                     |
 
-  @wip
   Esquema del escenario: 08-PDO Recuperar una consulta fallida sin mostrar datos de otra orden
     Dado que estaba viendo otra orden y la consulta de la orden elegida obtiene "<respuesta>"
     Cuando abro el detalle de la orden elegida
