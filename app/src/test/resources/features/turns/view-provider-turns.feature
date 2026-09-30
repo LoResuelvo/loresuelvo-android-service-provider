@@ -81,12 +81,12 @@ Característica: Visualizar turnos como prestador
       | falta de red   |
       | respuesta 500  |
 
-  Escenario: 09-PVT Mostrar en Inicio solamente turnos próximos
+  Escenario: 09-PVT Conservar en Inicio los turnos pendientes de evidencia y de pago
     Dado que el reloj indica "2026-09-26T12:00:00Z"
     Y tengo órdenes scheduled anteriores, iguales y posteriores a ese instante
     Y tengo órdenes futuras awaiting_payment y paid y propuestas pendientes
     Cuando abro Inicio
-    Entonces Trabajos agendados muestra sólo órdenes scheduled desde ese instante inclusive
+    Entonces Mis trabajos muestra las órdenes scheduled incluso pasadas y las awaiting_payment
     Y las ordena por fecha ascendente y luego por ID ascendente
     Y Ver todos permite consultar también las órdenes excluidas del resumen
 

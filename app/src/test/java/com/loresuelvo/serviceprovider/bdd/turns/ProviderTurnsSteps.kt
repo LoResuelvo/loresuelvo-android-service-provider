@@ -391,19 +391,19 @@ class ProviderTurnsSteps {
             override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome = error("Not used")
         }
         homeViewModel = ProviderHomeViewModel(GetPendingJobRequestsUseCase(requests),
-            GetScheduledWorkUseCase(repository) { now.toEpochMilli() })
+            GetScheduledWorkUseCase(repository))
         dispatcher.scheduler.advanceUntilIdle()
     }
 
-    @Then("Trabajos agendados muestra sólo órdenes scheduled desde ese instante inclusive")
-    fun homeShowsOnlyUpcomingScheduled() {
-        assertEquals(setOf(2, 5, 9),
+    @Then("Mis trabajos muestra las órdenes scheduled incluso pasadas y las awaiting_payment")
+    fun homeKeepsWorkNeedingEvidenceOrPayment() {
+        assertEquals(setOf(1, 2, 4, 5, 9),
             (homeViewModel.uiState.value.scheduledWork as ActivitySectionState.Ready).items.map { it.id }.toSet())
     }
 
     @And("las ordena por fecha ascendente y luego por ID ascendente")
     fun homeOrdersByDateAndId() {
-        assertEquals(listOf(2, 9, 5),
+        assertEquals(listOf(1, 2, 9, 4, 5),
             (homeViewModel.uiState.value.scheduledWork as ActivitySectionState.Ready).items.map { it.id })
     }
 

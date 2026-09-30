@@ -8,19 +8,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GetScheduledWorkUseCase internal constructor(
+class GetScheduledWorkUseCase @Inject constructor(
     private val repository: WorkOrderRepository,
-    private val nowMillis: () -> Long,
 ) {
-    @Inject constructor(repository: WorkOrderRepository) : this(repository, System::currentTimeMillis)
-
     suspend operator fun invoke(): ActivityLoadOutcome<WorkOrder> = when (
         val outcome = repository.getWorkOrders()
     ) {
         is ActivityLoadOutcome.Success -> {
-            val now = nowMillis()
             ActivityLoadOutcome.Success(outcome.items.filter {
-                it.status is WorkOrderStatus.Scheduled && it.scheduledOn >= now
+                it.status == WorkOrderStatus.Scheduled || it.status == WorkOrderStatus.AwaitingPayment
             }.sortedWith(compareBy<WorkOrder> { it.scheduledOn }.thenBy { it.id }))
         }
         is ActivityLoadOutcome.Failure -> outcome

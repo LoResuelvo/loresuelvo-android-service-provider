@@ -113,16 +113,15 @@ class ProviderHomeViewModelTest {
         viewModel.retryScheduledWork()
         advanceUntilIdle()
 
-        assertTrue((viewModel.uiState.value.scheduledWork as ActivitySectionState.Ready).items.isEmpty())
+        assertEquals(WorkOrderStatus.AwaitingPayment,
+            (viewModel.uiState.value.scheduledWork as ActivitySectionState.Ready).items.single().status)
         assertEquals(2, workOrders.calls)
         assertEquals(1, jobRequests.calls)
     }
 
     private fun createViewModel() = ProviderHomeViewModel(
         getPendingJobRequests = GetPendingJobRequestsUseCase(jobRequests),
-        getScheduledWork = GetScheduledWorkUseCase(workOrders) {
-            Instant.parse("2026-09-19T00:00:00Z").toEpochMilli()
-        },
+        getScheduledWork = GetScheduledWorkUseCase(workOrders),
     )
 
     private fun jobRequest() = JobRequest(

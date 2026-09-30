@@ -498,7 +498,7 @@ class ReportProviderWorkCompletionSteps {
         home = ProviderHomeViewModel(GetPendingJobRequestsUseCase(object : JobRequestRepository {
             override suspend fun getPendingJobRequests(): ActivityLoadOutcome<JobRequest> = ActivityLoadOutcome.Success(emptyList())
             override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome = error("Unused")
-        }), GetScheduledWorkUseCase(orders) { 0L })
+        }), GetScheduledWorkUseCase(orders))
         completion = ProviderCompletionViewModel(GetCompletionEligibilityUseCase(orders, accounts) { now },
             session, evidencePreparer, validateDraft, completionUploader, orders, SavedStateHandle())
         completion.open(selected)
@@ -552,7 +552,8 @@ class ReportProviderWorkCompletionSteps {
         advanceUntilIdle()
         assertEquals(WorkOrderStatus.AwaitingPayment,
             (turns.uiState.value as ProviderTurnsUiState.Ready).orders.single().status)
-        assertTrue((home.uiState.value.scheduledWork as ActivitySectionState.Ready).items.isEmpty())
+        assertEquals(WorkOrderStatus.AwaitingPayment,
+            (home.uiState.value.scheduledWork as ActivitySectionState.Ready).items.single().status)
     }
 
     @And("no se ofrece otro reporte ni se marca la orden como Pagado localmente")

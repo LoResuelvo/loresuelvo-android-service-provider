@@ -12,7 +12,7 @@ import org.junit.Test
 class GetScheduledWorkUseCaseTest {
 
     @Test
-    fun includes_current_instant_and_orders_upcoming_work_by_date_then_id() = runTest {
+    fun keeps_past_work_without_evidence_and_awaiting_payment_ordered_by_date_then_id() = runTest {
         val now = Instant.parse("2026-09-26T12:00:00Z")
         val orders = listOf(
             WorkOrder(5, "Ana", "Later", now.plusSeconds(60).toEpochMilli(), WorkOrderStatus.Scheduled),
@@ -24,13 +24,13 @@ class GetScheduledWorkUseCaseTest {
         )
         val useCase = GetScheduledWorkUseCase(object : WorkOrderRepository {
             override suspend fun getWorkOrders() = ActivityLoadOutcome.Success(orders)
-        }) { now.toEpochMilli() }
+        })
 
-        assertEquals(listOf(2, 9, 5), (useCase() as ActivityLoadOutcome.Success).items.map { it.id })
+        assertEquals(listOf(1, 2, 9, 4, 5), (useCase() as ActivityLoadOutcome.Success).items.map { it.id })
     }
 
     @Test
-    fun returns_only_scheduled_work_orders() = runTest {
+    fun returns_actionable_work_and_excludes_paid_and_unknown_statuses() = runTest {
         val useCase = GetScheduledWorkUseCase(
             repository = object : WorkOrderRepository {
                 override suspend fun getWorkOrders(): ActivityLoadOutcome<com.loresuelvo.serviceprovider.domain.activity.WorkOrder> =
@@ -43,13 +43,12 @@ class GetScheduledWorkUseCaseTest {
                         ),
                     )
             },
-            nowMillis = { Instant.parse("2026-09-19T00:00:00Z").toEpochMilli() },
         )
 
         val outcome = useCase()
 
         assertEquals(
-            listOf(1),
+            listOf(1, 2),
             (outcome as ActivityLoadOutcome.Success).items.map { it.id },
         )
     }
