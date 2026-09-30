@@ -10,6 +10,18 @@ import org.junit.Test
 class Auth0WebAuthLauncherTest {
 
     @Test
+    fun login_requires_authentication_instead_of_reusing_browser_session() {
+        val builder = mockk<WebAuthProvider.Builder>(relaxed = true)
+        every { builder.withScheme(any()) } returns builder
+        every { builder.withAudience(any()) } returns builder
+        every { builder.withParameters(any()) } returns builder
+
+        builder.configureLogin(config)
+
+        io.mockk.verify { builder.withParameters(mapOf("prompt" to "login")) }
+    }
+
+    @Test
     fun signup_configures_scheme_audience_and_signup_hint() {
         val builder = configuredBuilder()
 

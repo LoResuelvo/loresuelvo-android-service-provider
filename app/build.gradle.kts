@@ -118,6 +118,7 @@ android {
 
             manifestPlaceholders["auth0Domain"] = auth0Domain
             manifestPlaceholders["auth0Scheme"] = auth0Scheme
+            manifestPlaceholders["paymentReturnHost"] = paymentReturnHost
         }
 
         create("staging") {
