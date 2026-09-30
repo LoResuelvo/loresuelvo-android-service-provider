@@ -120,6 +120,7 @@ Load only the skills that match the current change:
 | Delivery gates, release, merge, or CI diagnosis | [android-testing-gates](.agents/skills/android-testing-gates/SKILL.md) |
 | HTTP, Retrofit, DTOs, or mappers | [android-api-client-governance](.agents/skills/android-api-client-governance/SKILL.md) |
 | Hilt graph, bindings, or Hilt tests | [android-hilt-governance](.agents/skills/android-hilt-governance/SKILL.md) |
+| Visual design, typography, color, spacing, or UX review | [ui-ux-pro-max](.agents/skills/ui-ux-pro-max/SKILL.md) |
 | Compose, navigation, or UI state | [android-compose-quality-governance](.agents/skills/android-compose-quality-governance/SKILL.md) |
 | Commits, PRs, or history review | [android-commit-governance](.agents/skills/android-commit-governance/SKILL.md) |
 | Agent contracts or documentation | [android-doc-governance](.agents/skills/android-doc-governance/SKILL.md) |
