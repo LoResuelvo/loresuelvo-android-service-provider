@@ -83,7 +83,7 @@ class ProviderTurnsAcceptanceTest {
                 messages = {}, profile = {}, jobRequestDetail = {}, conversation = {},
             )
         }
-        compose.onNodeWithTag("jobs_view_turns").performScrollTo()
+        compose.onNodeWithTag("home_turns_row").performScrollTo()
         val cta = compose.onNodeWithTag("provider_turn_details_40").fetchSemanticsNode().boundsInRoot
         val row = compose.onNodeWithTag("home_turns_row").fetchSemanticsNode().boundsInRoot
         val card = compose.onNodeWithTag("provider_turn_40").fetchSemanticsNode().boundsInRoot

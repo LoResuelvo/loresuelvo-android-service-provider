@@ -5,13 +5,18 @@ import android.content.res.Configuration
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
+import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
@@ -45,9 +50,10 @@ class ProviderHomeScreenTest {
         get() = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun opens_same_turns_list_from_scheduled_work_and_jobs_while_proposals_stay_separate() {
+    fun opens_turns_and_proposals_from_their_section_headers() {
         var turnsOpens = 0
         var proposalOpens = 0
+        var conversationId: Int? = null
         composeTestRule.setContent {
             LoresuelvoTheme {
                 ProviderHomeScreen(
@@ -62,18 +68,32 @@ class ProviderHomeScreenTest {
                     onMercadoPagoClick = {},
                     onAllTurnsClick = { turnsOpens++ },
                     onAllProposalsClick = { proposalOpens++ },
+                    onProposalConversation = { conversationId = it },
+                    proposalsState = ServiceProposalListUiState(
+                        proposals = listOf(proposal(3).copy(status = ServiceProposalStatus.Accepted),
+                            proposal(1), proposal(2), proposal(4).copy(status = ServiceProposalStatus.Rejected)),
+                        loading = false,
+                    ),
                 )
             }
         }
 
+        composeTestRule.onNodeWithTag("home_proposals_row")
+            .performScrollTo().performScrollToIndex(1)
+        composeTestRule.onAllNodesWithText("2").assertCountEquals(1)
+        composeTestRule.onNodeWithTag("home_proposal_details_2").performClick()
+        composeTestRule.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Proposal 2").assertIsDisplayed()
+        assertEquals(0, proposalOpens)
+        composeTestRule.onNodeWithText(context.getString(R.string.proposal_detail_conversation))
+            .performScrollTo().assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.runOnIdle { assertEquals(93, conversationId) }
         composeTestRule.onNodeWithTag("scheduled_view_all_turns")
-            .performScrollTo().performClick()
-        composeTestRule.onNodeWithTag("jobs_view_turns")
             .performScrollTo().performClick()
         composeTestRule.onNodeWithTag("jobs_view_all_proposals")
             .performScrollTo().performClick()
 
-        assertEquals(2, turnsOpens)
+        assertEquals(1, turnsOpens)
         assertEquals(1, proposalOpens)
     }
 
@@ -86,7 +106,7 @@ class ProviderHomeScreenTest {
             ), {}, {}, {}, {})
         } }
         composeTestRule.onNodeWithTag("scheduled_view_all_turns").performScrollTo().assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("Scheduled work").assertCountEquals(3)
+        composeTestRule.onAllNodesWithText("My jobs").assertCountEquals(1)
         assertEquals("Scheduled work", context.getString(R.string.provider_home_scheduled_count_label))
         assertEquals("Scheduled work", context.getString(R.string.provider_home_scheduled_action))
         assertEquals("View all", context.getString(R.string.provider_turns_view_all))
@@ -157,7 +177,7 @@ class ProviderHomeScreenTest {
         composeTestRule.onNodeWithText("Reparar pérdida").performScrollTo().assertIsDisplayed()
         composeTestRule.onAllNodesWithText("Ana Pérez").assertCountEquals(2)
         composeTestRule.onAllNodesWithText("Pérdida debajo de la pileta").assertCountEquals(2)
-        composeTestRule.onAllNodesWithText("1").assertCountEquals(4)
+        composeTestRule.onAllNodesWithText("1").assertCountEquals(2)
     }
 
     @Test
@@ -186,11 +206,11 @@ class ProviderHomeScreenTest {
             .onNodeWithText(context.getString(R.string.provider_home_scheduled_empty))
             .performScrollTo()
             .assertIsDisplayed()
-        composeTestRule.onAllNodesWithText("0").assertCountEquals(4)
+        composeTestRule.onAllNodesWithText("0").assertCountEquals(2)
     }
 
     @Test
-    fun exposes_retry_for_a_failed_section_and_keeps_future_detail_actions_disabled() {
+    fun exposes_retry_for_a_failed_section_without_placeholder_actions() {
         var retried = false
 
         composeTestRule.setContent {
@@ -217,8 +237,8 @@ class ProviderHomeScreenTest {
             .onNodeWithText(context.getString(R.string.provider_home_retry))
             .performScrollTo()
             .assertIsDisplayed()
-        composeTestRule.onNodeWithTag("provider-home-requests-action").assertIsNotEnabled()
-        composeTestRule.onNodeWithTag("provider-home-scheduled-action").assertIsNotEnabled()
+        composeTestRule.onNodeWithTag("provider-home-requests-action").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("provider-home-scheduled-action").assertDoesNotExist()
         assertTrue(!retried)
     }
 
@@ -250,6 +270,16 @@ class ProviderHomeScreenTest {
 
         assertEquals(request, selected)
     }
+
+    private fun proposal(id: Int) = ServiceProposalSummary(
+        id, 93, 1500050, Instant.parse("2026-10-06T12:00:00Z").toEpochMilli(), "Proposal $id", 45,
+        ServiceProposalStatus.Pending, Instant.parse("2026-09-21T12:00:00Z").toEpochMilli(),
+        ServiceProposalCounterpart(7, "consumer", "Ana", "Pérez", null, null),
+        ServiceProposalBookingTerms(
+            "ARS", 1500050, 1000, 1499050, 500, 100, 400, 1100, 1499450, 1500550,
+            Instant.parse("2026-09-30T12:00:00Z").toEpochMilli(),
+        ),
+    )
 
     private fun provider() = CurrentAccount.Provider(
         id = 1,

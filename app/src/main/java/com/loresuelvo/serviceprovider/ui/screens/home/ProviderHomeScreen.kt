@@ -1,32 +1,39 @@
 package com.loresuelvo.serviceprovider.ui.screens.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
-import com.loresuelvo.serviceprovider.ui.home.ActivitySectionState
-import com.loresuelvo.serviceprovider.ui.home.ProviderHomeUiState
 import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
+import com.loresuelvo.serviceprovider.ui.home.ProviderHomeUiState
+import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
+import com.loresuelvo.serviceprovider.ui.screens.proposals.ProposalDetailSheet
 
 @Composable
 fun ProviderHomeScreen(
@@ -40,44 +47,63 @@ fun ProviderHomeScreen(
     onAllTurnsClick: () -> Unit = {},
     onTurnDetailsClick: (com.loresuelvo.serviceprovider.domain.activity.WorkOrder) -> Unit = {},
     modifier: Modifier = Modifier,
+    proposalsState: ServiceProposalListUiState = ServiceProposalListUiState(),
+    onRetryProposals: () -> Unit = {},
+    onProposalConversation: (Int) -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
+    var selectedProposalId by rememberSaveable { mutableStateOf<Int?>(null) }
+    LaunchedEffect(proposalsState.loading, proposalsState.proposals) {
+        if (!proposalsState.loading && proposalsState.proposals.none { it.id == selectedProposalId }) {
+            selectedProposalId = null
+        }
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.provider_home_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            ProviderIdentityHeader(provider)
-            ProviderActivitySummary(uiState)
-            ProviderHomeActions(
-                onMercadoPagoClick = onMercadoPagoClick,
-            )
-            JobRequestsSection(
-                state = uiState.jobRequests,
-                onRetry = onRetryJobRequests,
-                onRequestClick = onJobRequestClick,
-            )
-            ScheduledWorkSection(
-                state = uiState.scheduledWork,
-                onRetry = onRetryScheduledWork,
-                onAllTurnsClick = onAllTurnsClick,
-                onTurnDetailsClick = onTurnDetailsClick,
-            )
-            ProposalsSection(onAllProposalsClick, onAllTurnsClick)
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 600.dp)
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .verticalScroll(scrollState)
+                    .padding(start = 16.dp, top = 24.dp, end = 16.dp, bottom = 112.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.provider_home_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.semantics { heading() },
+                )
+                ProviderIdentityHeader(provider)
+                ScheduledWorkSection(
+                    state = uiState.scheduledWork,
+                    onRetry = onRetryScheduledWork,
+                    onAllTurnsClick = onAllTurnsClick,
+                    onTurnDetailsClick = onTurnDetailsClick,
+                )
+                ProposalsSection(proposalsState, onRetryProposals, onAllProposalsClick) {
+                    selectedProposalId = it.id
+                }
+                JobRequestsSection(
+                    state = uiState.jobRequests,
+                    onRetry = onRetryJobRequests,
+                    onRequestClick = onJobRequestClick,
+                )
+                OutlinedButton(onClick = onMercadoPagoClick, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.provider_home_mercadopago_action))
+                }
+            }
         }
+    }
+    proposalsState.proposals.firstOrNull { it.id == selectedProposalId }?.let { proposal ->
+        ProposalDetailSheet(proposal, onDismiss = { selectedProposalId = null }, onConversation = {
+            selectedProposalId = null
+            onProposalConversation(proposal.conversationId)
+        })
     }
 }
 
@@ -86,6 +112,7 @@ private fun ProviderIdentityHeader(provider: CurrentAccount.Provider) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         ProviderAvatar(
             name = provider.name,
@@ -109,94 +136,17 @@ private fun ProviderIdentityHeader(provider: CurrentAccount.Provider) {
                 text = "${provider.name} ${provider.surname}".trim(),
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Text(
-                text = provider.category.name,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ProviderActivitySummary(uiState: ProviderHomeUiState) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        SummaryItem(
-            label = stringResource(R.string.provider_home_requests_count_label),
-            count = uiState.jobRequests.countOrPlaceholder(),
-            modifier = Modifier.weight(1f),
-        )
-        SummaryItem(
-            label = stringResource(R.string.provider_home_scheduled_count_label),
-            count = uiState.scheduledWork.countOrPlaceholder(),
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun SummaryItem(
-    label: String,
-    count: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = count, style = MaterialTheme.typography.headlineSmall)
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ProviderHomeActions(onMercadoPagoClick: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.provider_home_actions_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() },
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedButton(
-                onClick = {},
-                enabled = false,
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("provider-home-requests-action"),
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                shape = MaterialTheme.shapes.extraLarge,
             ) {
-                Text(stringResource(R.string.provider_home_requests_action))
-            }
-            OutlinedButton(
-                onClick = {},
-                enabled = false,
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("provider-home-scheduled-action"),
-            ) {
-                Text(stringResource(R.string.provider_home_scheduled_action))
+                Text(
+                    text = provider.category.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
             }
         }
-        Button(onClick = onMercadoPagoClick, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.provider_home_mercadopago_action))
-        }
     }
-}
-
-private fun <T> ActivitySectionState<T>.countOrPlaceholder(): String = when (this) {
-    is ActivitySectionState.Ready -> items.size.toString()
-    ActivitySectionState.Error, ActivitySectionState.Loading -> "—"
 }

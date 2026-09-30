@@ -1,34 +1,39 @@
 package com.loresuelvo.serviceprovider.ui.screens.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.JobRequest
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
+import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalSummary
 import com.loresuelvo.serviceprovider.ui.home.ActivitySectionState
-import com.loresuelvo.serviceprovider.ui.screens.turns.ProviderTurnCard
+import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
 
 @Composable
 internal fun JobRequestsSection(
@@ -36,17 +41,19 @@ internal fun JobRequestsSection(
     onRetry: () -> Unit,
     onRequestClick: (JobRequest) -> Unit,
 ) {
-    ActivitySectionHeader(
-        title = stringResource(R.string.provider_home_requests_title),
-        count = state.countOrPlaceholder(),
-    )
-    when (state) {
-        ActivitySectionState.Loading -> SectionLoading()
-        ActivitySectionState.Error -> SectionError(onRetry)
-        is ActivitySectionState.Ready -> if (state.items.isEmpty()) {
-            SectionEmpty(stringResource(R.string.provider_home_requests_empty))
-        } else {
-            state.items.forEach { JobRequestCard(it, onRequestClick) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ActivitySectionHeader(
+            title = stringResource(R.string.provider_home_requests_title),
+            count = state.countOrPlaceholder(),
+        )
+        when (state) {
+            ActivitySectionState.Loading -> SectionLoading()
+            ActivitySectionState.Error -> SectionError(onRetry)
+            is ActivitySectionState.Ready -> if (state.items.isEmpty()) {
+                SectionEmpty(stringResource(R.string.provider_home_requests_empty))
+            } else {
+                state.items.forEach { JobRequestCard(it, onRequestClick) }
+            }
         }
     }
 }
@@ -58,22 +65,28 @@ internal fun ScheduledWorkSection(
     onAllTurnsClick: () -> Unit,
     onTurnDetailsClick: (WorkOrder) -> Unit,
 ) {
-    ActivitySectionHeader(
-        title = stringResource(R.string.provider_home_scheduled_title),
-        count = state.countOrPlaceholder(),
-        onViewAll = onAllTurnsClick,
-    )
-    when (state) {
-        ActivitySectionState.Loading -> SectionLoading()
-        ActivitySectionState.Error -> SectionError(onRetry)
-        is ActivitySectionState.Ready -> if (state.items.isEmpty()) {
-            SectionEmpty(stringResource(R.string.provider_home_scheduled_empty))
-        } else {
-            val cardWidth = minOf(370.dp, (LocalConfiguration.current.screenWidthDp - 48).dp)
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("home_turns_row"),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                state.items.forEach { order ->
-                    ProviderTurnCard(order, Modifier.width(cardWidth)) { onTurnDetailsClick(it) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ActivitySectionHeader(
+            title = stringResource(R.string.provider_home_scheduled_title),
+            count = state.countOrPlaceholder(),
+            onViewAll = onAllTurnsClick,
+        )
+        when (state) {
+            ActivitySectionState.Loading -> SectionLoading()
+            ActivitySectionState.Error -> SectionError(onRetry)
+            is ActivitySectionState.Ready -> if (state.items.isEmpty()) {
+                SectionEmpty(stringResource(R.string.provider_home_scheduled_empty))
+            } else {
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val cardWidth = minOf(440.dp, if (state.items.size == 1) maxWidth else maxWidth - 16.dp)
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().testTag("home_turns_row"),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        items(state.items, key = { it.id }) { order ->
+                            HomeTurnCard(order, Modifier.width(cardWidth)) { onTurnDetailsClick(order) }
+                        }
+                    }
                 }
             }
         }
@@ -81,40 +94,67 @@ internal fun ScheduledWorkSection(
 }
 
 @Composable
-internal fun ProposalsSection(onAllProposalsClick: () -> Unit, onAllTurnsClick: () -> Unit) {
-    Text(
-        text = stringResource(R.string.proposal_home_jobs),
-        style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.semantics { heading() },
-    )
-    OutlinedButton(onClick = onAllProposalsClick, modifier = Modifier.testTag("jobs_view_all_proposals")) {
-        Text(stringResource(R.string.proposal_home_view_all))
-    }
-    OutlinedButton(onClick = onAllTurnsClick, modifier = Modifier.testTag("jobs_view_turns")) {
-        Text(stringResource(R.string.provider_turns_title))
+internal fun ProposalsSection(
+    state: ServiceProposalListUiState,
+    onRetry: () -> Unit,
+    onViewAll: () -> Unit,
+    onDetails: (ServiceProposalSummary) -> Unit,
+) {
+    val pendingProposals = state.proposals.filter { it.status == ServiceProposalStatus.Pending }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ActivitySectionHeader(
+            title = stringResource(R.string.provider_home_proposals_title),
+            count = if (state.loading || state.failure != null) "—" else pendingProposals.size.toString(),
+            onViewAll = onViewAll,
+            actionTag = "jobs_view_all_proposals",
+            actionLabel = R.string.proposal_home_view_all,
+        )
+        when {
+            state.loading -> SectionLoading()
+            state.failure != null -> SectionError(onRetry)
+            pendingProposals.isEmpty() -> SectionEmpty(stringResource(R.string.provider_home_proposals_empty))
+            else -> BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val cardWidth = minOf(440.dp, if (pendingProposals.size == 1) maxWidth else maxWidth - 16.dp)
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().testTag("home_proposals_row"),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(pendingProposals, key = { it.id }) { proposal ->
+                        HomeProposalCard(proposal, Modifier.width(cardWidth)) { onDetails(proposal) }
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun ActivitySectionHeader(title: String, count: String, onViewAll: (() -> Unit)? = null) {
-    val stackLink = onViewAll != null && LocalConfiguration.current.fontScale > 1f
+private fun ActivitySectionHeader(
+    title: String,
+    count: String,
+    onViewAll: (() -> Unit)? = null,
+    actionTag: String = "scheduled_view_all_turns",
+    actionLabel: Int = R.string.provider_turns_view_all,
+) {
+    val stackLink = onViewAll != null && LocalConfiguration.current.fontScale > 1.3f
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
         Row(Modifier.fillMaxWidth().semantics { heading() },
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Text(text = title, style = MaterialTheme.typography.titleLarge,
+            Text(text = title, style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f).then(
-                    if (onViewAll != null) Modifier.testTag("scheduled_section_title") else Modifier))
-            Text(text = count, style = MaterialTheme.typography.titleLarge,
-                modifier = if (onViewAll != null) Modifier.testTag("scheduled_section_count") else Modifier)
+                    if (onViewAll != null && actionTag == "scheduled_view_all_turns") Modifier.testTag("scheduled_section_title") else Modifier))
+            Text(text = count, style = MaterialTheme.typography.labelLarge,
+                modifier = if (onViewAll != null && actionTag == "scheduled_view_all_turns") Modifier.testTag("scheduled_section_count") else Modifier)
             if (onViewAll != null && !stackLink) TextButton(onClick = onViewAll,
-                modifier = Modifier.testTag("scheduled_view_all_turns")) {
-                Text(stringResource(R.string.provider_turns_view_all))
+                modifier = Modifier.testTag(actionTag)) {
+                Text(stringResource(actionLabel))
             }
         }
         if (stackLink) TextButton(onClick = onViewAll!!,
-            modifier = Modifier.testTag("scheduled_view_all_turns")) {
-            Text(stringResource(R.string.provider_turns_view_all))
+            modifier = Modifier.testTag(actionTag)) {
+            Text(stringResource(actionLabel))
         }
     }
 }
@@ -124,7 +164,9 @@ private fun JobRequestCard(
     request: JobRequest,
     onRequestClick: (JobRequest) -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.extraLarge) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),

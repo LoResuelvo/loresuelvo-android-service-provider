@@ -5,11 +5,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.ui.home.ProviderHomeViewModel
 import com.loresuelvo.serviceprovider.ui.navigation.Route
+import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
 
 @Composable
 fun ProviderHomeRoute(
@@ -18,8 +21,11 @@ fun ProviderHomeRoute(
     onJobRequestClick: (com.loresuelvo.serviceprovider.domain.activity.JobRequest) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProviderHomeViewModel = hiltViewModel(),
+    proposalsViewModel: ServiceProposalListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val proposalsState by proposalsViewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { proposalsViewModel.onResume() }
 
     LaunchedEffect(navController, viewModel) {
         val homeEntry = navController.currentBackStackEntry ?: return@LaunchedEffect
@@ -45,6 +51,11 @@ fun ProviderHomeRoute(
 
     ProviderHomeScreen(
         provider = provider,
+        proposalsState = proposalsState,
+        onRetryProposals = proposalsViewModel::load,
+        onProposalConversation = { id ->
+            navController.navigate(Route.Conversation.buildPath(id)) { launchSingleTop = true }
+        },
         uiState = uiState,
         onRetryJobRequests = viewModel::retryJobRequests,
         onRetryScheduledWork = viewModel::retryScheduledWork,

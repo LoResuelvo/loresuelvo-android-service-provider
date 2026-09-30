@@ -144,6 +144,7 @@
     <string name="provider_entry_account_mismatch_action">Volver a bienvenida</string>
 
     <!-- Provider Home -->
+    <string name="provider_home_proposals_empty">You have no proposals waiting for a response.</string>
     <string name="provider_home_title">Inicio</string>
     <string name="provider_home_greeting">Hola, %1$s</string>
     <string name="provider_home_photo_description">Foto de perfil de %1$s</string>
@@ -154,10 +155,10 @@
     <string name="provider_home_scheduled_action">Scheduled work</string>
     <string name="provider_home_mercadopago_action">Mercado Pago</string>
     <string name="provider_home_view_request">Ver solicitud</string>
-    <string name="provider_home_requests_title">Solicitudes pendientes</string>
+    <string name="provider_home_requests_title">New requests</string>
     <string name="provider_home_requests_empty">No tenés solicitudes pendientes.</string>
-    <string name="provider_home_scheduled_title">Scheduled work</string>
-    <string name="provider_home_scheduled_empty">You have no scheduled work yet.</string>
+    <string name="provider_home_scheduled_title">My jobs</string>
+    <string name="provider_home_scheduled_empty">You have no outstanding jobs.</string>
     <string name="provider_home_section_error">We couldn’t load this section.</string>
     <string name="provider_home_retry">Retry</string>
     <string name="provider_home_scheduled_on">Programado para %1$s</string>
@@ -357,4 +358,7 @@
     <string name="mercadopago_connection_incomplete_description">La autorización no se completó. Podés reintentar la conexión o continuar sin conectar.</string>
     <string name="mercadopago_error_browser_unavailable">No se pudo abrir el navegador para completar la conexión.</string>
     <string name="mercadopago_retry_verification">Reintentar verificación</string>
+    <string name="provider_home_proposals_title">Pending proposals</string>
+    <string name="provider_home_view_proposal">View proposal</string>
+    <string name="provider_home_visit_pattern">dd/MM/yyyy - HH:mm</string>
 </resources>
