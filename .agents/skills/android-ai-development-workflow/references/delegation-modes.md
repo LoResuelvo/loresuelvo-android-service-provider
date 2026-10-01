@@ -13,7 +13,7 @@ Identification and mode:
 - Numeric User Story ID, batch, and assigned scenario IDs:
 - Canonical plan key/status and approved batch scope:
 - Conduction: USER_GUIDED | AGENT_ORCHESTRATED
-- Granularity: MICROSTEP | SCENARIO | SCENARIO_GROUP
+- Batch: 1..3; one implementation commit
 
 Base state:
 - Verified HEAD SHA, branch, and upstream:
@@ -23,7 +23,7 @@ Base state:
 
 Scenarios:
 - Feature path, runner, and exact approved Gherkin for assigned scenarios:
-- Active scenario ID, @wip state, and prior GREEN scenario IDs:
+- Assigned scenario IDs, @wip state, and completed batches:
 
 Android context:
 - Relevant package paths, symbols, navigation destinations, and resources:
@@ -38,16 +38,14 @@ Governance:
 - Escalation conditions:
 - Required skills:
 
-Next boundary:
-- Observable behavior:
-- Ordered outside-in checkpoints for the active scenario, each with proof:
-- Tentative commit boundaries: result, required files/dependencies, focused
-  GREEN proof, Delivery intent, and proposed subject for each:
-- Active scenario task: existing code to reuse, allowed files/symbols:
-- Required input/output interfaces and dependencies:
-- Focused RED test and expected failure; GREEN proof and exclusions:
-- Expected artifacts and review checkpoint:
-- Required device coverage deferred to final User Story verification:
+Batch outcome:
+- Complete observable result and assigned acceptance criteria:
+- Existing code to reuse and allowed files/symbols:
+- Required interfaces/dependencies and exclusions:
+- Single proposed commit subject and Delivery intent:
+- JVM/BDD, lint/build proof at commit preparation:
+- Orchestrator review checkpoint before test execution:
+- Instrumented coverage included in the final batch, executed only at closure:
 
 Ownership and close:
 - Editing, staging, commit, and push owners:
@@ -58,25 +56,12 @@ Ownership and close:
 ```
 
 Do not put raw commands, copied logs, or manually calculated gates in the
-contract. The policy and Delivery MCP choose the gate. Copy only the approved
-Gherkin within the assigned scope; do not paste the entire plan or invent
-clean-tree, green-CI, or device facts. For `MICROSTEP`, name the owner of any
-later staging/commit/push and mark its commit map "none" because the developer
-stops after validation.
-Order active-scenario checkpoints by evidence: a runnable behavior RED, the
-smallest needed UI/domain/data seam with focused GREEN proof, then
-ViewModel/platform wiring and full scenario GREEN. Omit layers the behavior
-does not need; a checkpoint is not automatically a commit.
-Draft the commit boundaries before editing, then revise them when dependencies
-become clear. Finish, prepare, and commit each independently GREEN boundary
-before building the next independent one. Combine a slice with its required
-dependency when it cannot compile or pass its focused tests alone; split a
-newly discovered independent concern. Do not build the whole scenario and
-divide its uncommitted diff retrospectively. A boundary map is a forecast, not
-a commit quota or permission for layer-only commits.
-Do not default that map to one scenario-sized commit. If no smaller result can
-stand alone, record the concrete dependency that prevents it. Intermediate
-proof is device-free; carry missing instrumented coverage to the final phase.
+contract. The policy and Delivery MCP choose the gate. Copy only approved
+Gherkin in the assigned scope. Do not invent clean-tree, green-CI, or device
+facts. The user owns the initial scenario commit. The developer implements
+its batch end to end, pauses for orchestrator review, fixes findings, and
+runs checks at commit preparation. No intermediate RED/GREEN or per-scenario
+commits are required. Keep missing device proof explicit until final verification.
 
 When graph evidence informs the task, include its project and generation,
 evidence tier and bounded scope, queries/pagination, qualified symbols and
@@ -86,14 +71,14 @@ and unresolved questions. Do not send a raw graph transcript.
 ## Same-developer continuation
 
 When the bootstrap remains in context, send a short update only for changed
-HEAD/tree/CI facts, closed scenarios, revised commit boundaries, new risks or
+HEAD/tree/CI facts, closed scenarios, revised batch scope, new risks or
 device lessons, and the next action. New scope or a lost bootstrap requires a
 fresh bootstrap, even for the same developer.
 
 ## Execution reference
 
 The parent workflow skill defines granularity, ownership, and continuation;
-`android-bdd-tdd-process` defines RED/GREEN and `@wip` closure. Delivery
+`android-bdd-tdd-process` defines acceptance validation and `@wip` handling. Delivery
 intent, receipts, jobs, and CI recovery follow `.delivery/README.md` and
 `android-testing-gates`. Keep this contract limited to facts for one handoff.
 
@@ -101,7 +86,7 @@ intent, receipts, jobs, and CI recovery follow `.delivery/README.md` and
 
 ```text
 Status: WORKING | BLOCKED | READY_FOR_REVIEW | DONE
-Active scenario/task and next checkpoint:
+Active batch/task and next checkpoint:
 GREEN scenarios:
 Relevant SHAs and receipts:
 Contract or decision changes:
@@ -117,16 +102,6 @@ Running job ID, or none:
 ```
 
 Never include successful logs, raw stack traces, full diffs, or MCP payloads.
-
-## Small-task example
-
-For a Profile retry scenario, a tentative map might be: `test[35]` for
-compilable step glue and a fake after Gate 0 passes; `feat[35]` for retry
-behavior with a focused ViewModel test; then `feat[35]` for the screen callback
-and `@wip` removal when the full scenario runs GREEN. If the ViewModel slice
-needs the callback to be testable, combine those boundaries. Do not prebuild
-later identity or payment behavior; review each finished boundary before
-preparing it. This example does not set a commit count.
 
 ## Progress and resources
 

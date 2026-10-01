@@ -23,8 +23,8 @@ deterministic classification and check catalog live in
 
 Instrumented execution and device queries are reserved for final User Story
 verification. Commit, scenario, repair, and intermediate batch gates are
-device-free; do not introduce an earlier diagnostic device checkpoint. New
-instrumented tests may be delivered in a final coverage commit. `close_us`
+device-free; do not introduce an earlier diagnostic device checkpoint. Include new
+instrumented test code in the final planned implementation batch. `close_us`
 requires the full device suite and blocks if its device is unavailable.
 Gate R needs Staging credentials and the failed CI `repairsSha` for its
 lint/JVM/build checks; its receipt does not prove instrumented verification.

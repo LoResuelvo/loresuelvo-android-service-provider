@@ -27,49 +27,35 @@ and merge validation.
 One provider example is `features/auth/provider-welcome.feature`, with glue in
 `bdd/auth/welcome/` and the `WelcomeCucumberTest` runner.
 
-## Required outside-in loop
+## Batch implementation and acceptance
 
-1. Write Gherkin acceptance scenarios before production code, present them
-   for functional approval, and mark approved pending scenarios `@wip`.
-2. Add the smallest step definitions and test doubles that exercise the real
-   owned use case or ViewModel. Observe a relevant RED through a runnable
-   focused test before production code. With `@wip` present, Cucumber skips
-   that scenario. `delivery_test(mode="scenario", featureFile=<feature path>)`
-   selects a feature runner when available and cannot by itself prove its RED. To observe
-   Cucumber RED, temporarily remove `@wip` in the working tree and restore it
-   before an intermediate commit. A coherent glue-only boundary may be
-   committed after its staged `delivery_prepare(intent="prepare_commit")`
-   passes Gate 0.
-3. Add focused JVM tests for behavior and error branches; implement the
-   smallest production change. Use a stateless Composable, pure use case,
-   repository adapter, or ViewModel as needed. Test each relevant boundary
-   with Robolectric/Compose, JUnit4, MockWebServer, or Turbine.
-4. Refactor while focused tests stay GREEN. Record required instrumented UI
-   coverage for Activity, navigation, or real Android boundaries. New device
-   tests may be added in the final coverage commit; do not run them or query
-   a device until the User Story's final verification phase. Scenario GREEN
-   here means JVM acceptance proof; full Android verification remains pending.
-5. For the final functional boundary, remove `@wip` in the working tree so
-   the active Cucumber scenario runs. Verify focused GREEN
-   with `delivery_test(mode="scenario", featureFile=<feature path>)`. Confirm
-   a runner includes the feature and inspect the Cucumber report or test log
-   to see that the active scenario executed; a green suite with a filtered or
-   missing scenario is insufficient. Stage the functional change and tag
-   removal together, then call `delivery_prepare(intent="close_scenario")`.
-   Commit only after `status: passed`; push when authorized.
+1. Define all Gherkin before production work, with explicit functional
+   approval and `@wip` for pending scenarios. The user creates the initial
+   scenario commit; agents do not take over that commit.
+2. Implement the assigned batch end to end with meaningful step definitions,
+   test doubles, and JVM tests of real use cases or ViewModels. Scenarios
+   within the batch may be implemented together. Mandatory pre-implementation
+   RED and intermediate test executions are not required.
+3. The orchestrator reviews requirements, production code, and tests directly.
+   The retained developer fixes findings before commit validation.
+4. At the commit checkpoint, remove `@wip` for completed scenarios, stage their
+   functional implementation and tests, and run `delivery_prepare` with
+   `prepare_commit`. Confirm that the runner executed the completed scenarios;
+   skipped or missing scenarios are not proof. Keep later-batch scenarios
+   tagged. Do not create tag-only commits or routine `close_scenario` receipts.
+5. Use `delivery_test` at this checkpoint for focused evidence or diagnosis
+   only when needed beyond the selected gate. Inspect its actual selection:
+   scenario mode selects a feature runner, not one scenario by name. Fix
+   failures and obtain a passed exact-snapshot gate before committing.
+6. Include required Activity/navigation/lifecycle test code in the final
+   planned batch. Execute instrumented tests only in final User Story
+   verification, after all batches pass review and device-free checks.
 
-After approval, scenario wording is immutable: do not rewrite, remove, or
-weaken `Given`, `When`, or `Then` without renewed functional approval. Complete
-one scenario in GREEN before starting the next, including inside a
-`SCENARIO_GROUP`.
-
-Use `delivery_test(mode="unit", testFiles=[...])` for exact focused JVM classes
-when available. Use `delivery_test` for RED/GREEN. A RED result never
-authorizes a commit. A scenario may advance through one or several committed
-internal boundaries while its outer Gherkin remains `@wip`; each boundary
-must be coherent, compilable, independently reversible, and GREEN at its own
-test layer. Focused TDD results do not replace the staged policy gate. Use
-the numeric User Story ID, not the scenario ID, in commit messages.
+Approved scenario wording is immutable without renewed functional approval.
+Batching changes execution cadence, not required acceptance coverage. Preserve
+meaningful tests for error branches, security, and regression behavior; use
+existing JUnit4, Robolectric/Compose, MockWebServer, and Turbine as appropriate.
+Test-layer ownership remains in `android-testability-governance`.
 
 Each scenario has a stable ID such as `01-PWB`, one action per step, and one
 `When`. Keep scenario state in a world/context, never in mutable globals.

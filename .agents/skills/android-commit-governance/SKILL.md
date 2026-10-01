@@ -33,45 +33,34 @@ Allowed types are `feat`, `fix`, `refactor`, `test`, `chore`, `docs`,
 English, and has no trailing period. Do not use `[US-33]`, a parenthesized
 scope, or an invented story number.
 
-## Atomicity
+## Batch boundaries
 
-- One commit represents one complete logical boundary. A scenario may need
-  one or several commits; task size and batch granularity never set the count.
-- Small independently working commits are mandatory. Do not use the scenario
-  itself as the default boundary. If a whole scenario must be one commit,
-  record why its presentation, behavior, adapter, or integration results
-  cannot compile and pass focused tests independently.
-- Each commit leaves the repository compilable and testable, includes the
-  dependencies required by its boundary, and is independently reversible.
-- An independently testable Composable, use case, or adapter may form its own
-  boundary when the active behavior needs it. A coherent vertical boundary
-  may cross presentation, domain, data, and DI. Review broad commits for
-  separable behavior; do not split by file, layer, or line count.
-- Keep documentation/tooling changes separate from product behavior.
-- Stage only the intended files; never include secrets, `local.properties`,
-  generated outputs, or `.delivery/runtime/`.
-- Preserve the exact staged snapshot used for delivery evidence.
-- Intermediate commits may keep the active scenario `@wip`. Its removal
-  belongs in the final functional commit that makes the scenario GREEN.
-- Never create empty, tag-only, comment-only, or artificial closure commits.
-- Do not combine unrelated boundaries to reduce commit count or leave a
-  pushed commit dependent on files that are still uncommitted.
+- The user owns the first commit with approved scenarios. Plan at most three
+  implementation batches, one developer and one implementation commit each,
+  in both guided and orchestrated modes.
+- Each batch delivers a coherent end-to-end outcome with its production code
+  and tests. It must compile, pass checks, and be independently reversible.
+  Do not split it into mandatory commits per scenario, layer, or internal task.
+- Before editing, record the batch result, dependencies, acceptance coverage,
+  validation scope, owner, and English commit subject.
+- The orchestrator reviews the completed batch directly; the same developer
+  fixes findings. Run tests only at the commit-validation checkpoint, fixing
+  and revalidating failures before commit. No mandatory intermediate RED/GREEN.
+- Remove `@wip` for completed scenarios in the functional batch commit. Keep
+  future scenarios tagged; do not create tag-only or empty closure commits.
+- Include instrumented coverage in the final planned batch; execute it only
+  in final US verification. Necessary final/CI repair commits remain with the
+  responsible developer and do not create another implementation batch.
+- Preserve unrelated changes and exclude secrets, `local.properties`, generated
+  outputs, and `.delivery/runtime/`. Keep unrelated tooling/docs work separate.
 
 ## Before committing
 
-For scenario work, propose the likely commit boundaries before implementation:
-name each observable result, the dependencies it needs, its focused GREEN
-proof, and whether it is intermediate or closes the scenario. Revise the map
-as the code reveals coupling. Complete and commit each independent boundary
-before building the next; do not finish a large uncommitted scenario and then
-split its diff into commits that cannot stand alone.
-
-For a new read journey, inspect whether isolated presentation with immutable
-input, typed query/mapping behavior, and route integration can each stand
-alone with focused tests. Deliver the viable results in order; omit any
-unneeded seam. A final instrumented-coverage commit may add the required UI
-tests across completed scenarios. Device execution belongs to final User Story
-verification, not intermediate commit preparation.
+Review the complete batch against its approved requirements and test coverage.
+Stage all required dependencies together. Use `prepare_commit` for ordinary
+batch preparation and `repair_ci` for a failed CI SHA. Avoid routine
+per-scenario closure or redundant formal batch verification; `close_us` still
+certifies the complete final scope.
 
 Put `Delivery-Verify-US: <numeric ID>` in the last functional or coverage
 commit's Git trailers. Its ID must match the subject. That push automatically
@@ -95,8 +84,8 @@ operation after staging. For human CLI use, the matching `make
 delivery-prepare` target is the documented entry point. A documentation-only
 change still needs a valid Gate `NONE` receipt when agent evidence is enabled.
 
-Prepare, commit, and—when authorized—push each atomic boundary before starting
-the next boundary. Do not accumulate several local commits for one push. If
+Prepare, commit, and—when authorized—push each batch before starting
+the next batch. Do not accumulate several local commits for one push. If
 HEAD or staging changes externally, discard the stale receipt, inspect the
 tree again, and prepare the new exact snapshot.
 
