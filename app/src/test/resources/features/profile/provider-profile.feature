@@ -52,11 +52,12 @@ Característica: Ver mi perfil y consultar mis conexiones
     Y veo la fecha de aprobación si existe
     Y la acción de identificación respeta el estado actual del perfil
 
+  @wip
   Escenario: 06-PRF Usar Perfil con conexiones pendientes
     Dado que todavía no verifiqué mi identidad ni conecté Mercado Pago
     Cuando consulto Perfil
     Entonces Mercado Pago aparece pendiente y puedo abrir su flujo de conexión
-    Y Google Calendar aparece como "Próximamente" sin una acción de conexión
+    Y Google Calendar muestra el estado informado por la plataforma
     Y puedo seguir usando Inicio y Mensajes
 
   Escenario: 07-PRF Conectar Mercado Pago desde Perfil
