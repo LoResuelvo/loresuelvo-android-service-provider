@@ -1,6 +1,10 @@
 package com.loresuelvo.serviceprovider.ui.profile
 
 import androidx.lifecycle.ViewModel
+import com.loresuelvo.serviceprovider.domain.account.CalendarConnectionStatus
+import com.loresuelvo.serviceprovider.domain.calendar.ConnectCalendarOutcome
+import com.loresuelvo.serviceprovider.domain.calendar.CalendarConsentResult
+import com.loresuelvo.serviceprovider.domain.usecase.calendar.ConnectCalendarUseCase
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.account.ProviderEntryOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
@@ -29,6 +33,7 @@ class ProviderProfileViewModel @Inject constructor(
     private val getPaymentAccountStatus: GetPaymentAccountStatusUseCase,
     private val sessionStore: AuthSessionStore,
     private val startIdentityVerification: StartIdentityVerificationUseCase,
+    private val connectCalendar: ConnectCalendarUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ProviderProfileUiState>(ProviderProfileUiState.Loading)
@@ -48,6 +53,141 @@ class ProviderProfileViewModel @Inject constructor(
     private var resumed = false
     private var identityRefreshPending = false
 
+    private val _calendarState = MutableStateFlow(ProfileCalendarUiState())
+    val calendarState: StateFlow<ProfileCalendarUiState> = _calendarState.asStateFlow()
+    private val calendarEvents = Channel<ProfileCalendarLaunch>(Channel.BUFFERED)
+    val calendarLaunches = calendarEvents.receiveAsFlow()
+    private var calendarAttemptId = 0L
+    private var calendarSession: AuthSession? = null
+    private var calendarClaimed = false
+    private var calendarResultConsumed = false
+    private var calendarJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            sessionStore.sessionFlow.collect { session ->
+                if ((profileSession != null && profileSession != session) ||
+                    (calendarSession != null && calendarSession != session)) {
+                    invalidateCalendar()
+                    _uiState.value = ProviderProfileUiState.SessionExpired
+                }
+            }
+        }
+    }
+
+    fun authorizeCalendar() {
+        val ready = _uiState.value as? ProviderProfileUiState.Ready ?: return
+        if (_identityState.value.loading || _calendarState.value.loading || _calendarState.value.confirmationRetry ||
+            !ready.provider.calendarConnectionStatus.canAuthorize) return
+        val session = sessionStore.getSession() ?: return
+        if (session != profileSession) return
+        calendarSession = session
+        calendarClaimed = false
+        calendarResultConsumed = false
+        val id = ++calendarAttemptId
+        _calendarState.value = ProfileCalendarUiState(loading = true)
+        calendarEvents.trySend(ProfileCalendarLaunch(id))
+    }
+
+    fun claimCalendarLaunch(id: Long): Boolean {
+        if (!isCurrentCalendarAttempt(id) || calendarClaimed || !resumed) return false
+        calendarClaimed = true
+        return true
+    }
+
+    fun acceptsCalendarResolution(id: Long): Boolean =
+        isCurrentCalendarAttempt(id) && calendarClaimed && !calendarResultConsumed
+
+    fun onCalendarResult(id: Long, result: CalendarConsentResult) {
+        if (!acceptsCalendarResolution(id)) return
+        calendarResultConsumed = true
+        when (result) {
+            is CalendarConsentResult.Authorized -> {
+                val session = calendarSession ?: return
+                calendarJob = viewModelScope.launch {
+                    if (!isCurrentCalendarAttempt(id)) return@launch
+                    val outcome = connectCalendar(result.serverAuthCode, session)
+                    if (!isCurrentCalendarAttempt(id)) return@launch
+                    when (outcome) {
+                        ConnectCalendarOutcome.Submitted -> confirmCalendar(id)
+                        ConnectCalendarOutcome.Unauthorized -> expireCalendar()
+                        ConnectCalendarOutcome.Rejected -> finishCalendar(CalendarFeedback.CodeRejected)
+                        ConnectCalendarOutcome.Unavailable -> finishCalendar(CalendarFeedback.SubmissionFailed)
+                    }
+                }
+            }
+            CalendarConsentResult.Cancelled -> finishCalendar(CalendarFeedback.Cancelled)
+            CalendarConsentResult.Denied -> finishCalendar(CalendarFeedback.Denied)
+            CalendarConsentResult.Failed -> finishCalendar(CalendarFeedback.ConsentFailed)
+        }
+    }
+
+    fun retryCalendarConfirmation() {
+        if (_identityState.value.loading || !_calendarState.value.confirmationRetry || _calendarState.value.loading) return
+        val id = calendarAttemptId
+        if (!isCurrentCalendarAttempt(id)) return
+        _calendarState.value = ProfileCalendarUiState(loading = true, confirmationRetry = true)
+        calendarJob = viewModelScope.launch { confirmCalendar(id) }
+    }
+
+    private suspend fun confirmCalendar(id: Long) {
+        val outcome = resolveProviderEntry()
+        if (!isCurrentCalendarAttempt(id)) return
+        when (outcome) {
+            is ProviderEntryOutcome.Provider -> {
+                val ready = _uiState.value as? ProviderProfileUiState.Ready ?: return
+                _uiState.value = ready.copy(provider = outcome.account)
+                if (outcome.account.calendarConnectionStatus == CalendarConnectionStatus.Unavailable) {
+                    confirmationFailed()
+                } else finishCalendar(null)
+            }
+            ProviderEntryOutcome.SessionExpired, ProviderEntryOutcome.Unauthenticated -> expireCalendar()
+            ProviderEntryOutcome.RetryableFailure -> confirmationFailed()
+            ProviderEntryOutcome.AccountMismatch -> {
+                invalidateCalendar()
+                _uiState.value = ProviderProfileUiState.AccountMismatch
+            }
+            ProviderEntryOutcome.IncompleteProfile -> {
+                invalidateCalendar()
+                _uiState.value = ProviderProfileUiState.IncompleteProfile
+            }
+        }
+    }
+
+    private fun confirmationFailed() {
+        _calendarState.value = ProfileCalendarUiState(
+            feedback = CalendarFeedback.ConfirmationFailed, confirmationRetry = true,
+        )
+    }
+
+    private fun finishCalendar(feedback: CalendarFeedback?) {
+        calendarSession = null
+        _calendarState.value = ProfileCalendarUiState(feedback = feedback)
+    }
+
+    private fun isCurrentCalendarAttempt(id: Long): Boolean {
+        if (id != calendarAttemptId || calendarSession == null) return false
+        if (calendarSession != sessionStore.getSession()) {
+            expireCalendar()
+            return false
+        }
+        return true
+    }
+
+    private fun expireCalendar() {
+        invalidateCalendar()
+        _uiState.value = ProviderProfileUiState.SessionExpired
+    }
+
+    private fun invalidateCalendar() {
+        calendarAttemptId++
+        calendarSession = null
+        calendarClaimed = false
+        calendarJob?.cancel()
+        while (calendarEvents.tryReceive().isSuccess) Unit
+        _calendarState.value = ProfileCalendarUiState()
+    }
+
     fun onProfileResumed() {
         resumed = true
         if (identityRefreshPending) refreshAfterIdentity() else refresh()
@@ -56,6 +196,7 @@ class ProviderProfileViewModel @Inject constructor(
     fun onProfilePaused() { resumed = false }
 
     fun leaveProfile() {
+        invalidateCalendar()
         resumed = false
         attemptId++
         attemptSession = null
@@ -68,7 +209,7 @@ class ProviderProfileViewModel @Inject constructor(
 
     fun verifyIdentity() {
         val ready = _uiState.value as? ProviderProfileUiState.Ready ?: return
-        if (_identityState.value.loading || ready.provider.identityVerificationStatus.availableAction == null) return
+        if (_identityState.value.loading || _calendarState.value.loading || ready.provider.identityVerificationStatus.availableAction == null) return
         val session = sessionStore.getSession() ?: return
         if (session != profileSession) return
         val id = ++attemptId
@@ -138,7 +279,11 @@ class ProviderProfileViewModel @Inject constructor(
     }
 
     fun refresh() {
-        if (_identityState.value.loading) return
+        if (_identityState.value.loading || _calendarState.value.loading) return
+        if (_calendarState.value.confirmationRetry) {
+            retryCalendarConfirmation()
+            return
+        }
         reloadProfile()
     }
 
@@ -180,7 +325,7 @@ class ProviderProfileViewModel @Inject constructor(
             _uiState.value = ProviderProfileUiState.SessionExpired
             return
         }
-        if ((_uiState.value as? ProviderProfileUiState.Ready)?.provider != ready.provider) return
+        if ((_uiState.value as? ProviderProfileUiState.Ready)?.provider?.id != ready.provider.id) return
         val payment = when (outcome) {
             is PaymentAccountStatusOutcome.Success -> when (outcome.status.status) {
                 ConnectionStatus.PENDING -> ProfilePaymentState.Pending
@@ -193,6 +338,7 @@ class ProviderProfileViewModel @Inject constructor(
             }
             else -> ProfilePaymentState.Unavailable
         }
-        _uiState.value = ready.copy(payment = payment)
+        val current = _uiState.value as? ProviderProfileUiState.Ready ?: return
+        _uiState.value = current.copy(payment = payment)
     }
 }

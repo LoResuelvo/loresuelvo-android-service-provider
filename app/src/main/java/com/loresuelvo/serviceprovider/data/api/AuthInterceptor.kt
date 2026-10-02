@@ -22,7 +22,12 @@ class AuthInterceptor @Inject constructor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
-        val token = authSessionStore.getSession()?.accessToken
+        val session = authSessionStore.getSession()
+        val expectedSession = original.tag(com.loresuelvo.serviceprovider.domain.auth.AuthSession::class.java)
+        if (expectedSession != null && expectedSession != session) {
+            throw java.io.IOException("The request session is no longer active")
+        }
+        val token = (expectedSession ?: session)?.accessToken
         val request = if (!token.isNullOrBlank()) {
             original.newBuilder()
                 .header(HEADER_AUTHORIZATION, "$BEARER_PREFIX$token")

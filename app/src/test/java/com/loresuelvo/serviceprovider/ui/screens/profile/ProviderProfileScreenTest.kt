@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.profile
 
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -156,8 +157,9 @@ class ProviderProfileScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_identity_unavailable))
+        composeTestRule.onNodeWithTag(PROFILE_IDENTITY_STATUS_TAG)
             .performScrollTo().assertIsDisplayed()
+            .assertTextEquals(context.getString(R.string.provider_profile_identity_unavailable))
         composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_identity_date_label))
             .assertDoesNotExist()
         composeTestRule.onNodeWithTag(PROFILE_IDENTITY_ACTION_TAG)
@@ -165,7 +167,7 @@ class ProviderProfileScreenTest {
     }
 
     @Test
-    fun pending_payment_opens_existing_flow_and_calendar_has_no_action() {
+    fun pending_payment_opens_existing_flow_and_unknown_calendar_offers_query() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         var connectClicks = 0
         composeTestRule.setContent {
@@ -180,8 +182,9 @@ class ProviderProfileScreenTest {
 
         composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_connection_pending))
             .performScrollTo().assertIsDisplayed()
-        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_calendar_coming_soon))
+        composeTestRule.onNodeWithTag(PROFILE_CALENDAR_STATUS_TAG)
             .performScrollTo().assertIsDisplayed()
+            .assertTextEquals(context.getString(R.string.provider_profile_calendar_unavailable))
         composeTestRule.onNode(
             hasText(context.getString(R.string.provider_profile_calendar_label)) and hasClickAction(),
         ).assertDoesNotExist()
@@ -238,4 +241,21 @@ class ProviderProfileScreenTest {
         category = Category(4, "Plomería"),
         profilePhotoUrl = null,
     )
+    @Test
+    fun calendar_loading_disables_identity_and_calendar_actions() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderProfileScreen(
+                    state = ProviderProfileUiState.Ready(provider().copy(
+                        identityVerificationStatus = IdentityVerificationStatus.Unverified,
+                        calendarConnectionStatus = com.loresuelvo.serviceprovider.domain.account.CalendarConnectionStatus.Disconnected,
+                    )), onBack = {},
+                    calendarState = com.loresuelvo.serviceprovider.ui.profile.ProfileCalendarUiState(loading = true),
+                )
+            }
+        }
+        composeTestRule.onNodeWithTag(PROFILE_IDENTITY_ACTION_TAG).performScrollTo().assertIsNotEnabled()
+        composeTestRule.onNodeWithTag(PROFILE_CALENDAR_ACTION_TAG).performScrollTo().assertIsNotEnabled()
+    }
+
 }

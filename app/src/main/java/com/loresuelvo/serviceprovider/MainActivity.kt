@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var calendarConsentLauncher: com.loresuelvo.serviceprovider.platform.calendar.CalendarConsentLauncher
     @Inject lateinit var browserAuthenticationLauncher: BrowserAuthenticationLauncher
     @Inject lateinit var identityVerificationLauncher: IdentityVerificationLauncher
     @Inject lateinit var paymentAccountBrowserLauncher: PaymentAccountBrowserLauncher
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LoresuelvoTheme {
                 LoResuelvoNav(
+                    calendarConsentLauncher = calendarConsentLauncher,
                     browserAuthenticationLauncher = browserAuthenticationLauncher,
                     identityVerificationLauncher = identityVerificationLauncher,
                     paymentAccountBrowserLauncher = paymentAccountBrowserLauncher,

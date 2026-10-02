@@ -33,3 +33,14 @@ class ProfileIdentityLaunch(
     val attemptId: Long,
     val credential: IdentityVerificationCredential,
 )
+
+
+data class ProfileCalendarUiState(
+    val loading: Boolean = false,
+    val feedback: CalendarFeedback? = null,
+    val confirmationRetry: Boolean = false,
+)
+
+enum class CalendarFeedback { Cancelled, Denied, ConsentFailed, SubmissionFailed, CodeRejected, ConfirmationFailed }
+
+data class ProfileCalendarLaunch(val attemptId: Long)

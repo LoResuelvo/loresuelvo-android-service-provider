@@ -33,6 +33,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderProfileViewModelTest {
 
+    private val store = androidx.lifecycle.ViewModelStore()
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
     private lateinit var repository: FakeCurrentAccountRepository
@@ -48,7 +49,11 @@ class ProviderProfileViewModelTest {
     }
 
     @After
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        store.clear()
+        scheduler.advanceUntilIdle()
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun refresh_exposes_the_authenticated_provider_account() = runTest(scheduler) {
@@ -143,7 +148,16 @@ class ProviderProfileViewModelTest {
                     error("This Profile test must not start identity verification")
             },
         ),
-    )
+        com.loresuelvo.serviceprovider.domain.usecase.calendar.ConnectCalendarUseCase(
+            object : com.loresuelvo.serviceprovider.domain.calendar.CalendarConnectionRepository {
+                override suspend fun connect(
+                    serverAuthCode: String,
+                    session: com.loresuelvo.serviceprovider.domain.auth.AuthSession,
+                ): com.loresuelvo.serviceprovider.domain.calendar.ConnectCalendarOutcome =
+                    error("This Profile test must not authorize calendars")
+            }, sessionStore,
+        ),
+    ).also { store.put("profile", it) }
 
     @Test
     fun account_is_visible_while_payment_status_is_pending() = runTest(scheduler) {

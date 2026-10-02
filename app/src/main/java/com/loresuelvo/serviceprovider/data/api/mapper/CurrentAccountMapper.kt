@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.data.api.mapper
 
 import com.loresuelvo.serviceprovider.data.api.dto.CurrentAccountDto
+import com.loresuelvo.serviceprovider.domain.account.CalendarConnectionStatus
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
 import com.loresuelvo.serviceprovider.domain.account.IdentityVerificationStatus
 import java.text.ParsePosition
@@ -17,6 +18,12 @@ internal fun CurrentAccountDto.toDomain(): CurrentAccount = when (role.lowercase
         profilePhotoUrl = profilePhoto?.url,
         identityVerificationStatus = identityVerificationStatus.toIdentityStatus(),
         identityVerifiedOn = identityVerifiedOn.toVerifiedOnMillis(),
+        calendarConnectionStatus = when (calendarConnectionStatus) {
+            "disconnected" -> CalendarConnectionStatus.Disconnected
+            "connected" -> CalendarConnectionStatus.Connected
+            "action_required" -> CalendarConnectionStatus.ActionRequired
+            else -> CalendarConnectionStatus.Unavailable
+        },
     )
     "consumer" -> CurrentAccount.Consumer
     else -> error("Unsupported current account role")

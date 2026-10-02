@@ -67,6 +67,7 @@ import kotlinx.coroutines.flow.StateFlow
 @Composable
 fun LoResuelvoNav(
     browserAuthenticationLauncher: BrowserAuthenticationLauncher,
+    calendarConsentLauncher: com.loresuelvo.serviceprovider.platform.calendar.CalendarConsentLauncher,
     identityVerificationLauncher: IdentityVerificationLauncher,
     paymentAccountBrowserLauncher: PaymentAccountBrowserLauncher,
     paymentReturnLinkParser: PaymentAccountReturnLinkParser,
@@ -210,6 +211,7 @@ fun LoResuelvoNav(
                             profile = {
                                 ProviderProfileRoute(
                                     identityLauncher = identityVerificationLauncher,
+                                    calendarLauncher = calendarConsentLauncher,
                                     returnRefreshKey = profileReturnRefresh,
                                     onBack = {
                                         val fromProposal = navController.currentBackStackEntry

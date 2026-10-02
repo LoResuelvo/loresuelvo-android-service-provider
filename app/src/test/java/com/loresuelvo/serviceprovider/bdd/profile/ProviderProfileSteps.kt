@@ -95,11 +95,8 @@ internal class ProviderProfileSteps {
     @Then("Mercado Pago aparece pendiente y puedo abrir su flujo de conexión")
     fun profileShowsPendingPaymentConnection() = world.assertPendingPaymentConnection()
 
-    @And("Google Calendar aparece como {string} sin una acción de conexión")
-    fun calendarIsComingSoon(label: String) {
-        require(label == "Próximamente")
-        world.assertCalendarDoesNotBlockProfile()
-    }
+    @And("Google Calendar muestra el estado informado por la plataforma")
+    fun calendarShowsPlatformStatus() = world.assertCalendarDoesNotBlockProfile()
 
     @And("puedo seguir usando Inicio y Mensajes")
     fun primaryTabsRemainAvailable() = world.assertPrimaryTabs()

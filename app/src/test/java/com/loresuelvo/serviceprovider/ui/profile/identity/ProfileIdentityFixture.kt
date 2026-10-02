@@ -65,6 +65,13 @@ internal class ProfileIdentityFixture : AutoCloseable {
                 ResolveProviderEntryUseCase(sessionStore, account),
                 GetPaymentAccountStatusUseCase(payment), sessionStore,
                 StartIdentityVerificationUseCase(identity),
+                com.loresuelvo.serviceprovider.domain.usecase.calendar.ConnectCalendarUseCase(
+                    object : com.loresuelvo.serviceprovider.domain.calendar.CalendarConnectionRepository {
+                        override suspend fun connect(serverAuthCode: String, session: AuthSession):
+                            com.loresuelvo.serviceprovider.domain.calendar.ConnectCalendarOutcome =
+                            error("Identity must not authorize calendars")
+                    }, sessionStore,
+                ),
             ) as T
         })[ProviderProfileViewModel::class.java]
         scope.launch { viewModel.identityLaunches.collect { launches += it } }

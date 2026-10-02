@@ -1,0 +1,17 @@
+<resources>
+    <string name="provider_profile_calendar_disconnected">Not connected</string>
+    <string name="provider_profile_calendar_connected">Connected</string>
+    <string name="provider_profile_calendar_action_required">Action required</string>
+    <string name="provider_profile_calendar_unavailable">Status unavailable</string>
+    <string name="provider_profile_calendar_connect">Connect Google Calendar</string>
+    <string name="provider_profile_calendar_reauthorize">Reauthorize Google Calendar</string>
+    <string name="provider_profile_calendar_loading">Connection in progress</string>
+    <string name="provider_profile_calendar_cancelled">Consent cancelled. You can retry.</string>
+    <string name="provider_profile_calendar_denied">Access denied. You can retry.</string>
+    <string name="provider_profile_calendar_consent_failed">Could not open Google consent. Retry.</string>
+    <string name="provider_profile_calendar_submission_failed">Could not submit authorization. Retry with new consent.</string>
+    <string name="provider_profile_calendar_code_rejected">The platform rejected authorization. Start new consent.</string>
+    <string name="provider_profile_calendar_confirmation_failed">Could not confirm calendar status. Retry the query.</string>
+    <string name="provider_profile_calendar_retry_query">Retry the query</string>
+    <string name="provider_profile_calendar_restart">Start new consent</string>
+</resources>

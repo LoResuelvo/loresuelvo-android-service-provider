@@ -186,7 +186,10 @@ internal class ProviderProfileWorld : AutoCloseable {
 
     fun configurePendingConnections() {
         currentAccount.defaultResponse = CurrentAccountOutcome.Success(
-            provider().copy(identityVerificationStatus = IdentityVerificationStatus.Unverified),
+            provider().copy(
+                identityVerificationStatus = IdentityVerificationStatus.Unverified,
+                calendarConnectionStatus = com.loresuelvo.serviceprovider.domain.account.CalendarConnectionStatus.Disconnected,
+            ),
         )
         paymentAccount.outcome = PaymentAccountStatusOutcome.Success(
             PaymentAccountStatus(ConnectionStatus.PENDING),
@@ -201,7 +204,7 @@ internal class ProviderProfileWorld : AutoCloseable {
     }
 
     fun assertCalendarDoesNotBlockProfile() {
-        assertTrue(viewModel.uiState.value is ProviderProfileUiState.Ready)
+        assertEquals(com.loresuelvo.serviceprovider.domain.account.CalendarConnectionStatus.Disconnected, readyProvider().calendarConnectionStatus)
         assertEquals(0, paymentAccount.authorizationCalls)
     }
 
@@ -306,6 +309,15 @@ internal class ProviderProfileWorld : AutoCloseable {
                 override suspend fun start(): com.loresuelvo.serviceprovider.domain.identity.StartIdentityVerificationOutcome =
                     error("This Profile test must not start identity verification")
             },
+        ),
+        com.loresuelvo.serviceprovider.domain.usecase.calendar.ConnectCalendarUseCase(
+            object : com.loresuelvo.serviceprovider.domain.calendar.CalendarConnectionRepository {
+                override suspend fun connect(
+                    serverAuthCode: String,
+                    session: com.loresuelvo.serviceprovider.domain.auth.AuthSession,
+                ): com.loresuelvo.serviceprovider.domain.calendar.ConnectCalendarOutcome =
+                    error("This Profile test must not authorize calendars")
+            }, sessionStore,
         ),
     )
 

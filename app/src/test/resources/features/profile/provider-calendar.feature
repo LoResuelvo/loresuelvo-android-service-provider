@@ -5,7 +5,6 @@ Característica: Vincular Google Calendar desde Perfil
   Quiero vincular mi Google Calendar
   Para habilitar la integración de mis turnos con mi calendario
 
-  @wip
   Esquema del escenario: 57.1-CAL Consultar el estado del calendario
     Dado que soy un prestador autenticado con el calendario "<estado>"
     Cuando abro mi Perfil
@@ -17,7 +16,6 @@ Característica: Vincular Google Calendar desde Perfil
       | connected       | Vinculado          | ninguna acción            |
       | action_required | Requiere atención  | Reautorizar Google Calendar |
 
-  @wip
   Esquema del escenario: 57.2-CAL Vincular o reautorizar el calendario
     Dado que mi calendario está "<estado>"
     Y inicié el consentimiento oficial de Google desde Perfil
@@ -28,7 +26,6 @@ Característica: Vincular Google Calendar desde Perfil
       | disconnected    |
       | action_required |
 
-  @wip
   Esquema del escenario: 57.3-CAL Abandonar el consentimiento
     Dado que inicié la vinculación de Google Calendar desde Perfil
     Cuando "<resultado>" el consentimiento de Google
@@ -39,7 +36,6 @@ Característica: Vincular Google Calendar desde Perfil
       | cancelo            |
       | deniego            |
 
-  @wip
   Esquema del escenario: 57.4-CAL Recuperarse de un error
     Dado que inicié la vinculación de Google Calendar desde Perfil
     Cuando ocurre "<error>"
@@ -53,7 +49,6 @@ Característica: Vincular Google Calendar desde Perfil
       | un fallo al refrescar el perfil            | reintentar la consulta     |
       | la expiración de mi sesión                 | iniciar sesión nuevamente  |
 
-  @wip
   Escenario: 57.5-CAL Evitar intentos simultáneos
     Dado que una vinculación de Google Calendar está en curso
     Cuando intento iniciarla nuevamente

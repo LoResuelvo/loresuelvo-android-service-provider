@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
+import com.loresuelvo.serviceprovider.ui.profile.ProfileCalendarUiState
 import com.loresuelvo.serviceprovider.ui.profile.ProfileIdentityUiState
 import com.loresuelvo.serviceprovider.ui.profile.ProviderProfileUiState
 
@@ -43,6 +44,9 @@ fun ProviderProfileScreen(
     modifier: Modifier = Modifier,
     identityState: ProfileIdentityUiState = ProfileIdentityUiState(),
     onVerifyIdentity: () -> Unit = {},
+    calendarState: ProfileCalendarUiState = ProfileCalendarUiState(),
+    onAuthorizeCalendar: () -> Unit = {},
+    onRetryCalendar: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier
@@ -77,6 +81,7 @@ fun ProviderProfileScreen(
                 identityState,
                 onVerifyIdentity,
                 onRetry,
+                calendarState, onAuthorizeCalendar, onRetryCalendar,
             )
         }
     }
@@ -150,6 +155,9 @@ private fun ProfileReadyState(
     identityState: ProfileIdentityUiState,
     onVerifyIdentity: () -> Unit,
     onReloadProfile: () -> Unit,
+    calendarState: ProfileCalendarUiState,
+    onAuthorizeCalendar: () -> Unit,
+    onRetryCalendar: () -> Unit,
 ) {
     Box(
         modifier = Modifier.fillMaxSize().padding(contentPadding),
@@ -166,7 +174,8 @@ private fun ProfileReadyState(
         ) {
             ProfileSummaryCard(state.provider)
             ProfileAccountCard(state.provider)
-            ProfileIdentityCard(state.provider, identityState, onVerifyIdentity, onReloadProfile)
+            ProfileIdentityCard(state.provider, identityState, onVerifyIdentity, onReloadProfile,
+                actionEnabled = !calendarState.loading)
             Text(
                 text = stringResource(R.string.provider_profile_connections_title),
                 style = MaterialTheme.typography.titleSmall,
@@ -174,7 +183,8 @@ private fun ProfileReadyState(
                 modifier = Modifier.semantics { heading() },
             )
             ProfilePaymentCard(state.payment, onConnectMercadoPago, onRetryPaymentStatus)
-            ProfileCalendarCard()
+            ProfileCalendarCard(state.provider.calendarConnectionStatus, calendarState, onAuthorizeCalendar, onRetryCalendar, onReloadProfile,
+                actionEnabled = !identityState.loading)
         }
     }
 }

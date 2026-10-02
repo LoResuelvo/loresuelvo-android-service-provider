@@ -17,6 +17,7 @@ sealed interface CurrentAccount {
         val profilePhotoUrl: String?,
         val identityVerificationStatus: IdentityVerificationStatus = IdentityVerificationStatus.Unavailable,
         val identityVerifiedOn: Long? = null,
+        val calendarConnectionStatus: CalendarConnectionStatus = CalendarConnectionStatus.Unavailable,
     ) : CurrentAccount
 
     data object Consumer : CurrentAccount

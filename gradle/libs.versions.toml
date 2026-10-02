@@ -29,6 +29,7 @@ robolectric = "4.13"
 cucumberJvm = "7.20.1"
 coil = "3.0.4"
 googleMaps = "20.0.0"
+googleAuth = "22.0.0"
 didit = "4.9.0"
 
 [libraries]
@@ -58,6 +59,7 @@ androidx-security-crypto = { group = "androidx.security", name = "security-crypt
 # Image loading
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+google-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "googleAuth" }
 google-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "googleMaps" }
 didit-sdk-autodetection = { group = "me.didit", name = "didit-sdk-autodetection", version.ref = "didit" }
 

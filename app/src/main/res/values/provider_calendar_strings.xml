@@ -1,0 +1,17 @@
+<resources>
+    <string name="provider_profile_calendar_disconnected">Sin vincular</string>
+    <string name="provider_profile_calendar_connected">Vinculado</string>
+    <string name="provider_profile_calendar_action_required">Requiere atención</string>
+    <string name="provider_profile_calendar_unavailable">Estado no disponible</string>
+    <string name="provider_profile_calendar_connect">Vincular Google Calendar</string>
+    <string name="provider_profile_calendar_reauthorize">Reautorizar Google Calendar</string>
+    <string name="provider_profile_calendar_loading">Vinculación en curso</string>
+    <string name="provider_profile_calendar_cancelled">Cancelaste el consentimiento. Podés reintentar.</string>
+    <string name="provider_profile_calendar_denied">No autorizaste el acceso. Podés reintentar.</string>
+    <string name="provider_profile_calendar_consent_failed">No se pudo abrir el consentimiento de Google. Reintentá.</string>
+    <string name="provider_profile_calendar_submission_failed">No se pudo enviar la autorización. Reintentá con un nuevo consentimiento.</string>
+    <string name="provider_profile_calendar_code_rejected">La plataforma rechazó la autorización. Iniciá otro consentimiento.</string>
+    <string name="provider_profile_calendar_confirmation_failed">No se pudo confirmar el estado del calendario. Reintentá la consulta.</string>
+    <string name="provider_profile_calendar_retry_query">Reintentar la consulta</string>
+    <string name="provider_profile_calendar_restart">Iniciar otro consentimiento</string>
+</resources>

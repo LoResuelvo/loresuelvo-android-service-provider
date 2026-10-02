@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Shield
@@ -87,12 +86,14 @@ internal fun ProfileIdentityCard(
     identity: ProfileIdentityUiState,
     onVerify: () -> Unit,
     onReload: () -> Unit,
+    actionEnabled: Boolean = true,
 ) {
     ProfileSectionCard {
         ProfileSectionHeading(R.string.provider_profile_identity_label, Icons.Outlined.Shield)
         ProfileStatus(
             text = stringResource(provider.identityVerificationStatus.labelResource()),
             confirmed = provider.identityVerificationStatus == IdentityVerificationStatus.Approved,
+            modifier = Modifier.testTag(PROFILE_IDENTITY_STATUS_TAG),
         )
         Text(
             stringResource(R.string.provider_profile_identity_description),
@@ -107,10 +108,11 @@ internal fun ProfileIdentityCard(
                 ProfileDetail(R.string.provider_profile_identity_date_label, date)
             }
         }
-        ProfileIdentityActions(provider.identityVerificationStatus, identity, onVerify, onReload)
+        ProfileIdentityActions(provider.identityVerificationStatus, identity, onVerify, onReload, actionEnabled)
     }
 }
 
+const val PROFILE_IDENTITY_STATUS_TAG = "profile-identity-status"
 const val PROFILE_IDENTITY_ACTION_TAG = "profile-identity-action"
 
 @Composable
@@ -119,6 +121,7 @@ private fun ProfileIdentityActions(
     identity: ProfileIdentityUiState,
     onVerify: () -> Unit,
     onReload: () -> Unit,
+    actionEnabled: Boolean,
 ) {
     if (identity.loading) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -137,14 +140,14 @@ private fun ProfileIdentityActions(
         }), color = MaterialTheme.colorScheme.error,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
     }
-    Button(onClick = onVerify, enabled = !identity.loading && status.availableAction != null,
+    Button(onClick = onVerify, enabled = actionEnabled && !identity.loading && status.availableAction != null,
         modifier = Modifier.fillMaxWidth().testTag(PROFILE_IDENTITY_ACTION_TAG),
         shape = MaterialTheme.shapes.medium) {
         Text(stringResource(if (status.availableAction == IdentityVerificationAction.Retry)
             R.string.provider_profile_view_retry else R.string.provider_profile_identity_verify))
     }
     if (status == IdentityVerificationStatus.Unavailable) {
-        Button(onClick = onReload, enabled = !identity.loading, modifier = Modifier.fillMaxWidth(),
+        Button(onClick = onReload, enabled = actionEnabled && !identity.loading, modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.medium) {
             Text(stringResource(R.string.provider_profile_identity_reload))
         }
@@ -186,20 +189,7 @@ internal fun ProfilePaymentCard(
 }
 
 @Composable
-internal fun ProfileCalendarCard() {
-    ProfileSectionCard {
-        ProfileSectionHeading(R.string.provider_profile_calendar_label, Icons.Outlined.CalendarMonth)
-        ProfileStatus(stringResource(R.string.provider_profile_calendar_coming_soon))
-        Text(
-            stringResource(R.string.provider_profile_calendar_description),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun ProfileSectionHeading(@StringRes title: Int, icon: ImageVector) {
+internal fun ProfileSectionHeading(@StringRes title: Int, icon: ImageVector) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -220,14 +210,14 @@ private fun ProfileSectionHeading(@StringRes title: Int, icon: ImageVector) {
 }
 
 @Composable
-private fun ProfileStatus(text: String, confirmed: Boolean = false) {
+internal fun ProfileStatus(text: String, confirmed: Boolean = false, modifier: Modifier = Modifier) {
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = if (confirmed) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background,
         contentColor = if (confirmed) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+            modifier = modifier.padding(horizontal = 12.dp, vertical = 6.dp))
     }
 }
 

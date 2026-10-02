@@ -47,6 +47,8 @@ import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_TAG
 import com.loresuelvo.serviceprovider.ui.navigation.Route
+import com.loresuelvo.serviceprovider.ui.screens.profile.PROFILE_CALENDAR_STATUS_TAG
+import androidx.compose.ui.test.assertTextEquals
 import com.loresuelvo.serviceprovider.ui.screens.profile.PROVIDER_PROFILE_DATA_TAG
 import com.loresuelvo.serviceprovider.ui.screens.profile.PROVIDER_PROFILE_SCREEN_TAG
 import dagger.hilt.EntryPoint
@@ -375,9 +377,8 @@ class ProviderProfileNavigationAcceptanceTest {
 
     private fun openPaymentFlowFromProfile() {
         openProfileFrom(Route.Home)
-        composeTestRule.onNodeWithText(
-            composeTestRule.activity.getString(R.string.provider_profile_calendar_coming_soon),
-        ).performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROFILE_CALENDAR_STATUS_TAG).performScrollTo().assertIsDisplayed()
+            .assertTextEquals(composeTestRule.activity.getString(R.string.provider_profile_calendar_unavailable))
         composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performTouchInput { swipeUp() }
         composeTestRule.onNodeWithText(
             composeTestRule.activity.getString(R.string.mercadopago_connect_button),

@@ -1,5 +1,17 @@
 package com.loresuelvo.serviceprovider.ui.screens.profile
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.withResumed
+import kotlinx.coroutines.launch
+import com.loresuelvo.serviceprovider.domain.calendar.CalendarConsentResult
+import com.loresuelvo.serviceprovider.platform.calendar.CalendarConsentLauncher
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -21,6 +33,7 @@ import com.loresuelvo.serviceprovider.ui.screens.identity.findActivity
 fun ProviderProfileRoute(
     onBack: () -> Unit,
     identityLauncher: IdentityVerificationLauncher,
+    calendarLauncher: CalendarConsentLauncher,
     returnRefreshKey: Int = 0,
     onIncompleteProfile: () -> Unit = {},
     onAccountMismatch: () -> Unit = {},
@@ -28,9 +41,46 @@ fun ProviderProfileRoute(
     viewModel: ProviderProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val calendarState by viewModel.calendarState.collectAsStateWithLifecycle()
     val identityState by viewModel.identityState.collectAsStateWithLifecycle()
     val activity = LocalContext.current.findActivity()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    var calendarAttempt by rememberSaveable { mutableStateOf<Long?>(null) }
+    val consentResult = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        val id = calendarAttempt ?: return@rememberLauncherForActivityResult
+        calendarAttempt = null
+        if (!viewModel.acceptsCalendarResolution(id)) return@rememberLauncherForActivityResult
+        viewModel.onCalendarResult(id, if (result.resultCode == Activity.RESULT_CANCELED) {
+            CalendarConsentResult.Cancelled
+        } else calendarLauncher.result(activity, result.data))
+    }
+    LaunchedEffect(viewModel, calendarLauncher, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.calendarLaunches.collect { launch ->
+                if (viewModel.claimCalendarLaunch(launch.attemptId)) {
+                    calendarLauncher.authorize(activity,
+                        onResolution = { sender ->
+                            scope.launch {
+                                lifecycleOwner.lifecycle.withResumed {
+                                    if (viewModel.acceptsCalendarResolution(launch.attemptId)) {
+                                        calendarAttempt = launch.attemptId
+                                        try {
+                                            consentResult.launch(IntentSenderRequest.Builder(sender).build())
+                                        } catch (error: Exception) {
+                                            calendarAttempt = null
+                                            viewModel.onCalendarResult(launch.attemptId, CalendarConsentResult.Failed)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        onResult = { result -> viewModel.onCalendarResult(launch.attemptId, result) },
+                    )
+                }
+            }
+        }
+    }
     DisposableEffect(activity, identityLauncher, viewModel) {
         identityLauncher.attach(activity)
         onDispose {
@@ -69,6 +119,9 @@ fun ProviderProfileRoute(
     ProviderProfileScreen(
         state = state,
         identityState = identityState,
+        calendarState = calendarState,
+        onAuthorizeCalendar = viewModel::authorizeCalendar,
+        onRetryCalendar = viewModel::retryCalendarConfirmation,
         onVerifyIdentity = viewModel::verifyIdentity,
         onBack = onBack,
         onRetry = viewModel::refresh,

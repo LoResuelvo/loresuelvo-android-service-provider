@@ -108,9 +108,11 @@ android {
             val auth0Audience = envVar("AUTH0_AUDIENCE", "http://localhost:8080")
             val apiUrl = envVar("API_URL", "http://10.0.2.2:8080")
             val paymentReturnHost = envVar("PAYMENT_RETURN_HOST")
+            val calendarClientId = envVar("GOOGLE_CALENDAR_SERVER_CLIENT_ID")
 
             buildConfigField("String", "API_URL", "\"$apiUrl\"")
             buildConfigField("String", "PAYMENT_RETURN_HOST", "\"$paymentReturnHost\"")
+            buildConfigField("String", "GOOGLE_CALENDAR_SERVER_CLIENT_ID", "\"$calendarClientId\"")
             buildConfigField("String", "AUTH0_DOMAIN", "\"$auth0Domain\"")
             buildConfigField("String", "AUTH0_CLIENT_ID", "\"$auth0ClientId\"")
             buildConfigField("String", "AUTH0_SCHEME", "\"$auth0Scheme\"")
@@ -132,9 +134,11 @@ android {
             val auth0Audience = envVar("AUTH0_AUDIENCE_STAGING")
             val apiUrl = envVar("API_URL_STAGING")
             val paymentReturnHost = envVar("PAYMENT_RETURN_HOST_STAGING")
+            val calendarClientId = envVar("GOOGLE_CALENDAR_SERVER_CLIENT_ID_STAGING")
 
             buildConfigField("String", "API_URL", "\"$apiUrl\"")
             buildConfigField("String", "PAYMENT_RETURN_HOST", "\"$paymentReturnHost\"")
+            buildConfigField("String", "GOOGLE_CALENDAR_SERVER_CLIENT_ID", "\"$calendarClientId\"")
             buildConfigField("String", "AUTH0_DOMAIN", "\"$auth0Domain\"")
             buildConfigField("String", "AUTH0_CLIENT_ID", "\"$auth0ClientId\"")
             buildConfigField("String", "AUTH0_SCHEME", "\"$auth0Scheme\"")
@@ -154,9 +158,11 @@ android {
             val auth0Audience = envVar("AUTH0_AUDIENCE_PROD")
             val apiUrl = envVar("API_URL_PROD")
             val paymentReturnHost = envVar("PAYMENT_RETURN_HOST_PROD")
+            val calendarClientId = envVar("GOOGLE_CALENDAR_SERVER_CLIENT_ID_PROD")
 
             buildConfigField("String", "API_URL", "\"$apiUrl\"")
             buildConfigField("String", "PAYMENT_RETURN_HOST", "\"$paymentReturnHost\"")
+            buildConfigField("String", "GOOGLE_CALENDAR_SERVER_CLIENT_ID", "\"$calendarClientId\"")
             buildConfigField("String", "AUTH0_DOMAIN", "\"$auth0Domain\"")
             buildConfigField("String", "AUTH0_CLIENT_ID", "\"$auth0ClientId\"")
             buildConfigField("String", "AUTH0_SCHEME", "\"$auth0Scheme\"")
@@ -218,6 +224,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.google.maps)
+    implementation(libs.google.auth)
     implementation(libs.didit.sdk.autodetection)
 
     // Hilt (added in Fase 1)

@@ -37,6 +37,12 @@ import retrofit2.http.Path
  */
 interface BackendApi {
 
+    @POST("me/calendar-connection")
+    suspend fun connectCalendar(
+        @Body request: com.loresuelvo.serviceprovider.data.api.dto.ConnectCalendarRequestDto,
+        @retrofit2.http.Tag session: com.loresuelvo.serviceprovider.domain.auth.AuthSession,
+    ): retrofit2.Response<Unit>
+
     @GET("me")
     suspend fun getCurrentAccount(): CurrentAccountDto
 
