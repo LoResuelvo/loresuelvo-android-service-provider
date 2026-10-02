@@ -424,6 +424,16 @@ export async function recordCommitEvidence({
   // overwrite one another's entries with a stale snapshot.
   const releaseLedgerLock = await acquireLedgerLock({ repoRoot: root });
   try {
+    // Gate D replaces the verification receipt, never the independent repair
+    // receipt or its single-use authorization. Read under the writer lock.
+    if (gateId === "D") {
+      const previous = await queryCommitEvidence({ repoRoot: root, commitSha: cleanSha });
+      if (previous.valid && previous.entry.repairsSha) {
+        const prior = previous.entry;
+        entry.repairEvidence = prior.repairEvidence || prior;
+        for (const field of REPAIR_METADATA_FIELDS) entry[field] = prior[field];
+      }
+    }
     await writeJsonAtomic(root, path.join(LEDGER_DIR, `${cleanSha}.json`), entry);
 
     const absLedgerFile = path.resolve(root, LEDGER_FILE);
@@ -461,6 +471,81 @@ export async function recordCommitEvidence({
   }
 
   return entry;
+}
+
+const REPAIR_METADATA_FIELDS = [
+  "repairsSha", "supersedes", "repairStatus", "repairedFailure",
+  "repairAuthState", "repairAuthSha", "repairPushConsumed",
+  "repairPushConsumedAt", "manualRepairContextValidated",
+];
+
+async function verifyRepairReceipt(root, evidence, commitSha) {
+  const identity = resolveCommitIdentity(root, commitSha);
+  const loaded = await loadEvidenceRecord({ repoRoot: root, recordPath: evidence.recordPath });
+  const patch = execFileSync("git", ["diff", "--binary", identity.parents[0], commitSha], { cwd: root });
+  const files = execFileSync("git", ["diff-tree", "--no-commit-id", "--name-only", "-r", commitSha],
+    { cwd: root, encoding: "utf8" }).trim().split("\n").filter(Boolean);
+  if (evidence.schemaVersion !== 2 || evidence.commitSha !== commitSha || identity.parents.length !== 1 ||
+      evidence.parentSha !== identity.parents[0] || evidence.treeSha !== identity.treeSha ||
+      !hasMatchingFiles(files, evidence.stagedFiles) || evidence.gateId !== "R" ||
+      evidence.intent !== "repair_ci" || evidence.status !== "passed" ||
+      loaded.digest !== evidence.recordDigest || loaded.record.status !== "passed" ||
+      loaded.record.gate?.id !== "R" || loaded.record.policy?.hash !== evidence.policyHash ||
+      loaded.record.runKey !== evidence.runKey || loaded.record.snapshotHash !== evidence.snapshotHash ||
+      crypto.createHash("sha256").update(patch).digest("hex") !== evidence.snapshotHash) {
+    throw new Error("REPAIR_RECEIPT_MISMATCH");
+  }
+  return evidence;
+}
+
+// Recover only provenance lost by older verify-head versions. The consumed
+// original receipt must bind the same parent, tree, patch and authorization.
+// Neither verification receipts nor push authorizations are replaced.
+export async function recoverRepairProvenance({ repoRoot, repairSha, targetSha } = {}) {
+  const root = findRepoRoot(repoRoot);
+  const commitSha = assertCommitSha(repairSha);
+  const target = assertCommitSha(targetSha);
+  const releaseRepair = await acquireRepairLock({ repoRoot: root, targetSha: target });
+  let release;
+  try {
+    release = await acquireLedgerLock({ repoRoot: root });
+    const current = await queryCommitEvidence({ repoRoot: root, commitSha });
+    const prepared = await getLastPreparedEvidence({ repoRoot: root });
+    const auth = JSON.parse(await fs.readFile(path.join(root, REPAIR_AUTH_DIR, `${target}.json`), "utf8"));
+    const policy = await loadDeliveryPolicy({ repoRoot: root });
+    if (!current.valid || current.entry.gateId !== "D" ||
+        prepared?.consumedByCommitSha !== commitSha || prepared.repairsSha !== target ||
+        auth?.schemaVersion !== 1 || auth.commitSha !== commitSha || auth.targetSha !== target ||
+        auth.snapshotHash !== prepared.snapshotHash ||
+        prepared.policyHash !== (policy.sourceHash || policy.hash)) {
+      throw new Error("REPAIR_PROVENANCE_BINDING_MISMATCH");
+    }
+    const evidence = {
+      ...prepared, commitSha, parentSha: prepared.parentHeadSha,
+      treeSha: prepared.stagedTreeSha,
+    };
+    await verifyRepairReceipt(root, evidence, commitSha);
+    if (current.entry.repairsSha) {
+      if (current.entry.repairsSha !== target) throw new Error("REPAIR_TARGET_MISMATCH");
+      await verifyRepairReceipt(root, current.entry.repairEvidence, commitSha);
+      return { recovered: true, reused: true, commitSha, targetSha: target };
+    }
+    const entry = { ...current.entry, repairEvidence: evidence };
+    for (const field of REPAIR_METADATA_FIELDS) entry[field] = evidence[field] ?? current.entry[field];
+    entry.repairAuthState = auth.state;
+    entry.repairAuthSha = commitSha;
+    const auditPath = `.delivery/runtime/repair-provenance/${commitSha}.json`;
+    await writeJsonAtomic(root, auditPath, {
+      schemaVersion: 1, kind: "repair_provenance_recovery", commitSha, targetSha: target,
+      recordedAt: new Date().toISOString(), repairRecordPath: evidence.recordPath,
+      repairRecordDigest: evidence.recordDigest, verificationRecordDigest: entry.recordDigest,
+    });
+    const ledger = JSON.parse(await fs.readFile(path.join(root, LEDGER_FILE), "utf8"));
+    ledger[commitSha] = entry;
+    await writeJsonAtomic(root, path.join(LEDGER_DIR, `${commitSha}.json`), entry);
+    await writeJsonAtomic(root, LEDGER_FILE, ledger);
+    return { recovered: true, commitSha, targetSha: target, auditPath };
+  } finally { if (release) await release(); await releaseRepair(); }
 }
 
 export async function markRepairPushConsumed({ repoRoot, commitSha, lockHeld = false } = {}) {
@@ -1866,6 +1951,17 @@ export async function validateRepairLineage({
       throw error;
     }
     repairEntry = null;
+  }
+
+  // Stronger closure evidence coexists with the exact original Gate R receipt.
+  if (repairEntry?.gateId === "D" && repairEntry.repairEvidence) {
+    try {
+      const evidence = await verifyRepairReceipt(root, repairEntry.repairEvidence, cleanRepairSha);
+      if (evidence.repairsSha !== repairEntry.repairsSha) throw new Error("REPAIR_TARGET_MISMATCH");
+      repairEntry = { ...evidence, repairStatus: repairEntry.repairStatus };
+    } catch {
+      return { valid: false, reason: "REPAIR_RECEIPT_MISMATCH", repairEntry, targetEntry: null, targetSha };
+    }
   }
 
   // 2. Resolve target commit (repairsSha exists in git, ledger, or CI)

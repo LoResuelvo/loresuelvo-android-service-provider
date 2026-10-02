@@ -416,3 +416,20 @@ See [`AGENTS.md`](../AGENTS.md) for the repository contract and
 The schemas directory contains the versioned JSON Schemas consumed by the MCP.
 Keep policy and schema changes together, and add or update focused tests in
 `tools/delivery-mcp/test/` when the contract changes.
+
+### Repair provenance after final verification
+
+Gate D retains the original Gate R receipt independently from its stronger
+closure receipt. Repair lineage validates the original digest, committed patch,
+parent, tree, paths and context; closure still requires exact Gate D and green CI.
+For evidence overwritten by an older verifier, use:
+
+```sh
+scripts/with-node-24.sh node tools/delivery-mcp/cli.mjs repair-provenance --repair-sha <full-sha> --target-sha <full-sha>
+```
+
+Recovery requires the original consumed prepared receipt and matching bound
+repair authorization. It preserves the current Gate D receipt and authorization,
+records an audit, and refuses missing or mismatched evidence. Run recovery before
+preparing another commit replaces the last prepared receipt. Then use ordinary
+`delivery-finalize`; recovery itself never proves CI or closes a User Story.

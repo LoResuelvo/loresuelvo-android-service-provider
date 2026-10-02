@@ -38,6 +38,7 @@ import { captureGitSnapshot } from "./lib/git-snapshot.mjs";
 import { findRepoRoot } from "./lib/repo-root.mjs";
 import { redactSecrets } from "./lib/redact-secrets.mjs";
 import { waitForJob, cancelDeliveryJob } from "./lib/jobs.mjs";
+import { recoverRepairProvenance } from "./lib/delivery-ledger.mjs";
 import { recoverStaleRepairAuthorization } from "./lib/repair-recovery.mjs";
 import { recordHistoricalAcceptance } from "./lib/historical-acceptance.mjs";
 import { inspectClosureReadiness } from "./lib/closure-preflight.mjs";
@@ -57,6 +58,7 @@ function usage() {
   make delivery-job-wait ARGS="--job-id <job-id> [--timeout-ms <milliseconds>]"
   make delivery-job-cancel ARGS="--job-id <job-id> [--reason <text>]"
   make delivery-accept-history ARGS="--failed-sha <full-sha> --correction-sha <full-sha> --passed-sha <full-sha> --baseline-sha <full-sha> --anchor-sha <full-sha> --us-id <id> --operator <actor> --reason <authorization>"
+  scripts/with-node-24.sh node tools/delivery-mcp/cli.mjs repair-provenance --repair-sha <full-sha> --target-sha <full-sha>
   make delivery-repair-recover ARGS="--target-sha <sha> --expected-authorization-commit-sha <sha>"
   make delivery-hooks-install
   make delivery-hooks-status
@@ -144,7 +146,7 @@ function parseArguments(argv) {
   let subAction = "";
   let hookArgs = [];
 
-  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "closure-preflight", "ci-window-wait", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel", "repair-recover", "recover-repair", "accept-history"].includes(args[0])) {
+  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "closure-preflight", "ci-window-wait", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel", "repair-recover", "recover-repair", "repair-provenance", "accept-history"].includes(args[0])) {
     command = args.shift();
     if (command === "verify_head") command = "verify-head";
     if (command === "recover-repair") command = "repair-recover";
@@ -200,6 +202,20 @@ function parseArguments(argv) {
       input[options[option]] = takeValue(args, index++, option);
     }
     return { help: false, command, input, pretty };
+  }
+
+  if (command === "repair-provenance") {
+    const input = {};
+    let pretty = false;
+    for (let index = 0; index < args.length; index += 1) {
+      const option = args[index];
+      if (option === "--pretty") { pretty = true; continue; }
+      const value = takeValue(args, index++, option);
+      if (option === "--repair-sha") input.repairSha = value;
+      else if (option === "--target-sha") input.targetSha = value;
+      else throw new Error(`Unknown option for repair-provenance: ${option}`);
+    }
+    return { command, input, pretty };
   }
 
   if (command === "repair-recover") {
@@ -551,6 +567,12 @@ async function main() {
     const result = await recordHistoricalAcceptance({ repoRoot: root, ...parsed.data });
     writeJson(result, options.pretty);
     process.exitCode = result.accepted ? 0 : 2;
+    return;
+  }
+
+  if (options.command === "repair-provenance") {
+    const result = await recoverRepairProvenance({ repoRoot: root, ...options.input });
+    writeJson(result, options.pretty);
     return;
   }
 

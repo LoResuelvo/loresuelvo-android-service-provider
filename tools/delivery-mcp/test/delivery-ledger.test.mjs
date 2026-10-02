@@ -313,3 +313,68 @@ test("ledger paths are confined to ignored runtime and reject invalid commit ide
     /Invalid commit SHA/
   );
 });
+
+test("Gate D retains independently verified Gate R provenance and supports strict recovery", async (t) => {
+  const { recoverRepairProvenance, validateRepairLineage } = await import("../lib/delivery-ledger.mjs");
+  const { MockCiProvider } = await import("../lib/ci-provider.mjs");
+  const { loadDeliveryPolicy } = await import("../lib/policy-loader.mjs");
+  const repoRoot = await createGitRepo(t);
+  await fs.copyFile(path.join(sourceRoot, ".delivery/policy.v1.json"), path.join(repoRoot, ".delivery/policy.v1.json"));
+  await fs.cp(path.join(sourceRoot, ".delivery/schemas"), path.join(repoRoot, ".delivery/schemas"), { recursive: true });
+  const policy = await loadDeliveryPolicy({ repoRoot });
+  const policyHash = policy.sourceHash || policy.hash;
+  const commit = await commitAndroidFile(repoRoot, "Repair.kt", "fix[57]: repair fixture");
+  const patch = execFileSync("git", ["diff", "--binary", commit.parentSha, commit.commitSha], { cwd: repoRoot });
+  const snapshotHash = crypto.createHash("sha256").update(patch).digest("hex");
+  const stagedFiles = execFileSync("git", ["diff-tree", "--no-commit-id", "--name-only", "-r", commit.commitSha],
+    { cwd: repoRoot, encoding: "utf8" }).trim().split("\n");
+  const r = await writeExecutionRecord(repoRoot, "repair-proof", { snapshotHash, runKey: "repair-run", gateId: "R", policyHash });
+  const common = { repoRoot, ...commit, stagedFiles, branch: "main", policyHash, status: "passed" };
+  await recordPreparedEvidence({ repoRoot, snapshot: { snapshotHash, headSha: commit.parentSha,
+    stagedTreeSha: commit.treeSha, stagedFiles, branch: "main" }, inspection: { gate: { id: "R" }, policy: { hash: policyHash } },
+    intent: "repair_ci", repairsSha: commit.parentSha, runKey: "repair-run", status: "passed", recordPath: r.recordPath });
+  await recordCommitEvidence({ ...common, snapshotHash, runKey: "repair-run", ...r,
+    gateId: "R", intent: "repair_ci", repairsSha: commit.parentSha });
+  await consumePreparedEvidence({ repoRoot, commitSha: commit.commitSha });
+  const d = await writeExecutionRecord(repoRoot, "closure-proof", { snapshotHash: "e".repeat(64), runKey: "closure-run", gateId: "D", policyHash });
+  await recordCommitEvidence({ ...common, snapshotHash: "e".repeat(64), runKey: "closure-run", ...d,
+    gateId: "D", intent: "close_us", usId: "57", scopeFiles: ["calendar.feature"] });
+  let entry = await getCommitEvidence({ repoRoot, commitSha: commit.commitSha });
+  assert.equal(entry.gateId, "D");
+  assert.equal(entry.intent, "close_us");
+  assert.equal(entry.repairsSha, commit.parentSha);
+  assert.equal(entry.repairEvidence.gateId, "R");
+  assert.equal((await queryCommitEvidence({ repoRoot, commitSha: commit.commitSha })).valid, true);
+  // The repair context stays separate from the closure US metadata.
+  const provider = new MockCiProvider();
+  provider.setFixture(commit.parentSha, { status: "failed" });
+  provider.setFixture(commit.commitSha, { status: "passed" });
+  await recordCommitEvidence({ repoRoot, commitSha: commit.parentSha, verificationStatus: "not_run",
+    treeSha: execFileSync("git", ["rev-parse", `${commit.parentSha}^{tree}`], { cwd: repoRoot, encoding: "utf8" }).trim(),
+    parentSha: null, branch: "main", stagedFiles: ["README.md"] });
+  assert.equal((await validateRepairLineage({ repoRoot, repairSha: commit.commitSha, ciProvider: provider })).valid, true);
+  // Simulate the old writer's loss in an isolated fixture, then recover only
+  // from the consumed original receipt. The current Gate D receipt is intact.
+  const ledgerPath = path.join(repoRoot, LEDGER_FILE);
+  const entryPath = path.join(repoRoot, LEDGER_DIR, `${commit.commitSha}.json`);
+  delete entry.repairEvidence;
+  entry.repairsSha = null;
+  entry.supersedes = [];
+  const ledger = JSON.parse(await fs.readFile(ledgerPath, "utf8"));
+  ledger[commit.commitSha] = entry;
+  await fs.writeFile(entryPath, JSON.stringify(entry));
+  await fs.writeFile(ledgerPath, JSON.stringify(ledger));
+  const authBefore = await fs.readFile(path.join(repoRoot, ".delivery/runtime/repair-auth", `${commit.parentSha}.json`), "utf8");
+  const input = { repoRoot, repairSha: commit.commitSha, targetSha: commit.parentSha };
+  assert.equal((await recoverRepairProvenance(input)).recovered, true);
+  assert.equal((await recoverRepairProvenance(input)).reused, true);
+  entry = await getCommitEvidence({ repoRoot, commitSha: commit.commitSha });
+  assert.equal(entry.recordDigest, d.recordDigest);
+  assert.equal(entry.repairsSha, commit.parentSha);
+  assert.equal(await fs.readFile(path.join(repoRoot, ".delivery/runtime/repair-auth", `${commit.parentSha}.json`), "utf8"), authBefore);
+  assert.equal((await validateRepairLineage({ repoRoot, repairSha: commit.commitSha, ciProvider: provider })).valid, true);
+  await assert.rejects(recoverRepairProvenance({ ...input, targetSha: commit.commitSha }), /BINDING_MISMATCH|ENOENT/);
+  await fs.appendFile(path.join(repoRoot, r.recordPath), " ");
+  await assert.rejects(recoverRepairProvenance(input), /REPAIR_RECEIPT_MISMATCH/);
+  assert.equal((await validateRepairLineage({ repoRoot, repairSha: commit.commitSha, ciProvider: provider })).valid, false);
+});
