@@ -252,8 +252,8 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
     const after = new Map(before); after.set(file, before.get(file) + '\n// reviewed implementation change\n');
     after.set(testFile, before.get(testFile) + '\n// companion test change\n');
     scenarios.push({ before, after, files: [file, testFile], featureFile: features[featureIndex].featureFile,
-      gate: featureIndex === 0 ? 'C' : 'B',
-      ...(featureIndex === 0 && { reason: 'ANDROID_SHARED_OR_UNKNOWN_FEATURE' }) });
+      // Proposal and inbox models now serve multiple registered features, including realtime chat.
+      gate: 'C', reason: 'ANDROID_SHARED_OR_UNKNOWN_FEATURE' });
   }
   const proposal = 'app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/conversation/ProviderProposalViewModel.kt';
   const stateChange = new Map(before);

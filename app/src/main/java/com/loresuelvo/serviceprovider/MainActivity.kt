@@ -56,6 +56,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        androidx.lifecycle.ViewModelProvider(this)[com.loresuelvo.serviceprovider.ui.realtime.ProviderRealtimeViewModel::class.java]
+            .onForegroundChanged(true)
+    }
+
+    override fun onStop() {
+        androidx.lifecycle.ViewModelProvider(this)[com.loresuelvo.serviceprovider.ui.realtime.ProviderRealtimeViewModel::class.java]
+            .onForegroundChanged(false)
+        super.onStop()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         acceptPaymentReturn(intent)

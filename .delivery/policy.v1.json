@@ -262,6 +262,18 @@
           "deviceTestClasses": [
             "com.loresuelvo.serviceprovider.acceptance.profile.ProviderProfileNavigationAcceptanceTest"
           ]
+        },
+        {
+          "featureFile": "app/src/test/resources/features/messaging/provider-realtime-chat.feature",
+          "entryPoints": [
+            "com.loresuelvo.serviceprovider.ui.realtime.ProviderRealtimeViewModel",
+            "com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationViewModel",
+            "com.loresuelvo.serviceprovider.ui.screens.messages.MessagesListViewModel"
+          ],
+          "integrationFiles": [
+            "app/src/main/java/com/loresuelvo/serviceprovider/MainActivity.kt"
+          ],
+          "deviceTestClasses": []
         }
       ],
       "sourceTopology": {

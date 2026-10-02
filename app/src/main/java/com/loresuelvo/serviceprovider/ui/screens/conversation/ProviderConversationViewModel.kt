@@ -8,6 +8,8 @@ import com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer
 import com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder
 import com.loresuelvo.serviceprovider.domain.conversation.MediaReader
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage
+import com.loresuelvo.serviceprovider.domain.conversation.mergeConversationMessages
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
 import com.loresuelvo.serviceprovider.domain.conversation.MediaReadException
 import com.loresuelvo.serviceprovider.domain.conversation.validateMediaUploads
@@ -23,7 +25,11 @@ import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,7 +57,8 @@ import kotlinx.coroutines.launch
  * the bubble-level playback controls.
  */
 // Cohesion review: retain the existing shared send/status state machine in this batch.
-// Recording/player ports own platform resources; the next extraction seam is capture orchestration.
+// Recording/player ports own platform resources; ConversationRealtimeObserver owns subscriptions.
+// Nine dependencies remain explicit to preserve the cohesive composer/media state machine; capture orchestration is the next seam.
 // PCA01–11, virtual-time ceiling/read cancellation and shared text/image retry tests prove this cohesive lifecycle.
 @HiltViewModel
 class ProviderConversationViewModel @Inject constructor(
@@ -63,6 +70,7 @@ class ProviderConversationViewModel @Inject constructor(
     private val audioRecorder: AudioRecorder,
     private val audioPlayer: AudioPlayer,
     private val recordingTimeSource: RecordingTimeSource = RecordingTimeSource(),
+    private val realtime: ConversationRealtimeObserver? = null,
 ) : ViewModel() {
 
     private val conversationId: Int = savedStateHandle.get<Int>(Route.Conversation.argument)
@@ -80,13 +88,22 @@ class ProviderConversationViewModel @Inject constructor(
     private var previewUri: String? = null
     private var recordingStartedAt = 0L
 
+    private var operations = newOperationScope()
+    private var sessionGeneration = 0L
+    private val receivedDuringLoad = mutableMapOf<Int, ConversationMessage>()
+    private var loadJob: Job? = null
+    private var refreshPending = false
+    private var sessionInvalidated = false
+
     init {
-        load()
+        realtime?.start(viewModelScope, ::onIncomingMessage, ::onSessionChanged, ::refresh)
+        if (realtime?.hasSession != false) { if (loadJob == null) load() }
+        else _uiState.value = ProviderConversationUiState.Error(ConversationDetailOutcome.Failure.Unauthorized)
         observeAudioPlayer()
     }
 
     fun onRetryLoad() {
-        if (_uiState.value is ProviderConversationUiState.Error) load()
+        if (!sessionInvalidated && _uiState.value is ProviderConversationUiState.Error) load()
     }
 
     fun onPromptChange(value: String) {
@@ -115,7 +132,7 @@ class ProviderConversationViewModel @Inject constructor(
             return
         }
         _uiState.value = ready.copy(readingMedia = true, transientMediaError = null)
-        viewModelScope.launch {
+        operations.launch {
             val images = try {
                 uris.map { uri ->
                     val image = mediaReader.read(uri) as? MediaUpload.Image
@@ -133,6 +150,7 @@ class ProviderConversationViewModel @Inject constructor(
                 }
                 return@launch
             }
+            currentCoroutineContext().ensureActive()
             _uiState.update { current ->
                 if (current is ProviderConversationUiState.Ready && current.composerAllowed) {
                     val selected = if (replaceIndex == null) existing + images else
@@ -195,7 +213,7 @@ class ProviderConversationViewModel @Inject constructor(
         }
         recordingStartedAt = recordingTimeSource.nowMillis()
         _uiState.value = ready.copy(recordingState = RecordingState.Recording(0L), transientMediaError = null)
-        recordingTickerJob = viewModelScope.launch {
+        recordingTickerJob = operations.launch {
             while (true) {
                 delay(250L)
                 val elapsed = (recordingTimeSource.nowMillis() - recordingStartedAt).coerceAtLeast(0L)
@@ -228,11 +246,12 @@ class ProviderConversationViewModel @Inject constructor(
         }
         previewUri = uri
         _uiState.value = ready.copy(recordingState = RecordingState.Idle, readingMedia = true)
-        audioReadJob = viewModelScope.launch {
+        audioReadJob = operations.launch {
             try {
                 val media = mediaReader.read(uri) as? MediaUpload.Audio
                     ?: throw MediaReadException(SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.UnsupportedFormat))
                 validateMediaUploads(listOf(media))?.let { throw MediaReadException(it) }
+                currentCoroutineContext().ensureActive()
                 _uiState.update { current ->
                     if (current is ProviderConversationUiState.Ready && current.composerAllowed)
                         current.copy(pendingMedia = media, pendingImages = emptyList(), readingMedia = false, transientMediaError = null) else current
@@ -349,34 +368,71 @@ class ProviderConversationViewModel @Inject constructor(
         releasePreview()
     }
 
-    private fun load() {
-        _uiState.value = ProviderConversationUiState.Loading
+    private fun newOperationScope() = CoroutineScope(
+        viewModelScope.coroutineContext + SupervisorJob(viewModelScope.coroutineContext[Job]),
+    )
+
+    private fun onIncomingMessage(message: ConversationMessage) {
+        if (_uiState.value is ProviderConversationUiState.Loading) receivedDuringLoad[message.id] = message
+        _uiState.update { current ->
+            if (current is ProviderConversationUiState.Ready) current.copy(
+                items = mergeChatItems(current.items, listOf(message)),
+                detail = current.detail.copy(messages = mergeConversationMessages(current.detail.messages, listOf(message))),
+            ) else current
+        }
+    }
+
+    private fun onSessionChanged() {
+        sessionInvalidated = true
+        sessionGeneration++
+        operations.coroutineContext[Job]?.cancel()
+        operations = newOperationScope()
+        receivedDuringLoad.clear()
+        refreshPending = false
+        onConversationBackgrounded()
+        releasePreview()
+        _uiState.value = ProviderConversationUiState.Error(ConversationDetailOutcome.Failure.Unauthorized)
+        // A conversation ID belongs to the original account; later accounts must navigate from their own inbox.
+    }
+
+    private fun refresh() {
+        if (sessionInvalidated) return
+        if (loadJob?.isActive == true) refreshPending = true else load(preserveContent = true)
+    }
+
+    private fun load(preserveContent: Boolean = false) {
+        receivedDuringLoad.clear()
+        if (!preserveContent || _uiState.value !is ProviderConversationUiState.Ready) _uiState.value = ProviderConversationUiState.Loading
         // Drop any playback the user might have started on a
         // previous screen so the bubble doesn't show a stale
         // `isPlaying = true` after navigation.
-        audioPlayer.stop()
-        viewModelScope.launch {
-            _uiState.value = when (val outcome = getConversationById(conversationId)) {
+        if (!preserveContent) audioPlayer.stop()
+        val generation = sessionGeneration
+        loadJob = operations.launch {
+            val outcome = getConversationById(conversationId)
+            currentCoroutineContext().ensureActive()
+            if (generation != sessionGeneration) return@launch
+            val previous = _uiState.value as? ProviderConversationUiState.Ready
+            _uiState.value = when (outcome) {
                 is ConversationDetailOutcome.Success -> {
                     if (outcome.detail.id != conversationId) {
                         ProviderConversationUiState.Error(
                             ConversationDetailOutcome.Failure.NotFound("Conversation unavailable"),
                         )
-                    } else ProviderConversationUiState.Ready(
-                        detail = outcome.detail,
-                        items = outcome.detail.messages.map(ChatListItem::ServerConfirmed),
-                        promptInput = "",
-                        sending = false,
-                        pendingMedia = null,
-                        transientMediaError = null,
-                        recordingState = RecordingState.Idle,
-                        playingMediaKey = null,
-                        playingPositionMillis = 0L,
-                        isPlaying = false,
-                    )
+                    } else conversationReadyState(outcome.detail, previous.takeIf { preserveContent }, receivedDuringLoad.values.toList())
                 }
                 is ConversationDetailOutcome.Failure ->
-                    ProviderConversationUiState.Error(outcome)
+                    if (previous != null && preserveContent && outcome !is ConversationDetailOutcome.Failure.NotFound && outcome != ConversationDetailOutcome.Failure.Unauthorized && !(outcome is ConversationDetailOutcome.Failure.Server && outcome.code == 403)) previous
+                    else ProviderConversationUiState.Error(outcome)
+            }
+            if (_uiState.value is ProviderConversationUiState.Error) {
+                onConversationBackgrounded()
+                releasePreview()
+            }
+            receivedDuringLoad.clear()
+            if (refreshPending) {
+                refreshPending = false
+                load(preserveContent = true)
             }
         }
     }
@@ -439,8 +495,9 @@ class ProviderConversationViewModel @Inject constructor(
                 )
             }
         }
-        viewModelScope.launch {
+        operations.launch {
             val outcome = sendMessage(conversationId, prompt)
+            currentCoroutineContext().ensureActive()
             resolveSendOutcome(pendingKey, prompt, emptyList(), outcome)
         }
     }
@@ -475,8 +532,9 @@ class ProviderConversationViewModel @Inject constructor(
                 )
             }
         }
-        viewModelScope.launch {
+        operations.launch {
             val outcome = sendMediaMessage(conversationId, media)
+            currentCoroutineContext().ensureActive()
             resolveSendOutcome(pendingKey, "", media, outcome)
         }
     }
@@ -499,10 +557,12 @@ class ProviderConversationViewModel @Inject constructor(
                 else -> null
             }
             if (accessFailure != null) return@update ProviderConversationUiState.Error(accessFailure)
+            val items = mergeChatItems(ready.items.map { item ->
+                if (item.key == pendingKey) item.toResolved(outcome, prompt, media) else item
+            }, emptyList())
             ready.copy(
-                items = ready.items.map { item ->
-                    if (item.key == pendingKey) item.toResolved(outcome, prompt, media) else item
-                },
+                detail = ready.detail.copy(messages = items.filterIsInstance<ChatListItem.ServerConfirmed>().map { it.message }),
+                items = items,
                 sending = false,
             )
         }

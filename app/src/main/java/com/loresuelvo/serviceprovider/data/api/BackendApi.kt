@@ -37,6 +37,12 @@ import retrofit2.http.Path
  */
 interface BackendApi {
 
+    @POST("ws-tickets")
+    suspend fun createWebSocketTicket(
+        @retrofit2.http.Tag session: com.loresuelvo.serviceprovider.domain.auth.AuthSession,
+    ): com.loresuelvo.serviceprovider.data.api.dto.WebSocketTicketDto
+
+
     @POST("me/calendar-connection")
     suspend fun connectCalendar(
         @Body request: com.loresuelvo.serviceprovider.data.api.dto.ConnectCalendarRequestDto,

@@ -7,7 +7,7 @@ Característica: Mantener actualizada la conversación con el consumidor
   Antecedentes:
     Dado que inicié sesión como prestador
 
-  @wip @batch1
+  @batch1
   Esquema del escenario: 01-PRC Recibir un mensaje en la conversación abierta
     Dado que estoy al final de una conversación activa con Ana
     Cuando Ana me envía un mensaje de "<contenido>"
@@ -20,7 +20,7 @@ Característica: Mantener actualizada la conversación con el consumidor
       | fotografías |
       | audio       |
 
-  @wip @batch1
+  @batch1
   Escenario: 02-PRC Mantener separados los mensajes de cada consumidor
     Dado que tengo abierta la conversación con Ana
     Y tengo otra conversación con Bruno
@@ -29,7 +29,7 @@ Característica: Mantener actualizada la conversación con el consumidor
     Y la bandeja refleja el nuevo mensaje en la conversación con Bruno
     Y no aparece un aviso de nuevo mensaje dentro de la conversación con Ana
 
-  @wip @batch1
+  @batch1
   Escenario: 03-PRC Leer información adicional antes de aceptar una solicitud
     Dado que tengo abierta una solicitud de Ana que todavía no acepté
     Cuando Ana me envía información adicional por el chat
