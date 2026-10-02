@@ -130,11 +130,12 @@ class ProviderSignupCurrentAccountRepository : CurrentAccountRepository {
 }
 
 class ProviderSignupJobRequestRepository : JobRequestRepository {
+    var requests: List<JobRequest> = emptyList()
+    var acceptance: AcceptJobRequestOutcome = AcceptJobRequestOutcome.Failure.Invalid
     override suspend fun getPendingJobRequests(): ActivityLoadOutcome<JobRequest> =
-        ActivityLoadOutcome.Success(emptyList())
+        ActivityLoadOutcome.Success(requests)
 
-    override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome =
-        AcceptJobRequestOutcome.Failure.Invalid
+    override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome = acceptance
 }
 
 class ProviderSignupWorkOrderRepository : WorkOrderRepository {

@@ -273,7 +273,10 @@
           "integrationFiles": [
             "app/src/main/java/com/loresuelvo/serviceprovider/MainActivity.kt"
           ],
-          "deviceTestClasses": []
+          "deviceTestClasses": [
+            "com.loresuelvo.serviceprovider.acceptance.messaging.ProviderRealtimeChatAcceptanceTest",
+            "com.loresuelvo.serviceprovider.acceptance.messaging.ProviderRealtimeChatScreenTest"
+          ]
         }
       ],
       "sourceTopology": {

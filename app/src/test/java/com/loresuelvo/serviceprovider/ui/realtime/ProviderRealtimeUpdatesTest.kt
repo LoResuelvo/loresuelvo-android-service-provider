@@ -163,4 +163,68 @@ class ProviderRealtimeUpdatesTest {
             } finally { ViewModelStore().apply { put("owner", owner) }.clear() }
         }
     }
+    @Test fun `retry retained failure preserves media and failed sends without automatic resend`() {
+        RealtimeChatFixture().use { world ->
+            world.open()
+            world.conversation.onPromptChange("failed send")
+            world.conversation.onSendClick()
+            world.scheduler.advanceUntilIdle()
+            val failed = world.ready().items.filterIsInstance<ChatListItem.LocalFailed>().single()
+            world.conversation.onPromptChange("draft")
+            world.conversation.onImagesPicked(listOf("content://photo"))
+            world.scheduler.advanceUntilIdle()
+            val images = world.ready().pendingImages
+            world.missMessages()
+            world.repository.detailFailure = ConversationDetailOutcome.Failure.Network(java.io.IOException("offline"))
+            world.repository.inboxFailure = ConversationsOutcome.Failure.Network(java.io.IOException("offline"))
+            world.connection(com.loresuelvo.serviceprovider.domain.realtime.RealtimeState.Connection.Connected)
+            assertNotNull(world.ready().refreshFailure)
+            assertNotNull(world.inboxReady().refreshFailure)
+            assertEquals(images, world.ready().pendingImages)
+            assertTrue(world.ready().items.contains(failed))
+            world.repository.detailFailure = null
+            world.repository.inboxFailure = null
+            world.conversation.onRetryLoad()
+            world.inbox.load()
+            world.scheduler.advanceUntilIdle()
+            assertEquals(listOf(1, 2, 3, 4), world.serverMessages().map { it.id })
+            assertEquals("draft", world.ready().promptInput)
+            assertEquals(images, world.ready().pendingImages)
+            assertTrue(world.ready().items.contains(failed))
+            assertNull(world.ready().refreshFailure)
+            assertFalse(world.ready().refreshing)
+            assertNull(world.inboxReady().refreshFailure)
+            assertEquals(1, world.repository.sendCalls)
+        }
+    }
+
+    @Test fun `terminal send clears capture and cancels an overlapping recovery and cannot be retried`() {
+        listOf(SendMessageOutcome.Failure.Unauthorized, SendMessageOutcome.Failure.Server(403, "Forbidden"),
+            SendMessageOutcome.Failure.ConversationNotFound("Missing")).forEach { failure ->
+            RealtimeChatFixture().use { world ->
+                world.open()
+                world.repository.sendGate = CompletableDeferred()
+                world.conversation.onPromptChange("private send")
+                world.conversation.onSendClick()
+                world.scheduler.runCurrent()
+                world.repository.detailGate = CompletableDeferred()
+                world.connection(com.loresuelvo.serviceprovider.domain.realtime.RealtimeState.Connection.Connected)
+                world.conversation.onPlayAudio("2", "file:///voice.webm")
+                world.repository.sendOutcome = failure
+                val cancels = world.recorder.cancels
+                world.repository.sendGate!!.complete(Unit)
+                world.scheduler.advanceUntilIdle()
+                assertTrue(world.conversation.uiState.value is ProviderConversationUiState.Error)
+                assertFalse(world.player.isPlaying.value)
+                assertTrue(world.recorder.cancels > cancels)
+                world.repository.detailGate!!.complete(Unit)
+                world.conversation.onRetryLoad()
+                world.receive()
+                world.scheduler.advanceUntilIdle()
+                assertTrue(world.conversation.uiState.value is ProviderConversationUiState.Error)
+                assertEquals(1, world.repository.sendCalls)
+            }
+        }
+    }
+
 }

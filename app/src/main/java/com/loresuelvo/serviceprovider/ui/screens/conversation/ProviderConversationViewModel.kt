@@ -103,7 +103,12 @@ class ProviderConversationViewModel @Inject constructor(
     }
 
     fun onRetryLoad() {
-        if (!sessionInvalidated && _uiState.value is ProviderConversationUiState.Error) load()
+        if (sessionInvalidated || loadJob?.isActive == true) return
+        when (_uiState.value) {
+            is ProviderConversationUiState.Ready -> refresh()
+            is ProviderConversationUiState.Error -> load()
+            else -> Unit
+        }
     }
 
     fun onPromptChange(value: String) {
@@ -373,6 +378,7 @@ class ProviderConversationViewModel @Inject constructor(
     )
 
     private fun onIncomingMessage(message: ConversationMessage) {
+        if (sessionInvalidated) return
         if (_uiState.value is ProviderConversationUiState.Loading) receivedDuringLoad[message.id] = message
         _uiState.update { current ->
             if (current is ProviderConversationUiState.Ready) current.copy(
@@ -382,7 +388,9 @@ class ProviderConversationViewModel @Inject constructor(
         }
     }
 
-    private fun onSessionChanged() {
+    private fun onSessionChanged() = invalidateConversation(ConversationDetailOutcome.Failure.Unauthorized)
+
+    private fun invalidateConversation(failure: ConversationDetailOutcome.Failure) {
         sessionInvalidated = true
         sessionGeneration++
         operations.coroutineContext[Job]?.cancel()
@@ -391,7 +399,7 @@ class ProviderConversationViewModel @Inject constructor(
         refreshPending = false
         onConversationBackgrounded()
         releasePreview()
-        _uiState.value = ProviderConversationUiState.Error(ConversationDetailOutcome.Failure.Unauthorized)
+        _uiState.value = ProviderConversationUiState.Error(failure)
         // A conversation ID belongs to the original account; later accounts must navigate from their own inbox.
     }
 
@@ -402,6 +410,9 @@ class ProviderConversationViewModel @Inject constructor(
 
     private fun load(preserveContent: Boolean = false) {
         receivedDuringLoad.clear()
+        if (preserveContent) _uiState.update { current ->
+            if (current is ProviderConversationUiState.Ready) current.copy(refreshing = true, refreshFailure = null) else current
+        }
         if (!preserveContent || _uiState.value !is ProviderConversationUiState.Ready) _uiState.value = ProviderConversationUiState.Loading
         // Drop any playback the user might have started on a
         // previous screen so the bubble doesn't show a stale
@@ -422,10 +433,15 @@ class ProviderConversationViewModel @Inject constructor(
                     } else conversationReadyState(outcome.detail, previous.takeIf { preserveContent }, receivedDuringLoad.values.toList())
                 }
                 is ConversationDetailOutcome.Failure ->
-                    if (previous != null && preserveContent && outcome !is ConversationDetailOutcome.Failure.NotFound && outcome != ConversationDetailOutcome.Failure.Unauthorized && !(outcome is ConversationDetailOutcome.Failure.Server && outcome.code == 403)) previous
+                    if (previous != null && preserveContent && outcome !is ConversationDetailOutcome.Failure.NotFound && outcome != ConversationDetailOutcome.Failure.Unauthorized && !(outcome is ConversationDetailOutcome.Failure.Server && outcome.code == 403)) previous.copy(refreshing = false, refreshFailure = outcome)
                     else ProviderConversationUiState.Error(outcome)
             }
             if (_uiState.value is ProviderConversationUiState.Error) {
+                val failure = (_uiState.value as ProviderConversationUiState.Error).failure
+                if (failure is ConversationDetailOutcome.Failure.NotFound || failure == ConversationDetailOutcome.Failure.Unauthorized || (failure is ConversationDetailOutcome.Failure.Server && failure.code == 403)) {
+                    invalidateConversation(failure)
+                    return@launch
+                }
                 onConversationBackgrounded()
                 releasePreview()
             }
@@ -545,18 +561,21 @@ class ProviderConversationViewModel @Inject constructor(
         media: List<MediaUpload>,
         outcome: SendMessageOutcome,
     ) {
+        val accessFailure = when (outcome) {
+            SendMessageOutcome.Failure.Unauthorized -> ConversationDetailOutcome.Failure.Unauthorized
+            is SendMessageOutcome.Failure.ConversationNotFound ->
+                ConversationDetailOutcome.Failure.NotFound("Conversation unavailable")
+            is SendMessageOutcome.Failure.Server -> if (outcome.code == 403) {
+                ConversationDetailOutcome.Failure.NotFound("Conversation unavailable")
+            } else null
+            else -> null
+        }
+        if (accessFailure != null) {
+            invalidateConversation(accessFailure)
+            return
+        }
         _uiState.update { current ->
             val ready = current as? ProviderConversationUiState.Ready ?: return@update current
-            val accessFailure = when (outcome) {
-                SendMessageOutcome.Failure.Unauthorized -> ConversationDetailOutcome.Failure.Unauthorized
-                is SendMessageOutcome.Failure.ConversationNotFound ->
-                    ConversationDetailOutcome.Failure.NotFound("Conversation unavailable")
-                is SendMessageOutcome.Failure.Server -> if (outcome.code == 403) {
-                    ConversationDetailOutcome.Failure.NotFound("Conversation unavailable")
-                } else null
-                else -> null
-            }
-            if (accessFailure != null) return@update ProviderConversationUiState.Error(accessFailure)
             val items = mergeChatItems(ready.items.map { item ->
                 if (item.key == pendingKey) item.toResolved(outcome, prompt, media) else item
             }, emptyList())

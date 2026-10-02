@@ -196,6 +196,20 @@ fun ProviderConversationScreen(
                     }
                 },
             )
+            if (state is ProviderConversationUiState.Ready && state.detail.status == ConversationStatus.Pending) {
+                Text(stringResource(R.string.provider_chat_accept_to_reply),
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp).testTag(PROVIDER_CONVERSATION_PENDING_TAG))
+            }
+            if (state is ProviderConversationUiState.Ready && (state.refreshing || state.refreshFailure != null)) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                    .testTag(PROVIDER_CONVERSATION_REFRESH_TAG).semantics { liveRegion = LiveRegionMode.Polite }) {
+                    Text(stringResource(if (state.refreshing) R.string.provider_chat_refresh_pending else R.string.provider_chat_refresh_error))
+                    if (!state.refreshing) TextButton(onClick = onRetryLoad,
+                        modifier = Modifier.heightIn(min = 48.dp).testTag(PROVIDER_CONVERSATION_REFRESH_RETRY_TAG)) {
+                        Text(stringResource(R.string.provider_home_retry))
+                    }
+                }
+            }
             if (state is ProviderConversationUiState.Ready && orderLinkState == ConversationOrderLinkUiState.Error) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     Text(stringResource(R.string.provider_chat_order_link_error))
@@ -489,3 +503,8 @@ const val PROVIDER_CONVERSATION_MESSAGES_TAG: String = "provider-conversation-me
 const val PROVIDER_CONVERSATION_BACK_TAG: String = "provider-conversation-back"
 
 const val PROVIDER_CONVERSATION_NEW_MESSAGE_TAG: String = "provider-conversation-new-message"
+
+const val PROVIDER_CONVERSATION_REFRESH_TAG = "provider-chat-refresh"
+const val PROVIDER_CONVERSATION_REFRESH_RETRY_TAG = "provider-chat-refresh-retry"
+
+const val PROVIDER_CONVERSATION_PENDING_TAG = "provider-chat-accept-to-reply"

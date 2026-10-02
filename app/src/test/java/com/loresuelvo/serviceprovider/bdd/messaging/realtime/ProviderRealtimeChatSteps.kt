@@ -8,7 +8,9 @@ import io.cucumber.java.After
 import io.cucumber.java.Before
 import io.cucumber.java.es.*
 import org.junit.Assert.*
+import kotlinx.coroutines.launch
 
+// One story owns its fixture and production assertions; recovery steps are the next split if this glue grows.
 class ProviderRealtimeChatSteps {
     private lateinit var world: RealtimeChatFixture
     private var reading = ConversationReadingPosition()
@@ -61,7 +63,9 @@ class ProviderRealtimeChatSteps {
     }
 
     @Dado("tengo una respuesta escrita sin enviar")
+    @Dado("que tengo una respuesta escrita sin enviar")
     fun unsentReply() {
+        if (!world.hasConversation) world.open()
         draft = "A reply still being written"
         world.conversation.onPromptChange(draft)
     }
@@ -163,4 +167,104 @@ class ProviderRealtimeChatSteps {
         assertEquals(0, world.recorder.starts)
         assertEquals("", world.ready().promptInput)
     }
+    private var backgroundInterruption = false
+    private var previousSession: com.loresuelvo.serviceprovider.domain.auth.AuthSession? = null
+
+    @Dado("Ana me envió mensajes mientras {string}")
+    fun missedActivity(interruption: String) {
+        assertTrue(interruption == "mi conexión estaba interrumpida" || interruption == "estaba usando otra aplicación")
+        backgroundInterruption = interruption == "estaba usando otra aplicación"
+        if (backgroundInterruption) { world.foreground(true); world.foreground(false) }
+        else world.connection(com.loresuelvo.serviceprovider.domain.realtime.RealtimeState.Connection.Retrying)
+        world.missMessages()
+    }
+
+    @Cuando("vuelvo a usar la conversación con conexión disponible")
+    fun reconnect() {
+        if (backgroundInterruption) world.foreground(true)
+        else world.connection(com.loresuelvo.serviceprovider.domain.realtime.RealtimeState.Connection.Connected)
+    }
+
+    @Entonces("aparecen los mensajes recibidos durante la interrupción sin recargar manualmente")
+    fun recoveredMessages() { assertEquals(listOf(1, 2, 3, 4), world.serverMessages().map { it.id }) }
+
+    @Entonces("cada mensaje aparece una sola vez en orden cronológico")
+    fun uniqueChronologicalMessages() {
+        val messages = world.serverMessages()
+        assertEquals(messages.size, messages.map { it.id }.distinct().size)
+        assertEquals(messages.sortedWith(compareBy({ it.createdOnEpochMillis }, { it.id })), messages)
+    }
+
+    @Entonces("conservo mi respuesta escrita mientras siga abierta la misma sesión de la aplicación")
+    @Entonces("conservo mi respuesta escrita")
+    fun retainedDraft() { assertEquals(draft, world.ready().promptInput) }
+
+    @Entonces("la bandeja refleja la actividad recuperada")
+    fun recoveredInbox() { assertEquals(4, world.inboxReady().conversations.single { it.id == 42 }.lastMessage!!.id) }
+
+    @Dado("que veo el historial de Ana y una respuesta escrita sin enviar")
+    fun historyAndDraft() { world.open(); unsentReply() }
+
+    @Dado("no se pudo recuperar la actividad reciente de esa conversación")
+    fun failedRefresh() {
+        world.missMessages()
+        world.repository.detailFailure = com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome.Failure.Network(java.io.IOException("offline"))
+        reconnect()
+        assertNotNull(world.ready().refreshFailure)
+        assertEquals(listOf(1, 2), world.serverMessages().map { it.id })
+    }
+
+    @Cuando("elijo reintentar con conexión disponible")
+    fun retryRefresh() {
+        world.repository.detailFailure = null
+        world.conversation.onRetryLoad()
+        world.scheduler.advanceUntilIdle()
+    }
+
+    @Entonces("veo el historial actualizado sin mensajes repetidos")
+    fun updatedHistory() { recoveredMessages(); uniqueChronologicalMessages() }
+
+    @Entonces("desaparece el aviso de actualización pendiente")
+    fun refreshNoticeCleared() { assertNull(world.ready().refreshFailure); assertFalse(world.ready().refreshing) }
+
+    @Dado("que cerré mi sesión de prestador mientras tenía abierta una conversación")
+    fun logout() {
+        world.open()
+        previousSession = world.sessions.getSession()
+        world.sessions.clearSession()
+        world.scheduler.advanceUntilIdle()
+    }
+
+    @Dado("después ingresé con otra cuenta de prestador")
+    fun loginOtherAccount() {
+        world.repository.details.clear()
+        world.repository.details[43] = com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail(43,
+            com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus.Active,
+            com.loresuelvo.serviceprovider.domain.conversation.ConversationCounterpart(8, "Bruno", "Perez", null), emptyList(), 0)
+        world.sessions.saveSession(com.loresuelvo.serviceprovider.domain.auth.AuthSession(
+            com.loresuelvo.serviceprovider.domain.auth.User("provider-b", "b@example.test"), "token-b"))
+        world.scheduler.advanceUntilIdle()
+    }
+
+    @Cuando("llega un mensaje dirigido a mi cuenta anterior")
+    fun previousAccountMessage() {
+        world.scope.launch {
+            world.client.mutableEvents.emit(com.loresuelvo.serviceprovider.domain.realtime.SessionEvent(previousSession!!,
+                com.loresuelvo.serviceprovider.domain.realtime.ProviderEvent.MessageCreated(42,
+                    com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage(99,
+                        com.loresuelvo.serviceprovider.domain.conversation.ConversationSender.Consumer, "private-old-account", 99))))
+        }
+        world.scheduler.advanceUntilIdle()
+    }
+
+    @Entonces("no veo ese mensaje ni el historial privado de la cuenta anterior")
+    fun privateHistoryHidden() {
+        assertEquals(com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome.Failure.Unauthorized,
+            (world.conversation.uiState.value as ProviderConversationUiState.Error).failure)
+        assertFalse(world.conversation.canStartComposerOperation())
+    }
+
+    @Entonces("puedo consultar las conversaciones de mi cuenta actual")
+    fun ownInboxAvailable() { assertEquals(listOf(43), world.inboxReady().conversations.map { it.id }) }
+
 }

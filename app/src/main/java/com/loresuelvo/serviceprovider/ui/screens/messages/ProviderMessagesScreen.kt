@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -65,10 +66,15 @@ fun ProviderMessagesScreen(
             when (state) {
                 MessagesListUiState.Loading -> LoadingState()
                 is MessagesListUiState.Ready -> {
-                    if (state.conversations.isEmpty()) {
-                        EmptyState()
-                    } else {
-                        ConversationsList(
+                    Column {
+                        if (state.refreshFailure != null) {
+                            Text(stringResource(R.string.provider_messages_error),
+                                Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+                            Button(onClick = onRetryClick, modifier = Modifier.testTag(PROVIDER_MESSAGES_RETRY_TAG)) {
+                                Text(stringResource(R.string.provider_messages_retry))
+                            }
+                        }
+                        if (state.conversations.isEmpty()) EmptyState() else ConversationsList(
                             conversations = state.conversations,
                             onConversationClick = onConversationClick,
                         )

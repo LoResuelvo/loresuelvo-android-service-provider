@@ -17,6 +17,6 @@ internal fun conversationReadyState(
 ): ProviderConversationUiState.Ready {
     val items = mergeChatItems(previous?.items.orEmpty(), detail.messages + buffered)
     val mergedDetail = detail.copy(messages = items.filterIsInstance<ChatListItem.ServerConfirmed>().map { it.message })
-    return previous?.copy(detail = mergedDetail, items = items)
+    return previous?.copy(detail = mergedDetail, items = items, refreshing = false, refreshFailure = null)
         ?: ProviderConversationUiState.Ready(mergedDetail, items, promptInput = "", sending = false)
 }

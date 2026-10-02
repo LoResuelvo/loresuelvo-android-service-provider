@@ -68,6 +68,8 @@ sealed interface ProviderConversationUiState {
         val playingMediaKey: String? = null,
         val playingPositionMillis: Long = 0L,
         val isPlaying: Boolean = false,
+        val refreshing: Boolean = false,
+        val refreshFailure: ConversationDetailOutcome.Failure? = null,
     ) : ProviderConversationUiState {
         val composerAllowed: Boolean get() = detail.status == ConversationStatus.Active
         val canStartComposerOperation: Boolean

@@ -29,6 +29,13 @@ class RealtimeChatFixture : AutoCloseable {
     lateinit var conversation: ProviderConversationViewModel
     lateinit var inbox: MessagesListViewModel
     var incoming: ConversationMessage? = null
+    private var owner: ProviderRealtimeViewModel? = null
+
+    fun foreground(active: Boolean) {
+        if (owner == null) owner = ProviderRealtimeViewModel(ObserveProviderSessionUseCase(sessions), ConnectProviderRealtimeUseCase(client)).also(models::add)
+        owner!!.onForegroundChanged(active)
+        scheduler.advanceUntilIdle()
+    }
 
     init { Dispatchers.setMain(dispatcher) }
 
@@ -55,6 +62,20 @@ class RealtimeChatFixture : AutoCloseable {
         repository.details[conversationId] = repository.details.getValue(conversationId).let { it.copy(messages = it.messages + message, updatedOnEpochMillis = time) }
         scope.launch { client.mutableEvents.emit(SessionEvent(session, ProviderEvent.MessageCreated(conversationId, message))) }
         scheduler.advanceUntilIdle()
+    }
+
+    val hasConversation: Boolean get() = ::conversation.isInitialized
+
+    fun connection(connection: RealtimeState.Connection) {
+        client.state.value = RealtimeState(sessions.getSession(), connection)
+        scheduler.advanceUntilIdle()
+    }
+
+    fun missMessages() {
+        val messages = listOf(ConversationMessage(4, ConversationSender.Consumer, "missed-4", 40),
+            ConversationMessage(3, ConversationSender.Consumer, "missed-3", 30),
+            ConversationMessage(3, ConversationSender.Consumer, "missed-3", 30))
+        repository.details[42] = repository.details.getValue(42).let { it.copy(messages = it.messages + messages, updatedOnEpochMillis = 40) }
     }
 
     fun ready() = conversation.uiState.value as ProviderConversationUiState.Ready
@@ -86,7 +107,11 @@ class FakeRealtimeClient : RealtimeClient {
         started += session
         active++
         maximumActive = maxOf(maximumActive, active)
-        try { awaitCancellation() } finally { active-- }
+        state.value = RealtimeState(session, RealtimeState.Connection.Connected)
+        try { awaitCancellation() } finally {
+            active--
+            if (state.value.session == session) state.value = RealtimeState(session, RealtimeState.Connection.Stopped)
+        }
     }
 }
 
@@ -104,6 +129,7 @@ class RealtimeTestRepository : ConversationRepository {
     var sendCalls = 0
     var mediaReads = 0
     var inboxCalls = 0
+    var inboxFailure: ConversationsOutcome.Failure? = null
     var sendOutcome: SendMessageOutcome = SendMessageOutcome.Failure.Network(java.io.IOException("offline"))
     override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome {
         detailCalls++
@@ -113,9 +139,9 @@ class RealtimeTestRepository : ConversationRepository {
     }
     override suspend fun getConversations(): ConversationsOutcome {
         inboxCalls++
-        val snapshot = details.values.map { Conversation(it.id, it.status, it.counterpart, it.messages.lastOrNull(), it.updatedOnEpochMillis) }
+        val snapshot = details.values.map { Conversation(it.id, it.status, it.counterpart, it.messages.maxWithOrNull(compareBy<ConversationMessage> { message -> message.createdOnEpochMillis }.thenBy { message -> message.id }), it.updatedOnEpochMillis) }
         inboxGate?.await()
-        return ConversationsOutcome.Success(snapshot)
+        return inboxFailure ?: ConversationsOutcome.Success(snapshot)
     }
     override suspend fun sendMessage(conversationId: Int, content: String): SendMessageOutcome {
         sendCalls++

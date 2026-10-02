@@ -389,4 +389,7 @@
     <string name="provider_audio_seek">Buscar posición del audio</string>
     <string name="provider_audio_format_error">Elegí un audio WebM/Opus.</string>
     <string name="provider_conversation_new_message">Nuevo mensaje</string>
+    <string name="provider_chat_refresh_pending">Actualizando la conversación…</string>
+    <string name="provider_chat_refresh_error">No se pudo actualizar la conversación. Tu respuesta se conserva.</string>
+    <string name="provider_chat_accept_to_reply">Aceptá la solicitud para responder.</string>
 </resources>

@@ -378,4 +378,7 @@
     <string name="provider_audio_seek">Seek audio</string>
     <string name="provider_audio_format_error">Choose a WebM/Opus audio clip.</string>
     <string name="provider_conversation_new_message">New message</string>
+    <string name="provider_chat_refresh_pending">Updating conversation…</string>
+    <string name="provider_chat_refresh_error">Conversation could not be updated. Your reply is kept.</string>
+    <string name="provider_chat_accept_to_reply">Accept the request to reply.</string>
 </resources>

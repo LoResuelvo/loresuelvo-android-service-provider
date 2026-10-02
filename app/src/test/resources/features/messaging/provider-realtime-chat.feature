@@ -61,7 +61,7 @@ Característica: Mantener actualizada la conversación con el consumidor
     Y el aviso desaparece
     Y los dos mensajes recibidos permanecen en la conversación
 
-  @wip @batch3
+  @batch3
   Esquema del escenario: 07-PRC Recuperar la conversación después de una interrupción
     Dado que tengo una respuesta escrita sin enviar
     Y Ana me envió mensajes mientras "<interrupción>"
@@ -75,7 +75,7 @@ Característica: Mantener actualizada la conversación con el consumidor
       | mi conexión estaba interrumpida |
       | estaba usando otra aplicación  |
 
-  @wip @batch3
+  @batch3
   Escenario: 08-PRC Recuperar una actualización que no pudo completarse
     Dado que veo el historial de Ana y una respuesta escrita sin enviar
     Y no se pudo recuperar la actividad reciente de esa conversación
@@ -84,7 +84,7 @@ Característica: Mantener actualizada la conversación con el consumidor
     Y conservo mi respuesta escrita
     Y desaparece el aviso de actualización pendiente
 
-  @wip @batch3
+  @batch3
   Escenario: 09-PRC Mantener privadas las conversaciones al cambiar de cuenta
     Dado que cerré mi sesión de prestador mientras tenía abierta una conversación
     Y después ingresé con otra cuenta de prestador
