@@ -2,6 +2,7 @@
 import { inspectDelivery } from "./lib/inspect-delivery.mjs";
 import { prepareDelivery } from "./lib/prepare-delivery.mjs";
 import {
+  DeliveryHistoricalAcceptanceInputSchema,
   DeliveryInspectInputSchema,
   DeliveryPrepareInputSchema,
   DeliveryContextInputSchema,
@@ -38,6 +39,7 @@ import { findRepoRoot } from "./lib/repo-root.mjs";
 import { redactSecrets } from "./lib/redact-secrets.mjs";
 import { waitForJob, cancelDeliveryJob } from "./lib/jobs.mjs";
 import { recoverStaleRepairAuthorization } from "./lib/repair-recovery.mjs";
+import { recordHistoricalAcceptance } from "./lib/historical-acceptance.mjs";
 import { inspectClosureReadiness } from "./lib/closure-preflight.mjs";
 import { waitForCiWindow } from "./lib/ci-window-wait.mjs";
 
@@ -54,6 +56,7 @@ function usage() {
   make delivery-test ARGS="[options]"
   make delivery-job-wait ARGS="--job-id <job-id> [--timeout-ms <milliseconds>]"
   make delivery-job-cancel ARGS="--job-id <job-id> [--reason <text>]"
+  make delivery-accept-history ARGS="--failed-sha <full-sha> --correction-sha <full-sha> --passed-sha <full-sha> --baseline-sha <full-sha> --anchor-sha <full-sha> --us-id <id> --operator <actor> --reason <authorization>"
   make delivery-repair-recover ARGS="--target-sha <sha> --expected-authorization-commit-sha <sha>"
   make delivery-hooks-install
   make delivery-hooks-status
@@ -141,7 +144,7 @@ function parseArguments(argv) {
   let subAction = "";
   let hookArgs = [];
 
-  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "closure-preflight", "ci-window-wait", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel", "repair-recover", "recover-repair"].includes(args[0])) {
+  if (["inspect", "prepare", "context", "hooks", "hook", "ci", "closure-preflight", "ci-window-wait", "finalize", "verify-head", "verify_head", "test", "job", "job-wait", "job-cancel", "repair-recover", "recover-repair", "accept-history"].includes(args[0])) {
     command = args.shift();
     if (command === "verify_head") command = "verify-head";
     if (command === "recover-repair") command = "repair-recover";
@@ -181,6 +184,22 @@ function parseArguments(argv) {
       else throw new Error(`Unknown option for ${command}: ${option}`);
     }
     return { help: false, command, contextAction: "set", input, pretty };
+  }
+
+  if (command === "accept-history") {
+    const input = {};
+    let pretty = false;
+    const options = { "--failed-sha": "failedSha", "--correction-sha": "correctionSha",
+      "--passed-sha": "passedSha", "--baseline-sha": "baselineSha", "--anchor-sha": "anchorSha",
+      "--us-id": "usId", "--operator": "operator", "--reason": "reason" };
+    for (let index = 0; index < args.length; index++) {
+      const option = args[index];
+      if (option === "--help" || option === "-h") return { help: true, command, input, pretty };
+      if (option === "--pretty") { pretty = true; continue; }
+      if (!options[option]) throw new Error(`Unknown option for accept-history: ${option}`);
+      input[options[option]] = takeValue(args, index++, option);
+    }
+    return { help: false, command, input, pretty };
   }
 
   if (command === "repair-recover") {
@@ -523,6 +542,15 @@ async function main() {
     process.exitCode = ["passed", "no_changes", "job_started", "running"].includes(res.status)
       ? 0
       : res.status === "failed" ? 3 : 2;
+    return;
+  }
+
+  if (options.command === "accept-history") {
+    const parsed = DeliveryHistoricalAcceptanceInputSchema.safeParse(options.input);
+    if (!parsed.success) throw new Error(formatInputIssues(parsed.error));
+    const result = await recordHistoricalAcceptance({ repoRoot: root, ...parsed.data });
+    writeJson(result, options.pretty);
+    process.exitCode = result.accepted ? 0 : 2;
     return;
   }
 

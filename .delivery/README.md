@@ -360,6 +360,45 @@ invalid/missing receipts are never recorded as `not_run`. An autonomous agent
 must still prepare its exact staged snapshot. Install hooks only after the Node
 contracts, Android smoke matrix, and real-repository checks pass.
 
+### Explicit historical acceptance
+
+Only with explicit user authorization, a reviewed human correction and an
+already-published green descendant can reconcile **one named historical CI
+failure** and **one named missing scenario-baseline receipt**. This opt-in
+operation appends a separate `accepted_historical` audit; it never creates a
+receipt, modifies existing ledger evidence, labels a failure as passed, or
+accepts later commits. The operator must identify themselves truthfully (for
+example, `Codex on behalf of the user`) and record the user's authorization
+and reviewed causal correction in the reason.
+
+```bash
+make delivery-accept-history ARGS="--failed-sha <full-sha> --correction-sha <full-sha> --passed-sha <full-sha> --baseline-sha <full-sha> --anchor-sha <full-sha> --us-id <id> --operator '<actual actor>' --reason '<explicit authorization and reviewed correction>'"
+```
+
+All SHAs must be exact lowercase 40-character commits. On first registration,
+`anchor-sha` must equal both local HEAD and actual remote `origin/main`.
+Ancestry must connect the named failure, correction, passed descendant and
+anchor; the scenario baseline must precede the passed descendant. The baseline
+must contain only added/modified pending `.feature` files, optionally
+`README.md` or `docs/*.md`, and have no existing gate evidence. App, tooling,
+policy, deleted or renamed paths are refused. CI/provider ambiguity, a changed
+remote, corrupt audit/evidence or conflicting repeated input refuses acceptance.
+The record is append-only and repeating identical input is idempotent.
+
+Consumers recheck lineage, remote membership and the named descendant's green
+CI. Preflight reports the baseline as `accepted_historical`, retaining its
+original missing-evidence reason. Finalization reports
+`acceptedHistoricalCommits` and `acceptedHistoricalFailures` separately from
+verified commits and validated repairs. **Current HEAD still requires exact
+Gate D proof, completed scope, remote CI and the full instrumented suite for
+`close_us`**. Every new staged snapshot retains its ordinary selected gate.
+
+After changing Delivery modules, an already-connected MCP may still run its
+previous loaded code. Use the documented Make/Node 24 CLI commands (fresh
+processes) for acceptance, preflight, preparation and finalization until the
+MCP server has been reconnected. Do not create a second worker MCP client or
+edit audit/runtime JSON manually.
+
 If a remote rejects a repair push after authorization, recover the stale
 never-remote binding explicitly with `delivery-repair-recover`. The operation
 requires both the failed target SHA and the expected authorization commit SHA,

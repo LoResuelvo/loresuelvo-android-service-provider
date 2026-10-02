@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { assertSafeRepoPath, findRepoRoot } from "./repo-root.mjs";
 import { validateExecutionResult } from "./validate-schema.mjs";
 import { inspectCi, getCiProvider } from "./ci-provider.mjs";
+import { readHistoricalAcceptance } from "./historical-acceptance.mjs";
 import { loadDeliveryPolicy } from "./policy-loader.mjs";
 
 export const LEDGER_DIR = ".delivery/runtime/ledger";
@@ -2348,6 +2349,7 @@ export async function getActiveCiIncidents({
 } = {}) {
   signal?.throwIfAborted();
   const root = findRepoRoot(repoRoot);
+  const historicalAcceptance = await readHistoricalAcceptance({ repoRoot: root, ciProvider, signal });
   const entriesFromLedger = ledgerEntries || await listCommitEvidence({ repoRoot: root });
   signal?.throwIfAborted();
   const rawEntries = filterEntriesReachableFrom(root, entriesFromLedger, historyHeadSha);
@@ -2515,7 +2517,9 @@ export async function getActiveCiIncidents({
       } else if (["in_progress", "queued", "not_found"].includes(ci.status)) {
         status = "pending";
       } else if (["failed", "cancelled", "timed_out"].includes(ci.status)) {
-        if (ci.status === "cancelled" && await hasGreenDescendant(sha)) {
+        if (historicalAcceptance.some(entry => entry.failedSha === sha)) {
+          status = "accepted_historical";
+        } else if (ci.status === "cancelled" && await hasGreenDescendant(sha)) {
           // GitHub can cancel an older run when concurrency replaces it with a
           // newer run. A green descendant proves the current descendant state
           // passed CI, so the superseded cancellation must not block delivery.
@@ -2593,6 +2597,9 @@ export async function getActiveCiIncidents({
       branch,
       status,
       repairSha,
+      ...(status === "accepted_historical" ? {
+        acceptanceId: historicalAcceptance.find(entry => entry.failedSha === sha).auditId,
+      } : {}),
     };
 
     allIncidents.push(incidentRecord);

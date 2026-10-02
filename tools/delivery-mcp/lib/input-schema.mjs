@@ -127,3 +127,16 @@ export function formatInputIssues(error) {
     .map((issue) => `${issue.path.join(".") || "input"}: ${issue.message}`)
     .join(", ");
 }
+
+
+const HistoricalShaSchema = z.string().regex(/^[a-f0-9]{40}$/, "An exact lowercase commit SHA is required");
+export const DeliveryHistoricalAcceptanceInputSchema = z.object({
+  failedSha: HistoricalShaSchema,
+  correctionSha: HistoricalShaSchema,
+  passedSha: HistoricalShaSchema,
+  baselineSha: HistoricalShaSchema,
+  anchorSha: HistoricalShaSchema,
+  usId: NumericUsIdSchema,
+  operator: z.string().trim().min(4).max(120).regex(/^[^\x00-\x1f]+$/),
+  reason: z.string().trim().min(24).max(1000).regex(/^[^\x00-\x1f]+$/),
+}).strict();

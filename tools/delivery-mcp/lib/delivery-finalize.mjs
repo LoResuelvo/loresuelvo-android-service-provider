@@ -8,6 +8,7 @@ import {
   listCommitEvidence,
   getActiveCiIncidents,
 } from "./delivery-ledger.mjs";
+import { readHistoricalAcceptance } from "./historical-acceptance.mjs";
 import { extractUsId } from "./git-snapshot.mjs";
 import { inspectCi } from "./ci-provider.mjs";
 import { loadDeliveryPolicy } from "./policy-loader.mjs";
@@ -320,10 +321,18 @@ export async function finalizeDelivery({
 
   const effectiveUsId = requestedUsId || evidenceUsId || null;
   const shas = await relevantCommitShas(root, headSha, effectiveUsId);
+  let historicalAcceptance;
+  try { historicalAcceptance = await readHistoricalAcceptance({ repoRoot: root, ciProvider }); }
+  catch (error) { return { finalized: false, status: "blocked", reason: error.code || "HISTORICAL_AUDIT_INVALID" }; }
+  const acceptedHistoricalCommits = [];
   const unverifiedCommits = [];
   for (const sha of shas) {
     const evidence = await queryCommitEvidence({ repoRoot: root, commitSha: sha });
     if (evidence.state === "missing") {
+      if (sha !== headSha && historicalAcceptance.some(entry => entry.baselineSha === sha && entry.usId === effectiveUsId)) {
+        acceptedHistoricalCommits.push(sha);
+        continue;
+      }
       return {
         finalized: false,
         status: "blocked",
@@ -387,6 +396,8 @@ export async function finalizeDelivery({
         .filter((incident) => incident.status === "superseded")
         .map((incident) => incident.failedSha)),
     ].filter((sha, index, all) => all.indexOf(sha) === index);
+    const acceptedHistoricalFailures = (activeIncidents.allIncidents || [])
+      .filter(incident => incident.status === "accepted_historical").map(incident => incident.failedSha);
     const failedRepairs = repairResolution.failedRepairs || [];
     const invalidRepairs = repairResolution.invalidRepairs || [];
     const supersededSet = new Set(supersededFailures.map((s) => s.toLowerCase()));
@@ -466,6 +477,7 @@ export async function finalizeDelivery({
       ciResults.push(ci);
       const normalizedSha = sha.toLowerCase();
 
+      if (sha !== headSha && (acceptedHistoricalCommits.includes(sha) || acceptedHistoricalFailures.includes(sha))) continue;
       if (supersededSet.has(normalizedSha)) {
         // Historical failure formally superseded by a green repair or a green
         // descendant after CI concurrency cancellation; it does not block.
@@ -542,10 +554,12 @@ export async function finalizeDelivery({
         headSha,
         shas,
         unverifiedCommits,
+        acceptedHistoricalCommits,
+        acceptedHistoricalFailures,
         remoteVerification: "passed",
         pendingCi: [],
         maxInFlightCommits: policy.ci.maxInFlightCommits,
-        message: `${deliveryLabel} ${effectiveUsId ? `'${effectiveUsId}' ` : ""}finalized with Gate D and green CI`,
+        message: `${deliveryLabel} ${effectiveUsId ? `'${effectiveUsId}' ` : ""}finalized with Gate D and current CI${acceptedHistoricalCommits.length || acceptedHistoricalFailures.length ? "; explicit historical acceptance is reported separately" : ""}`,
         ci: ciResults.map(toCompactCi),
         supersededFailures,
         pendingFailures: [],
@@ -600,6 +614,8 @@ export async function finalizeDelivery({
         headSha,
         shas,
         unverifiedCommits,
+        acceptedHistoricalCommits,
+        acceptedHistoricalFailures,
         remoteVerification: hasPendingCi ? "pending" : "passed",
         pendingCi: pendingCi.map(toCompactCi),
         maxInFlightCommits: policy.ci.maxInFlightCommits,

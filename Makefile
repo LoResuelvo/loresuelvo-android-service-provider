@@ -3,7 +3,7 @@
 	delivery-prepare delivery-context delivery-ci delivery-closure-preflight \
 	delivery-ci-window-wait delivery-finalize \
 	delivery-verify-head delivery-job-wait delivery-job-cancel \
-	delivery-repair-recover \
+	delivery-repair-recover delivery-accept-history \
 	delivery-hooks-install delivery-hooks-status
 
 # Keep Android toolchain resolution in one place. The wrapper sets up Java,
@@ -49,6 +49,7 @@ help:
 	@echo "  make delivery-job-wait ARGS=\"--job-id <job-id> [--timeout-ms <ms>]\""
 	@echo "  make delivery-job-cancel ARGS=\"--job-id <job-id> [--reason <text>]\""
 	@echo "  make delivery-repair-recover ARGS=\"--target-sha <sha> --expected-authorization-commit-sha <sha>\""
+	@echo "  make delivery-accept-history ARGS=\"--failed-sha <full-sha> --correction-sha <full-sha> --passed-sha <full-sha> --baseline-sha <full-sha> --anchor-sha <full-sha> --us-id <id> --operator <actor> --reason <authorization>\""
 	@echo "  make delivery-hooks-install"
 	@echo "  make delivery-hooks-status"
 	@echo ""
@@ -119,6 +120,9 @@ delivery-job-wait:
 
 delivery-job-cancel:
 	$(DELIVERY_CLI) job-cancel $(ARGS)
+
+delivery-accept-history:
+	$(DELIVERY_CLI) accept-history $(ARGS)
 
 delivery-repair-recover:
 	$(DELIVERY_CLI) repair-recover $(ARGS)

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -236,6 +237,9 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
   const features = policy.analysis.dependencyImpact.features;
   const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore','pipe','pipe'] }).trim();
   const before = readFeatureGateTree(ROOT, git('rev-parse', 'HEAD'));
+  // Exercise graph decisions independently of previously committed build-topology drift.
+  const sourceTopology = Object.fromEntries(Object.keys(policy.analysis.dependencyImpact.sourceTopology)
+    .map(file => [file, crypto.createHash('sha256').update(before.get(file)).digest('hex')]));
   const scenarios = [];
   for (const [featureIndex, stem] of [[0, 'ui/screens/conversation/ProviderProposalViewModel'], [3, 'ui/screens/messages/MessagesListViewModel']]) {
     const file = `app/src/main/java/com/loresuelvo/serviceprovider/${stem}.kt`;
@@ -304,9 +308,17 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
     const file = id.slice(2), key = keys.get(file + '\0' + code);
     return (byFile.get(key) || []).map(fact => ({ ...fact, id: id + fact.id.slice(key.length) }));
   });
+  const policyTopology = policy.analysis.dependencyImpact.sourceTopology;
+  if (Object.keys(sourceTopology).some(file => sourceTopology[file] !== policyTopology[file])) {
+    const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenarios[0], features,
+      sourceTopology: policyTopology, parse });
+    assert.equal(impact.reason, 'ANDROID_SOURCE_TOPOLOGY_CHANGED');
+    assert.equal(selectGate({ policy, snapshot: { stagedFiles: scenarios[0].files }, intent: 'close_scenario',
+      featureFile: scenarios[0].featureFile, dependencyImpact: impact }).gate.id, 'C');
+  }
   for (const scenario of scenarios) {
     const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenario, features: scenario.features || features,
-      sourceTopology: policy.analysis.dependencyImpact.sourceTopology, parse });
+      sourceTopology, parse });
     if (scenario.reason) assert.equal(impact.reason, scenario.reason);
     if (scenario.deviceTestClasses) {
       assert.deepEqual(impact.deviceTestClasses, scenario.deviceTestClasses, `${scenario.files[0]}: ${JSON.stringify(impact)}`);
