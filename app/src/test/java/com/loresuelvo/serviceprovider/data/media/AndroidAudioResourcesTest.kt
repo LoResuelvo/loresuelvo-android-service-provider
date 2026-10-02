@@ -111,6 +111,32 @@ class AndroidAudioResourcesTest {
     }
 
     @Test
+    fun failed_seek_keeps_the_released_player_stopped_at_zero() {
+        for (failure in listOf("duration", "seek")) {
+            val native = mockk<MediaPlayer>(relaxed = true)
+            val prepared = slot<MediaPlayer.OnPreparedListener>()
+            every { native.setOnPreparedListener(capture(prepared)) } just Runs
+            every { native.duration } returns 5000
+            val player = object : AndroidAudioPlayer(context) { override fun createPlayer() = native }
+            player.play("https://example.test/audio")
+            prepared.captured.onPrepared(native)
+            player.seekTo(1000)
+            assertTrue(player.isPlaying.value)
+            assertEquals(1000L, player.currentPositionMillis.value)
+            if (failure == "duration") every { native.duration } throws IllegalStateException("duration")
+            else every { native.seekTo(2000) } throws IllegalStateException("seek")
+
+            player.seekTo(2000)
+
+            assertFalse(player.isPlaying.value)
+            assertEquals(0L, player.currentPositionMillis.value)
+            verify(exactly = 1) { native.release() }
+            player.stop()
+            verify(exactly = 1) { native.release() }
+        }
+    }
+
+    @Test
     fun player_prepare_failure_completion_and_error_release_the_owned_player() {
         for (stage in listOf("source", "prepare", "completion", "error")) {
             val native = mockk<MediaPlayer>(relaxed = true)
@@ -122,10 +148,15 @@ class AndroidAudioResourcesTest {
             if (stage == "prepare") every { native.prepareAsync() } throws IllegalStateException("prepare")
             val player = object : AndroidAudioPlayer(context) { override fun createPlayer() = native }
             player.play("https://example.test/audio")
+            if (stage in listOf("completion", "error")) {
+                player.seekTo(2000)
+                assertEquals(2000L, player.currentPositionMillis.value)
+            }
             if (stage == "completion") complete.captured.onCompletion(native)
             if (stage == "error") error.captured.onError(native, 1, 1)
             verify(exactly = 1) { native.release() }
             assertFalse(player.isPlaying.value)
+            assertEquals(0L, player.currentPositionMillis.value)
             player.stop()
             verify(exactly = 1) { native.release() }
         }

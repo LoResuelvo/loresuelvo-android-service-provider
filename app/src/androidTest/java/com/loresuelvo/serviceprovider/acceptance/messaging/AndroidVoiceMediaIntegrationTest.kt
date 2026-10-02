@@ -48,7 +48,11 @@ class AndroidVoiceMediaIntegrationTest {
             instrumentation.runOnMainSync { player.play(uri!!, 1000) }
             withTimeout(10_000) { player.isPlaying.first { it } }
             withTimeout(10_000) { player.isPlaying.first { !it } }
-            assertEquals(0L, player.currentPositionMillis.value)
+            // Completion updates both flows on main; inspect them after the callback returns.
+            instrumentation.runOnMainSync {
+                assertFalse(player.isPlaying.value)
+                assertEquals(0L, player.currentPositionMillis.value)
+            }
         } finally {
             instrumentation.runOnMainSync { player.stop(); recorder.cancel(); uri?.let(recorder::discard) }
         }

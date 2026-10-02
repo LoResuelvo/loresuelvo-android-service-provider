@@ -102,7 +102,7 @@ open class AndroidAudioPlayer @Inject constructor(
         if (prepared) runCatching {
             requestedPosition = requestedPosition.coerceAtMost(current.duration.toLong().coerceAtLeast(0L))
             current.seekTo(requestedPosition.toInt())
-        }.onFailure { stop() }
+        }.onFailure { stop(); return }
         _currentPositionMillis.value = requestedPosition
     }
 
