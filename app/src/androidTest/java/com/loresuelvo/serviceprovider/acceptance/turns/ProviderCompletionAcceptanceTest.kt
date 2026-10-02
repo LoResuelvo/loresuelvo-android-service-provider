@@ -174,7 +174,8 @@ class ProviderCompletionAcceptanceTest {
         compose.runOnIdle { model.removeEvidence(model.evidence.value[1].id) }
         compose.onNodeWithTag("completion_submit").performScrollTo().performClick()
         compose.waitUntil(5_000) { orders.postCalls == 1 &&
-            (home.uiState.value.scheduledWork as? ActivitySectionState.Ready)?.items?.isEmpty() == true }
+            (home.uiState.value.scheduledWork as? ActivitySectionState.Ready)?.items?.singleOrNull()
+                ?.let { it.id == 42 && it.status == WorkOrderStatus.AwaitingPayment } == true }
         assertEquals(listOf("file-one.jpg"), orders.postedFileIds)
         compose.onNodeWithText(activity.getString(R.string.provider_completion_report_success)).assertIsDisplayed()
         compose.onNodeWithText(activity.getString(R.string.provider_turns_back)).performClick()

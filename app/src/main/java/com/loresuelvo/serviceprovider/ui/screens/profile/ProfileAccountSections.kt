@@ -170,6 +170,7 @@ internal fun ProfilePaymentCard(
                 ProfilePaymentState.Unavailable -> R.string.provider_profile_connection_unavailable
             }),
             confirmed = payment == ProfilePaymentState.Connected,
+            modifier = Modifier.testTag(PROFILE_PAYMENT_STATUS_TAG),
         )
         Text(
             stringResource(R.string.provider_profile_payment_description),
@@ -187,6 +188,8 @@ internal fun ProfilePaymentCard(
         }
     }
 }
+
+const val PROFILE_PAYMENT_STATUS_TAG = "profile-payment-status"
 
 @Composable
 internal fun ProfileSectionHeading(@StringRes title: Int, icon: ImageVector) {

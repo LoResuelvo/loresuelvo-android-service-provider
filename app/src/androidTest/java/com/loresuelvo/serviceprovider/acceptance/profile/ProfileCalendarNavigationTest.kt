@@ -138,7 +138,7 @@ class ProfileCalendarNavigationTest {
     @Test
     fun rotation_after_resolution_launch_delivers_one_result_to_restored_registration() {
         start(); awaitConsent()
-        compose.activityRule.scenario.recreate()
+        recreateBackgroundProfile()
         finishConsent(Activity.RESULT_OK, authorized = true)
         assertConnected()
         assertEquals(1, dependencies.calendarLauncher().calls)
@@ -190,7 +190,7 @@ class ProfileCalendarNavigationTest {
         start()
         compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
         compose.runOnUiThread { dependencies.calendarLauncher().resolve() }
-        compose.activityRule.scenario.recreate()
+        recreateBackgroundProfile()
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         assertRecoverable(R.string.provider_profile_calendar_cancelled)
         assertEquals(1, dependencies.calendarLauncher().calls)
@@ -229,8 +229,8 @@ class ProfileCalendarNavigationTest {
         dependencies.payment().outcome = PaymentAccountStatusOutcome.Success(PaymentAccountStatus(ConnectionStatus.CONNECTED))
         compose.runOnUiThread { dependencies.identityLauncher().finish(IdentityVerificationResult.Completed) }
         assertConnected()
-        compose.onNodeWithText(compose.activity.getString(R.string.provider_profile_connection_connected))
-            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag(PROFILE_PAYMENT_STATUS_TAG).performScrollTo().assertIsDisplayed()
+            .assertTextEquals(compose.activity.getString(R.string.provider_profile_connection_connected))
         assertEquals(1, dependencies.calendar().calls)
         assertEquals(1, dependencies.identity().calls)
     }
@@ -338,6 +338,24 @@ class ProfileCalendarNavigationTest {
         compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performTouchInput { swipeUp(startY = height * 0.7f, endY = height * 0.5f) }
         compose.onNodeWithTag(PROFILE_CALENDAR_ACTION_TAG).performClick()
         compose.waitForIdle()
+    }
+
+    private fun recreateBackgroundProfile() {
+        val previous = compose.activity
+        // ActivityScenario.recreate temporarily requests RESUMED, which would deliver
+        // queued consent callbacks or wait forever while the consent activity covers Profile.
+        compose.runOnUiThread { previous.recreate() }
+        compose.waitUntil(5_000) {
+            var recreated = false
+            compose.runOnUiThread {
+                val monitor = ActivityLifecycleMonitorRegistry.getInstance()
+                recreated = monitor.getLifecycleStageOf(previous) == Stage.DESTROYED &&
+                    listOf(Stage.CREATED, Stage.STARTED, Stage.RESUMED, Stage.PAUSED, Stage.STOPPED).any { stage ->
+                        monitor.getActivitiesInStage(stage).any { it is MainActivity && it !== previous }
+                    }
+            }
+            recreated
+        }
     }
 
     private fun awaitConsent(): ProfileCalendarConsentTestActivity {
