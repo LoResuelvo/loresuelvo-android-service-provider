@@ -24,11 +24,15 @@ import javax.inject.Singleton
  * intervals — fine for the `mm:ss` granularity the bubble shows.
  */
 @Singleton
-class AndroidAudioPlayer @Inject constructor(
+open class AndroidAudioPlayer @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : AudioPlayer {
 
     private var player: MediaPlayer? = null
+    private var playWhenPrepared = false
+    private var prepared = false
+    private var requestedPosition = 0L
+    private var loadedUrl: String? = null
 
     private val _isPlaying = MutableStateFlow(false)
     override val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
@@ -40,47 +44,83 @@ class AndroidAudioPlayer @Inject constructor(
     private val positionPollRunnable = object : Runnable {
         override fun run() {
             val current = player
-            if (current != null && current.isPlaying) {
-                _currentPositionMillis.value = safePosition(current)
-                handler.postDelayed(this, 250L)
-            }
+            if (current != null) runCatching {
+                if (current.isPlaying) {
+                    _currentPositionMillis.value = safePosition(current)
+                    handler.postDelayed(this, 250L)
+                }
+            }.onFailure { stop() }
         }
     }
 
+    protected open fun createPlayer(): MediaPlayer = MediaPlayer()
+
     override fun play(url: String, startPositionMillis: Long) {
-        releaseCurrentPlayer()
-        val mediaPlayer = MediaPlayer().apply {
-            setDataSource(url)
-            setOnPreparedListener {
-                if (startPositionMillis > 0) seekTo(startPositionMillis.toInt())
-                start()
+        val current = player
+        if (current != null && loadedUrl == url && prepared) {
+            runCatching {
+                seekTo(startPositionMillis)
+                current.start()
+                playWhenPrepared = true
                 _isPlaying.value = true
                 handler.post(positionPollRunnable)
+            }.onFailure { stop() }
+            return
+        }
+        stop()
+        loadedUrl = url
+        val mediaPlayer = runCatching { createPlayer() }.getOrNull() ?: return
+        player = mediaPlayer
+        playWhenPrepared = true
+        requestedPosition = startPositionMillis.coerceAtLeast(0L)
+        runCatching {
+            mediaPlayer.setDataSource(context, android.net.Uri.parse(url))
+            mediaPlayer.setOnPreparedListener {
+                if (player !== it) return@setOnPreparedListener
+                prepared = true
+                runCatching {
+                    if (requestedPosition > 0) it.seekTo(requestedPosition.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+                    if (playWhenPrepared) {
+                        it.start()
+                        _isPlaying.value = true
+                        handler.post(positionPollRunnable)
+                    }
+                }.onFailure { stop() }
             }
-            setOnCompletionListener {
-                _isPlaying.value = false
-                _currentPositionMillis.value = 0L
-            }
-            setOnErrorListener { _, _, _ ->
-                _isPlaying.value = false
+            mediaPlayer.setOnCompletionListener { if (player === it) stop() }
+            mediaPlayer.setOnErrorListener { current, _, _ ->
+                if (player === current) stop()
                 true
             }
-            prepareAsync()
-        }
-        player = mediaPlayer
+            mediaPlayer.prepareAsync()
+        }.onFailure { stop() }
+    }
+
+    override fun seekTo(positionMillis: Long) {
+        val current = player ?: return
+        requestedPosition = positionMillis.coerceAtLeast(0L)
+        if (prepared) runCatching {
+            requestedPosition = requestedPosition.coerceAtMost(current.duration.toLong().coerceAtLeast(0L))
+            current.seekTo(requestedPosition.toInt())
+        }.onFailure { stop() }
+        _currentPositionMillis.value = requestedPosition
     }
 
     override fun pause() {
+        playWhenPrepared = false
         val current = player ?: return
-        if (current.isPlaying) {
-            current.pause()
-            handler.removeCallbacks(positionPollRunnable)
-            _isPlaying.value = false
-            _currentPositionMillis.value = safePosition(current)
+        if (runCatching { current.isPlaying }.getOrDefault(false)) {
+            runCatching {
+                current.pause()
+                handler.removeCallbacks(positionPollRunnable)
+                _isPlaying.value = false
+                _currentPositionMillis.value = safePosition(current)
+            }.onFailure { stop() }
         }
     }
 
     override fun stop() {
+        playWhenPrepared = false
         releaseCurrentPlayer()
         _isPlaying.value = false
         _currentPositionMillis.value = 0L
@@ -91,6 +131,8 @@ class AndroidAudioPlayer @Inject constructor(
         player?.runCatching { stop() }
         player?.runCatching { release() }
         player = null
+        prepared = false
+        loadedUrl = null
     }
 
     private fun safePosition(player: MediaPlayer): Long = runCatching {

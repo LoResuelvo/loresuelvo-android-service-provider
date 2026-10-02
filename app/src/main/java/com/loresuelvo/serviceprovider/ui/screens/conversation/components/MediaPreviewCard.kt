@@ -11,6 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,10 +48,13 @@ fun MediaPreviewCard(
     media: MediaUpload,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
+    onPlay: () -> Unit = {},
+    onPause: () -> Unit = {},
+    isPlaying: Boolean = false,
 ) {
     when (media) {
         is MediaUpload.Image -> ImagePreviewCard(media, onClear, modifier)
-        is MediaUpload.Audio -> AudioPreviewCard(media, onClear, modifier)
+        is MediaUpload.Audio -> AudioPreviewCard(media, onClear, modifier, onPlay, onPause, isPlaying)
     }
 }
 
@@ -108,6 +113,9 @@ private fun AudioPreviewCard(
     media: MediaUpload.Audio,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
+    onPlay: () -> Unit,
+    onPause: () -> Unit,
+    isPlaying: Boolean,
 ) {
     Row(
         modifier = modifier
@@ -118,18 +126,10 @@ private fun AudioPreviewCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Icon(
-                imageVector = Icons.Filled.Mic,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        IconButton(onClick = if (isPlaying) onPause else onPlay,
+            modifier = Modifier.testTag("provider-chat-preview-play")) {
+            Icon(if (isPlaying) androidx.compose.material.icons.Icons.Filled.Pause else androidx.compose.material.icons.Icons.Filled.PlayArrow,
+                androidx.compose.ui.res.stringResource(if (isPlaying) R.string.provider_conversation_pause_audio_content_description else R.string.provider_conversation_play_audio_content_description))
         }
         Text(
             text = androidx.compose.ui.res.stringResource(

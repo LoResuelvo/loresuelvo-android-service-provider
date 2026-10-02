@@ -72,6 +72,23 @@ class AndroidMediaReaderMimeInferenceTest {
     }
 
     @Test
+    fun unknown_zero_and_exceeded_audio_metadata_are_rejected() = runTest {
+        for (duration in listOf(null, "0", "999", "300001")) {
+            val file = java.io.File(context.cacheDir, "invalid-${duration ?: "unknown"}.webm")
+            try {
+                file.writeBytes(byteArrayOf(1))
+                val uri = Uri.fromFile(file).toString()
+                if (duration != null) org.robolectric.shadows.ShadowMediaMetadataRetriever.addMetadata(uri, android.media.MediaMetadataRetriever.METADATA_KEY_DURATION, duration)
+                val error = runCatching { reader.read(uri) }.exceptionOrNull()
+                assertTrue(error is com.loresuelvo.serviceprovider.domain.conversation.MediaReadException)
+                assertEquals(com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.InvalidMedia(
+                    com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.InvalidAudioDuration),
+                    (error as com.loresuelvo.serviceprovider.domain.conversation.MediaReadException).failure)
+            } finally { file.delete() }
+        }
+    }
+
+    @Test
     fun audio_recorder_webm_uri_is_typed_as_audio_not_image() = runTest {
         // The recorder writes files named `audio-<uuid>.webm` in
         // `cacheDir`. We materialise a tiny placeholder so the
@@ -94,12 +111,15 @@ class AndroidMediaReaderMimeInferenceTest {
             resolverMime,
         )
 
+        org.robolectric.shadows.ShadowMediaMetadataRetriever.addMetadata(uri.toString(), android.media.MediaMetadataRetriever.METADATA_KEY_DURATION, "3000")
         val upload = reader.read(uri.toString())
         assertTrue(
             "audio recorder .webm must produce MediaUpload.Audio, was $upload",
             upload is MediaUpload.Audio,
         )
         val audio = upload as MediaUpload.Audio
+        assertEquals(3000L, audio.durationMillis)
+        file.delete()
         assertEquals("audio/webm", audio.mimeType)
         assertEquals("audio-1234.webm", audio.originalName)
     }

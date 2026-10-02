@@ -13,6 +13,28 @@ import org.junit.Test
 class SendMediaMessageUseCaseTest {
 
     @Test
+    fun audio_exact_limits_pass_and_invalid_format_duration_size_or_multiple_clips_fail_before_repository() = runTest {
+        var calls = 0
+        val repository = object : ConversationRepository {
+            override suspend fun getConversations(): ConversationsOutcome = error("unused")
+            override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome = error("unused")
+            override suspend fun sendMessage(conversationId: Int, content: String): SendMessageOutcome = error("unused")
+            override suspend fun sendMediaMessage(conversationId: Int, media: List<MediaUpload>): SendMessageOutcome {
+                calls++; return SendMessageOutcome.Failure.Network(Exception("offline"))
+            }
+        }
+        val send = SendMediaMessageUseCase(repository)
+        fun audio(size: Int = 1, duration: Long = 1000, mime: String = "audio/webm") = MediaUpload.Audio(ByteArray(size), mime, "clip.webm", duration)
+        listOf(listOf(audio(0)), listOf(audio(duration = 0)), listOf(audio(duration = 999)),
+            listOf(audio(duration = 300_001)), listOf(audio(5 * 1024 * 1024 + 1)),
+            listOf(audio(mime = "audio/mp4")), listOf(audio(mime = "audio/aac")), listOf(audio(), audio())
+        ).forEach { assertTrue(send(42, it) is SendMessageOutcome.Failure) }
+        assertEquals(0, calls)
+        send(42, listOf(audio(5 * 1024 * 1024, 300_000)))
+        assertEquals(1, calls)
+    }
+
+    @Test
     fun validates_all_images_formats_count_and_exact_size_before_repository() = runTest {
         var calls = 0
         val repository = object : ConversationRepository {

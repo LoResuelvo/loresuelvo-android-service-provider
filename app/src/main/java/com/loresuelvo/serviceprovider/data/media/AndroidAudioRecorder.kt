@@ -26,12 +26,20 @@ import javax.inject.Singleton
  * [start]).
  */
 @Singleton
-class AndroidAudioRecorder @Inject constructor(
+open class AndroidAudioRecorder @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : AudioRecorder {
 
     private var recorder: MediaRecorder? = null
     private var outputFile: File? = null
+    private val completedFiles = mutableMapOf<String, File>()
+
+    protected open fun createRecorder(): MediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        MediaRecorder(context)
+    } else {
+        @Suppress("DEPRECATION")
+        MediaRecorder()
+    }
 
     override fun start(): Result<Unit> {
         if (recorder != null) {
@@ -46,13 +54,10 @@ class AndroidAudioRecorder @Inject constructor(
         )
 
         return runCatching {
-            val mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                MediaRecorder(context)
-            } else {
-                @Suppress("DEPRECATION")
-                MediaRecorder()
-            }
+            val mediaRecorder = createRecorder()
 
+            recorder = mediaRecorder
+            outputFile = file
             mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC)
             mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.WEBM)
             mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.OPUS)
@@ -60,9 +65,6 @@ class AndroidAudioRecorder @Inject constructor(
 
             mediaRecorder.prepare()
             mediaRecorder.start()
-
-            recorder = mediaRecorder
-            outputFile = file
         }.onFailure {
             recorder?.runCatching { release() }
             recorder = null
@@ -77,19 +79,24 @@ class AndroidAudioRecorder @Inject constructor(
                 IllegalStateException("Audio recording is not in progress"),
             )
 
-        val file = outputFile
-            ?: return Result.failure(
-                IllegalStateException("Audio recording file is missing"),
-            )
+        val file = outputFile ?: run {
+            cancel()
+            return Result.failure(IllegalStateException("Audio recording file is missing"))
+        }
 
         return runCatching {
             mediaRecorder.stop()
             Uri.fromFile(file).toString()
         }.also {
-            mediaRecorder.release()
+            mediaRecorder.runCatching { release() }
+            if (it.isFailure) file.delete() else completedFiles[it.getOrThrow()] = file
             recorder = null
             outputFile = null
         }
+    }
+
+    override fun discard(uri: String) {
+        completedFiles.remove(uri)?.delete()
     }
 
     override fun cancel() {
@@ -97,7 +104,7 @@ class AndroidAudioRecorder @Inject constructor(
             stop()
         }
 
-        recorder?.release()
+        recorder?.runCatching { release() }
 
         recorder = null
 

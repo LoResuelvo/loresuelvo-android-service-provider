@@ -51,7 +51,8 @@ import kotlinx.coroutines.launch
  * the bubble-level playback controls.
  */
 // Cohesion review: retain the existing shared send/status state machine in this batch.
-// The audio recording/playback orchestration is the next extraction seam; image and retry tests cover this change.
+// Recording/player ports own platform resources; the next extraction seam is capture orchestration.
+// PCA01–11, virtual-time ceiling/read cancellation and shared text/image retry tests prove this cohesive lifecycle.
 @HiltViewModel
 class ProviderConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -61,6 +62,7 @@ class ProviderConversationViewModel @Inject constructor(
     private val mediaReader: MediaReader,
     private val audioRecorder: AudioRecorder,
     private val audioPlayer: AudioPlayer,
+    private val recordingTimeSource: RecordingTimeSource = RecordingTimeSource(),
 ) : ViewModel() {
 
     private val conversationId: Int = savedStateHandle.get<Int>(Route.Conversation.argument)
@@ -74,6 +76,9 @@ class ProviderConversationViewModel @Inject constructor(
 
     /** Coroutine that drives [RecordingState.Recording.elapsedMillis]. */
     private var recordingTickerJob: Job? = null
+    private var audioReadJob: Job? = null
+    private var previewUri: String? = null
+    private var recordingStartedAt = 0L
 
     init {
         load()
@@ -88,7 +93,7 @@ class ProviderConversationViewModel @Inject constructor(
         _uiState.update { current ->
             when (current) {
                 is ProviderConversationUiState.Ready ->
-                    if (current.composerAllowed) current.copy(promptInput = value) else current
+                    if (current.composerAllowed && current.pendingMedia !is MediaUpload.Audio) current.copy(promptInput = value) else current
                 else -> current
             }
         }
@@ -98,7 +103,7 @@ class ProviderConversationViewModel @Inject constructor(
 
     fun onImagesPicked(uris: List<String>, replaceIndex: Int? = null) {
         val ready = _uiState.value as? ProviderConversationUiState.Ready ?: return
-        if (!ready.canStartComposerOperation || uris.isEmpty()) return
+        if (!ready.canStartComposerOperation || ready.pendingMedia is MediaUpload.Audio || uris.isEmpty()) return
         val existing = ready.pendingImages
         val nextCount = if (replaceIndex == null) existing.size + uris.size else existing.size
         if (nextCount > MAX_MESSAGE_IMAGES || (replaceIndex != null && replaceIndex !in existing.indices)) {
@@ -149,6 +154,8 @@ class ProviderConversationViewModel @Inject constructor(
     }
 
     fun onClearStagedMedia() {
+        if (!canStartComposerOperation()) return
+        releasePreview()
         _uiState.update { current ->
             when (current) {
                 is ProviderConversationUiState.Ready ->
@@ -175,150 +182,121 @@ class ProviderConversationViewModel @Inject constructor(
      * concern).
      */
     fun onStartRecording() {
-        if (!canStartComposerOperation()) return
+        val ready = _uiState.value as? ProviderConversationUiState.Ready ?: return
+        if (!ready.canStartComposerOperation || ready.pendingMedia != null || ready.promptInput.isNotBlank()) return
+        audioPlayer.stop()
         val started = audioRecorder.start()
         if (started.isFailure) {
-            _uiState.update { current ->
-                if (current is ProviderConversationUiState.Ready) {
-                    current.copy(
-                        transientMediaError = SendMessageOutcome.Failure.Server(
-                            code = 0,
-                            message = started.exceptionOrNull()?.message
-                                ?: "Could not start audio recording",
-                        ),
-                    )
-                } else {
-                    current
-                }
-            }
+            audioRecorder.cancel()
+            onAudioFailure(if (started.exceptionOrNull() is SecurityException)
+                SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.MicrophonePermission)
+                else SendMessageOutcome.Failure.Server(0, "Audio unavailable"))
             return
         }
-        _uiState.update { current ->
-            if (current is ProviderConversationUiState.Ready) {
-                current.copy(
-                    recordingState = RecordingState.Recording(elapsedMillis = 0L),
-                )
-            } else {
-                current
-            }
-        }
-        recordingTickerJob?.cancel()
+        recordingStartedAt = recordingTimeSource.nowMillis()
+        _uiState.value = ready.copy(recordingState = RecordingState.Recording(0L), transientMediaError = null)
         recordingTickerJob = viewModelScope.launch {
-            val startedAt = System.currentTimeMillis()
             while (true) {
                 delay(250L)
-                val elapsed = System.currentTimeMillis() - startedAt
+                val elapsed = (recordingTimeSource.nowMillis() - recordingStartedAt).coerceAtLeast(0L)
                 _uiState.update { current ->
-                    if (current is ProviderConversationUiState.Ready &&
-                        current.recordingState is RecordingState.Recording
-                    ) {
-                        current.copy(
-                            recordingState = RecordingState.Recording(elapsedMillis = elapsed),
-                        )
-                    } else {
-                        current
-                    }
+                    if (current is ProviderConversationUiState.Ready && current.recordingState is RecordingState.Recording)
+                        current.copy(recordingState = RecordingState.Recording(elapsed.coerceAtMost(com.loresuelvo.serviceprovider.domain.conversation.MAX_AUDIO_DURATION_MILLIS))) else current
+                }
+                if (elapsed >= com.loresuelvo.serviceprovider.domain.conversation.MAX_AUDIO_DURATION_MILLIS) {
+                    onStopRecording()
+                    break
                 }
             }
         }
     }
 
-    /**
-     * Stops the in-progress recording and stages the captured
-     * clip as [MediaUpload.Audio] in
-     * [ProviderConversationUiState.Ready.pendingMedia].
-     */
+    fun onMicrophonePermissionDenied() {
+        onAudioFailure(SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.MicrophonePermission))
+    }
+
     fun onStopRecording() {
-        val state = _uiState.value as? ProviderConversationUiState.Ready ?: return
-        if (!state.composerAllowed || state.recordingState !is RecordingState.Recording) return
+        val ready = _uiState.value as? ProviderConversationUiState.Ready ?: return
+        if (!ready.composerAllowed || ready.recordingState !is RecordingState.Recording) return
         recordingTickerJob?.cancel()
         recordingTickerJob = null
-        val stopped = audioRecorder.stop()
-        val uri = stopped.getOrNull()
+        val uri = audioRecorder.stop().getOrNull()
         if (uri == null) {
-            _uiState.update { current ->
-                if (current is ProviderConversationUiState.Ready) {
-                    current.copy(
-                        recordingState = RecordingState.Idle,
-                        transientMediaError = SendMessageOutcome.Failure.Server(
-                            code = 0,
-                            message = stopped.exceptionOrNull()?.message
-                                ?: "Could not stop audio recording",
-                        ),
-                    )
-                } else {
-                    current
-                }
-            }
+            audioRecorder.cancel()
+            onAudioFailure()
             return
         }
-        viewModelScope.launch {
-            val media = try {
-                mediaReader.read(uri)
-            } catch (e: IOException) {
+        previewUri = uri
+        _uiState.value = ready.copy(recordingState = RecordingState.Idle, readingMedia = true)
+        audioReadJob = viewModelScope.launch {
+            try {
+                val media = mediaReader.read(uri) as? MediaUpload.Audio
+                    ?: throw MediaReadException(SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.UnsupportedFormat))
+                validateMediaUploads(listOf(media))?.let { throw MediaReadException(it) }
                 _uiState.update { current ->
-                    if (current is ProviderConversationUiState.Ready) {
-                        current.copy(
-                            recordingState = RecordingState.Idle,
-                            transientMediaError = SendMessageOutcome.Failure.Network(
-                                cause = e,
-                            ),
-                        )
-                    } else {
-                        current
-                    }
+                    if (current is ProviderConversationUiState.Ready && current.composerAllowed)
+                        current.copy(pendingMedia = media, pendingImages = emptyList(), readingMedia = false, transientMediaError = null) else current
                 }
-                return@launch
+            } catch (e: IOException) {
+                releasePreview()
+                onAudioFailure((e as? MediaReadException)?.failure ?: SendMessageOutcome.Failure.Network(e))
             }
-            _uiState.update { current ->
-                if (current is ProviderConversationUiState.Ready) {
-                    current.copy(
-                        pendingMedia = media,
-                        pendingImages = emptyList(),
-                        recordingState = RecordingState.Idle,
-                        promptInput = "",
-                    )
-                } else {
-                    current
-                }
-            }
+        }
+    }
+
+    private fun onAudioFailure(failure: SendMessageOutcome.Failure = SendMessageOutcome.Failure.Server(0, "Audio unavailable")) {
+        _uiState.update { current ->
+            if (current is ProviderConversationUiState.Ready) current.copy(recordingState = RecordingState.Idle,
+                readingMedia = false, transientMediaError = failure) else current
         }
     }
 
     fun onCancelRecording() {
+        val ready = _uiState.value as? ProviderConversationUiState.Ready
+        val capturing = ready?.recordingState is RecordingState.Recording || audioReadJob?.isActive == true
         recordingTickerJob?.cancel()
         recordingTickerJob = null
+        audioReadJob?.cancel()
+        audioReadJob = null
         audioRecorder.cancel()
         _uiState.update { current ->
-            if (current is ProviderConversationUiState.Ready) {
-                current.copy(recordingState = RecordingState.Idle)
-            } else {
-                current
-            }
+            if (current is ProviderConversationUiState.Ready) current.copy(recordingState = RecordingState.Idle, readingMedia = if (capturing) false else current.readingMedia) else current
         }
+        if ((_uiState.value as? ProviderConversationUiState.Ready)?.pendingMedia !is MediaUpload.Audio) releasePreview()
+    }
+
+    /** Background cancels capture; a cached preview survives without replaying or sending. */
+    fun onConversationBackgrounded() {
+        onCancelRecording()
+        audioPlayer.stop()
+    }
+
+    private fun releasePreview() {
+        audioPlayer.stop()
+        previewUri?.let(audioRecorder::discard)
+        previewUri = null
+    }
+
+    fun onPlayPreview() {
+        val ready = _uiState.value as? ProviderConversationUiState.Ready ?: return
+        if (ready.pendingMedia !is MediaUpload.Audio) return
+        previewUri?.let { onPlayAudio("audio-preview", it) }
     }
 
     fun onPlayAudio(bubbleKey: String, url: String) {
-        audioPlayer.play(url)
-        _uiState.update { current ->
-            if (current is ProviderConversationUiState.Ready) {
-                current.copy(playingMediaKey = bubbleKey)
-            } else {
-                current
-            }
-        }
+        val ready = _uiState.value as? ProviderConversationUiState.Ready ?: return
+        val position = if (ready.playingMediaKey == bubbleKey) ready.playingPositionMillis else 0L
+        _uiState.value = ready.copy(playingMediaKey = bubbleKey)
+        audioPlayer.play(url, position)
     }
 
-    fun onPauseAudio() {
-        audioPlayer.pause()
-        _uiState.update { current ->
-            if (current is ProviderConversationUiState.Ready) {
-                current.copy(playingMediaKey = null)
-            } else {
-                current
-            }
-        }
+    fun onSeekAudio(bubbleKey: String, url: String, positionMillis: Long) {
+        val ready = _uiState.value as? ProviderConversationUiState.Ready ?: return
+        if (ready.playingMediaKey != bubbleKey) return
+        audioPlayer.seekTo(positionMillis.coerceAtLeast(0L))
     }
+
+    fun onPauseAudio() = audioPlayer.pause()
 
     fun onSendClick() {
         val state = _uiState.value as? ProviderConversationUiState.Ready ?: return
@@ -366,8 +344,9 @@ class ProviderConversationViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         recordingTickerJob?.cancel()
+        audioReadJob?.cancel()
         audioRecorder.cancel()
-        audioPlayer.stop()
+        releasePreview()
     }
 
     private fun load() {
@@ -467,6 +446,7 @@ class ProviderConversationViewModel @Inject constructor(
     }
 
     private fun fireSendMedia(media: List<MediaUpload>, retryKey: String? = null) {
+        if (retryKey == null) releasePreview()
         val pendingKey = retryKey ?: newLocalKey()
         if (retryKey == null) {
             val pending = ChatListItem.LocalPending(

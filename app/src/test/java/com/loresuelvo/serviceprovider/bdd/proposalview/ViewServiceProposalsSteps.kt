@@ -510,12 +510,14 @@ class ViewServiceProposalsSteps {
             object : AudioRecorder {
                 override fun start(): Result<Unit> = error("Not needed")
                 override fun stop(): Result<String> = error("Not needed")
+                override fun discard(uri: String) = Unit
                 override fun cancel() = Unit
             },
             object : AudioPlayer {
                 override val isPlaying = MutableStateFlow(false)
                 override val currentPositionMillis = MutableStateFlow(0L)
                 override fun play(url: String, startPositionMillis: Long) = Unit
+                override fun seekTo(positionMillis: Long) { currentPositionMillis.value = positionMillis }
                 override fun pause() = Unit
                 override fun stop() = Unit
             },

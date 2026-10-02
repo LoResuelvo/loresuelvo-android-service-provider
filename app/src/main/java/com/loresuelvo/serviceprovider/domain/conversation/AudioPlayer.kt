@@ -33,6 +33,9 @@ interface AudioPlayer {
         startPositionMillis: Long = 0L,
     )
 
+    /** Seeks the loaded clip without changing its playing or paused state. */
+    fun seekTo(positionMillis: Long)
+
     /** Pauses the current playback; the position is preserved. */
     fun pause()
 

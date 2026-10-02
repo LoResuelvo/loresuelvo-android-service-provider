@@ -4,6 +4,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -42,6 +45,26 @@ class ProviderConversationScreenTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test
+    fun image_accessible_name_survives_failed_local_loading_without_duplicate_child_description() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                com.loresuelvo.serviceprovider.ui.screens.conversation.components.MessageBubble(
+                    ChatListItem.ServerConfirmed(ConversationMessage(99, ConversationSender.Consumer, "", 1,
+                        media = com.loresuelvo.serviceprovider.domain.conversation.MediaReference.Image(
+                            "image", "file:///unavailable-image.jpg", "image/jpeg", "photo.jpg"))),
+                    {}, { _, _ -> }, {}, null, 0, false)
+            }
+        }
+        composeTestRule.onAllNodesWithContentDescription("photo.jpg").assertCountEquals(1)
+        composeTestRule.waitUntil {
+            composeTestRule.onAllNodesWithTag("provider-message-image-error-99", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onAllNodesWithContentDescription("photo.jpg").assertCountEquals(1)
+        composeTestRule.onNodeWithTag("provider-message-image-99").performClick()
+        composeTestRule.onNodeWithTag("provider-image-viewer").assertIsDisplayed()
+    }
 
     @Test
     fun restricted_composer_disables_input_attach_mic_send_and_retry() {

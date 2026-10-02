@@ -38,6 +38,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -96,12 +98,14 @@ fun MessageBubble(
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     retryEnabled: Boolean = true,
+    onSeekAudio: (String, String, Long) -> Unit = { _, _, _ -> },
 ) {
     when (item) {
         is ChatListItem.ServerConfirmed -> ConfirmedBubble(
             item = item,
             onPlayAudio = onPlayAudio,
             onPauseAudio = onPauseAudio,
+            onSeekAudio = onSeekAudio,
             playingMediaKey = playingMediaKey,
             playingPositionMillis = playingPositionMillis,
             isPlaying = isPlaying,
@@ -125,6 +129,7 @@ private fun ConfirmedBubble(
     item: ChatListItem.ServerConfirmed,
     onPlayAudio: (String, String) -> Unit,
     onPauseAudio: () -> Unit,
+    onSeekAudio: (String, String, Long) -> Unit = { _, _, _ -> },
     playingMediaKey: String?,
     playingPositionMillis: Long,
     isPlaying: Boolean,
@@ -158,6 +163,7 @@ private fun ConfirmedBubble(
                         bubbleKey = item.message.id.toString(),
                         onPlayAudio = onPlayAudio,
                         onPauseAudio = onPauseAudio,
+                        onSeekAudio = onSeekAudio,
                         playingMediaKey = playingMediaKey,
                         playingPositionMillis = playingPositionMillis,
                         isPlaying = isPlaying,
@@ -314,6 +320,7 @@ private fun MediaRenderer(
     bubbleKey: String,
     onPlayAudio: (String, String) -> Unit,
     onPauseAudio: () -> Unit,
+    onSeekAudio: (String, String, Long) -> Unit = { _, _, _ -> },
     playingMediaKey: String?,
     playingPositionMillis: Long,
     isPlaying: Boolean,
@@ -334,6 +341,7 @@ private fun MediaRenderer(
             durationMillis = media.durationMillis,
             onPlayAudio = onPlayAudio,
             onPauseAudio = onPauseAudio,
+            onSeekAudio = onSeekAudio,
             playingMediaKey = playingMediaKey,
             playingPositionMillis = playingPositionMillis,
             isPlaying = isPlaying,
@@ -357,8 +365,8 @@ private fun MediaRenderer(
  * Image renderer shared by all three bubble variants. Loads from
  * the wire URL (server-confirmed) or the local in-memory bytes
  * (optimistic / failed) via Coil. The fixed height keeps the
- * bubble compact while still being tappable for a future
- * fullscreen viewer (US-B keeps it read-only).
+ * bubble compact; confirmed images open the fullscreen zoom viewer.
+ * The container owns the accessible name throughout loading and failure.
  */
 @Composable
 private fun ChatImage(model: Any, testTagSuffix: String) {
@@ -385,12 +393,13 @@ private fun ChatImage(model: Any, testTagSuffix: String) {
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(enabled = image != null, onClickLabel = stringResource(R.string.provider_image_open)) { viewing = true }
+            .semantics { contentDescription = name }
             .testTag(PROVIDER_MESSAGE_IMAGE_TAG_PREFIX + testTagSuffix),
         contentAlignment = Alignment.Center,
     ) {
         SubcomposeAsyncImage(
             model = request,
-            contentDescription = name,
+            contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
             loading = {
@@ -403,7 +412,7 @@ private fun ChatImage(model: Any, testTagSuffix: String) {
                 Icon(
                     imageVector = Icons.Filled.BrokenImage,
                     contentDescription = null,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(32.dp).testTag("provider-message-image-error-$testTagSuffix"),
                 )
             },
         )
@@ -425,6 +434,7 @@ private fun AudioBubble(
     durationMillis: Long,
     onPlayAudio: (String, String) -> Unit,
     onPauseAudio: () -> Unit,
+    onSeekAudio: (String, String, Long) -> Unit = { _, _, _ -> },
     playingMediaKey: String?,
     playingPositionMillis: Long,
     isPlaying: Boolean,
@@ -439,6 +449,7 @@ private fun AudioBubble(
         0f
     }
     val canStream = !url.isNullOrBlank()
+    val seekLabel = stringResource(R.string.provider_audio_seek)
     Column(
         modifier = Modifier
             .widthIn(min = 180.dp, max = 240.dp)
@@ -461,7 +472,7 @@ private fun AudioBubble(
                 ),
                 tint = LocalContentColor.current,
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(48.dp)
                     .clickable(enabled = canStream) {
                         if (bubbleIsPlaying) {
                             onPauseAudio()
@@ -499,23 +510,14 @@ private fun AudioBubble(
                 )
             }
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+        androidx.compose.material3.Slider(
+            value = progress,
+            onValueChange = { onSeekAudio(bubbleKey, url.orEmpty(), (it * durationMillis).toLong()) },
+            enabled = canStream && isCurrent && durationMillis > 0L,
+            modifier = Modifier.fillMaxWidth()
+                .semantics { contentDescription = seekLabel }
                 .testTag(PROVIDER_MESSAGE_AUDIO_PROGRESS_TAG_PREFIX + testTagSuffix),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(progress)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .testTag(PROVIDER_MESSAGE_AUDIO_FILL_TAG_PREFIX + testTagSuffix),
-            )
-        }
+        )
     }
 }
 

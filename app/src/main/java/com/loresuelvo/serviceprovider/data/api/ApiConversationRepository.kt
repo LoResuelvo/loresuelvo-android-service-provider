@@ -213,7 +213,6 @@ class ApiConversationRepository @Inject constructor(
         val dto = backendApi.postMessage(
             conversationId = conversationId,
             request = SendMessageRequestDto(
-                content = "",
                 audioFileId = fileId,
             ),
         )

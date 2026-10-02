@@ -112,6 +112,9 @@ fun ProviderConversationScreen(
     onStopRecording: () -> Unit = {},
     onPlayAudio: (String, String) -> Unit = { _, _ -> },
     onPauseAudio: () -> Unit = {},
+    onCancelRecording: () -> Unit = {},
+    onPlayPreview: () -> Unit = {},
+    onSeekAudio: (String, String, Long) -> Unit = { _, _, _ -> },
     onDismissMediaError: () -> Unit = {},
     onDiscardImage: (Int) -> Unit = { onClearStagedMedia() },
     onReplaceImage: (Int) -> Unit = {},
@@ -131,6 +134,9 @@ fun ProviderConversationScreen(
                 com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.UnsupportedFormat -> R.string.provider_image_format_error
                 com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.TooManyImages -> R.string.provider_image_count_error
                 com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.InvalidReplacement -> R.string.provider_image_replace_error
+                com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.UnsupportedAudioFormat -> R.string.provider_audio_format_error
+                com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.InvalidAudioDuration -> R.string.provider_audio_duration_error
+                com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.MicrophonePermission -> R.string.provider_audio_permission_error
             }
             is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Network ->
                 R.string.provider_conversation_media_error_network
@@ -239,6 +245,10 @@ fun ProviderConversationScreen(
                     onClearStagedMedia = onClearStagedMedia,
                     onMicClick = onMicClick,
                     onStopRecordingClick = onStopRecording,
+                    onCancelRecording = onCancelRecording,
+                    onPlayPreview = onPlayPreview,
+                    previewPlaying = state.playingMediaKey == "audio-preview" && state.isPlaying,
+                    onPausePreview = onPauseAudio,
                 )
             }
         },
@@ -258,6 +268,7 @@ fun ProviderConversationScreen(
                 onRetrySendFailedBubble = onRetrySendFailedBubble,
                 onPlayAudio = onPlayAudio,
                 onPauseAudio = onPauseAudio,
+                onSeekAudio = onSeekAudio,
                 listState = rememberLazyListState(),
                 contentPadding = contentPadding,
             )
@@ -343,6 +354,7 @@ private fun ReadyState(
     onRetrySendFailedBubble: (String) -> Unit,
     onPlayAudio: (String, String) -> Unit,
     onPauseAudio: () -> Unit,
+    onSeekAudio: (String, String, Long) -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState,
     contentPadding: PaddingValues,
 ) {
@@ -357,6 +369,7 @@ private fun ReadyState(
         onRetrySendFailedBubble = onRetrySendFailedBubble,
         onPlayAudio = onPlayAudio,
         onPauseAudio = onPauseAudio,
+        onSeekAudio = onSeekAudio,
         playingMediaKey = state.playingMediaKey,
         playingPositionMillis = state.playingPositionMillis,
         isPlaying = state.isPlaying,
@@ -372,6 +385,7 @@ private fun MessagesList(
     onRetrySendFailedBubble: (String) -> Unit,
     onPlayAudio: (String, String) -> Unit,
     onPauseAudio: () -> Unit,
+    onSeekAudio: (String, String, Long) -> Unit,
     playingMediaKey: String?,
     playingPositionMillis: Long,
     isPlaying: Boolean,
@@ -394,6 +408,7 @@ private fun MessagesList(
                 onRetrySendFailedBubble = onRetrySendFailedBubble,
                 onPlayAudio = onPlayAudio,
                 onPauseAudio = onPauseAudio,
+                onSeekAudio = onSeekAudio,
                 playingMediaKey = playingMediaKey,
                 playingPositionMillis = playingPositionMillis,
                 isPlaying = isPlaying,

@@ -200,7 +200,6 @@ Feature: Conversación del prestador con un consumidor
   # US-C — Adjuntar audios a un mensaje (grabar + enviar + reproducir)
   # =========================================================================
 
-  @wip
   Scenario: 01-PCA Grabar y enviar un audio como mensaje
     Given que el permiso de micrófono del prestador está concedido
     And que la conversación 42 está abierta sin mensajes previos
@@ -209,14 +208,12 @@ Feature: Conversación del prestador con un consumidor
     Then la pantalla agrega optimistamente una burbuja pendiente con el reproductor y la duración del clip
     And al confirmarse el envío la burbuja pendiente se reemplaza por la versión persistida con id estable y url de descarga
 
-  @wip
   Scenario: 02-PCA Reproducir un audio recibido
     Given que la API devuelve el detalle de la conversación 42 con un mensaje confirmado del consumidor que lleva un audio WebM de 5 segundos adjunto
     When el prestador navega a la ruta de la conversación 42
     And selecciona reproducir sobre la burbuja de audio
     Then el reproductor muestra el contador avanzando hasta la duración total
 
-  @wip
   Scenario: 03-PCA Cancelar una grabación de audio en curso
     Given que el permiso de micrófono del prestador está concedido
     And que la conversación 42 está abierta sin mensajes previos
@@ -224,3 +221,57 @@ Feature: Conversación del prestador con un consumidor
     And cancela la grabación mid-way
     Then ningún envío se dispara
     And el botón de micrófono vuelve a estar disponible para una nueva grabación
+
+  Scenario Outline: 04-PCA Validar el audio antes de iniciar la subida
+    Given que el permiso de micrófono del prestador está concedido
+    And que la conversación 42 está abierta sin mensajes previos
+    When el prestador termina un audio "<archivo>"
+    Then el audio se "<resultado>" sin iniciar un envío
+
+    Examples:
+      | archivo          | resultado |
+      | WebM válido      | acepta    |
+      | cinco MiB        | acepta    |
+      | 300 segundos     | acepta    |
+      | mayor a cinco MiB| rechaza   |
+      | 301 segundos     | rechaza   |
+      | duración cero    | rechaza   |
+      | muy corto        | rechaza   |
+      | AAC              | rechaza   |
+
+  Scenario: 05-PCA Denegar el permiso del micrófono
+    Given que la conversación 42 está abierta sin mensajes previos
+    When se deniega el permiso del micrófono
+    Then se informa el permiso faltante sin iniciar la grabación
+
+  Scenario: 06-PCA Interrumpir la grabación al salir de la conversación
+    Given que el permiso de micrófono del prestador está concedido
+    And que la conversación 42 está grabando un audio
+    When la conversación pasa a segundo plano
+    Then la grabación se cancela sin enviar ni conservar un archivo
+
+  Scenario: 07-PCA Detener la grabación al alcanzar cinco minutos
+    Given que el permiso de micrófono del prestador está concedido
+    And que la conversación 42 está grabando un audio
+    When transcurren 300 segundos de grabación
+    Then queda una preview de audio sin enviar
+
+  Scenario: 08-PCA Reproducir y pausar la preview antes de enviar
+    Given que la conversación 42 tiene una preview de audio válida
+    When el prestador reproduce y pausa la preview
+    Then la posición de reproducción permanece y ningún envío se dispara
+
+  Scenario: 09-PCA Descartar la preview de audio
+    Given que la conversación 42 tiene una preview de audio válida
+    When el prestador descarta la preview
+    Then no queda audio pendiente ni reproducción ni archivo local
+
+  Scenario: 10-PCA Reintentar un audio conservando el borrador nuevo
+    Given que la conversación 42 tiene un audio cuyo envío falló
+    When el prestador reintenta el audio varias veces con el borrador "Otro mensaje"
+    Then se inicia un solo reintento y el borrador nuevo permanece
+
+  Scenario: 11-PCA Buscar una posición y cambiar de audio recibido
+    Given que la conversación 42 contiene dos audios recibidos
+    When el prestador busca una posición y reproduce el segundo audio
+    Then solamente el segundo audio está activo

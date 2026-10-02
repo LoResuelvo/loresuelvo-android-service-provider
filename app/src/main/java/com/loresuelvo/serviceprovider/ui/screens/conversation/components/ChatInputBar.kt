@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -76,6 +77,10 @@ fun ChatInputBar(
     pendingImages: List<MediaUpload.Image> = listOfNotNull(pendingMedia as? MediaUpload.Image),
     onDiscardImage: (Int) -> Unit = { onClearStagedMedia() },
     onReplaceImage: (Int) -> Unit = {},
+    onCancelRecording: () -> Unit = {},
+    onPlayPreview: () -> Unit = {},
+    onPausePreview: () -> Unit = {},
+    previewPlaying: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -112,14 +117,18 @@ fun ChatInputBar(
                     }
                 }
                 pendingMedia != null -> {
-                    AttachButton(onClick = onAttachClick, enabled = operationEnabled)
+                    AttachButton(onClick = onAttachClick, enabled = false)
                     MediaPreviewCard(
                         media = pendingMedia,
+                        onPlay = onPlayPreview, onPause = onPausePreview, isPlaying = previewPlaying,
                         onClear = onClearStagedMedia,
                         modifier = Modifier.weight(1f),
                     )
                 }
                 isRecording -> {
+                    androidx.compose.material3.IconButton(onClick = onCancelRecording, modifier = Modifier.testTag("provider-chat-recording-cancel")) {
+                        Icon(Icons.Filled.Close, stringResource(R.string.provider_audio_cancel))
+                    }
                     RecordingIndicator(
                         elapsedMillis = recordingElapsedMillis,
                         onStop = onStopRecordingClick,

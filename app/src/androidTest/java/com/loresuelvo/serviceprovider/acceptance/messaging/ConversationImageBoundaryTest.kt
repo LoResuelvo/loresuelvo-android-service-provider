@@ -1,6 +1,9 @@
 package com.loresuelvo.serviceprovider.acceptance.messaging
 
 import android.net.Uri
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.Modifier
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.setContent
@@ -79,10 +82,10 @@ class ConversationImageBoundaryTest {
 
     @Test
     fun confirmed_images_from_both_participants_open_zoom_viewer_and_close_to_same_bubble() {
-        val images = (1..3).map { MediaReference.Image("$it", "https://example.test/$it", "image/jpeg", "$it.jpg") }
+        val images = (1..3).map { MediaReference.Image("$it", "file:///unavailable-image-$it.jpg", "image/jpeg", "$it.jpg") }
         compose.setContent {
             MaterialTheme {
-                androidx.compose.foundation.layout.Column {
+                androidx.compose.foundation.layout.Column(Modifier.verticalScroll(rememberScrollState())) {
                     listOf(ConversationSender.Provider, ConversationSender.Consumer).forEachIndexed { index, sender ->
                         MessageBubble(ChatListItem.ServerConfirmed(ConversationMessage(index + 1, sender, "", 1,
                             media = images.first(), images = images)), {}, { _, _ -> }, {}, null, 0, false)
@@ -91,13 +94,15 @@ class ConversationImageBoundaryTest {
             }
         }
         compose.onAllNodesWithContentDescription("3.jpg").assertCountEquals(2)
-        compose.onNodeWithTag("provider-message-image-1-2").performClick()
-        compose.onNodeWithTag("provider-image-viewer").assertIsDisplayed()
-        compose.onNodeWithTag("provider-image-zoom-in").performClick()
-        compose.onNodeWithTag("provider-image-zoom-out").assertIsEnabled().performClick()
-        androidx.test.espresso.Espresso.pressBack()
-        compose.onNodeWithTag("provider-image-viewer").assertDoesNotExist()
-        compose.onNodeWithTag("provider-message-image-1-2").assertExists()
+        for (participant in 1..2) {
+            compose.onNodeWithTag("provider-message-image-$participant-2").performScrollTo().performClick()
+            compose.onNodeWithTag("provider-image-viewer").assertIsDisplayed()
+            compose.onNodeWithTag("provider-image-zoom-in").performClick()
+            compose.onNodeWithTag("provider-image-zoom-out").assertIsEnabled().performClick()
+            androidx.test.espresso.Espresso.pressBack()
+            compose.onNodeWithTag("provider-image-viewer").assertDoesNotExist()
+            compose.onNodeWithTag("provider-message-image-$participant-2").assertExists()
+        }
     }
 
     private fun install(registry: ControlledRegistry, conversation: () -> Int, onImages: (List<String>, Int?) -> Unit) {

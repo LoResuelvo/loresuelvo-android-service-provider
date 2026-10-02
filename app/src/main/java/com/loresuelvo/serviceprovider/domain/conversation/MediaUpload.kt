@@ -81,20 +81,10 @@ sealed interface MediaUpload {
     }
 }
 
-/**
- * Maximum size (in bytes) the provider app will upload for an
- * audio clip. Mirrors the backend's `UploadPolicy.MaxAudioBytes`
- * cap (10 MB at the time of writing). The use case rejects
- * payloads larger than this with a typed
- * [SendMessageOutcome.Failure.PayloadTooLarge] so the backend
- * never sees the request — saves a wasted round-trip and gives
- * the UI a clearer copy than "Server(413)".
- *
- * Held here (domain) so both the use case and the UI can
- * reference the same source of truth: the UI surfaces the limit
- * in the error message and the use case enforces it.
- */
-const val MAX_AUDIO_BYTES: Long = 10L * 1024L * 1024L
+/** Backend audio policy: WebM/Opus, five MiB, five minutes. */
+const val MAX_AUDIO_BYTES: Long = 5L * 1024L * 1024L
+const val MIN_AUDIO_DURATION_MILLIS: Long = 1000L
+const val MAX_AUDIO_DURATION_MILLIS: Long = 300_000L
 
 const val MAX_IMAGE_BYTES: Long = 5L * 1024L * 1024L
 const val MAX_MESSAGE_IMAGES: Int = 3
@@ -117,6 +107,12 @@ fun validateMediaUploads(media: List<MediaUpload>): SendMessageOutcome.Failure? 
     media.forEach { attachment ->
         if (attachment is MediaUpload.Image && attachment.mimeType !in SUPPORTED_IMAGE_MIME_TYPES) {
             return SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.UnsupportedFormat)
+        }
+        if (attachment is MediaUpload.Audio) {
+            if (attachment.mimeType != "audio/webm") return SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.UnsupportedAudioFormat)
+            if (attachment.durationMillis !in MIN_AUDIO_DURATION_MILLIS..MAX_AUDIO_DURATION_MILLIS) {
+                return SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.InvalidAudioDuration)
+            }
         }
         val limit = if (attachment is MediaUpload.Image) MAX_IMAGE_BYTES else MAX_AUDIO_BYTES
         if (attachment.bytes.size.toLong() > limit) return SendMessageOutcome.Failure.PayloadTooLarge(limit)

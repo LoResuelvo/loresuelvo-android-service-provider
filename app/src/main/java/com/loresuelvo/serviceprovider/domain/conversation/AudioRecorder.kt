@@ -31,6 +31,9 @@ interface AudioRecorder {
      */
     fun stop(): Result<String>
 
+    /** Deletes a completed recording owned by this adapter after discard or byte caching. */
+    fun discard(uri: String)
+
     /**
      * Cancels the current recording and removes the temporary
      * file. Safe to call when no recording is in flight (no-op).

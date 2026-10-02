@@ -1,9 +1,5 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -86,21 +82,9 @@ fun ProviderConversationRoute(
             MediaOutputUriFactoryEntryPoint::class.java,
         ).mediaOutputUriFactory()
     }
-    val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted ->
-        if (granted) {
-            viewModel.onStartRecording()
-        } else {
-            // Surface a transient snackbar so the user understands
-            // why the mic did nothing. The VM doesn't own the
-            // permission grant; the route knows the contract result.
-            // (Snackbar hosting stays on the screen via its own
-            // state — this callback just records the denial for
-            // any debug logging the host wires up.)
-        }
-    }
-
+    ConversationAudioLifecycle(viewModel::onConversationBackgrounded)
+    ConversationAudioPermission(conversationId, viewModel::canStartComposerOperation,
+        viewModel::onStartRecording, viewModel::onMicrophonePermissionDenied) { requestMicrophone ->
     ConversationImageLaunchers(conversationId, outputUriFactory, viewModel::canStartComposerOperation,
         viewModel::onImagesPicked) { pickGallery, captureCamera, replaceImage ->
     ProviderConversationScreen(
@@ -128,24 +112,17 @@ fun ProviderConversationRoute(
         onCaptureFromCamera = captureCamera,
         onDiscardImage = viewModel::onDiscardImage,
         onReplaceImage = replaceImage,
-        onMicClick = {
-            // Always re-request so the user sees the system prompt
-            // if they previously denied with "don't ask again".
-            // `RequestPermission` is a no-op (auto-grant) on API
-            // levels where the permission is pre-granted.
-            if (viewModel.canStartComposerOperation()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                } else {
-                    viewModel.onStartRecording()
-                }
-            }
-        },
+        onMicClick = requestMicrophone,
         onStopRecording = viewModel::onStopRecording,
+        onCancelRecording = viewModel::onCancelRecording,
+        onPlayPreview = viewModel::onPlayPreview,
+        onSeekAudio = viewModel::onSeekAudio,
         onPlayAudio = viewModel::onPlayAudio,
         onPauseAudio = viewModel::onPauseAudio,
         onClose = { navController.popBackStack() },
     )
+
+    }
 
     }
 

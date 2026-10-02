@@ -36,16 +36,30 @@ class AndroidMediaReader @Inject constructor(
             }
             val limit = if (mimeType.startsWith("audio/")) MAX_AUDIO_BYTES else MAX_IMAGE_BYTES
             val bytes = resolver.openInputStream(uri)?.use { stream -> readBoundedMedia(stream, limit) } ?: throw java.io.IOException(
-                "Could not open input stream for $uri",
+                "Could not open local attachment",
             )
             if (bytes.isEmpty()) throw MediaReadException(SendMessageOutcome.Failure.Server(0, "Media payload is empty"))
-            if (mimeType.startsWith("audio/")) MediaUpload.Audio(
-                bytes = bytes, mimeType = mimeType, originalName = displayName, durationMillis = 0L,
+            val media = if (mimeType.startsWith("audio/")) MediaUpload.Audio(
+                bytes = bytes, mimeType = mimeType, originalName = displayName, durationMillis = readAudioDuration(uri),
             ) else MediaUpload.Image(bytes = bytes, mimeType = mimeType, originalName = displayName)
+            com.loresuelvo.serviceprovider.domain.conversation.validateMediaUploads(listOf(media))?.let { throw MediaReadException(it) }
+            media
         } catch (e: SecurityException) {
             throw java.io.IOException("Local attachment is inaccessible", e)
         } catch (e: IllegalArgumentException) {
             throw java.io.IOException("Local attachment is unreadable", e)
+        }
+    }
+
+    private fun readAudioDuration(uri: Uri): Long {
+        val metadata = android.media.MediaMetadataRetriever()
+        return try {
+            metadata.setDataSource(context, uri)
+            metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+        } catch (e: RuntimeException) {
+            throw java.io.IOException("Audio metadata is unreadable", e)
+        } finally {
+            metadata.release()
         }
     }
 

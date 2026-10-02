@@ -128,6 +128,11 @@ class ProviderConversationViewModelTest {
         scheduler.runCurrent()
         assertEquals(1, reads)
         assertTrue(readyState(vm).readingMedia)
+        vm.onConversationBackgrounded()
+        assertTrue(readyState(vm).readingMedia)
+        vm.onImagesPicked(listOf("content://three"))
+        scheduler.runCurrent()
+        assertEquals(1, reads)
         gate.complete(Unit)
         advanceUntilIdle()
         assertEquals(1, readyState(vm).pendingImages.size)
@@ -735,6 +740,7 @@ class ProviderConversationViewModelTest {
     private object NotExercisedAudioRecorder : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
         override fun start(): Result<Unit> = error("AudioRecorder is not exercised by US-A VM tests")
         override fun stop(): Result<String> = error("AudioRecorder is not exercised by US-A VM tests")
+        override fun discard(uri: String) = Unit
         override fun cancel() = Unit
     }
 
@@ -742,6 +748,7 @@ class ProviderConversationViewModelTest {
         override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
         override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
         override fun play(url: String, startPositionMillis: Long) = Unit
+        override fun seekTo(positionMillis: Long) { currentPositionMillis.value = positionMillis }
         override fun pause() = Unit
         override fun stop() = Unit
     }
@@ -762,6 +769,7 @@ class ProviderConversationViewModelTest {
         override fun play(url: String, startPositionMillis: Long) {
             playCalls += url
         }
+        override fun seekTo(positionMillis: Long) { currentPositionMillis.value = positionMillis }
         override fun pause() {
             pauseCalls += 1
         }
@@ -822,6 +830,134 @@ class ProviderConversationViewModelTest {
                     is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Server,
             )
         }
+
+    @Test
+    fun retrying_an_older_failed_media_bubble_preserves_the_new_audio_preview_and_its_owned_uri() = runTest(scheduler) {
+        for (oldIsAudio in listOf(false, true)) {
+            val repo = RecordingRepository(detailOutcome = detailOutcome(emptyList()))
+            val discarded = mutableListOf<String>()
+            var clip = 0
+            val recorder = object : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
+                override fun start() = Result.success(Unit)
+                override fun stop() = Result.success("file:///audio-${++clip}.webm")
+                override fun cancel() = Unit
+                override fun discard(uri: String) { discarded += uri }
+            }
+            val oldAudio = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Audio(byteArrayOf(1), "audio/webm", "old.webm", 3000)
+            val newAudio = oldAudio.copy(bytes = byteArrayOf(9), originalName = "new.webm")
+            var nextAudio = oldAudio
+            val reader = object : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+                override suspend fun read(uri: String): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
+                    if (uri.startsWith("content:")) com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(byteArrayOf(1), "image/jpeg", "old.jpg") else nextAudio
+            }
+            val player = FakeAudioPlayer()
+            val vm = viewModelWithAudioAndReader(repo, recorder, player, reader)
+            advanceUntilIdle()
+            fun record() { vm.onStartRecording(); scheduler.runCurrent(); vm.onStopRecording(); scheduler.runCurrent() }
+            if (oldIsAudio) record() else { vm.onImagesPicked(listOf("content://old")); scheduler.runCurrent() }
+            vm.onSendClick()
+            advanceUntilIdle()
+            val failedKey = readyState(vm).items.filterIsInstance<ChatListItem.LocalFailed>().single().key
+            nextAudio = newAudio
+            record()
+            val newUri = "file:///audio-$clip.webm"
+            assertEquals(newAudio, readyState(vm).pendingMedia)
+            val gate = CompletableDeferred<Unit>()
+            repo.sendGate = gate
+            repo.sendOutcome = SendMessageOutcome.Success(ConversationMessage(99, ConversationSender.Provider, "", 10_000))
+            repeat(3) { vm.onRetrySendFailedBubble(failedKey) }
+            scheduler.runCurrent()
+            assertEquals(2, repo.sendCalls)
+            assertEquals(newAudio, readyState(vm).pendingMedia)
+            gate.complete(Unit)
+            advanceUntilIdle()
+            assertEquals(newAudio, readyState(vm).pendingMedia)
+            assertTrue(readyState(vm).items.single() is ChatListItem.ServerConfirmed)
+            assertTrue(newUri !in discarded)
+            vm.onPlayPreview()
+            scheduler.runCurrent()
+            assertEquals(newUri, player.playCalls.single())
+            assertEquals(2, repo.sendCalls)
+        }
+    }
+
+    @Test
+    fun permission_revocation_and_stop_failure_cancel_capture_and_restore_idle_without_send() = runTest(scheduler) {
+        for (revoked in listOf(true, false)) {
+            val repo = RecordingRepository().apply { detailOutcome = detailOutcome(messages = emptyList()) }
+            var cancellations = 0
+            val recorder = object : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
+                override fun start(): Result<Unit> = if (revoked) Result.failure(SecurityException("revoked")) else Result.success(Unit)
+                override fun stop(): Result<String> = Result.failure(IllegalStateException("too short"))
+                override fun discard(uri: String) = Unit
+                override fun cancel() { cancellations++ }
+            }
+            val vm = viewModelWithAudio(repo, recorder, FakeAudioPlayer())
+            advanceUntilIdle()
+            vm.onStartRecording(); scheduler.runCurrent()
+            if (!revoked) vm.onStopRecording()
+            scheduler.runCurrent()
+            assertEquals(1, cancellations)
+            assertTrue(readyState(vm).recordingState is RecordingState.Idle)
+            assertNotNull(readyState(vm).transientMediaError)
+            if (revoked) assertEquals(com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.InvalidMedia(
+                com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.MicrophonePermission), readyState(vm).transientMediaError)
+            assertEquals(0, repo.sendCalls)
+            assertNull(readyState(vm).pendingMedia)
+        }
+    }
+
+    @Test
+    fun recording_uses_monotonic_virtual_time_stops_at_ceiling_and_never_sends_automatically() = runTest(scheduler) {
+        val repo = RecordingRepository().apply { detailOutcome = detailOutcome(messages = emptyList()) }
+        val recorder = FakeAudioRecorder()
+        val audio = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Audio(byteArrayOf(1), "audio/webm", "clip.webm", 300_000)
+        val vm = viewModelWithAudioAndReader(repo, recorder, FakeAudioPlayer(), AudioMediaReader(mapOf(FakeAudioRecorder.OUTPUT_URI to audio)))
+        advanceUntilIdle()
+        vm.onStartRecording()
+        scheduler.runCurrent()
+        scheduler.advanceTimeBy(1000)
+        scheduler.runCurrent()
+        assertEquals(1000L, (readyState(vm).recordingState as RecordingState.Recording).elapsedMillis)
+        scheduler.advanceTimeBy(299_000)
+        scheduler.runCurrent()
+        assertEquals(audio, readyState(vm).pendingMedia)
+        assertTrue(readyState(vm).recordingState is RecordingState.Idle)
+        assertTrue(readyState(vm).items.isEmpty())
+        vm.onPromptChange("mixed text")
+        vm.onImagesPicked(listOf("content://mixed"))
+        assertEquals("", readyState(vm).promptInput)
+        assertEquals(audio, readyState(vm).pendingMedia)
+    }
+
+    @Test
+    fun background_cancels_delayed_audio_read_discards_file_and_prevents_late_preview() = runTest(scheduler) {
+        val repo = RecordingRepository().apply { detailOutcome = detailOutcome(messages = emptyList()) }
+        var discarded = 0
+        val recorder = object : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
+            override fun start() = Result.success(Unit)
+            override fun stop() = Result.success("file:///owned.webm")
+            override fun cancel() = Unit
+            override fun discard(uri: String) { discarded++ }
+        }
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val reader = object : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+            override suspend fun read(uri: String): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload {
+                gate.await()
+                return com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Audio(byteArrayOf(1), "audio/webm", "clip.webm", 3000)
+            }
+        }
+        val vm = viewModelWithAudioAndReader(repo, recorder, FakeAudioPlayer(), reader)
+        advanceUntilIdle()
+        vm.onStartRecording(); scheduler.runCurrent(); vm.onStopRecording(); scheduler.runCurrent()
+        assertTrue(readyState(vm).readingMedia)
+        vm.onConversationBackgrounded()
+        gate.complete(Unit)
+        scheduler.runCurrent()
+        assertNull(readyState(vm).pendingMedia)
+        assertFalse(readyState(vm).readingMedia)
+        assertEquals(1, discarded)
+    }
 
     @Test
     fun onStopRecording_stages_audio_as_pendingMedia() = runTest(scheduler) {
@@ -901,7 +1037,7 @@ class ProviderConversationViewModelTest {
     }
 
     @Test
-    fun onPauseAudio_clears_playingMediaKey_and_mirrors_player_state() = runTest(scheduler) {
+    fun onPauseAudio_preserves_playingMediaKey_and_mirrors_player_state() = runTest(scheduler) {
         val repo = RecordingRepository()
         repo.detailOutcome = detailOutcome(messages = emptyList())
         val player = FakeAudioPlayer()
@@ -920,7 +1056,7 @@ class ProviderConversationViewModelTest {
         advanceUntilIdle()
 
         val ready = readyState(vm)
-        assertNull(ready.playingMediaKey)
+        assertEquals("bubble-1", ready.playingMediaKey)
         assertFalse(
             "VM should mirror paused state, got isPlaying=${ready.isPlaying}",
             ready.isPlaying,
@@ -975,6 +1111,7 @@ class ProviderConversationViewModelTest {
         mediaReader = NotExercisedMediaReader,
         audioRecorder = recorder,
         audioPlayer = player,
+        recordingTimeSource = object : RecordingTimeSource() { override fun nowMillis() = scheduler.currentTime },
     ).also(ownedModels::add)
 
     private fun viewModelWithAudioAndReader(
@@ -990,6 +1127,7 @@ class ProviderConversationViewModelTest {
         mediaReader = reader,
         audioRecorder = recorder,
         audioPlayer = player,
+        recordingTimeSource = object : RecordingTimeSource() { override fun nowMillis() = scheduler.currentTime },
     ).also(ownedModels::add)
 
     private class FakeAudioRecorder : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
@@ -1011,6 +1149,7 @@ class ProviderConversationViewModelTest {
             return Result.success(OUTPUT_URI.toString())
         }
 
+        override fun discard(uri: String) = Unit
         override fun cancel() {
             started = false
         }
@@ -1026,6 +1165,7 @@ class ProviderConversationViewModelTest {
             Result.failure(IllegalStateException("Mic is busy"))
         override fun stop(): Result<String> =
             Result.failure(IllegalStateException("Recording not started"))
+        override fun discard(uri: String) = Unit
         override fun cancel() = Unit
     }
 

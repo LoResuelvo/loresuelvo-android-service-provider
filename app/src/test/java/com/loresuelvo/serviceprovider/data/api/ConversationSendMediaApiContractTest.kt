@@ -195,13 +195,50 @@ class ConversationSendMediaApiContractTest {
         assertEquals(1, server.requestCount)
     }
 
+    @Test
+    fun audio_json_omits_content_and_other_attachments_using_production_json() = runTest {
+        server.enqueue(MockResponse().setResponseCode(201).setBody("""{"id":99,"sender_role":"provider","content":"","created_on":"2026-05-30T14:30:00Z","audio":{"id":"confirmed-1","url":"https://example.test/audio.webm","mime_type":"audio/webm","original_name":"audio.webm","duration_seconds":3}}"""))
+        val files = OrderedFiles()
+        val outcome = ApiConversationRepository(api(), files).sendMediaMessage(42, listOf(MediaUpload.Audio(byteArrayOf(1), "audio/webm", "audio.webm", 3000)))
+        assertTrue(outcome is SendMessageOutcome.Success)
+        assertEquals(FilePurpose.CONVERSATION_MESSAGE_AUDIO, files.presigns.single().purpose)
+        assertEquals("audio/webm", files.presigns.single().mimeType)
+        assertEquals(3000L, ((outcome as SendMessageOutcome.Success).message.media as com.loresuelvo.serviceprovider.domain.conversation.MediaReference.Audio).durationMillis)
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/conversations/42/messages", request.path)
+        assertEquals("{\"audio_file_id\":\"confirmed-1\"}", request.body.readUtf8())
+        assertEquals(listOf("presign-1", "put-1", "confirm-1"), files.events)
+    }
+
+    @Test
+    fun audio_failures_stop_each_pipeline_and_explicit_retry_reuses_bytes() = runTest {
+        val audio = MediaUpload.Audio(byteArrayOf(1, 2), "audio/webm", "audio.webm", 3000)
+        for (stage in listOf("presign", "put", "confirm")) {
+            val files = OrderedFiles(stage)
+            assertTrue(ApiConversationRepository(api(), files).sendMediaMessage(42, listOf(audio)) is SendMessageOutcome.Failure.Network)
+            assertEquals(0, server.requestCount)
+            assertEquals(listOf("presign-1", "put-1", "confirm-1").takeWhile { it != "$stage-1" } + "$stage-1", files.events)
+        }
+        val repository = ApiConversationRepository(api(), OrderedFiles())
+        server.enqueue(MockResponse().setResponseCode(503))
+        assertTrue(repository.sendMediaMessage(42, listOf(audio)) is SendMessageOutcome.Failure.Server)
+        assertTrue(audio.bytes.contentEquals(byteArrayOf(1, 2)))
+        server.takeRequest()
+        server.enqueue(MockResponse().setResponseCode(201).setBody("""{"id":99,"sender_role":"provider","content":"","created_on":"2026-05-30T14:30:00Z"}"""))
+        assertTrue(repository.sendMediaMessage(42, listOf(audio)) is SendMessageOutcome.Success)
+        assertEquals(2, server.requestCount)
+    }
+
     private fun testImages() = (1..3).map { MediaUpload.Image(byteArrayOf(it.toByte()), "image/jpeg", "$it.jpg") }
 
     private class OrderedFiles(private val failStage: String? = null) : FileRepository {
         val events = mutableListOf<String>()
+        val presigns = mutableListOf<PresignUploadRequest>()
         private var index = 0
         override suspend fun presign(request: PresignUploadRequest): PresignUploadOutcome {
             index++
+            presigns += request
             events += "presign-$index"
             if (failStage == "presign") return PresignUploadOutcome.Failure.Network(java.io.IOException("offline"))
             return PresignUploadOutcome.Success(PresignUploadResult("upload-$index", "key-$index", "https://example.test/$index", emptyMap()))
@@ -229,10 +266,7 @@ class ConversationSendMediaApiContractTest {
                 .build(),
         )
         .addConverterFactory(
-            Json {
-                ignoreUnknownKeys = true
-                explicitNulls = false
-            }.asConverterFactory("application/json".toMediaType()),
+            com.loresuelvo.serviceprovider.di.NetworkModule.provideJson().asConverterFactory("application/json".toMediaType()),
         )
         .build()
         .create(BackendApi::class.java)

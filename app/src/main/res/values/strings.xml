@@ -383,4 +383,9 @@
     <string name="provider_image_format_error">Elegí imágenes JPEG, PNG o WebP.</string>
     <string name="provider_image_count_error">Podés adjuntar hasta tres imágenes.</string>
     <string name="provider_image_replace_error">Elegí una sola imagen para reemplazar la preview.</string>
+    <string name="provider_audio_duration_error">El audio debe durar entre un segundo y cinco minutos.</string>
+    <string name="provider_audio_permission_error">Se necesita permiso de micrófono para grabar audio.</string>
+    <string name="provider_audio_cancel">Cancelar grabación</string>
+    <string name="provider_audio_seek">Buscar posición del audio</string>
+    <string name="provider_audio_format_error">Elegí un audio WebM/Opus.</string>
 </resources>

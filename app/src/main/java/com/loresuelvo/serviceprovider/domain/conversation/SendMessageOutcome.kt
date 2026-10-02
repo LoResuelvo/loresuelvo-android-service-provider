@@ -23,7 +23,7 @@ sealed interface SendMessageOutcome {
 
     sealed interface Failure : SendMessageOutcome {
 
-        enum class MediaReason { UnsupportedFormat, TooManyImages, InvalidReplacement }
+        enum class MediaReason { UnsupportedFormat, UnsupportedAudioFormat, TooManyImages, InvalidReplacement, InvalidAudioDuration, MicrophonePermission }
         data class InvalidMedia(val reason: MediaReason) : Failure
 
         /** Transport-level failure: timeouts, DNS, connection refused. */

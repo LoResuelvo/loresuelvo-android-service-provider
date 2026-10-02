@@ -50,13 +50,19 @@ import org.junit.Assert.assertTrue
  *  - 06-PCC — blank input keeps the send button disabled.
  */
 // Cohesion review: this existing world owns one real conversation model and its shared fake ports.
-// Image acceptance reuses that lifecycle; split audio fixtures if the final batch grows independent setup.
+// Text/image/audio acceptance shares the same composer lifecycle; the next seam is standalone port fixtures.
+// PCA01–11 and bounded scheduler/owned-model teardown provide focused proof without a second state machine.
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class ProviderConversationWorld : AutoCloseable {
 
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
     private val repository = FakeConversationRepository()
+
+    private var microphoneGranted = false
+    fun grantMicrophone() { microphoneGranted = true }
+    private val recorder = BddAudioRecorder()
+    private val player = BddAudioPlayer()
 
     private val conversationId: Int = 42
 
@@ -87,7 +93,7 @@ internal class ProviderConversationWorld : AutoCloseable {
      */
     private var mediaPickerUri: String = "content://bdd/image"
     private var stagedMediaUri: String = mediaPickerUri
-    private var stagedMedia: MediaUpload.Image? = null
+    private var stagedMedia: MediaUpload? = null
     private var readFailure: java.io.IOException? = null
 
     fun seedMediaUri(uri: android.net.Uri) {
@@ -556,6 +562,113 @@ internal class ProviderConversationWorld : AutoCloseable {
     fun assertDraft(prompt: String) = assertEquals(prompt, readReadyStateOrNull()!!.promptInput)
     fun repeatedImageSend() { repeat(3) { viewModel.onSendClick() }; scheduler.advanceUntilIdle() }
 
+    fun recordAudio(seconds: Int = 3, kind: String = "WebM válido") {
+        stagedMedia = MediaUpload.Audio(
+            ByteArray(if (kind == "cinco MiB") 5 * 1024 * 1024 else if (kind == "mayor a cinco MiB") 5 * 1024 * 1024 + 1 else 4),
+            if (kind == "AAC") "audio/aac" else "audio/webm", "clip.webm",
+            when (kind) { "300 segundos" -> 300_000L; "301 segundos" -> 301_000L; "duración cero" -> 0L; "muy corto" -> 999L; else -> seconds * 1000L },
+        )
+        check(microphoneGranted)
+        viewModel.onStartRecording()
+        scheduler.runCurrent()
+        scheduler.advanceTimeBy(seconds * 1000L)
+        viewModel.onStopRecording()
+        scheduler.runCurrent()
+    }
+
+    fun startAudio() { check(microphoneGranted); viewModel.onStartRecording(); scheduler.runCurrent() }
+    fun cancelAudio() { viewModel.onCancelRecording(); scheduler.runCurrent() }
+    fun denyMicrophone() = viewModel.onMicrophonePermissionDenied()
+    fun backgroundAudio() { viewModel.onConversationBackgrounded(); scheduler.runCurrent() }
+    fun assertPermissionDenied() {
+        assertEquals(0, recorder.starts)
+        assertEquals(SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.MicrophonePermission), readReadyStateOrNull()!!.transientMediaError)
+    }
+    fun assertAudioCancelled() {
+        assertTrue(!recorder.active)
+        assertTrue(readReadyStateOrNull()!!.recordingState is com.loresuelvo.serviceprovider.ui.screens.conversation.RecordingState.Idle)
+        thenNoSendWasFired()
+    }
+    fun assertAudioResult(result: String) {
+        assertEquals(result == "acepta", readReadyStateOrNull()!!.pendingMedia is MediaUpload.Audio)
+        assertEquals(result == "rechaza", readReadyStateOrNull()!!.transientMediaError != null)
+        if (result == "rechaza") assertEquals(1, recorder.discards)
+        thenNoSendWasFired()
+    }
+    fun reachAudioCeiling() {
+        stagedMedia = MediaUpload.Audio(byteArrayOf(1), "audio/webm", "clip.webm", 300_000L)
+        scheduler.advanceTimeBy(300_000L)
+        scheduler.runCurrent()
+    }
+    fun previewAudio() { viewModel.onPlayPreview(); player.currentPositionMillis.value = 1500; scheduler.runCurrent(); viewModel.onPauseAudio(); scheduler.runCurrent() }
+    fun assertPreviewPaused() { assertEquals(1500L, readReadyStateOrNull()!!.playingPositionMillis); assertTrue(!readReadyStateOrNull()!!.isPlaying); thenNoSendWasFired() }
+    fun assertPreviewDiscarded() { thenNoStagedMedia(); assertEquals(1, recorder.discards); assertTrue(!player.isPlaying.value) }
+    fun givenAudioSend() { givenSendWillSucceedWithMedia(99); pauseSendOnGate() }
+    fun assertPendingAudio() {
+        val pending = readReadyStateOrNull()!!.items.filterIsInstance<ChatListItem.LocalPending>().single()
+        assertEquals(3000L, (pending.pendingMedia as MediaUpload.Audio).durationMillis)
+        assertEquals("", pending.content)
+    }
+    fun assertConfirmedAudio() {
+        releaseSendGate()
+        val message = readReadyStateOrNull()!!.items.filterIsInstance<ChatListItem.ServerConfirmed>().single().message
+        assertEquals(99, message.id)
+        assertTrue((message.media as MediaReference.Audio).url.startsWith("https://"))
+    }
+    fun givenReceivedAudio(count: Int = 1) {
+        repository.detailOutcome = ConversationDetailOutcome.Success(detail(List(count) { index -> ConversationMessage(
+            id = 99 + index, sender = ConversationSender.Consumer, content = "", createdOnEpochMillis = 10_000L,
+            media = MediaReference.Audio("audio-$index", "https://example.test/audio-$index.webm", "audio/webm", "audio.webm", 5000L),
+        ) }))
+    }
+    fun playReceivedAudio() { viewModel.onPlayAudio("99", "https://example.test/audio-0.webm"); scheduler.runCurrent() }
+    fun assertReceivedProgress() {
+        val message = readReadyStateOrNull()!!.detail.messages.single()
+        val duration = (message.media as MediaReference.Audio).durationMillis
+        assertEquals(5000L, duration)
+        for (position in listOf(1000L, 2500L, duration)) {
+            player.currentPositionMillis.value = position
+            scheduler.runCurrent()
+            assertEquals(position, readReadyStateOrNull()!!.playingPositionMillis)
+            assertTrue(readReadyStateOrNull()!!.isPlaying)
+        }
+        player.stop()
+        scheduler.runCurrent()
+        assertTrue(!readReadyStateOrNull()!!.isPlaying)
+    }
+    fun seekAndSwitchAudio() {
+        playReceivedAudio()
+        viewModel.onPauseAudio()
+        viewModel.onSeekAudio("99", "https://example.test/audio-0.webm", 2000L); scheduler.runCurrent()
+        assertEquals(2000L, player.currentPositionMillis.value)
+        assertTrue(!player.isPlaying.value)
+        viewModel.onPlayAudio("100", "https://example.test/audio-1.webm"); scheduler.runCurrent()
+    }
+    fun assertSecondAudio() { assertEquals("100", readReadyStateOrNull()!!.playingMediaKey); assertEquals(0L, player.currentPositionMillis.value); assertTrue(player.isPlaying.value) }
+    fun givenFailedAudio() {
+        grantMicrophone(); givenEmptyDetail(); whenOpeningConversation(); recordAudio(); givenSendWillFailWithNetwork(); whenTappingSend()
+    }
+    fun retryAudio(prompt: String) { givenSendWillSucceedWithMedia(99); pauseSendOnGate(); whenRepeatedRetryWithDraft(prompt) }
+    fun assertAudioRetry() { thenOnlyOneSendWasFired(); thenDraftSurvives("Otro mensaje") }
+
+    private class BddAudioRecorder : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
+        var starts = 0
+        var discards = 0
+        var active = false
+        override fun start(): Result<Unit> { starts++; active = true; return Result.success(Unit) }
+        override fun stop(): Result<String> { active = false; return Result.success("file:///bdd/audio.webm") }
+        override fun cancel() { active = false }
+        override fun discard(uri: String) { discards++ }
+    }
+    private class BddAudioPlayer : com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer {
+        override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
+        override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
+        override fun play(url: String, startPositionMillis: Long) { currentPositionMillis.value = startPositionMillis; isPlaying.value = true }
+        override fun seekTo(positionMillis: Long) { currentPositionMillis.value = positionMillis }
+        override fun pause() { isPlaying.value = false }
+        override fun stop() { isPlaying.value = false; currentPositionMillis.value = 0L }
+    }
+
     // --- helpers --------------------------------------------------------
 
     private fun newViewModel(): ProviderConversationViewModel = ProviderConversationViewModel(
@@ -564,8 +677,11 @@ internal class ProviderConversationWorld : AutoCloseable {
         sendMessage = SendMessageUseCase(repository),
         sendMediaMessage = SendMediaMessageUseCase(repository),
         mediaReader = BddMediaReader { readFailure?.let { throw it }; stagedMedia },
-        audioRecorder = NotExercisedAudioRecorder,
-        audioPlayer = NotExercisedAudioPlayer,
+        audioRecorder = recorder,
+        audioPlayer = player,
+        recordingTimeSource = object : com.loresuelvo.serviceprovider.ui.screens.conversation.RecordingTimeSource() {
+            override fun nowMillis() = scheduler.currentTime
+        },
     ).also(ownedModels::add)
 
     private fun detail(messages: List<ConversationMessage>): ConversationDetail = ConversationDetail(
@@ -581,36 +697,11 @@ internal class ProviderConversationWorld : AutoCloseable {
         updatedOnEpochMillis = 1L,
     )
 
-    private object NotExercisedMediaReader :
-        com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
-        override suspend fun read(uri: String):
-            com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
-            error("MediaReader is not exercised by US-A BDD scenarios")
-    }
-
     private class BddMediaReader(
-        private val media: () -> MediaUpload.Image?,
+        private val media: () -> MediaUpload?,
     ) : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
         override suspend fun read(uri: String): MediaUpload =
             media() ?: error("BDD media reader has no staged media for $uri")
-    }
-
-    private object NotExercisedAudioRecorder :
-        com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
-        override fun start(): Result<Unit> =
-            error("AudioRecorder is not exercised by US-A BDD scenarios")
-        override fun stop(): Result<String> =
-            error("AudioRecorder is not exercised by US-A BDD scenarios")
-        override fun cancel() = Unit
-    }
-
-    private object NotExercisedAudioPlayer :
-        com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer {
-        override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
-        override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
-        override fun play(url: String, startPositionMillis: Long) = Unit
-        override fun pause() = Unit
-        override fun stop() = Unit
     }
 
     private class FakeConversationRepository : ConversationRepository {
@@ -672,6 +763,9 @@ internal class ProviderConversationWorld : AutoCloseable {
                         sender = ConversationSender.Provider,
                         content = outcome.message.content,
                         createdOnEpochMillis = outcome.message.createdOnEpochMillis,
+                        media = media.filterIsInstance<MediaUpload.Audio>().singleOrNull()?.let { upload ->
+                            MediaReference.Audio("audio-99", "https://example.test/audio.webm", upload.mimeType, upload.originalName, upload.durationMillis)
+                        },
                         images = media.filterIsInstance<MediaUpload.Image>().map { upload ->
                             MediaReference.Image(
                                 id = "file-uuid-${outcome.message.id.takeIf { it != 0 } ?: baseId}",
