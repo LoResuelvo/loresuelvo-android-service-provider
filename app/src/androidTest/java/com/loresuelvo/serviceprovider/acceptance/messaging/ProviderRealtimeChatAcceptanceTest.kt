@@ -138,6 +138,8 @@ class ProviderRealtimeChatAcceptanceTest {
         compose.runOnIdle { ports.client().state.value = RealtimeState(accountA, RealtimeState.Connection.Connected) }
         compose.onNodeWithTag(PROVIDER_CONVERSATION_REFRESH_RETRY_TAG).assertIsDisplayed()
         compose.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).assertTextContains("Retained reply")
+        // Refresh feedback reduces the viewport; retained history must remain readable.
+        list().performScrollToIndex(29)
         bubble(30).assertIsDisplayed()
         compose.runOnIdle { ports.conversations().detailOutcome = recovered }
         compose.onNodeWithTag(PROVIDER_CONVERSATION_REFRESH_RETRY_TAG).performClick()
