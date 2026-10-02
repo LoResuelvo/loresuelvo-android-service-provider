@@ -94,6 +94,7 @@ fun MessageBubble(
     playingPositionMillis: Long,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
+    retryEnabled: Boolean = true,
 ) {
     when (item) {
         is ChatListItem.ServerConfirmed -> ConfirmedBubble(
@@ -112,6 +113,7 @@ fun MessageBubble(
         is ChatListItem.LocalFailed -> FailedBubble(
             item = item,
             onRetry = { onRetrySendFailedBubble(item.key) },
+            retryEnabled = retryEnabled,
             modifier = modifier,
         )
     }
@@ -230,6 +232,7 @@ private fun PendingBubble(
 private fun FailedBubble(
     item: ChatListItem.LocalFailed,
     onRetry: () -> Unit,
+    retryEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -278,7 +281,7 @@ private fun FailedBubble(
                         ),
                         modifier = Modifier
                             .size(20.dp)
-                            .clickable(onClick = onRetry)
+                            .clickable(enabled = retryEnabled, onClick = onRetry)
                             .testTag(PROVIDER_MESSAGE_RETRY_BUTTON_TAG_PREFIX + item.key),
                     )
                 }

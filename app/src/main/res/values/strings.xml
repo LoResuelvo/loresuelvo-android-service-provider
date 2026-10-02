@@ -372,4 +372,7 @@
     <string name="provider_home_proposals_title">Propuestas pendientes</string>
     <string name="provider_home_view_proposal">Ver propuesta</string>
     <string name="provider_home_visit_pattern">dd/MM/yyyy - HH:mm</string>
+    <string name="provider_conversation_media_error_network">No pudimos leer el archivo. Reintentá.</string>
+    <string name="provider_conversation_media_error_server">No pudimos procesar el archivo. Reintentá más tarde.</string>
+    <string name="provider_conversation_media_error_size">El archivo es demasiado grande.</string>
 </resources>

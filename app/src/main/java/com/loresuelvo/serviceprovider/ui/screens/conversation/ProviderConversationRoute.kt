@@ -34,8 +34,8 @@ import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
  * Route composable for `Route.Conversation` on the provider side.
  * Acquires the [ProviderConversationViewModel] through
  * [hiltViewModel] (Hilt scopes it to this back-stack entry so the
- * same instance survives rotation and process death) and wires
- * the typed event callbacks into the stateless
+ * same instance survives rotation). After process death, a new
+ * instance loads the server snapshot. Wires the typed event callbacks into the stateless
  * [ProviderConversationScreen].
  *
  * Owns the [androidx.activity.result.ActivityResultLauncher]s for
@@ -143,24 +143,28 @@ fun ProviderConversationRoute(
             (state as? ProviderConversationUiState.Ready)?.detail?.let(proposalViewModel::open)
         },
         onPickFromGallery = {
-            galleryLauncher.launch(
+            if (viewModel.canStartComposerOperation()) galleryLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
             )
         },
         onCaptureFromCamera = {
-            val uri = outputUriFactory.createCameraOutputUri()
-            pendingCameraUri = uri
-            cameraLauncher.launch(uri)
+            if (viewModel.canStartComposerOperation()) {
+                val uri = outputUriFactory.createCameraOutputUri()
+                pendingCameraUri = uri
+                cameraLauncher.launch(uri)
+            }
         },
         onMicClick = {
             // Always re-request so the user sees the system prompt
             // if they previously denied with "don't ask again".
             // `RequestPermission` is a no-op (auto-grant) on API
             // levels where the permission is pre-granted.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            } else {
-                viewModel.onStartRecording()
+            if (viewModel.canStartComposerOperation()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                } else {
+                    viewModel.onStartRecording()
+                }
             }
         },
         onStopRecording = viewModel::onStopRecording,

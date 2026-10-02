@@ -69,6 +69,8 @@ internal class ProviderConversationWorld : AutoCloseable {
      * failed sends in the Given setup.
      */
     private var sendCallsAtRetryBaseline: Int = 0
+    private var operation: String = "detalle"
+    private val ownedModels = mutableListOf<ProviderConversationViewModel>()
 
     /**
      * Staged media for the US-B scenarios. The [FakeMediaReader]
@@ -241,6 +243,107 @@ internal class ProviderConversationWorld : AutoCloseable {
         scheduler.advanceUntilIdle()
     }
 
+    fun givenRestrictedStatus(status: String) {
+        givenEmptyDetail()
+        when (status) {
+            "Loading" -> repository.pendingDetailCompletion = CompletableDeferred()
+            "Error" -> repository.detailOutcome = ConversationDetailOutcome.Failure.Network(Exception("offline"))
+            else -> {
+                val detail = (repository.detailOutcome as ConversationDetailOutcome.Success).detail
+                repository.detailOutcome = ConversationDetailOutcome.Success(detail.copy(status = when (status) {
+                    "Pending" -> ConversationStatus.Pending
+                    "Rejected" -> ConversationStatus.Rejected
+                    else -> ConversationStatus.Unsupported("future")
+                }))
+            }
+        }
+        whenOpeningConversation()
+    }
+
+    fun whenAttemptingRestrictedActions() {
+        whenTyping("Blocked")
+        viewModel.onSendClick()
+        viewModel.onMediaPicked(io.mockk.mockk())
+        viewModel.onStartRecording()
+        viewModel.onRetrySendFailedBubble("missing")
+        scheduler.advanceUntilIdle()
+    }
+
+    fun thenComposerDidNotStart() {
+        assertEquals(0, repository.sendCalls)
+        assertTrue(!viewModel.canStartComposerOperation())
+        readReadyStateOrNull()?.let {
+            assertEquals("", it.promptInput)
+            assertTrue(it.pendingMedia == null)
+            assertTrue(it.recordingState is com.loresuelvo.serviceprovider.ui.screens.conversation.RecordingState.Idle)
+        }
+    }
+
+    fun whenRepeatedSend(prompt: String) {
+        whenTyping(prompt)
+        repeat(3) { viewModel.onSendClick() }
+        scheduler.advanceUntilIdle()
+    }
+
+    fun whenRepeatedRetryWithDraft(prompt: String) {
+        whenTyping(prompt)
+        sendCallsAtRetryBaseline = repository.sendCalls
+        val key = readReadyStateOrNull()!!.items.filterIsInstance<ChatListItem.LocalFailed>().single().key
+        repeat(3) { viewModel.onRetrySendFailedBubble(key) }
+        scheduler.advanceUntilIdle()
+    }
+
+    fun thenDraftSurvives(prompt: String) {
+        releaseSendGate()
+        assertEquals(prompt, readReadyStateOrNull()!!.promptInput)
+        assertTrue(readReadyStateOrNull()!!.items.single() is ChatListItem.ServerConfirmed)
+    }
+
+    fun givenAccessFailure(operation: String, failure: String) {
+        this.operation = operation
+        givenEmptyDetail()
+        if (operation == "envio") {
+            whenOpeningConversation()
+            repository.sendOutcome = when (failure) {
+                "Unauthorized" -> SendMessageOutcome.Failure.Unauthorized
+                "Forbidden" -> SendMessageOutcome.Failure.Server(403, "private diagnostic")
+                else -> SendMessageOutcome.Failure.ConversationNotFound("private diagnostic")
+            }
+        } else {
+            repository.detailOutcome = when (failure) {
+                "Unauthorized" -> ConversationDetailOutcome.Failure.Unauthorized
+                "Forbidden" -> ConversationDetailOutcome.Failure.Server(403, "private diagnostic")
+                "WrongId" -> ConversationDetailOutcome.Success(detail(emptyList()).copy(id = 99))
+                else -> ConversationDetailOutcome.Failure.NotFound("private diagnostic")
+            }
+        }
+    }
+
+    fun whenExecutingAccessOperation() {
+        if (operation == "detalle") whenOpeningConversation() else {
+            whenTyping("Message")
+            whenTappingSend()
+        }
+    }
+
+    fun thenConversationIsInaccessible() {
+        assertTrue(readState() is ProviderConversationUiState.Error)
+        assertTrue(!viewModel.canStartComposerOperation())
+    }
+
+    fun whenRestoringProcess() {
+        sendCallsAtRetryBaseline = repository.sendCalls
+        whenOpeningConversation()
+    }
+
+    fun thenNoLocalStateWasRestored() {
+        assertEquals(sendCallsAtRetryBaseline, repository.sendCalls)
+        val ready = readReadyStateOrNull()!!
+        assertTrue(ready.items.isEmpty())
+        assertEquals("", ready.promptInput)
+        assertTrue(!ready.sending)
+    }
+
     // --- Then -----------------------------------------------------------
 
     fun thenReadyStateRendersAllMessagesInOrder(
@@ -336,6 +439,7 @@ internal class ProviderConversationWorld : AutoCloseable {
             "expected at least one ServerConfirmed bubble for id $serverMessageId, got ${ready.items}",
             confirmed.any { it.message.id == serverMessageId },
         )
+        assertEquals(10_000L, confirmed.single { it.message.id == serverMessageId }.message.createdOnEpochMillis)
         assertEquals(false, ready.sending)
         assertEquals("", ready.promptInput)
     }
@@ -375,9 +479,10 @@ internal class ProviderConversationWorld : AutoCloseable {
     }
 
     override fun close() {
-        if (::viewModel.isInitialized) scheduler.advanceUntilIdle()
-        repository.pendingDetailCompletion?.complete(Unit)
-        repository.sendGate?.complete(Unit)
+        ownedModels.forEach { androidx.lifecycle.ViewModelStore().apply { put("conversation", it) }.clear() }
+        repository.pendingDetailCompletion?.cancel()
+        repository.sendGate?.cancel()
+        scheduler.runCurrent()
         Dispatchers.resetMain()
     }
 
@@ -391,7 +496,7 @@ internal class ProviderConversationWorld : AutoCloseable {
         mediaReader = BddMediaReader(stagedMedia),
         audioRecorder = NotExercisedAudioRecorder,
         audioPlayer = NotExercisedAudioPlayer,
-    )
+    ).also(ownedModels::add)
 
     private fun detail(messages: List<ConversationMessage>): ConversationDetail = ConversationDetail(
         id = conversationId,
@@ -426,8 +531,7 @@ internal class ProviderConversationWorld : AutoCloseable {
             error("AudioRecorder is not exercised by US-A BDD scenarios")
         override fun stop(): Result<android.net.Uri> =
             error("AudioRecorder is not exercised by US-A BDD scenarios")
-        override fun cancel() =
-            error("AudioRecorder is not exercised by US-A BDD scenarios")
+        override fun cancel() = Unit
     }
 
     private object NotExercisedAudioPlayer :

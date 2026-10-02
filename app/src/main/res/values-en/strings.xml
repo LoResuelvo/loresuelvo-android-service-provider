@@ -361,4 +361,7 @@
     <string name="provider_home_proposals_title">Pending proposals</string>
     <string name="provider_home_view_proposal">View proposal</string>
     <string name="provider_home_visit_pattern">dd/MM/yyyy - HH:mm</string>
+    <string name="provider_conversation_media_error_network">We could not read the file. Please retry.</string>
+    <string name="provider_conversation_media_error_server">We could not process the file. Please try again later.</string>
+    <string name="provider_conversation_media_error_size">The file is too large.</string>
 </resources>

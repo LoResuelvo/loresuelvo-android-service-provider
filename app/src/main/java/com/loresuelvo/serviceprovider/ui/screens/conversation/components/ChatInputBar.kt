@@ -71,6 +71,8 @@ fun ChatInputBar(
     onMicClick: () -> Unit,
     onStopRecordingClick: () -> Unit = {},
     modifier: Modifier = Modifier,
+    composerEnabled: Boolean = true,
+    operationEnabled: Boolean = true,
 ) {
     Column(
         modifier = modifier
@@ -92,7 +94,7 @@ fun ChatInputBar(
         ) {
             when {
                 pendingMedia != null -> {
-                    AttachButton(onClick = onAttachClick)
+                    AttachButton(onClick = onAttachClick, enabled = operationEnabled)
                     MediaPreviewCard(
                         media = pendingMedia,
                         onClear = onClearStagedMedia,
@@ -107,9 +109,10 @@ fun ChatInputBar(
                     )
                 }
                 else -> {
-                    AttachButton(onClick = onAttachClick)
+                    AttachButton(onClick = onAttachClick, enabled = operationEnabled)
                     PromptField(
                         value = promptInput,
+                        enabled = composerEnabled,
                         onValueChange = onPromptChange,
                         modifier = Modifier
                             .weight(1f)
@@ -124,7 +127,7 @@ fun ChatInputBar(
             when {
                 isRecording -> StopButton(onClick = onStopRecordingClick)
                 promptInput.isBlank() && pendingMedia == null && !canSend ->
-                    MicButton(onClick = onMicClick)
+                    MicButton(onClick = onMicClick, enabled = operationEnabled)
                 else -> SendButton(
                     canSend = canSend,
                     onSendClick = onSendClick,
@@ -136,9 +139,10 @@ fun ChatInputBar(
 }
 
 @Composable
-private fun MicButton(onClick: () -> Unit) {
+private fun MicButton(onClick: () -> Unit, enabled: Boolean) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier
             .size(48.dp)
             .testTag(PROVIDER_CHAT_MIC_BUTTON_TAG),
@@ -238,9 +242,10 @@ private fun formatElapsed(millis: Long): String {
 }
 
 @Composable
-private fun AttachButton(onClick: () -> Unit) {
+private fun AttachButton(onClick: () -> Unit, enabled: Boolean) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier
             .size(48.dp)
             .testTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG),
@@ -265,11 +270,13 @@ private fun AttachButton(onClick: () -> Unit) {
 @Composable
 private fun PromptField(
     value: String,
+    enabled: Boolean,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     androidx.compose.foundation.text.BasicTextField(
         value = value,
+        enabled = enabled,
         onValueChange = onValueChange,
         modifier = modifier
             .background(

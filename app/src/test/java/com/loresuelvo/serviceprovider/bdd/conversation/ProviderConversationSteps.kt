@@ -83,6 +83,12 @@ internal class ProviderConversationSteps {
         world.whenOpeningConversation()
     }
 
+    @Given("que la conversación {int} está abierta sin mensajes previos")
+    fun conversationIsOpenWithoutMessages(@Suppress("UNUSED_PARAMETER") conversationId: Int) {
+        world.givenEmptyDetail()
+        world.whenOpeningConversation()
+    }
+
     @Given("que la API aceptará el envío de un nuevo mensaje con contenido {string}")
     fun apiWillAcceptSendWithContent(content: String) {
         // The server-persisted id is fixed at 99 so the world can
@@ -248,6 +254,39 @@ internal class ProviderConversationSteps {
     fun inputBarIsClearedAndReady() {
         world.thenInputBarIsEmptyAndEnabled()
     }
+
+    @Given("que la conversación 42 tiene estado {string}")
+    fun conversationIsRestricted(status: String) = world.givenRestrictedStatus(status)
+
+    @When("el prestador intenta enviar adjuntar grabar y reintentar")
+    fun attemptAllComposerActions() = world.whenAttemptingRestrictedActions()
+
+    @Then("ninguna operación del compositor se inicia")
+    fun noComposerOperationStarted() = world.thenComposerDidNotStart()
+
+    @When("el prestador selecciona Enviar varias veces con el texto {string}")
+    fun repeatSend(prompt: String) = world.whenRepeatedSend(prompt)
+
+    @When("el prestador reintenta varias veces con un borrador nuevo {string}")
+    fun repeatRetryWithDraft(prompt: String) = world.whenRepeatedRetryWithDraft(prompt)
+
+    @Then("el borrador nuevo {string} permanece después de la confirmación")
+    fun newDraftRemains(prompt: String) = world.thenDraftSurvives(prompt)
+
+    @Given("que la operación {string} de la conversación 42 devuelve {string}")
+    fun accessOperationFails(operation: String, failure: String) = world.givenAccessFailure(operation, failure)
+
+    @When("el prestador ejecuta esa operación")
+    fun executeAccessOperation() = world.whenExecutingAccessOperation()
+
+    @Then("la conversación queda inaccesible sin mensajes ni compositor")
+    fun conversationIsInaccessible() = world.thenConversationIsInaccessible()
+
+    @When("se restaura un nuevo modelo de la conversación 42")
+    fun restoreProcess() = world.whenRestoringProcess()
+
+    @Then("no se reenvía ni se restaura la burbuja local fallida")
+    fun noLocalStateRestored() = world.thenNoLocalStateWasRestored()
 
     // =====================================================================
     // US-B — Adjuntar imágenes a un mensaje

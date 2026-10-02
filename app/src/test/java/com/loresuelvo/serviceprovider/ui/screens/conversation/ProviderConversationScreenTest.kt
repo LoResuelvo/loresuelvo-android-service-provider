@@ -43,6 +43,74 @@ class ProviderConversationScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    @Test
+    fun restricted_composer_disables_input_attach_mic_send_and_retry() {
+        val state = mutableStateOf(readyState("").let { it.copy(
+            detail = it.detail.copy(status = ConversationStatus.Pending),
+            items = listOf(ChatListItem.LocalFailed("local-failed", ConversationSender.Provider, "failed", 1L, "failed")),
+        ) })
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = state.value,
+                    onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                    onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        val prefix = "provider-message-retry-"
+        for (status in listOf(ConversationStatus.Pending, ConversationStatus.Rejected, ConversationStatus.Unsupported("future"))) {
+            composeTestRule.runOnIdle { state.value = state.value.copy(detail = state.value.detail.copy(status = status)) }
+            composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).assertIsNotEnabled()
+            composeTestRule.onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_INPUT_FIELD_TAG).assertIsNotEnabled()
+            composeTestRule.onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_MIC_BUTTON_TAG).assertIsNotEnabled()
+            composeTestRule.onNodeWithTag(prefix + "local-failed").assertIsNotEnabled()
+        }
+        composeTestRule.runOnIdle { state.value = state.value.copy(promptInput = "blocked") }
+        composeTestRule.onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_SEND_BUTTON_TAG).assertIsNotEnabled()
+        composeTestRule.runOnIdle {
+            state.value = state.value.copy(detail = state.value.detail.copy(status = ConversationStatus.Active))
+        }
+        composeTestRule.onNodeWithTag(com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_SEND_BUTTON_TAG).assertIsEnabled()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).assertIsEnabled()
+        composeTestRule.onNodeWithTag(prefix + "local-failed").assertIsEnabled()
+    }
+
+    @Test
+    fun forbidden_error_uses_localized_copy_and_hides_private_diagnostics_and_composer() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = ProviderConversationUiState.Error(ConversationDetailOutcome.Failure.Server(403, "private diagnostic")),
+                    onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                    onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_conversation_error_not_found)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("private diagnostic").assertDoesNotExist()
+        composeTestRule.onNodeWithTag(PROVIDER_CONVERSATION_RETRY_LOAD_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun media_server_error_uses_resource_copy_instead_of_raw_diagnostics() {
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                ProviderConversationScreen(
+                    state = readyState("").copy(transientMediaError =
+                        com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Server(500, "private diagnostic")),
+                    onPromptChange = {}, onSendClick = {}, onRetrySendFailedBubble = {},
+                    onRetryLoad = {}, onMediaPicked = {}, onClearStagedMedia = {}, onClose = {},
+                )
+            }
+        }
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_conversation_media_error_server)).assertIsDisplayed()
+        composeTestRule.onNodeWithText("private diagnostic").assertDoesNotExist()
+    }
+
     @Test fun top_bar_opens_only_verified_order_id_without_proposal_sheet() {
         var openedId: Int? = null
         composeTestRule.setContent {
@@ -186,7 +254,7 @@ class ProviderConversationScreenTest {
     }
 
     @Test
-    fun nonactive_chats_keep_media_actions_without_proposal_action() {
+    fun nonactive_chats_disable_attachment_sheet_and_proposal_action() {
         val base = readyState("")
         val state = mutableStateOf<ProviderConversationUiState>(
             base.copy(detail = base.detail.copy(status = ConversationStatus.Pending)),
@@ -200,7 +268,6 @@ class ProviderConversationScreenTest {
                 )
             }
         }
-        composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).performClick()
         listOf(
             ConversationStatus.Pending,
             ConversationStatus.Rejected,
@@ -209,8 +276,9 @@ class ProviderConversationScreenTest {
             composeTestRule.runOnIdle {
                 state.value = base.copy(detail = base.detail.copy(status = status))
             }
-            composeTestRule.onNodeWithTag(PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG).assertIsDisplayed()
-            composeTestRule.onNodeWithTag(PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG).assertIsDisplayed()
+            composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).assertIsNotEnabled()
+            composeTestRule.onNodeWithTag(PROVIDER_MEDIA_ATTACH_GALLERY_ROW_TAG).assertDoesNotExist()
+            composeTestRule.onNodeWithTag(PROVIDER_MEDIA_ATTACH_CAMERA_ROW_TAG).assertDoesNotExist()
             composeTestRule.onNodeWithTag(PROVIDER_CREATE_PROPOSAL_ROW_TAG).assertDoesNotExist()
         }
     }

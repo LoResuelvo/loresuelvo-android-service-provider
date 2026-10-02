@@ -165,11 +165,18 @@ class ProviderSignupConversationRepository : ConversationRepository {
     override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome =
         detailOutcome
 
+    val sentTexts = mutableListOf<Pair<Int, String>>()
+    var pendingSend: kotlinx.coroutines.CompletableDeferred<SendMessageOutcome>? = null
+
     override suspend fun sendMessage(
         conversationId: Int,
         content: String,
-    ): SendMessageOutcome =
-        TODO("Not exercised by the signup acceptance test.")
+    ): SendMessageOutcome {
+        sentTexts += conversationId to content
+        return pendingSend?.await() ?: SendMessageOutcome.Success(
+            com.loresuelvo.serviceprovider.domain.conversation.ConversationMessage(99, com.loresuelvo.serviceprovider.domain.conversation.ConversationSender.Provider, content, 10_000L),
+        )
+    }
 }
 
 class ProviderSignupServiceProposalRepository : ServiceProposalRepository {

@@ -2,7 +2,13 @@ package com.loresuelvo.serviceprovider.acceptance.messaging
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ActivityScenario
+import androidx.lifecycle.Lifecycle
+import kotlinx.coroutines.CompletableDeferred
+import org.junit.After
+import org.junit.Assert.assertEquals
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -62,7 +68,9 @@ class ProviderConversationAcceptanceTest {
     val hiltRule = HiltAndroidRule(this)
 
     @get:Rule(order = 1)
-    val composeTestRule = createAndroidComposeRule<MainActivity>()
+    val composeTestRule = createEmptyComposeRule()
+
+    private lateinit var scenario: ActivityScenario<MainActivity>
 
     private lateinit var sessionStore: ProviderSignupSessionStore
     private lateinit var currentAccountRepository: ProviderSignupCurrentAccountRepository
@@ -135,6 +143,41 @@ class ProviderConversationAcceptanceTest {
                 accessToken = "device-access-token",
             ),
         )
+        conversationRepository.sentTexts.clear()
+        conversationRepository.pendingSend = null
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+    }
+
+    @After
+    fun tearDown() {
+        conversationRepository.pendingSend?.cancel()
+        scenario.close()
+    }
+
+    @Test
+    fun delayed_text_send_survives_background_and_recreation_without_second_post() {
+        val pending = CompletableDeferred<com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome>()
+        conversationRepository.pendingSend = pending
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + 42).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).performTextInput("Lifecycle message")
+        composeTestRule.onNodeWithTag(
+            com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_SEND_BUTTON_TAG,
+        ).performClick()
+        composeTestRule.runOnIdle { assertEquals(listOf(42 to "Lifecycle message"), conversationRepository.sentTexts) }
+        scenario.moveToState(Lifecycle.State.CREATED)
+        scenario.moveToState(Lifecycle.State.RESUMED)
+        scenario.recreate()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Lifecycle message").assertIsDisplayed()
+        composeTestRule.runOnIdle { assertEquals(1, conversationRepository.sentTexts.size) }
+        pending.complete(com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Success(
+            ConversationMessage(99, ConversationSender.Provider, "Lifecycle message", 10_000L),
+        ))
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("provider-message-bubble-99").assertIsDisplayed()
+        composeTestRule.runOnIdle { assertEquals(1, conversationRepository.sentTexts.size) }
     }
 
     @Test
@@ -178,7 +221,7 @@ class ProviderConversationAcceptanceTest {
         // Back button returns to the inbox without crashing.
         composeTestRule
             .onNodeWithContentDescription(
-                composeTestRule.activity.getString(R.string.provider_conversation_close),
+                ApplicationProvider.getApplicationContext<android.content.Context>().getString(R.string.provider_conversation_close),
             )
             .performClick()
         composeTestRule.waitForIdle()

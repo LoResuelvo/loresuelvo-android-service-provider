@@ -173,6 +173,31 @@ class ConversationDetailApiContractTest {
         assertTrue(outcome is SendMessageOutcome.Failure.ConversationNotFound)
     }
 
+    @Test
+    fun inaccessible_detail_and_send_map_to_typed_failures_without_retry() = runTest {
+        for (code in listOf(401, 403, 404)) {
+            server.enqueue(MockResponse().setResponseCode(code).setBody("private diagnostic"))
+            val detail = repository().getConversationById(42)
+            val detailRequest = server.takeRequest()
+            assertEquals("GET", detailRequest.method)
+            assertEquals("/conversations/42", detailRequest.path)
+            assertTrue(when (code) {
+                401 -> detail is ConversationDetailOutcome.Failure.Unauthorized
+                403 -> detail is ConversationDetailOutcome.Failure.Server && detail.code == 403
+                else -> detail is ConversationDetailOutcome.Failure.NotFound
+            })
+            server.enqueue(MockResponse().setResponseCode(code).setBody("private diagnostic"))
+            val send = repository().sendMessage(42, "message")
+            assertEquals("POST", server.takeRequest().method)
+            assertTrue(when (code) {
+                401 -> send is SendMessageOutcome.Failure.Unauthorized
+                403 -> send is SendMessageOutcome.Failure.Server && send.code == 403
+                else -> send is SendMessageOutcome.Failure.ConversationNotFound
+            })
+        }
+        assertEquals(6, server.requestCount)
+    }
+
     private fun repository(): ApiConversationRepository {
         return ApiConversationRepository(api(), StubFileRepository)
     }

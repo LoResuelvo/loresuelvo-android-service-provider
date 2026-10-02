@@ -31,7 +31,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +53,6 @@ import com.loresuelvo.serviceprovider.ui.screens.proposals.labelRes
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.ChatInputBar
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MediaAttachSheet
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.MessageBubble
-import kotlinx.coroutines.launch
 
 /**
  * Stateless screen for the provider conversation detail
@@ -121,27 +119,25 @@ fun ProviderConversationScreen(
     var attachSheetVisible by remember { mutableStateOf(false) }
     var detailVisible by remember { mutableStateOf(false) }
     val snackbarHostState = proposalSnackbarHostState ?: remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(state) {
-        val ready = state as? ProviderConversationUiState.Ready ?: return@LaunchedEffect
-        val error = ready.transientMediaError ?: return@LaunchedEffect
-        val message = when (error) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val mediaError = (state as? ProviderConversationUiState.Ready)?.transientMediaError
+    LaunchedEffect(mediaError) {
+        val error = mediaError ?: return@LaunchedEffect
+        val messageRes = when (error) {
             is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Network ->
-                "No pudimos leer la imagen seleccionada."
+                R.string.provider_conversation_media_error_network
             is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Server ->
-                error.message
-            is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Unauthorized ->
-                "Tu sesión expiró."
+                R.string.provider_conversation_media_error_server
+            com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Unauthorized ->
+                R.string.provider_conversation_error_unauthorized
             is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.ConversationNotFound ->
-                "La conversación ya no está disponible."
+                R.string.provider_conversation_error_not_found
             is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.PayloadTooLarge ->
-                "El archivo es demasiado grande."
+                R.string.provider_conversation_media_error_size
         }
-        scope.launch {
-            snackbarHostState.showSnackbar(message)
-            onDismissMediaError()
-        }
+        snackbarHostState.showSnackbar(context.getString(messageRes))
+        onDismissMediaError()
     }
 
     Scaffold(
@@ -222,13 +218,14 @@ fun ProviderConversationScreen(
                     promptInput = state.promptInput,
                     pendingMedia = state.pendingMedia,
                     canSend = (state.promptInput.isNotBlank() || state.pendingMedia != null) &&
-                        !state.sending &&
-                        state.recordingState == RecordingState.Idle,
+                        state.canStartComposerOperation,
+                    composerEnabled = state.composerAllowed,
+                    operationEnabled = state.canStartComposerOperation,
                     isRecording = recording is RecordingState.Recording,
                     recordingElapsedMillis = elapsed,
                     onPromptChange = onPromptChange,
                     onSendClick = onSendClick,
-                    onAttachClick = { attachSheetVisible = true },
+                    onAttachClick = { if (state.canStartComposerOperation) attachSheetVisible = true },
                     onClearStagedMedia = onClearStagedMedia,
                     onMicClick = onMicClick,
                     onStopRecordingClick = onStopRecording,
@@ -257,7 +254,8 @@ fun ProviderConversationScreen(
         }
     }
 
-    if (attachSheetVisible) {
+    if (attachSheetVisible &&
+        (state as? ProviderConversationUiState.Ready)?.canStartComposerOperation == true) {
         MediaAttachSheet(
             onPickFromGallery = onPickFromGallery,
             onCaptureFromCamera = onCaptureFromCamera,
@@ -345,6 +343,7 @@ private fun ReadyState(
     }
     MessagesList(
         items = state.items,
+        retryEnabled = state.canStartComposerOperation,
         onRetrySendFailedBubble = onRetrySendFailedBubble,
         onPlayAudio = onPlayAudio,
         onPauseAudio = onPauseAudio,
@@ -359,6 +358,7 @@ private fun ReadyState(
 @Composable
 private fun MessagesList(
     items: List<ChatListItem>,
+    retryEnabled: Boolean,
     onRetrySendFailedBubble: (String) -> Unit,
     onPlayAudio: (String, String) -> Unit,
     onPauseAudio: () -> Unit,
@@ -380,6 +380,7 @@ private fun MessagesList(
         items(items = items, key = { it.key }) { item ->
             MessageBubble(
                 item = item,
+                retryEnabled = retryEnabled,
                 onRetrySendFailedBubble = onRetrySendFailedBubble,
                 onPlayAudio = onPlayAudio,
                 onPauseAudio = onPauseAudio,
@@ -396,7 +397,9 @@ private fun errorCopy(failure: ConversationDetailOutcome.Failure): Pair<String, 
     is ConversationDetailOutcome.Failure.Network ->
         stringResource(R.string.provider_conversation_error_network) to true
     is ConversationDetailOutcome.Failure.Server ->
-        stringResource(R.string.provider_conversation_error_server) to true
+        if (failure.code == 403) {
+            stringResource(R.string.provider_conversation_error_not_found) to false
+        } else stringResource(R.string.provider_conversation_error_server) to true
     is ConversationDetailOutcome.Failure.Unauthorized ->
         stringResource(R.string.provider_conversation_error_unauthorized) to false
     is ConversationDetailOutcome.Failure.NotFound ->

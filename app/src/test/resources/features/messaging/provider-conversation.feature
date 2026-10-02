@@ -44,6 +44,52 @@ Feature: Conversación del prestador con un consumidor
     Then el botón Enviar permanece deshabilitado
     And ningún envío se dispara
 
+  Scenario Outline: 07-PCC Restringir todas las acciones del compositor fuera de Active
+    Given que la conversación 42 tiene estado "<estado>"
+    When el prestador intenta enviar adjuntar grabar y reintentar
+    Then ninguna operación del compositor se inicia
+
+    Examples:
+      | estado      |
+      | Pending     |
+      | Rejected    |
+      | Unsupported |
+      | Loading     |
+      | Error       |
+
+  Scenario: 08-PCC Enviar varias veces durante una respuesta demorada
+    Given que la conversación 42 está abierta sin mensajes previos
+    And que la API aceptará el envío de un nuevo mensaje con contenido "Listo"
+    When el prestador selecciona Enviar varias veces con el texto "Listo"
+    Then el envío se ejecuta una sola vez
+
+  Scenario: 09-PCC Reintentar varias veces preserva un borrador nuevo
+    Given que la conversación 42 está abierta con una burbuja pendiente en fallo por red
+    And que el reintento del envío tendrá éxito
+    When el prestador reintenta varias veces con un borrador nuevo "Otro mensaje"
+    Then el envío se ejecuta una sola vez
+    And el borrador nuevo "Otro mensaje" permanece después de la confirmación
+
+  Scenario Outline: 10-PCC No exponer una conversación inaccesible
+    Given que la operación "<operacion>" de la conversación 42 devuelve "<fallo>"
+    When el prestador ejecuta esa operación
+    Then la conversación queda inaccesible sin mensajes ni compositor
+
+    Examples:
+      | operacion | fallo        |
+      | detalle   | Unauthorized |
+      | detalle   | Forbidden    |
+      | detalle   | NotFound     |
+      | envio     | Unauthorized |
+      | envio     | Forbidden    |
+      | envio     | NotFound     |
+      | detalle   | WrongId      |
+
+  Scenario: 11-PCC Restaurar el proceso carga solo el estado del servidor
+    Given que la conversación 42 está abierta con una burbuja pendiente en fallo por red
+    When se restaura un nuevo modelo de la conversación 42
+    Then no se reenvía ni se restaura la burbuja local fallida
+
   # =========================================================================
   # US-B — Adjuntar imágenes a un mensaje (galería + cámara + upload + retry)
   # =========================================================================

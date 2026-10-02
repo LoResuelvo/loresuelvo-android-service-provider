@@ -76,21 +76,23 @@ class ProviderConversationViewModel @Inject constructor(
     }
 
     fun onRetryLoad() {
-        load()
+        if (_uiState.value is ProviderConversationUiState.Error) load()
     }
 
     fun onPromptChange(value: String) {
         _uiState.update { current ->
             when (current) {
                 is ProviderConversationUiState.Ready ->
-                    current.copy(promptInput = value)
+                    if (current.composerAllowed) current.copy(promptInput = value) else current
                 else -> current
             }
         }
     }
 
     fun onMediaPicked(uri: Uri) {
+        if (!canStartComposerOperation()) return
         viewModelScope.launch {
+            if (!canStartComposerOperation()) return@launch
             val media = try {
                 mediaReader.read(uri)
             } catch (e: IOException) {
@@ -110,11 +112,11 @@ class ProviderConversationViewModel @Inject constructor(
             _uiState.update { current ->
                 when (current) {
                     is ProviderConversationUiState.Ready ->
-                        current.copy(
+                        if (current.canStartComposerOperation) current.copy(
                             pendingMedia = media,
                             promptInput = "",
                             transientMediaError = null,
-                        )
+                        ) else current
                     else -> current
                 }
             }
@@ -148,6 +150,7 @@ class ProviderConversationViewModel @Inject constructor(
      * concern).
      */
     fun onStartRecording() {
+        if (!canStartComposerOperation()) return
         val started = audioRecorder.start()
         if (started.isFailure) {
             _uiState.update { current ->
@@ -201,6 +204,8 @@ class ProviderConversationViewModel @Inject constructor(
      * [ProviderConversationUiState.Ready.pendingMedia].
      */
     fun onStopRecording() {
+        val state = _uiState.value as? ProviderConversationUiState.Ready ?: return
+        if (!state.composerAllowed || state.recordingState !is RecordingState.Recording) return
         recordingTickerJob?.cancel()
         recordingTickerJob = null
         val stopped = audioRecorder.stop()
@@ -293,7 +298,7 @@ class ProviderConversationViewModel @Inject constructor(
         val state = _uiState.value as? ProviderConversationUiState.Ready ?: return
         val prompt = state.promptInput.trim()
         val media = state.pendingMedia
-        if ((prompt.isEmpty() && media == null) || state.sending) return
+        if ((prompt.isEmpty() && media == null) || !state.canStartComposerOperation) return
 
         when {
             media != null -> fireSendMedia(media)
@@ -307,7 +312,7 @@ class ProviderConversationViewModel @Inject constructor(
             .firstOrNull { it.key == localKey }
             as? ChatListItem.LocalFailed
             ?: return
-        if (state.sending) return
+        if (!state.canStartComposerOperation) return
 
         val pending = ChatListItem.LocalPending(
             key = failed.key,
@@ -347,7 +352,11 @@ class ProviderConversationViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = when (val outcome = getConversationById(conversationId)) {
                 is ConversationDetailOutcome.Success -> {
-                    ProviderConversationUiState.Ready(
+                    if (outcome.detail.id != conversationId) {
+                        ProviderConversationUiState.Error(
+                            ConversationDetailOutcome.Failure.NotFound("Conversation unavailable"),
+                        )
+                    } else ProviderConversationUiState.Ready(
                         detail = outcome.detail,
                         items = outcome.detail.messages.map(ChatListItem::ServerConfirmed),
                         promptInput = "",
@@ -418,8 +427,6 @@ class ProviderConversationViewModel @Inject constructor(
         } else {
             _uiState.update { current ->
                 (current as ProviderConversationUiState.Ready).copy(
-                    promptInput = "",
-                    pendingMedia = null,
                     sending = true,
                     transientMediaError = null,
                 )
@@ -453,8 +460,6 @@ class ProviderConversationViewModel @Inject constructor(
         } else {
             _uiState.update { current ->
                 (current as ProviderConversationUiState.Ready).copy(
-                    promptInput = "",
-                    pendingMedia = null,
                     sending = true,
                     transientMediaError = null,
                 )
@@ -474,6 +479,16 @@ class ProviderConversationViewModel @Inject constructor(
     ) {
         _uiState.update { current ->
             val ready = current as? ProviderConversationUiState.Ready ?: return@update current
+            val accessFailure = when (outcome) {
+                SendMessageOutcome.Failure.Unauthorized -> ConversationDetailOutcome.Failure.Unauthorized
+                is SendMessageOutcome.Failure.ConversationNotFound ->
+                    ConversationDetailOutcome.Failure.NotFound("Conversation unavailable")
+                is SendMessageOutcome.Failure.Server -> if (outcome.code == 403) {
+                    ConversationDetailOutcome.Failure.NotFound("Conversation unavailable")
+                } else null
+                else -> null
+            }
+            if (accessFailure != null) return@update ProviderConversationUiState.Error(accessFailure)
             ready.copy(
                 items = ready.items.map { item ->
                     if (item.key == pendingKey) item.toResolved(outcome, prompt, media) else item
@@ -498,6 +513,9 @@ class ProviderConversationViewModel @Inject constructor(
             pendingMedia = media,
         )
     }
+
+    fun canStartComposerOperation(): Boolean =
+        (_uiState.value as? ProviderConversationUiState.Ready)?.canStartComposerOperation == true
 
     private fun newLocalKey(): String = "local-${UUID.randomUUID()}"
 }

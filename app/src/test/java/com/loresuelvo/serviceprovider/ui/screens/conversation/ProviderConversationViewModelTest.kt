@@ -42,6 +42,7 @@ class ProviderConversationViewModelTest {
 
     private val scheduler = TestCoroutineScheduler()
     private val dispatcher = StandardTestDispatcher(scheduler)
+    private val ownedModels = mutableListOf<ProviderConversationViewModel>()
 
     @Before
     fun setUp() {
@@ -50,6 +51,8 @@ class ProviderConversationViewModelTest {
 
     @After
     fun tearDown() {
+        ownedModels.forEach { androidx.lifecycle.ViewModelStore().apply { put("conversation", it) }.clear() }
+        scheduler.runCurrent()
         Dispatchers.resetMain()
     }
 
@@ -481,6 +484,111 @@ class ProviderConversationViewModelTest {
             assertEquals(7, (resolved as ChatListItem.ServerConfirmed).message.id)
         }
 
+    @Test
+    fun restricted_states_do_not_read_media_record_or_send() = runTest(scheduler) {
+        for (status in listOf(ConversationStatus.Pending, ConversationStatus.Rejected, ConversationStatus.Unsupported("future"))) {
+            val detail = detailOutcome(emptyList()).detail.copy(status = status)
+            val repo = RecordingRepository(detailOutcome = ConversationDetailOutcome.Success(detail))
+            val vm = viewModel(repo)
+            advanceUntilIdle()
+            vm.onPromptChange("blocked")
+            vm.onMediaPicked(android.net.Uri.parse("content://blocked"))
+            vm.onStartRecording()
+            vm.onSendClick()
+            vm.onRetrySendFailedBubble("missing")
+            advanceUntilIdle()
+            assertEquals(0, repo.sendCalls)
+            assertFalse(vm.canStartComposerOperation())
+            assertEquals("", readyState(vm).promptInput)
+        }
+    }
+
+    @Test
+    fun unloaded_states_reject_side_effects() = runTest(scheduler) {
+        val repo = RecordingRepository(detailOutcome = ConversationDetailOutcome.Failure.Unauthorized)
+        val vm = viewModel(repo)
+        vm.onMediaPicked(android.net.Uri.parse("content://blocked"))
+        vm.onStartRecording()
+        vm.onSendClick()
+        advanceUntilIdle()
+        vm.onMediaPicked(android.net.Uri.parse("content://blocked"))
+        vm.onStartRecording()
+        vm.onSendClick()
+        advanceUntilIdle()
+        assertEquals(0, repo.sendCalls)
+        assertTrue(vm.uiState.value is ProviderConversationUiState.Error)
+    }
+
+    @Test
+    fun wrong_detail_id_never_exposes_counterpart_or_messages() = runTest(scheduler) {
+        val detail = detailOutcome(listOf(message(1, ConversationSender.Consumer, "private"))).detail.copy(id = 99)
+        val vm = viewModel(RecordingRepository(detailOutcome = ConversationDetailOutcome.Success(detail)))
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value is ProviderConversationUiState.Error)
+        assertFalse(vm.canStartComposerOperation())
+    }
+
+    @Test
+    fun access_loss_on_send_removes_messages_and_composer() = runTest(scheduler) {
+        for (failure in listOf(
+            SendMessageOutcome.Failure.Unauthorized,
+            SendMessageOutcome.Failure.Server(403, "private diagnostic"),
+            SendMessageOutcome.Failure.ConversationNotFound("private diagnostic"),
+        )) {
+            val repo = RecordingRepository(sendOutcome = failure)
+            val vm = viewModel(repo)
+            advanceUntilIdle()
+            vm.onPromptChange("message")
+            vm.onSendClick()
+            advanceUntilIdle()
+            assertTrue(vm.uiState.value is ProviderConversationUiState.Error)
+            vm.onStartRecording()
+            vm.onSendClick()
+            assertEquals(1, repo.sendCalls)
+        }
+    }
+
+    @Test
+    fun delayed_retry_is_single_and_preserves_newer_draft() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        val vm = viewModel(repo)
+        advanceUntilIdle()
+        vm.onPromptChange("failed")
+        vm.onSendClick()
+        advanceUntilIdle()
+        val key = readyState(vm).items.single().key
+        repo.sendGate = CompletableDeferred()
+        repo.sendOutcome = SendMessageOutcome.Success(message(99, ConversationSender.Provider, "failed"))
+        vm.onPromptChange("new draft")
+        repeat(3) { vm.onRetrySendFailedBubble(key) }
+        advanceUntilIdle()
+        assertEquals(2, repo.sendCalls)
+        assertEquals("new draft", readyState(vm).promptInput)
+        vm.onRetryLoad()
+        assertTrue(readyState(vm).sending)
+        repo.sendGate!!.complete(Unit)
+        advanceUntilIdle()
+        assertEquals("new draft", readyState(vm).promptInput)
+        assertEquals(99, (readyState(vm).items.single() as ChatListItem.ServerConfirmed).message.id)
+    }
+
+    @Test
+    fun restoring_new_model_loads_server_snapshot_without_replaying_local_failure() = runTest(scheduler) {
+        val repo = RecordingRepository()
+        val first = viewModel(repo)
+        advanceUntilIdle()
+        first.onPromptChange("not persisted")
+        first.onSendClick()
+        advanceUntilIdle()
+        assertTrue(readyState(first).items.single() is ChatListItem.LocalFailed)
+        val restored = viewModel(repo)
+        advanceUntilIdle()
+        assertEquals(1, repo.sendCalls)
+        assertTrue(readyState(restored).items.isEmpty())
+        assertFalse(readyState(restored).sending)
+        assertEquals("", readyState(restored).promptInput)
+    }
+
     // --- helpers --------------------------------------------------------
 
     private fun viewModel(repo: RecordingRepository): ProviderConversationViewModel =
@@ -492,7 +600,7 @@ class ProviderConversationViewModelTest {
             mediaReader = NotExercisedMediaReader,
             audioRecorder = NotExercisedAudioRecorder,
             audioPlayer = NotExercisedAudioPlayer,
-        )
+        ).also(ownedModels::add)
 
     private fun viewModelWithMediaReader(
         repo: RecordingRepository,
@@ -505,7 +613,7 @@ class ProviderConversationViewModelTest {
         mediaReader = reader,
         audioRecorder = NotExercisedAudioRecorder,
         audioPlayer = NotExercisedAudioPlayer,
-    )
+    ).also(ownedModels::add)
 
     private fun readyState(vm: ProviderConversationViewModel): ProviderConversationUiState.Ready {
         val state = vm.uiState.value
@@ -548,7 +656,7 @@ class ProviderConversationViewModelTest {
     private object NotExercisedAudioRecorder : com.loresuelvo.serviceprovider.data.media.AudioRecorder {
         override fun start(): Result<Unit> = error("AudioRecorder is not exercised by US-A VM tests")
         override fun stop(): Result<android.net.Uri> = error("AudioRecorder is not exercised by US-A VM tests")
-        override fun cancel() = error("AudioRecorder is not exercised by US-A VM tests")
+        override fun cancel() = Unit
     }
 
     private object NotExercisedAudioPlayer : com.loresuelvo.serviceprovider.data.media.AudioPlayer {
@@ -788,7 +896,7 @@ class ProviderConversationViewModelTest {
         mediaReader = NotExercisedMediaReader,
         audioRecorder = recorder,
         audioPlayer = player,
-    )
+    ).also(ownedModels::add)
 
     private fun viewModelWithAudioAndReader(
         repo: RecordingRepository,
@@ -803,7 +911,7 @@ class ProviderConversationViewModelTest {
         mediaReader = reader,
         audioRecorder = recorder,
         audioPlayer = player,
-    )
+    ).also(ownedModels::add)
 
     private class FakeAudioRecorder : com.loresuelvo.serviceprovider.data.media.AudioRecorder {
         private var started = false

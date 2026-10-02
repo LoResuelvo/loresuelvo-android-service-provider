@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetail
+import com.loresuelvo.serviceprovider.domain.conversation.ConversationStatus
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
@@ -65,7 +66,11 @@ sealed interface ProviderConversationUiState {
         val playingMediaKey: String? = null,
         val playingPositionMillis: Long = 0L,
         val isPlaying: Boolean = false,
-    ) : ProviderConversationUiState
+    ) : ProviderConversationUiState {
+        val composerAllowed: Boolean get() = detail.status == ConversationStatus.Active
+        val canStartComposerOperation: Boolean
+            get() = composerAllowed && !sending && recordingState == RecordingState.Idle
+    }
 }
 
 /**
