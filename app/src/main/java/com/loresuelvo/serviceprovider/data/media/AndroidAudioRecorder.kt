@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.data.media
 
+import com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder
 import android.content.Context
 import android.media.MediaRecorder
 import android.net.Uri
@@ -70,7 +71,7 @@ class AndroidAudioRecorder @Inject constructor(
         }
     }
 
-    override fun stop(): Result<Uri> {
+    override fun stop(): Result<String> {
         val mediaRecorder = recorder
             ?: return Result.failure(
                 IllegalStateException("Audio recording is not in progress"),
@@ -83,7 +84,7 @@ class AndroidAudioRecorder @Inject constructor(
 
         return runCatching {
             mediaRecorder.stop()
-            Uri.fromFile(file)
+            Uri.fromFile(file).toString()
         }.also {
             mediaRecorder.release()
             recorder = null

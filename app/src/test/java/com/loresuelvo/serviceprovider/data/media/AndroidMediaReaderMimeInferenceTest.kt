@@ -47,6 +47,31 @@ class AndroidMediaReaderMimeInferenceTest {
     }
 
     @Test
+    fun image_formats_empty_missing_and_oversized_files_are_checked_locally() = runTest {
+        val file = java.io.File(context.cacheDir, "bounded-image.jpg")
+        try {
+            file.writeBytes(ByteArray(5 * 1024 * 1024))
+            val valid = reader.read(Uri.fromFile(file).toString()) as MediaUpload.Image
+            assertEquals(5 * 1024 * 1024, valid.bytes.size)
+            file.appendBytes(byteArrayOf(1))
+            val oversized = runCatching { reader.read(Uri.fromFile(file).toString()) }.exceptionOrNull()
+            assertTrue(oversized is com.loresuelvo.serviceprovider.domain.conversation.MediaReadException)
+            file.writeBytes(byteArrayOf())
+            assertTrue(runCatching { reader.read(Uri.fromFile(file).toString()) }.isFailure)
+            file.delete()
+            assertTrue(runCatching { reader.read(Uri.fromFile(file).toString()) }.exceptionOrNull() is java.io.IOException)
+            for (extension in listOf("png", "webp", "gif")) {
+                val other = java.io.File(context.cacheDir, "image.$extension")
+                try {
+                    other.writeBytes(byteArrayOf(1))
+                    val result = runCatching { reader.read(Uri.fromFile(other).toString()) }
+                    if (extension == "gif") assertTrue(result.isFailure) else assertEquals("image/$extension", result.getOrThrow().mimeType)
+                } finally { other.delete() }
+            }
+        } finally { file.delete() }
+    }
+
+    @Test
     fun audio_recorder_webm_uri_is_typed_as_audio_not_image() = runTest {
         // The recorder writes files named `audio-<uuid>.webm` in
         // `cacheDir`. We materialise a tiny placeholder so the
@@ -69,7 +94,7 @@ class AndroidMediaReaderMimeInferenceTest {
             resolverMime,
         )
 
-        val upload = reader.read(uri)
+        val upload = reader.read(uri.toString())
         assertTrue(
             "audio recorder .webm must produce MediaUpload.Audio, was $upload",
             upload is MediaUpload.Audio,

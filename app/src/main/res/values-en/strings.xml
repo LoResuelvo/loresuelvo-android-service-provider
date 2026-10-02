@@ -364,4 +364,12 @@
     <string name="provider_conversation_media_error_network">We could not read the file. Please retry.</string>
     <string name="provider_conversation_media_error_server">We could not process the file. Please try again later.</string>
     <string name="provider_conversation_media_error_size">The file is too large.</string>
+    <string name="provider_conversation_replace_image">Replace image</string>
+    <string name="provider_image_reset">Reset zoom</string>
+    <string name="provider_image_zoom_out">Zoom out</string>
+    <string name="provider_image_zoom_in">Zoom in</string>
+    <string name="provider_image_open">Open image</string>
+    <string name="provider_image_format_error">Choose JPEG, PNG or WebP images.</string>
+    <string name="provider_image_count_error">You can attach up to three images.</string>
+    <string name="provider_image_replace_error">Choose one image to replace the preview.</string>
 </resources>

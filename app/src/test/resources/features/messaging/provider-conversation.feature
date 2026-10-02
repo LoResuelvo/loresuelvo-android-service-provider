@@ -94,21 +94,18 @@ Feature: Conversación del prestador con un consumidor
   # US-B — Adjuntar imágenes a un mensaje (galería + cámara + upload + retry)
   # =========================================================================
 
-  @wip
   Scenario: 01-PCM Adjuntar una imagen de la galería como preview antes de enviar
     Given que la conversación 42 está abierta sin mensajes previos
     When el prestador selecciona una imagen JPEG de su galería
     Then la pantalla muestra una preview de esa imagen en la barra del input
     And el botón Enviar queda habilitado con esa imagen adjunta
 
-  @wip
   Scenario: 02-PCM Adjuntar una foto recién tomada con la cámara como preview
     Given que la conversación 42 está abierta sin mensajes previos
     When el prestador toma una foto JPEG con la cámara del dispositivo
     Then la pantalla muestra una preview de esa foto en la barra del input
     And el botón Enviar queda habilitado con esa imagen adjunta
 
-  @wip
   Scenario: 03-PCM Enviar una imagen con burbuja pendiente optimista
     Given que la conversación 42 está abierta sin mensajes previos
     And que el prestador tiene una imagen JPEG adjunta como preview
@@ -117,14 +114,12 @@ Feature: Conversación del prestador con un consumidor
     Then la pantalla agrega optimistamente una burbuja pendiente con la miniatura de esa imagen
     And la preview local se descarta y el input bar queda vacío
 
-  @wip
   Scenario: 04-PCM La imagen confirmada por el servidor reemplaza la burbuja pendiente
     Given que la conversación 42 está abierta sin mensajes previos
     And que el prestador está enviando una imagen JPEG
     When el servidor confirma el upload y la persistencia del mensaje
     Then la burbuja pendiente se reemplaza por la versión persistida con id estable y url de descarga
 
-  @wip
   Scenario: 05-PCM Una subida de imagen fallida por red queda pendiente con retry
     Given que la conversación 42 está abierta sin mensajes previos
     And que el próximo upload de imagen del prestador fallará por red
@@ -132,7 +127,6 @@ Feature: Conversación del prestador con un consumidor
     Then la pantalla agrega optimistamente una burbuja pendiente con la miniatura
     And al fallar el upload la burbuja permanece con un indicador de fallo y un botón Reintentar
 
-  @wip
   Scenario: 06-PCM Reintentar una subida de imagen pendiente confirma el mensaje
     Given que la conversación 42 está abierta con una burbuja pendiente de imagen en fallo por red
     And que el reintento del upload tendrá éxito
@@ -140,11 +134,67 @@ Feature: Conversación del prestador con un consumidor
     Then el upload se ejecuta una sola vez
     And al confirmarse la burbuja pendiente se reemplaza por la versión persistida con url de descarga
 
-  @wip
   Scenario: 07-PCM Renderizar la imagen recibida al abrir la conversación
     Given que la API devuelve el detalle de la conversación 42 con un mensaje confirmado del prestador que lleva una imagen JPEG adjunta
     When el prestador navega a la ruta de la conversación 42
     Then la pantalla muestra la miniatura de esa imagen en su burbuja con el contenido accesible correcto
+
+  Scenario Outline: 08-PCM Seleccionar hasta tres formatos de imagen permitidos
+    Given que la conversación 42 está abierta sin mensajes previos
+    When el prestador selecciona <cantidad> imágenes de tipo "<tipo>"
+    Then quedan <cantidad> previews listas para enviar
+
+    Examples:
+      | cantidad | tipo       |
+      | 1        | image/jpeg |
+      | 2        | image/png  |
+      | 3        | image/webp |
+
+  Scenario: 09-PCM Rechazar una cuarta imagen conservando las seleccionadas
+    Given que la conversación 42 tiene tres imágenes seleccionadas
+    When el prestador agrega una cuarta imagen
+    Then las tres previews originales permanecen y se informa el límite
+
+  Scenario: 10-PCM Reemplazar y descartar una preview individual
+    Given que la conversación 42 tiene tres imágenes seleccionadas
+    When el prestador reemplaza la segunda imagen y descarta la primera
+    Then quedan la imagen reemplazada y la tercera imagen
+
+  Scenario Outline: 11-PCM Rechazar archivos inválidos antes de subir
+    Given que la conversación 42 está abierta sin mensajes previos
+    When el prestador selecciona una imagen "<archivo>"
+    Then se informa un fallo local sin iniciar un envío
+
+    Examples:
+      | archivo      |
+      | vacía        |
+      | no soportada |
+      | ilegible     |
+      | mayor a 5MiB |
+
+  Scenario: 12-PCM Aceptar exactamente cinco MiB
+    Given que la conversación 42 está abierta sin mensajes previos
+    When el prestador selecciona una imagen de exactamente cinco MiB
+    Then queda una preview lista para enviar
+
+  Scenario: 13-PCM Cancelar selección preserva el borrador
+    Given que la conversación 42 está abierta sin mensajes previos
+    When el prestador cancela la selección con el borrador "Otro mensaje"
+    Then ningún envío se dispara
+    And el borrador "Otro mensaje" permanece
+
+  Scenario: 14-PCM Evitar envíos duplicados de imágenes demoradas
+    Given que la conversación 42 tiene tres imágenes seleccionadas
+    And que la API aceptará el upload de la imagen y el envío del mensaje
+    When el prestador selecciona Enviar imágenes varias veces
+    Then el upload se ejecuta una sola vez
+
+  Scenario: 15-PCM Reintentar imágenes preserva el borrador nuevo
+    Given que la conversación 42 está abierta con una burbuja pendiente de imagen en fallo por red
+    And que el reintento del upload tendrá éxito
+    When el prestador reintenta varias veces con un borrador nuevo "Otro mensaje"
+    Then el upload se ejecuta una sola vez
+    And el borrador nuevo "Otro mensaje" permanece después de la confirmación
 
   # =========================================================================
   # US-C — Adjuntar audios a un mensaje (grabar + enviar + reproducir)

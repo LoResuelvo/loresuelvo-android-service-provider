@@ -4,11 +4,14 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.loresuelvo.serviceprovider.data.media.AudioPlayer
-import com.loresuelvo.serviceprovider.data.media.AudioRecorder
-import com.loresuelvo.serviceprovider.data.media.MediaReader
+import com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer
+import com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder
+import com.loresuelvo.serviceprovider.domain.conversation.MediaReader
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationSender
+import com.loresuelvo.serviceprovider.domain.conversation.MediaReadException
+import com.loresuelvo.serviceprovider.domain.conversation.validateMediaUploads
+import com.loresuelvo.serviceprovider.domain.conversation.MAX_MESSAGE_IMAGES
 import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.conversation.GetConversationByIdUseCase
@@ -47,6 +50,8 @@ import kotlinx.coroutines.launch
  * for the in-app recorder and [onPlayAudio] / [onPauseAudio] for
  * the bubble-level playback controls.
  */
+// Cohesion review: retain the existing shared send/status state machine in this batch.
+// The audio recording/playback orchestration is the next extraction seam; image and retry tests cover this change.
 @HiltViewModel
 class ProviderConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -89,37 +94,57 @@ class ProviderConversationViewModel @Inject constructor(
         }
     }
 
-    fun onMediaPicked(uri: Uri) {
-        if (!canStartComposerOperation()) return
+    fun onMediaPicked(uri: Uri) = onImagesPicked(listOf(uri.toString()))
+
+    fun onImagesPicked(uris: List<String>, replaceIndex: Int? = null) {
+        val ready = _uiState.value as? ProviderConversationUiState.Ready ?: return
+        if (!ready.canStartComposerOperation || uris.isEmpty()) return
+        val existing = ready.pendingImages
+        val nextCount = if (replaceIndex == null) existing.size + uris.size else existing.size
+        if (nextCount > MAX_MESSAGE_IMAGES || (replaceIndex != null && replaceIndex !in existing.indices)) {
+            _uiState.value = ready.copy(transientMediaError = SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.TooManyImages))
+            return
+        }
+        if (replaceIndex != null && uris.size != 1) {
+            _uiState.value = ready.copy(transientMediaError = SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.InvalidReplacement))
+            return
+        }
+        _uiState.value = ready.copy(readingMedia = true, transientMediaError = null)
         viewModelScope.launch {
-            if (!canStartComposerOperation()) return@launch
-            val media = try {
-                mediaReader.read(uri)
+            val images = try {
+                uris.map { uri ->
+                    val image = mediaReader.read(uri) as? MediaUpload.Image
+                        ?: throw MediaReadException(SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.UnsupportedFormat))
+                    validateMediaUploads(listOf(image))?.let { throw MediaReadException(it) }
+                    image
+                }
             } catch (e: IOException) {
                 _uiState.update { current ->
-                    if (current is ProviderConversationUiState.Ready) {
-                        current.copy(
-                            transientMediaError = SendMessageOutcome.Failure.Network(
-                                cause = e,
-                            ),
-                        )
-                    } else {
-                        current
-                    }
+                    if (current is ProviderConversationUiState.Ready) current.copy(
+                        readingMedia = false,
+                        transientMediaError = (e as? MediaReadException)?.failure
+                            ?: SendMessageOutcome.Failure.Network(e),
+                    ) else current
                 }
                 return@launch
             }
             _uiState.update { current ->
-                when (current) {
-                    is ProviderConversationUiState.Ready ->
-                        if (current.canStartComposerOperation) current.copy(
-                            pendingMedia = media,
-                            promptInput = "",
-                            transientMediaError = null,
-                        ) else current
-                    else -> current
-                }
+                if (current is ProviderConversationUiState.Ready && current.composerAllowed) {
+                    val selected = if (replaceIndex == null) existing + images else
+                        existing.mapIndexed { index, image -> if (index == replaceIndex) images.single() else image }
+                    current.copy(pendingMedia = selected.firstOrNull(), pendingImages = selected,
+                        readingMedia = false, transientMediaError = null)
+                } else current
             }
+        }
+    }
+
+    fun onDiscardImage(index: Int) {
+        _uiState.update { current ->
+            if (current is ProviderConversationUiState.Ready && current.canStartComposerOperation && index in current.pendingImages.indices) {
+                val images = current.pendingImages.filterIndexed { position, _ -> position != index }
+                current.copy(pendingMedia = images.firstOrNull(), pendingImages = images, transientMediaError = null)
+            } else current
         }
     }
 
@@ -127,7 +152,7 @@ class ProviderConversationViewModel @Inject constructor(
         _uiState.update { current ->
             when (current) {
                 is ProviderConversationUiState.Ready ->
-                    current.copy(pendingMedia = null, transientMediaError = null)
+                    if (current.canStartComposerOperation) current.copy(pendingMedia = null, pendingImages = emptyList(), transientMediaError = null) else current
                 else -> current
             }
         }
@@ -249,6 +274,7 @@ class ProviderConversationViewModel @Inject constructor(
                 if (current is ProviderConversationUiState.Ready) {
                     current.copy(
                         pendingMedia = media,
+                        pendingImages = emptyList(),
                         recordingState = RecordingState.Idle,
                         promptInput = "",
                     )
@@ -301,7 +327,7 @@ class ProviderConversationViewModel @Inject constructor(
         if ((prompt.isEmpty() && media == null) || !state.canStartComposerOperation) return
 
         when {
-            media != null -> fireSendMedia(media)
+            media != null -> fireSendMedia(if (state.pendingImages.isNotEmpty()) state.pendingImages else listOf(media))
             prompt.isNotEmpty() -> fireSendText(prompt)
         }
     }
@@ -320,6 +346,7 @@ class ProviderConversationViewModel @Inject constructor(
             content = failed.content,
             createdOnEpochMillis = failed.createdOnEpochMillis,
             pendingMedia = failed.pendingMedia,
+            pendingImages = failed.pendingImages,
         )
         _uiState.update { current ->
             (current as ProviderConversationUiState.Ready).copy(
@@ -330,7 +357,7 @@ class ProviderConversationViewModel @Inject constructor(
             )
         }
         if (failed.pendingMedia != null) {
-            fireSendMedia(failed.pendingMedia, retryKey = pending.key)
+            fireSendMedia(if (failed.pendingImages.isNotEmpty()) failed.pendingImages else listOf(failed.pendingMedia), retryKey = pending.key)
         } else {
             fireSendText(failed.pendingPrompt, retryKey = pending.key)
         }
@@ -419,6 +446,7 @@ class ProviderConversationViewModel @Inject constructor(
                 (current as ProviderConversationUiState.Ready).copy(
                     promptInput = "",
                     pendingMedia = null,
+                    pendingImages = emptyList(),
                     items = current.items + pending,
                     sending = true,
                     transientMediaError = null,
@@ -434,11 +462,11 @@ class ProviderConversationViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val outcome = sendMessage(conversationId, prompt)
-            resolveSendOutcome(pendingKey, prompt, null, outcome)
+            resolveSendOutcome(pendingKey, prompt, emptyList(), outcome)
         }
     }
 
-    private fun fireSendMedia(media: MediaUpload, retryKey: String? = null) {
+    private fun fireSendMedia(media: List<MediaUpload>, retryKey: String? = null) {
         val pendingKey = retryKey ?: newLocalKey()
         if (retryKey == null) {
             val pending = ChatListItem.LocalPending(
@@ -446,12 +474,14 @@ class ProviderConversationViewModel @Inject constructor(
                 sender = ConversationSender.Provider,
                 content = "",
                 createdOnEpochMillis = System.currentTimeMillis(),
-                pendingMedia = media,
+                pendingMedia = media.firstOrNull(),
+                pendingImages = media.filterIsInstance<MediaUpload.Image>(),
             )
             _uiState.update { current ->
                 (current as ProviderConversationUiState.Ready).copy(
                     promptInput = "",
                     pendingMedia = null,
+                    pendingImages = emptyList(),
                     items = current.items + pending,
                     sending = true,
                     transientMediaError = null,
@@ -466,7 +496,7 @@ class ProviderConversationViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            val outcome = sendMediaMessage(conversationId, listOf(media))
+            val outcome = sendMediaMessage(conversationId, media)
             resolveSendOutcome(pendingKey, "", media, outcome)
         }
     }
@@ -474,7 +504,7 @@ class ProviderConversationViewModel @Inject constructor(
     private fun resolveSendOutcome(
         pendingKey: String,
         prompt: String,
-        media: MediaUpload?,
+        media: List<MediaUpload>,
         outcome: SendMessageOutcome,
     ) {
         _uiState.update { current ->
@@ -501,7 +531,7 @@ class ProviderConversationViewModel @Inject constructor(
     private fun ChatListItem.toResolved(
         outcome: SendMessageOutcome,
         prompt: String,
-        media: MediaUpload?,
+        media: List<MediaUpload>,
     ): ChatListItem = when (outcome) {
         is SendMessageOutcome.Success -> ChatListItem.ServerConfirmed(outcome.message)
         is SendMessageOutcome.Failure -> ChatListItem.LocalFailed(
@@ -510,7 +540,8 @@ class ProviderConversationViewModel @Inject constructor(
             content = content,
             createdOnEpochMillis = createdOnEpochMillis,
             pendingPrompt = prompt,
-            pendingMedia = media,
+            pendingMedia = media.firstOrNull(),
+            pendingImages = media.filterIsInstance<MediaUpload.Image>(),
         )
     }
 

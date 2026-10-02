@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation.components
 
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -25,6 +27,27 @@ class MessageBubbleTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    @Test
+    fun renders_every_image_and_opens_accessible_viewer_with_zoom_controls() {
+        val images = (1..3).map { MediaReference.Image("$it", "https://example.test/$it", "image/jpeg", "$it.jpg") }
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                MessageBubble(ChatListItem.ServerConfirmed(ConversationMessage(7, ConversationSender.Consumer, "", 1,
+                    media = images.first(), images = images)), {}, { _, _ -> }, {}, null, 0, false)
+            }
+        }
+        images.indices.forEach { index ->
+            composeTestRule.onNodeWithTag(PROVIDER_MESSAGE_IMAGE_TAG_PREFIX + if (index == 0) "7" else "7-$index").assertExists()
+        }
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGE_IMAGE_TAG_PREFIX + "7").performClick()
+        composeTestRule.onNodeWithTag("provider-image-viewer").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("provider-image-zoom-in").performClick()
+        composeTestRule.onNodeWithTag("provider-image-zoom-out").assertIsEnabled().performClick()
+        composeTestRule.onNodeWithTag("provider-image-zoom-out").assertIsNotEnabled()
+        composeTestRule.onNodeWithText(androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+            .getString(com.loresuelvo.serviceprovider.R.string.provider_image_reset)).performClick()
+    }
 
     @Test
     fun renders_server_confirmed_consumer_bubble_with_the_message_text() {

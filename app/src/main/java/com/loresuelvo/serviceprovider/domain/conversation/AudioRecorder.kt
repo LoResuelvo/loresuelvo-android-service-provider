@@ -1,12 +1,11 @@
-package com.loresuelvo.serviceprovider.data.media
+package com.loresuelvo.serviceprovider.domain.conversation
 
-import android.net.Uri
 
 /**
  * Port for recording audio from the device microphone.
  *
  * The implementation owns the temporary recording file and
- * returns its [Uri] when recording successfully stops.
+ * returns its URI string when recording successfully stops.
  *
  * Permission handling (`RECORD_AUDIO`) belongs to the UI layer:
  * the route acquires the runtime permission via
@@ -30,7 +29,7 @@ interface AudioRecorder {
      * @return the URI of the recorded clip on success; a typed
      *  failure if the recorder wasn't started.
      */
-    fun stop(): Result<Uri>
+    fun stop(): Result<String>
 
     /**
      * Cancels the current recording and removes the temporary

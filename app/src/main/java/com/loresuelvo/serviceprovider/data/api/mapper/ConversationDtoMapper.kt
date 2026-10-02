@@ -69,6 +69,7 @@ internal fun ConversationMessageDto.toDomain(): ConversationMessage {
         createdOnEpochMillis = createdOnMillis,
         kind = kind,
         media = media,
+        images = images.orEmpty().map { it.toMediaReference() },
     )
 }
 

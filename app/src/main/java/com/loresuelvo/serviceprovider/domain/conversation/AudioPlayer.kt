@@ -1,4 +1,4 @@
-package com.loresuelvo.serviceprovider.data.media
+package com.loresuelvo.serviceprovider.domain.conversation
 
 import kotlinx.coroutines.flow.StateFlow
 

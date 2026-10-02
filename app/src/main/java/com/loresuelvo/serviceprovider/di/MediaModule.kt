@@ -3,9 +3,11 @@ package com.loresuelvo.serviceprovider.di
 import com.loresuelvo.serviceprovider.data.media.AndroidAudioPlayer
 import com.loresuelvo.serviceprovider.data.media.AndroidAudioRecorder
 import com.loresuelvo.serviceprovider.data.media.AndroidMediaReader
-import com.loresuelvo.serviceprovider.data.media.AudioPlayer
-import com.loresuelvo.serviceprovider.data.media.AudioRecorder
-import com.loresuelvo.serviceprovider.data.media.MediaReader
+import com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer
+import com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder
+import com.loresuelvo.serviceprovider.domain.conversation.MediaReader
+import com.loresuelvo.serviceprovider.domain.conversation.CameraOutput
+import com.loresuelvo.serviceprovider.data.media.MediaOutputUriFactory
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -23,6 +25,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class MediaModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindCameraOutput(impl: MediaOutputUriFactory): CameraOutput
 
     @Binds
     @Singleton

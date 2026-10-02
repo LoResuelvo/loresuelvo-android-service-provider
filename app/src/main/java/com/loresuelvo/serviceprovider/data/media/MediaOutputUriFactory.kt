@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.data.media
 
+import com.loresuelvo.serviceprovider.domain.conversation.CameraOutput
 import android.content.Context
 import android.net.Uri
 import androidx.core.content.FileProvider
@@ -36,15 +37,15 @@ import javax.inject.Singleton
 @Singleton
 class MediaOutputUriFactory @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
-    fun createCameraOutputUri(): Uri {
+) : CameraOutput {
+    override fun createCameraOutputUri(): String {
         val cameraDir = File(context.cacheDir, CAMERA_SUBDIR).apply { mkdirs() }
         val file = File(cameraDir, "capture_${System.currentTimeMillis()}.jpg")
         return FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
             file,
-        )
+        ).toString()
     }
 
     private companion object {

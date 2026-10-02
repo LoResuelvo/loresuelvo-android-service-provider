@@ -95,3 +95,31 @@ sealed interface MediaUpload {
  * in the error message and the use case enforces it.
  */
 const val MAX_AUDIO_BYTES: Long = 10L * 1024L * 1024L
+
+const val MAX_IMAGE_BYTES: Long = 5L * 1024L * 1024L
+const val MAX_MESSAGE_IMAGES: Int = 3
+val SUPPORTED_IMAGE_MIME_TYPES: Set<String> = setOf("image/jpeg", "image/png", "image/webp")
+
+/** Checked at both local input and repository trust boundaries before any upload. */
+fun validateMediaUploads(media: List<MediaUpload>): SendMessageOutcome.Failure? {
+    if (media.isEmpty() || media.any { it.bytes.isEmpty() }) {
+        return SendMessageOutcome.Failure.Server(0, "Media payload is empty")
+    }
+    if (media.any { it is MediaUpload.Image } && media.any { it is MediaUpload.Audio }) {
+        return SendMessageOutcome.Failure.Server(0, "Mixed media is unsupported")
+    }
+    if (media.first() is MediaUpload.Image && media.size > MAX_MESSAGE_IMAGES) {
+        return SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.TooManyImages)
+    }
+    if (media.first() is MediaUpload.Audio && media.size != 1) {
+        return SendMessageOutcome.Failure.Server(0, "Audio messages accept exactly one clip")
+    }
+    media.forEach { attachment ->
+        if (attachment is MediaUpload.Image && attachment.mimeType !in SUPPORTED_IMAGE_MIME_TYPES) {
+            return SendMessageOutcome.Failure.InvalidMedia(SendMessageOutcome.Failure.MediaReason.UnsupportedFormat)
+        }
+        val limit = if (attachment is MediaUpload.Image) MAX_IMAGE_BYTES else MAX_AUDIO_BYTES
+        if (attachment.bytes.size.toLong() > limit) return SendMessageOutcome.Failure.PayloadTooLarge(limit)
+    }
+    return null
+}

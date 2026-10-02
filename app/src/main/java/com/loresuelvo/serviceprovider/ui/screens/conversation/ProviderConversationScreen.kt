@@ -113,6 +113,8 @@ fun ProviderConversationScreen(
     onPlayAudio: (String, String) -> Unit = { _, _ -> },
     onPauseAudio: () -> Unit = {},
     onDismissMediaError: () -> Unit = {},
+    onDiscardImage: (Int) -> Unit = { onClearStagedMedia() },
+    onReplaceImage: (Int) -> Unit = {},
     proposalSnackbarHostState: SnackbarHostState? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -125,6 +127,11 @@ fun ProviderConversationScreen(
     LaunchedEffect(mediaError) {
         val error = mediaError ?: return@LaunchedEffect
         val messageRes = when (error) {
+            is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.InvalidMedia -> when (error.reason) {
+                com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.UnsupportedFormat -> R.string.provider_image_format_error
+                com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.TooManyImages -> R.string.provider_image_count_error
+                com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.MediaReason.InvalidReplacement -> R.string.provider_image_replace_error
+            }
             is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Network ->
                 R.string.provider_conversation_media_error_network
             is com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome.Failure.Server ->
@@ -217,6 +224,9 @@ fun ProviderConversationScreen(
                 ChatInputBar(
                     promptInput = state.promptInput,
                     pendingMedia = state.pendingMedia,
+                    pendingImages = state.pendingImages,
+                    onDiscardImage = onDiscardImage,
+                    onReplaceImage = onReplaceImage,
                     canSend = (state.promptInput.isNotBlank() || state.pendingMedia != null) &&
                         state.canStartComposerOperation,
                     composerEnabled = state.composerAllowed,

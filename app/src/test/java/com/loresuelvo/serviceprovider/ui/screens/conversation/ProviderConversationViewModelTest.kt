@@ -57,6 +57,85 @@ class ProviderConversationViewModelTest {
     }
 
     @Test
+    fun delayed_plural_media_send_and_retry_run_once_and_retain_newer_draft() = runTest(scheduler) {
+        val repo = RecordingRepository(detailOutcome = detailOutcome(emptyList()),
+            sendOutcome = SendMessageOutcome.Failure.Server(503, "Post failed"), sendGate = CompletableDeferred())
+        val image = com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(byteArrayOf(1), "image/jpeg", "image")
+        val vm = viewModelWithMediaReader(repo, FakeMediaReader(mapOf("content://image" to image)))
+        advanceUntilIdle()
+        vm.onImagesPicked(List(3) { "content://image" })
+        advanceUntilIdle()
+        repeat(3) { vm.onSendClick() }
+        advanceUntilIdle()
+        assertEquals(1, repo.sendCalls)
+        assertEquals(3, (readyState(vm).items.single() as ChatListItem.LocalPending).pendingImages.size)
+        repo.sendGate!!.complete(Unit)
+        advanceUntilIdle()
+        val failed = readyState(vm).items.single() as ChatListItem.LocalFailed
+        assertEquals(3, failed.pendingImages.size)
+        repo.sendGate = CompletableDeferred()
+        repo.sendOutcome = SendMessageOutcome.Success(message(99, ConversationSender.Provider, ""))
+        vm.onPromptChange("Newer draft")
+        repeat(3) { vm.onRetrySendFailedBubble(failed.key) }
+        advanceUntilIdle()
+        assertEquals(2, repo.sendCalls)
+        repo.sendGate!!.complete(Unit)
+        advanceUntilIdle()
+        assertEquals("Newer draft", readyState(vm).promptInput)
+        assertTrue(readyState(vm).items.single() is ChatListItem.ServerConfirmed)
+    }
+
+    @Test
+    fun image_selection_preserves_order_rejects_fourth_replaces_and_discards_individually() = runTest(scheduler) {
+        val repo = RecordingRepository(detailOutcome = detailOutcome(emptyList()))
+        val images = (1..4).associate { "content://image/$it" to com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(byteArrayOf(it.toByte()), "image/jpeg", "$it.jpg") }
+        val vm = viewModelWithMediaReader(repo, FakeMediaReader(images))
+        advanceUntilIdle()
+        vm.onPromptChange("Keep draft")
+        vm.onImagesPicked(images.keys.take(3))
+        advanceUntilIdle()
+        val original = readyState(vm).pendingImages
+        assertEquals(listOf("1.jpg", "2.jpg", "3.jpg"), original.map { it.originalName })
+        assertEquals("Keep draft", readyState(vm).promptInput)
+        vm.onImagesPicked(listOf("content://image/4"))
+        assertEquals(original, readyState(vm).pendingImages)
+        assertNotNull(readyState(vm).transientMediaError)
+        vm.onImagesPicked(listOf("content://image/4"), replaceIndex = 1)
+        advanceUntilIdle()
+        vm.onDiscardImage(0)
+        assertEquals(listOf("4.jpg", "3.jpg"), readyState(vm).pendingImages.map { it.originalName })
+    }
+
+    @Test
+    fun pending_image_read_reserves_composer_and_cancellation_keeps_draft() = runTest(scheduler) {
+        val repo = RecordingRepository(detailOutcome = detailOutcome(emptyList()))
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        var reads = 0
+        val reader = object : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+            override suspend fun read(uri: String): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload {
+                reads++; gate.await()
+                return com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image(byteArrayOf(1), "image/jpeg", "one")
+            }
+        }
+        val vm = viewModelWithMediaReader(repo, reader)
+        advanceUntilIdle()
+        vm.onPromptChange("Draft")
+        vm.onImagesPicked(emptyList())
+        assertEquals("Draft", readyState(vm).promptInput)
+        vm.onImagesPicked(listOf("content://one"))
+        vm.onImagesPicked(listOf("content://two"))
+        vm.onSendClick()
+        scheduler.runCurrent()
+        assertEquals(1, reads)
+        assertTrue(readyState(vm).readingMedia)
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(1, readyState(vm).pendingImages.size)
+        assertEquals("Draft", readyState(vm).promptInput)
+        assertFalse(readyState(vm).sending)
+    }
+
+    @Test
     fun load_emits_Ready_with_server_confirmed_messages() = runTest(scheduler) {
         val repo = RecordingRepository()
         repo.detailOutcome = detailOutcome(
@@ -604,7 +683,7 @@ class ProviderConversationViewModelTest {
 
     private fun viewModelWithMediaReader(
         repo: RecordingRepository,
-        reader: com.loresuelvo.serviceprovider.data.media.MediaReader,
+        reader: com.loresuelvo.serviceprovider.domain.conversation.MediaReader,
     ): ProviderConversationViewModel = ProviderConversationViewModel(
         savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
         getConversationById = GetConversationByIdUseCase(repo),
@@ -648,18 +727,18 @@ class ProviderConversationViewModelTest {
         createdOnEpochMillis = id.toLong(),
     )
 
-    private object NotExercisedMediaReader : com.loresuelvo.serviceprovider.data.media.MediaReader {
-        override suspend fun read(uri: android.net.Uri): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
+    private object NotExercisedMediaReader : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+        override suspend fun read(uri: String): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
             error("MediaReader is not exercised by US-A VM tests")
     }
 
-    private object NotExercisedAudioRecorder : com.loresuelvo.serviceprovider.data.media.AudioRecorder {
+    private object NotExercisedAudioRecorder : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
         override fun start(): Result<Unit> = error("AudioRecorder is not exercised by US-A VM tests")
-        override fun stop(): Result<android.net.Uri> = error("AudioRecorder is not exercised by US-A VM tests")
+        override fun stop(): Result<String> = error("AudioRecorder is not exercised by US-A VM tests")
         override fun cancel() = Unit
     }
 
-    private object NotExercisedAudioPlayer : com.loresuelvo.serviceprovider.data.media.AudioPlayer {
+    private object NotExercisedAudioPlayer : com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer {
         override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
         override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
         override fun play(url: String, startPositionMillis: Long) = Unit
@@ -674,7 +753,7 @@ class ProviderConversationViewModelTest {
      * imperatively to simulate `MediaPlayer` callbacks without
      * pulling Robolectric into the picture.
      */
-    private class FakeAudioPlayer : com.loresuelvo.serviceprovider.data.media.AudioPlayer {
+    private class FakeAudioPlayer : com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer {
         override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
         override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
         var playCalls = mutableListOf<String>()
@@ -886,8 +965,8 @@ class ProviderConversationViewModelTest {
 
     private fun viewModelWithAudio(
         repo: RecordingRepository,
-        recorder: com.loresuelvo.serviceprovider.data.media.AudioRecorder,
-        player: com.loresuelvo.serviceprovider.data.media.AudioPlayer,
+        recorder: com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder,
+        player: com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer,
     ): ProviderConversationViewModel = ProviderConversationViewModel(
         savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
         getConversationById = GetConversationByIdUseCase(repo),
@@ -900,9 +979,9 @@ class ProviderConversationViewModelTest {
 
     private fun viewModelWithAudioAndReader(
         repo: RecordingRepository,
-        recorder: com.loresuelvo.serviceprovider.data.media.AudioRecorder,
-        player: com.loresuelvo.serviceprovider.data.media.AudioPlayer,
-        reader: com.loresuelvo.serviceprovider.data.media.MediaReader,
+        recorder: com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder,
+        player: com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer,
+        reader: com.loresuelvo.serviceprovider.domain.conversation.MediaReader,
     ): ProviderConversationViewModel = ProviderConversationViewModel(
         savedStateHandle = SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
         getConversationById = GetConversationByIdUseCase(repo),
@@ -913,7 +992,7 @@ class ProviderConversationViewModelTest {
         audioPlayer = player,
     ).also(ownedModels::add)
 
-    private class FakeAudioRecorder : com.loresuelvo.serviceprovider.data.media.AudioRecorder {
+    private class FakeAudioRecorder : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
         private var started = false
 
         override fun start(): Result<Unit> {
@@ -924,12 +1003,12 @@ class ProviderConversationViewModelTest {
             return Result.success(Unit)
         }
 
-        override fun stop(): Result<android.net.Uri> {
+        override fun stop(): Result<String> {
             if (!started) return Result.failure(
                 IllegalStateException("Audio recording is not in progress"),
             )
             started = false
-            return Result.success(OUTPUT_URI)
+            return Result.success(OUTPUT_URI.toString())
         }
 
         override fun cancel() {
@@ -942,32 +1021,32 @@ class ProviderConversationViewModelTest {
         }
     }
 
-    private object ThrowingAudioRecorder : com.loresuelvo.serviceprovider.data.media.AudioRecorder {
+    private object ThrowingAudioRecorder : com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
         override fun start(): Result<Unit> =
             Result.failure(IllegalStateException("Mic is busy"))
-        override fun stop(): Result<android.net.Uri> =
+        override fun stop(): Result<String> =
             Result.failure(IllegalStateException("Recording not started"))
         override fun cancel() = Unit
     }
 
     private class AudioMediaReader(
         private val audioForUri: Map<android.net.Uri, com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Audio>,
-    ) : com.loresuelvo.serviceprovider.data.media.MediaReader {
-        override suspend fun read(uri: android.net.Uri) =
-            audioForUri[uri]
+    ) : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+        override suspend fun read(uri: String) =
+            audioForUri[android.net.Uri.parse(uri)]
                 ?: error("AudioMediaReader has no entry for $uri")
     }
 
     private class FakeMediaReader(
         private val images: Map<String, com.loresuelvo.serviceprovider.domain.conversation.MediaUpload.Image>,
-    ) : com.loresuelvo.serviceprovider.data.media.MediaReader {
-        override suspend fun read(uri: android.net.Uri) =
+    ) : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+        override suspend fun read(uri: String) =
             images[uri.toString()]
                 ?: error("MediaReader has no entry for $uri")
     }
 
-    private object ThrowingMediaReader : com.loresuelvo.serviceprovider.data.media.MediaReader {
-        override suspend fun read(uri: android.net.Uri): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
+    private object ThrowingMediaReader : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+        override suspend fun read(uri: String): com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
             throw java.io.IOException("Could not open input stream for $uri")
     }
 

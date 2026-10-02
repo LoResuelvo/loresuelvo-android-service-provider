@@ -51,6 +51,7 @@ sealed interface ChatListItem {
         override val content: String,
         override val createdOnEpochMillis: Long,
         val pendingMedia: MediaUpload? = null,
+        val pendingImages: List<MediaUpload.Image> = listOfNotNull(pendingMedia as? MediaUpload.Image),
     ) : ChatListItem
 
     data class LocalFailed(
@@ -60,5 +61,6 @@ sealed interface ChatListItem {
         override val createdOnEpochMillis: Long,
         val pendingPrompt: String,
         val pendingMedia: MediaUpload? = null,
+        val pendingImages: List<MediaUpload.Image> = listOfNotNull(pendingMedia as? MediaUpload.Image),
     ) : ChatListItem
 }

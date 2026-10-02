@@ -33,6 +33,7 @@ data class ConversationMessage(
     val createdOnEpochMillis: Long,
     val kind: ConversationMessageKind = ConversationMessageKind.Text,
     val media: MediaReference? = null,
+    val images: List<MediaReference.Image> = listOfNotNull(media as? MediaReference.Image),
 )
 
 sealed interface ConversationMessageKind {

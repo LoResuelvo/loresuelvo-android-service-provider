@@ -28,9 +28,9 @@ import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.CreateServiceProposalUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.proposal.ValidateServiceProposalUseCase
-import com.loresuelvo.serviceprovider.data.media.MediaReader
-import com.loresuelvo.serviceprovider.data.media.AudioRecorder
-import com.loresuelvo.serviceprovider.data.media.AudioPlayer
+import com.loresuelvo.serviceprovider.domain.conversation.MediaReader
+import com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder
+import com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer
 import androidx.lifecycle.SavedStateHandle
 import android.net.Uri
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -506,10 +506,10 @@ class ViewServiceProposalsSteps {
             GetConversationByIdUseCase(repository),
             SendMessageUseCase(repository),
             SendMediaMessageUseCase(repository),
-            object : MediaReader { override suspend fun read(uri: Uri): MediaUpload = error("Not needed") },
+            object : MediaReader { override suspend fun read(uri: String): MediaUpload = error("Not needed") },
             object : AudioRecorder {
                 override fun start(): Result<Unit> = error("Not needed")
-                override fun stop(): Result<Uri> = error("Not needed")
+                override fun stop(): Result<String> = error("Not needed")
                 override fun cancel() = Unit
             },
             object : AudioPlayer {

@@ -1,24 +1,20 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
 import android.Manifest
-import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.navigation.NavHostController
-import com.loresuelvo.serviceprovider.data.media.MediaOutputUriFactory
+import com.loresuelvo.serviceprovider.domain.conversation.CameraOutput
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.SnackbarHostState
@@ -90,22 +86,6 @@ fun ProviderConversationRoute(
             MediaOutputUriFactoryEntryPoint::class.java,
         ).mediaOutputUriFactory()
     }
-    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
-
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-    ) { uri ->
-        if (uri != null) viewModel.onMediaPicked(uri)
-    }
-
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture(),
-    ) { success ->
-        val uri = pendingCameraUri
-        if (success && uri != null) viewModel.onMediaPicked(uri)
-        pendingCameraUri = null
-    }
-
     val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -121,6 +101,8 @@ fun ProviderConversationRoute(
         }
     }
 
+    ConversationImageLaunchers(conversationId, outputUriFactory, viewModel::canStartComposerOperation,
+        viewModel::onImagesPicked) { pickGallery, captureCamera, replaceImage ->
     ProviderConversationScreen(
         state = state,
         orderLinkState = orderLinkState,
@@ -142,18 +124,10 @@ fun ProviderConversationRoute(
         onCreateProposal = {
             (state as? ProviderConversationUiState.Ready)?.detail?.let(proposalViewModel::open)
         },
-        onPickFromGallery = {
-            if (viewModel.canStartComposerOperation()) galleryLauncher.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-            )
-        },
-        onCaptureFromCamera = {
-            if (viewModel.canStartComposerOperation()) {
-                val uri = outputUriFactory.createCameraOutputUri()
-                pendingCameraUri = uri
-                cameraLauncher.launch(uri)
-            }
-        },
+        onPickFromGallery = pickGallery,
+        onCaptureFromCamera = captureCamera,
+        onDiscardImage = viewModel::onDiscardImage,
+        onReplaceImage = replaceImage,
         onMicClick = {
             // Always re-request so the user sees the system prompt
             // if they previously denied with "don't ask again".
@@ -172,6 +146,8 @@ fun ProviderConversationRoute(
         onPauseAudio = viewModel::onPauseAudio,
         onClose = { navController.popBackStack() },
     )
+
+    }
 
     val sending = proposalState as? ProposalUiState.Sending
     val reviewing = (proposalState as? ProposalUiState.Reviewing) ?: sending?.reviewing
@@ -227,5 +203,5 @@ internal suspend fun handleProposalSuccess(
 @dagger.hilt.EntryPoint
 @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
 internal interface MediaOutputUriFactoryEntryPoint {
-    fun mediaOutputUriFactory(): MediaOutputUriFactory
+    fun mediaOutputUriFactory(): CameraOutput
 }

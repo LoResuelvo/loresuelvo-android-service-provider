@@ -61,6 +61,8 @@ sealed interface ProviderConversationUiState {
         val promptInput: String,
         val sending: Boolean,
         val pendingMedia: MediaUpload? = null,
+        val pendingImages: List<MediaUpload.Image> = listOfNotNull(pendingMedia as? MediaUpload.Image),
+        val readingMedia: Boolean = false,
         val transientMediaError: SendMessageOutcome.Failure? = null,
         val recordingState: RecordingState = RecordingState.Idle,
         val playingMediaKey: String? = null,
@@ -69,7 +71,7 @@ sealed interface ProviderConversationUiState {
     ) : ProviderConversationUiState {
         val composerAllowed: Boolean get() = detail.status == ConversationStatus.Active
         val canStartComposerOperation: Boolean
-            get() = composerAllowed && !sending && recordingState == RecordingState.Idle
+            get() = composerAllowed && !sending && !readingMedia && recordingState == RecordingState.Idle
     }
 }
 

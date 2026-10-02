@@ -106,7 +106,7 @@ class ConversationSendMediaApiContractTest {
         }
 
     @Test
-    fun send_image_maps_presign_Network_failure_to_Network_failure() = runTest {
+    fun send_image_maps_post_500_to_Server_failure() = runTest {
         server.enqueue(
             MockResponse().setResponseCode(500),
         )
@@ -123,7 +123,7 @@ class ConversationSendMediaApiContractTest {
         )
 
         assertTrue(
-            "expected Server failure (presign 500), got $outcome",
+            "expected Server failure (post 500), got $outcome",
             outcome is SendMessageOutcome.Failure.Server,
         )
         assertEquals(500, (outcome as SendMessageOutcome.Failure.Server).code)
@@ -148,6 +148,74 @@ class ConversationSendMediaApiContractTest {
             "expected ConversationNotFound, got $outcome",
             outcome is SendMessageOutcome.Failure.ConversationNotFound,
         )
+    }
+
+    @Test
+    fun three_images_confirm_in_order_before_one_post_and_map_every_image() = runTest {
+        val files = OrderedFiles()
+        server.enqueue(MockResponse().setResponseCode(201).setBody("""{
+            "id":99,"sender_role":"consumer","content":"","created_on":"2026-05-30T14:30:00Z",
+            "images":[
+                {"id":"confirmed-1","url":"https://example.test/1","mime_type":"image/jpeg","original_name":"1.jpg"},
+                {"id":"confirmed-2","url":"https://example.test/2","mime_type":"image/jpeg","original_name":"2.jpg"},
+                {"id":"confirmed-3","url":"https://example.test/3","mime_type":"image/jpeg","original_name":"3.jpg"}
+            ]} """))
+        val outcome = ApiConversationRepository(api(), files).sendMediaMessage(42, testImages()) as SendMessageOutcome.Success
+        assertEquals((1..3).flatMap { listOf("presign-$it", "put-$it", "confirm-$it") }, files.events)
+        assertEquals(listOf("confirmed-1", "confirmed-2", "confirmed-3"), outcome.message.images.map { it.id })
+        assertEquals(ConversationSender.Consumer, outcome.message.sender)
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/conversations/42/messages", request.path)
+        assertTrue(request.body.readUtf8().contains("\"image_file_ids\":[\"confirmed-1\",\"confirmed-2\",\"confirmed-3\"]"))
+    }
+
+    @Test
+    fun every_upload_stage_failure_stops_before_message_post() = runTest {
+        for (stage in listOf("presign", "put", "confirm")) {
+            val files = OrderedFiles(failStage = stage)
+            val outcome = ApiConversationRepository(api(), files).sendMediaMessage(42, testImages())
+            assertTrue(outcome is SendMessageOutcome.Failure.Network)
+            assertEquals(0, server.requestCount)
+            assertEquals(listOf("presign-1", "put-1", "confirm-1").takeWhile { it != "$stage-1" } + "$stage-1", files.events)
+        }
+    }
+
+    @Test
+    fun invalid_or_mixed_media_never_starts_presign_and_post_failure_is_typed() = runTest {
+        val files = OrderedFiles()
+        val repository = ApiConversationRepository(api(), files)
+        val invalid = listOf(testImages().take(1) + MediaUpload.Audio(byteArrayOf(1), "audio/webm", "a", 1000), List(4) { testImages().first() })
+        invalid.forEach { assertTrue(repository.sendMediaMessage(42, it) is SendMessageOutcome.Failure) }
+        assertTrue(files.events.isEmpty())
+        assertEquals(0, server.requestCount)
+        server.enqueue(MockResponse().setResponseCode(503))
+        val failure = repository.sendMediaMessage(42, testImages()) as SendMessageOutcome.Failure.Server
+        assertEquals(503, failure.code)
+        assertEquals(1, server.requestCount)
+    }
+
+    private fun testImages() = (1..3).map { MediaUpload.Image(byteArrayOf(it.toByte()), "image/jpeg", "$it.jpg") }
+
+    private class OrderedFiles(private val failStage: String? = null) : FileRepository {
+        val events = mutableListOf<String>()
+        private var index = 0
+        override suspend fun presign(request: PresignUploadRequest): PresignUploadOutcome {
+            index++
+            events += "presign-$index"
+            if (failStage == "presign") return PresignUploadOutcome.Failure.Network(java.io.IOException("offline"))
+            return PresignUploadOutcome.Success(PresignUploadResult("upload-$index", "key-$index", "https://example.test/$index", emptyMap()))
+        }
+        override suspend fun uploadBytes(uploadUrl: String, headers: Map<String, String>, bytes: ByteArray): UploadBytesOutcome {
+            events += "put-$index"
+            if (failStage == "put") return UploadBytesOutcome.Failure.Network(java.io.IOException("offline"))
+            return UploadBytesOutcome.Success
+        }
+        override suspend fun confirm(fileId: String, request: ConfirmUploadRequest): ConfirmUploadOutcome {
+            events += "confirm-$index"
+            if (failStage == "confirm") return ConfirmUploadOutcome.Failure.Network(java.io.IOException("offline"))
+            return ConfirmUploadOutcome.Success(ConfirmedFile(id = "confirmed-$index", mimeType = request.mimeType, originalName = "image"))
+        }
     }
 
     private fun repository(): ApiConversationRepository =

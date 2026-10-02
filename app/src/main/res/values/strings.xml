@@ -375,4 +375,12 @@
     <string name="provider_conversation_media_error_network">No pudimos leer el archivo. Reintentá.</string>
     <string name="provider_conversation_media_error_server">No pudimos procesar el archivo. Reintentá más tarde.</string>
     <string name="provider_conversation_media_error_size">El archivo es demasiado grande.</string>
+    <string name="provider_conversation_replace_image">Reemplazar imagen</string>
+    <string name="provider_image_reset">Restablecer zoom</string>
+    <string name="provider_image_zoom_out">Alejar</string>
+    <string name="provider_image_zoom_in">Acercar</string>
+    <string name="provider_image_open">Abrir imagen</string>
+    <string name="provider_image_format_error">Elegí imágenes JPEG, PNG o WebP.</string>
+    <string name="provider_image_count_error">Podés adjuntar hasta tres imágenes.</string>
+    <string name="provider_image_replace_error">Elegí una sola imagen para reemplazar la preview.</string>
 </resources>

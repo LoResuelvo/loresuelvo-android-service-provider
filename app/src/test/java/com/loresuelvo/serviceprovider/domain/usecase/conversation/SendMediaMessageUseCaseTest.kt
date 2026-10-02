@@ -13,6 +13,32 @@ import org.junit.Test
 class SendMediaMessageUseCaseTest {
 
     @Test
+    fun validates_all_images_formats_count_and_exact_size_before_repository() = runTest {
+        var calls = 0
+        val repository = object : ConversationRepository {
+            override suspend fun getConversations(): ConversationsOutcome = error("Not needed")
+            override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome = error("Not needed")
+            override suspend fun sendMessage(conversationId: Int, content: String): SendMessageOutcome = error("Not needed")
+            override suspend fun sendMediaMessage(conversationId: Int, media: List<MediaUpload>): SendMessageOutcome {
+                calls++
+                return SendMessageOutcome.Failure.Network(Exception("offline"))
+            }
+        }
+        val useCase = SendMediaMessageUseCase(repository)
+        fun image(size: Int = 1, mime: String = "image/jpeg") = MediaUpload.Image(ByteArray(size), mime, "image")
+        listOf(
+            listOf(image(), image(0)),
+            listOf(image(mime = "image/gif")),
+            List(4) { image() },
+            listOf(image(5 * 1024 * 1024 + 1)),
+            listOf(image(), MediaUpload.Audio(byteArrayOf(1), "audio/webm", "clip", 1000)),
+        ).forEach { assertTrue(useCase(42, it) is SendMessageOutcome.Failure) }
+        assertEquals(0, calls)
+        useCase(42, listOf(image(5 * 1024 * 1024), image(mime = "image/png"), image(mime = "image/webp")))
+        assertEquals(1, calls)
+    }
+
+    @Test
     fun rejects_an_empty_payload_with_a_typed_Server_failure() = runTest {
         val useCase = SendMediaMessageUseCase(
             object : ConversationRepository {

@@ -1,12 +1,12 @@
 package com.loresuelvo.serviceprovider.data.api
 
-import android.util.Log
 import com.loresuelvo.serviceprovider.data.api.dto.SendMessageRequestDto
 import com.loresuelvo.serviceprovider.data.api.mapper.toDomain
 import com.loresuelvo.serviceprovider.domain.api.ApiError
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationDetailOutcome
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationRepository
 import com.loresuelvo.serviceprovider.domain.conversation.ConversationsOutcome
+import com.loresuelvo.serviceprovider.domain.conversation.validateMediaUploads
 import com.loresuelvo.serviceprovider.domain.conversation.MediaUpload
 import com.loresuelvo.serviceprovider.domain.conversation.SendMessageOutcome
 import com.loresuelvo.serviceprovider.domain.file.ConfirmUploadOutcome
@@ -152,12 +152,7 @@ class ApiConversationRepository @Inject constructor(
         conversationId: Int,
         media: List<MediaUpload>,
     ): SendMessageOutcome {
-        if (media.isEmpty()) {
-            return SendMessageOutcome.Failure.Server(
-                code = 0,
-                message = "Media payload is empty",
-            )
-        }
+        validateMediaUploads(media)?.let { return it }
         return when (val first = media.first()) {
             is MediaUpload.Image -> sendImages(conversationId, media.map { it as MediaUpload.Image })
             is MediaUpload.Audio -> sendAudio(conversationId, media.map { it as MediaUpload.Audio })
@@ -169,13 +164,7 @@ class ApiConversationRepository @Inject constructor(
         images: List<MediaUpload.Image>,
     ): SendMessageOutcome {
         val fileIds = mutableListOf<String>()
-        for ((index, image) in images.withIndex()) {
-            Log.d(
-                TAG,
-                "sendImages[$index/${images.size}]: " +
-                    "mime=${image.mimeType} size=${image.bytes.size}B " +
-                    "originalName=${image.originalName}",
-            )
+        for (image in images) {
             val fileId = when (
                 val r = runPresignUploadConfirm(
                     originalName = image.originalName,
@@ -202,12 +191,6 @@ class ApiConversationRepository @Inject constructor(
         val audio = audios.singleOrNull() ?: return SendMessageOutcome.Failure.Server(
             code = 0,
             message = "Audio messages accept exactly one clip",
-        )
-        Log.d(
-            TAG,
-            "sendAudio start: conversationId=$conversationId " +
-                "mime=${audio.mimeType} size=${audio.bytes.size}B " +
-                "duration=${audio.durationMillis}ms",
         )
         val fileId = when (
             val r = runPresignUploadConfirm(
@@ -379,7 +362,4 @@ class ApiConversationRepository @Inject constructor(
         }
     }
 
-    private companion object {
-        const val TAG = "ApiConversationRepo"
-    }
 }

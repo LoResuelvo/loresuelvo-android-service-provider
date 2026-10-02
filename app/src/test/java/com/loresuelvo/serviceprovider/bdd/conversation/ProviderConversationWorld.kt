@@ -49,6 +49,8 @@ import org.junit.Assert.assertTrue
  *  - 05-PCC — retrying the failed send resolves the bubble.
  *  - 06-PCC — blank input keeps the send button disabled.
  */
+// Cohesion review: this existing world owns one real conversation model and its shared fake ports.
+// Image acceptance reuses that lifecycle; split audio fixtures if the final batch grows independent setup.
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class ProviderConversationWorld : AutoCloseable {
 
@@ -83,13 +85,14 @@ internal class ProviderConversationWorld : AutoCloseable {
      * runtime stubs), so the Steps class is responsible for the
      * Android-side construction.
      */
-    private lateinit var mediaPickerUri: android.net.Uri
-    private lateinit var stagedMediaUri: android.net.Uri
+    private var mediaPickerUri: String = "content://bdd/image"
+    private var stagedMediaUri: String = mediaPickerUri
     private var stagedMedia: MediaUpload.Image? = null
+    private var readFailure: java.io.IOException? = null
 
     fun seedMediaUri(uri: android.net.Uri) {
-        mediaPickerUri = uri
-        stagedMediaUri = uri
+        mediaPickerUri = uri.toString()
+        stagedMediaUri = uri.toString()
     }
 
     init {
@@ -185,7 +188,7 @@ internal class ProviderConversationWorld : AutoCloseable {
     }
 
     fun whenProviderPicksMedia() {
-        viewModel.onMediaPicked(stagedMediaUri)
+        viewModel.onImagesPicked(listOf(stagedMediaUri))
         scheduler.advanceUntilIdle()
     }
 
@@ -263,7 +266,7 @@ internal class ProviderConversationWorld : AutoCloseable {
     fun whenAttemptingRestrictedActions() {
         whenTyping("Blocked")
         viewModel.onSendClick()
-        viewModel.onMediaPicked(io.mockk.mockk())
+        viewModel.onImagesPicked(listOf("content://blocked"))
         viewModel.onStartRecording()
         viewModel.onRetrySendFailedBubble("missing")
         scheduler.advanceUntilIdle()
@@ -411,8 +414,7 @@ internal class ProviderConversationWorld : AutoCloseable {
         val confirmed = ready.items
             .filterIsInstance<ChatListItem.ServerConfirmed>()
             .lastOrNull { item ->
-                val m = item.message.media
-                m is MediaReference.Image && m.id == mediaId
+                item.message.images.any { it.id == mediaId }
             }
             ?: error(
                 "expected a ServerConfirmed image bubble with id $mediaId, got ${ready.items}",
@@ -486,6 +488,74 @@ internal class ProviderConversationWorld : AutoCloseable {
         Dispatchers.resetMain()
     }
 
+    fun givenReceivedImage() {
+        repository.detailOutcome = ConversationDetailOutcome.Success(detail(listOf(ConversationMessage(
+            99, ConversationSender.Provider, "", 10_000L,
+            media = MediaReference.Image("file-uuid-99", "https://example.test/image.jpg", "image/jpeg", "image.jpg"),
+        ))))
+    }
+
+    fun selectImages(count: Int, mime: String) {
+        givenMediaPickerReturns(byteArrayOf(1, 2, 3, 4), mime, "image")
+        viewModel.onImagesPicked(List(count) { "content://bdd/$it" })
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertImageCount(count: Int) {
+        val ready = readReadyStateOrNull()!!
+        assertEquals(count, ready.pendingImages.size)
+        assertTrue(ready.canStartComposerOperation)
+    }
+
+    fun replaceAndDiscard() {
+        givenMediaPickerReturns(byteArrayOf(9), "image/png", "replacement.png")
+        viewModel.onImagesPicked(listOf("content://bdd/replacement"), 1)
+        scheduler.advanceUntilIdle()
+        viewModel.onDiscardImage(0)
+    }
+
+    fun assertReplacement() {
+        val images = readReadyStateOrNull()!!.pendingImages
+        assertEquals(2, images.size)
+        assertEquals("replacement.png", images[0].originalName)
+        assertTrue(images[1].bytes.contentEquals(byteArrayOf(1, 2, 3, 4)))
+    }
+
+    fun selectInvalid(kind: String) {
+        if (kind == "ilegible") {
+            readFailure = java.io.IOException("Unreadable")
+        } else givenMediaPickerReturns(
+            when (kind) { "vacía" -> byteArrayOf(); "mayor a 5MiB" -> ByteArray(5 * 1024 * 1024 + 1); else -> byteArrayOf(1) },
+            if (kind == "no soportada") "image/gif" else "image/jpeg", "invalid",
+        )
+        whenProviderPicksMedia()
+    }
+
+    fun assertLocalFailure() {
+        assertNotNull(readReadyStateOrNull()!!.transientMediaError)
+        assertTrue(readReadyStateOrNull()!!.pendingImages.isEmpty())
+        thenNoSendWasFired()
+    }
+
+    fun assertFourthRejected() {
+        assertImageCount(3)
+        assertNotNull(readReadyStateOrNull()!!.transientMediaError)
+    }
+
+    fun selectExactLimit() {
+        givenMediaPickerReturns(ByteArray(5 * 1024 * 1024), "image/jpeg", "boundary.jpg")
+        whenProviderPicksMedia()
+    }
+
+    fun cancelSelection(prompt: String) {
+        whenTyping(prompt)
+        viewModel.onImagesPicked(emptyList())
+        scheduler.advanceUntilIdle()
+    }
+
+    fun assertDraft(prompt: String) = assertEquals(prompt, readReadyStateOrNull()!!.promptInput)
+    fun repeatedImageSend() { repeat(3) { viewModel.onSendClick() }; scheduler.advanceUntilIdle() }
+
     // --- helpers --------------------------------------------------------
 
     private fun newViewModel(): ProviderConversationViewModel = ProviderConversationViewModel(
@@ -493,7 +563,7 @@ internal class ProviderConversationWorld : AutoCloseable {
         getConversationById = GetConversationByIdUseCase(repository),
         sendMessage = SendMessageUseCase(repository),
         sendMediaMessage = SendMediaMessageUseCase(repository),
-        mediaReader = BddMediaReader(stagedMedia),
+        mediaReader = BddMediaReader { readFailure?.let { throw it }; stagedMedia },
         audioRecorder = NotExercisedAudioRecorder,
         audioPlayer = NotExercisedAudioPlayer,
     ).also(ownedModels::add)
@@ -512,30 +582,30 @@ internal class ProviderConversationWorld : AutoCloseable {
     )
 
     private object NotExercisedMediaReader :
-        com.loresuelvo.serviceprovider.data.media.MediaReader {
-        override suspend fun read(uri: android.net.Uri):
+        com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+        override suspend fun read(uri: String):
             com.loresuelvo.serviceprovider.domain.conversation.MediaUpload =
             error("MediaReader is not exercised by US-A BDD scenarios")
     }
 
     private class BddMediaReader(
-        private val media: MediaUpload.Image?,
-    ) : com.loresuelvo.serviceprovider.data.media.MediaReader {
-        override suspend fun read(uri: android.net.Uri): MediaUpload =
-            media ?: error("BDD media reader has no staged media for $uri")
+        private val media: () -> MediaUpload.Image?,
+    ) : com.loresuelvo.serviceprovider.domain.conversation.MediaReader {
+        override suspend fun read(uri: String): MediaUpload =
+            media() ?: error("BDD media reader has no staged media for $uri")
     }
 
     private object NotExercisedAudioRecorder :
-        com.loresuelvo.serviceprovider.data.media.AudioRecorder {
+        com.loresuelvo.serviceprovider.domain.conversation.AudioRecorder {
         override fun start(): Result<Unit> =
             error("AudioRecorder is not exercised by US-A BDD scenarios")
-        override fun stop(): Result<android.net.Uri> =
+        override fun stop(): Result<String> =
             error("AudioRecorder is not exercised by US-A BDD scenarios")
         override fun cancel() = Unit
     }
 
     private object NotExercisedAudioPlayer :
-        com.loresuelvo.serviceprovider.data.media.AudioPlayer {
+        com.loresuelvo.serviceprovider.domain.conversation.AudioPlayer {
         override val isPlaying = kotlinx.coroutines.flow.MutableStateFlow(false)
         override val currentPositionMillis = kotlinx.coroutines.flow.MutableStateFlow(0L)
         override fun play(url: String, startPositionMillis: Long) = Unit
@@ -602,7 +672,7 @@ internal class ProviderConversationWorld : AutoCloseable {
                         sender = ConversationSender.Provider,
                         content = outcome.message.content,
                         createdOnEpochMillis = outcome.message.createdOnEpochMillis,
-                        media = media.firstOrNull()?.let { upload ->
+                        images = media.filterIsInstance<MediaUpload.Image>().map { upload ->
                             MediaReference.Image(
                                 id = "file-uuid-${outcome.message.id.takeIf { it != 0 } ?: baseId}",
                                 url = "https://example.test/${upload.originalName}",

@@ -73,6 +73,9 @@ fun ChatInputBar(
     modifier: Modifier = Modifier,
     composerEnabled: Boolean = true,
     operationEnabled: Boolean = true,
+    pendingImages: List<MediaUpload.Image> = listOfNotNull(pendingMedia as? MediaUpload.Image),
+    onDiscardImage: (Int) -> Unit = { onClearStagedMedia() },
+    onReplaceImage: (Int) -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -93,6 +96,21 @@ fun ChatInputBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             when {
+                pendingImages.isNotEmpty() -> {
+                    AttachButton(onClick = onAttachClick, enabled = operationEnabled)
+                    androidx.compose.foundation.lazy.LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(pendingImages.size) { index ->
+                            val image = pendingImages[index]
+                            Column(Modifier.widthIn(min = 180.dp, max = 200.dp)) {
+                                MediaPreviewCard(image, { onDiscardImage(index) })
+                                androidx.compose.material3.TextButton(onClick = { onReplaceImage(index) }, enabled = operationEnabled,
+                                    modifier = Modifier.testTag("provider-image-replace-$index")) {
+                                    Text(stringResource(R.string.provider_conversation_replace_image))
+                                }
+                            }
+                        }
+                    }
+                }
                 pendingMedia != null -> {
                     AttachButton(onClick = onAttachClick, enabled = operationEnabled)
                     MediaPreviewCard(

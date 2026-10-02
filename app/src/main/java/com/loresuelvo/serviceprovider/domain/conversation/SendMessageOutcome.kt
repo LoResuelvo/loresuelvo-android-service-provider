@@ -23,6 +23,9 @@ sealed interface SendMessageOutcome {
 
     sealed interface Failure : SendMessageOutcome {
 
+        enum class MediaReason { UnsupportedFormat, TooManyImages, InvalidReplacement }
+        data class InvalidMedia(val reason: MediaReason) : Failure
+
         /** Transport-level failure: timeouts, DNS, connection refused. */
         data class Network(val cause: Throwable) : Failure
 
@@ -42,7 +45,7 @@ sealed interface SendMessageOutcome {
 
         /**
          * A media payload exceeded the client-side size limit
-         * (audio only; images are bounded by the picker). The
+         * (images or audio). The
          * use case rejects oversized payloads before the
          * network round-trip so the backend never sees them.
          *

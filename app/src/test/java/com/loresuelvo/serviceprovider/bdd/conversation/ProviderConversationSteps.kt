@@ -308,7 +308,7 @@ internal class ProviderConversationSteps {
         // is gallery-vs-camera agnostic; the route decides which
         // launcher fires and both end at `onMediaPicked(uri)`.
         world.givenMediaPickerReturns(
-            bytes = byteArrayOf(1, 2, 3),
+            bytes = byteArrayOf(1, 2, 3, 4),
             mimeType = "image/jpeg",
             originalName = "kitchen.jpg",
         )
@@ -327,6 +327,7 @@ internal class ProviderConversationSteps {
 
     @When("el prestador selecciona Enviar con una imagen adjunta")
     fun providerSendsWithImage() {
+        providerHasImagePending()
         world.whenTappingSend()
     }
 
@@ -367,10 +368,10 @@ internal class ProviderConversationSteps {
         )
     }
 
-    @Given("que el servidor confirma el upload y la persistencia del mensaje")
+    @When("el servidor confirma el upload y la persistencia del mensaje")
     fun serverConfirmsImageUpload() {
         world.givenSendWillSucceedWithMedia(serverMessageId = 99)
-        world.pauseSendOnGate()
+        world.releaseSendGate()
     }
 
     @Then("la pantalla agrega optimistamente una burbuja pendiente con la miniatura de esa imagen")
@@ -404,11 +405,13 @@ internal class ProviderConversationSteps {
 
     @Then("al fallar el upload la burbuja permanece con un indicador de fallo y un botón Reintentar")
     fun failedImageBubbleKeepsFailureIndicator() {
+        world.releaseSendGate()
         world.thenBubbleReplacedByLocalFailed(expectedContent = "")
     }
 
     @Then("al confirmarse la burbuja pendiente se reemplaza por la versión persistida con url de descarga")
     fun retryFailedImageBubbleReplacedByConfirmed() {
+        world.releaseSendGate()
         world.thenImageBubbleConfirmed(mediaId = "file-uuid-7")
     }
 
@@ -420,8 +423,71 @@ internal class ProviderConversationSteps {
             .filterIsInstance<ChatListItem.ServerConfirmed>()
             .singleOrNull()
             ?: error("expected a single ServerConfirmed bubble, got ${ready.items}")
-        val media = confirmed.message.media
+        val media = confirmed.message.images.firstOrNull()
             ?: error("expected the bubble to carry an image, got ${confirmed.message}")
         assertEquals("image/jpeg", media.mimeType)
     }
+    @Then("la pantalla muestra una preview de esa foto en la barra del input")
+    fun cameraPreview() = world.thenStagedMediaBytes(byteArrayOf(9, 9, 9))
+
+    @Given("que la API aceptará el upload de la imagen y el envío del mensaje")
+    fun imageUploadAccepted() { world.givenSendWillSucceedWithMedia(99); world.pauseSendOnGate() }
+
+    @When("el prestador selecciona Enviar")
+    fun sendImage() = world.whenTappingSend()
+
+    @Given("que el prestador está enviando una imagen JPEG")
+    fun imageSending() { providerHasImagePending(); imageUploadAccepted(); world.whenTappingSend() }
+
+    @Then("la pantalla agrega optimistamente una burbuja pendiente con la miniatura")
+    fun pendingThumbnail() = screenAddsOptimisticPendingImageBubble()
+
+    @Then("el upload se ejecuta una sola vez")
+    fun uploadOnce() = world.thenOnlyOneSendWasFired()
+
+    @Given("que la API devuelve el detalle de la conversación 42 con un mensaje confirmado del prestador que lleva una imagen JPEG adjunta")
+    fun receivedImage() = world.givenReceivedImage()
+
+    @When("el prestador selecciona {int} imágenes de tipo {string}")
+    fun selectImages(count: Int, mime: String) = world.selectImages(count, mime)
+
+    @Then("quedan {int} previews listas para enviar")
+    fun imageCount(count: Int) = world.assertImageCount(count)
+
+    @Given("que la conversación 42 tiene tres imágenes seleccionadas")
+    fun threeImages() { world.givenEmptyDetail(); world.whenOpeningConversation(); world.selectImages(3, "image/jpeg") }
+
+    @When("el prestador agrega una cuarta imagen")
+    fun fourthImage() = world.selectImages(1, "image/jpeg")
+
+    @Then("las tres previews originales permanecen y se informa el límite")
+    fun fourthRejected() = world.assertFourthRejected()
+
+    @When("el prestador reemplaza la segunda imagen y descarta la primera")
+    fun replaceAndDiscard() = world.replaceAndDiscard()
+
+    @Then("quedan la imagen reemplazada y la tercera imagen")
+    fun replacementRemains() = world.assertReplacement()
+
+    @When("el prestador selecciona una imagen {string}")
+    fun invalidImage(kind: String) = world.selectInvalid(kind)
+
+    @Then("se informa un fallo local sin iniciar un envío")
+    fun localFailure() = world.assertLocalFailure()
+
+    @When("el prestador selecciona una imagen de exactamente cinco MiB")
+    fun exactLimit() = world.selectExactLimit()
+
+    @Then("queda una preview lista para enviar")
+    fun onePreview() = world.assertImageCount(1)
+
+    @When("el prestador cancela la selección con el borrador {string}")
+    fun cancelSelection(prompt: String) = world.cancelSelection(prompt)
+
+    @Then("el borrador {string} permanece")
+    fun draftRemains(prompt: String) = world.assertDraft(prompt)
+
+    @When("el prestador selecciona Enviar imágenes varias veces")
+    fun repeatedImages() = world.repeatedImageSend()
+
 }

@@ -25,7 +25,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -148,7 +149,10 @@ private fun ConfirmedBubble(
             testTag = bubbleTestTag(item),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item.message.media?.let { media ->
+                item.message.images.forEachIndexed { index, image ->
+                    ChatImage(image, if (index == 0) item.message.id.toString() else "${item.message.id}-$index")
+                }
+                item.message.media?.takeUnless { it is MediaReference.Image }?.let { media ->
                     MediaRenderer(
                         media = media,
                         bubbleKey = item.message.id.toString(),
@@ -188,7 +192,10 @@ private fun PendingBubble(
             testTag = bubbleTestTag(item),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item.pendingMedia?.let { media ->
+                item.pendingImages.forEachIndexed { index, image ->
+                    ChatImage(image, "${item.key}-$index-local")
+                }
+                item.pendingMedia?.takeUnless { it is MediaUpload.Image }?.let { media ->
                     MediaRenderer(
                         media = media,
                         bubbleKey = item.key,
@@ -246,7 +253,10 @@ private fun FailedBubble(
             testTag = bubbleTestTag(item),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                item.pendingMedia?.let { media ->
+                item.pendingImages.forEachIndexed { index, image ->
+                    ChatImage(image, "${item.key}-$index-local")
+                }
+                item.pendingMedia?.takeUnless { it is MediaUpload.Image }?.let { media ->
                     MediaRenderer(
                         media = media,
                         bubbleKey = item.key,
@@ -353,6 +363,10 @@ private fun MediaRenderer(
 @Composable
 private fun ChatImage(model: Any, testTagSuffix: String) {
     val context = LocalContext.current
+    val image = model as? MediaReference.Image
+    val name = image?.originalName ?: (model as? MediaUpload.Image)?.originalName.orEmpty()
+    var viewing by rememberSaveable(image?.url) { mutableStateOf(false) }
+    if (viewing && image != null) FullScreenImageViewer(image.url, image.originalName) { viewing = false }
     val request = when (model) {
         is MediaReference.Image -> ImageRequest.Builder(context)
             .data(model.url)
@@ -370,12 +384,13 @@ private fun ChatImage(model: Any, testTagSuffix: String) {
             .size(width = 180.dp, height = 180.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(enabled = image != null, onClickLabel = stringResource(R.string.provider_image_open)) { viewing = true }
             .testTag(PROVIDER_MESSAGE_IMAGE_TAG_PREFIX + testTagSuffix),
         contentAlignment = Alignment.Center,
     ) {
         SubcomposeAsyncImage(
             model = request,
-            contentDescription = null,
+            contentDescription = name,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
             loading = {
