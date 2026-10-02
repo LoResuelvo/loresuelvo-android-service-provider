@@ -64,7 +64,10 @@ internal class ProfileCalendarFixture : AutoCloseable {
         PaymentAccountStatusOutcome.Success(PaymentAccountStatus(ConnectionStatus.PENDING))
     }
     val launches = mutableListOf<ProfileCalendarLaunch>()
-    val viewModel: ProviderProfileViewModel
+    var viewModel: ProviderProfileViewModel
+        private set
+    private lateinit var factory: ViewModelProvider.Factory
+    private var collector: kotlinx.coroutines.Job? = null
 
     init {
         Dispatchers.setMain(dispatcher)
@@ -92,14 +95,26 @@ internal class ProfileCalendarFixture : AutoCloseable {
             override suspend fun getStatus() = paymentResponse()
             override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome = error("Calendar must not authorize payments")
         }
-        viewModel = ViewModelProvider(store, object : ViewModelProvider.Factory {
+        factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T = ProviderProfileViewModel(
                 ResolveProviderEntryUseCase(sessionStore, account), GetPaymentAccountStatusUseCase(payment),
                 sessionStore, StartIdentityVerificationUseCase(identity), ConnectCalendarUseCase(calendar, sessionStore),
             ) as T
-        })[ProviderProfileViewModel::class.java]
-        scope.launch { viewModel.calendarLaunches.collect { launches += it } }
+        }
+        viewModel = ViewModelProvider(store, factory)[ProviderProfileViewModel::class.java]
+        collectLaunches()
+    }
+
+    private fun collectLaunches() {
+        val current = viewModel
+        collector = scope.launch { current.calendarLaunches.collect { launches += it } }
+    }
+    fun restart() {
+        collector?.cancel()
+        store.clear()
+        viewModel = ViewModelProvider(store, factory)[ProviderProfileViewModel::class.java]
+        collectLaunches()
     }
 
     fun drain() = scheduler.advanceUntilIdle()

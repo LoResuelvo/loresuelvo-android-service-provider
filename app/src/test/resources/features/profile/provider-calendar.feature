@@ -55,7 +55,6 @@ Característica: Vincular Google Calendar desde Perfil
     Entonces se mantiene un único intento con una indicación de carga
     Y no se duplica el consentimiento ni el envío del código
 
-  @wip
   Esquema del escenario: 57.6-CAL Recuperar Perfil sin repetir la autorización
     Dado que inicié una vinculación de Google Calendar
     Cuando "<regreso>"
@@ -68,7 +67,6 @@ Característica: Vincular Google Calendar desde Perfil
       | se recrea la pantalla          |
       | reinicio la aplicación         |
 
-  @wip
   Escenario: 57.7-CAL Descartar un resultado de una sesión anterior
     Dado que inicié el consentimiento de Google con una sesión que ya finalizó
     Cuando llega el resultado de ese consentimiento

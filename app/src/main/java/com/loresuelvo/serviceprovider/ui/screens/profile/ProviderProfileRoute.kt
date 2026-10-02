@@ -1,7 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.screens.profile
 
 import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.runtime.remember
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateOf
@@ -46,11 +48,15 @@ fun ProviderProfileRoute(
     val activity = LocalContext.current.findActivity()
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
-    var calendarAttempt by rememberSaveable { mutableStateOf<Long?>(null) }
-    val consentResult = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
-        val id = calendarAttempt ?: return@rememberLauncherForActivityResult
-        calendarAttempt = null
-        if (!viewModel.acceptsCalendarResolution(id)) return@rememberLauncherForActivityResult
+    var calendarAttempt by rememberSaveable { mutableStateOf<String?>(null) }
+    val registry = checkNotNull(LocalActivityResultRegistryOwner.current).activityResultRegistry
+    var consentResult by remember(activity, viewModel) { mutableStateOf<ActivityResultLauncher<IntentSenderRequest>?>(null) }
+    fun registerConsent(id: String): ActivityResultLauncher<IntentSenderRequest> = registry.register(
+        "profile-calendar-$id", ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        // The registry owns this immutable attempt, including delayed restored results.
+        if (!viewModel.acceptsCalendarResolution(id)) return@register
+        if (calendarAttempt == id) calendarAttempt = null
         viewModel.onCalendarResult(id, if (result.resultCode == Activity.RESULT_CANCELED) {
             CalendarConsentResult.Cancelled
         } else calendarLauncher.result(activity, result.data))
@@ -59,6 +65,8 @@ fun ProviderProfileRoute(
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.calendarLaunches.collect { launch ->
                 if (viewModel.claimCalendarLaunch(launch.attemptId)) {
+                    consentResult?.unregister()
+                    consentResult = registerConsent(launch.attemptId)
                     calendarLauncher.authorize(activity,
                         onResolution = { sender ->
                             scope.launch {
@@ -66,7 +74,7 @@ fun ProviderProfileRoute(
                                     if (viewModel.acceptsCalendarResolution(launch.attemptId)) {
                                         calendarAttempt = launch.attemptId
                                         try {
-                                            consentResult.launch(IntentSenderRequest.Builder(sender).build())
+                                            checkNotNull(consentResult).launch(IntentSenderRequest.Builder(sender).build())
                                         } catch (error: Exception) {
                                             calendarAttempt = null
                                             viewModel.onCalendarResult(launch.attemptId, CalendarConsentResult.Failed)
@@ -81,10 +89,16 @@ fun ProviderProfileRoute(
             }
         }
     }
-    DisposableEffect(activity, identityLauncher, viewModel) {
+    DisposableEffect(activity, identityLauncher, calendarLauncher, registry, viewModel) {
+        calendarAttempt?.let { id ->
+            if (viewModel.acceptsCalendarResolution(id)) consentResult = registerConsent(id)
+            else calendarAttempt = null
+        }
         identityLauncher.attach(activity)
         onDispose {
             identityLauncher.detach(activity)
+            consentResult?.unregister()
+            if (calendarAttempt == null) viewModel.abandonUnlaunchedCalendarConsent()
             if (!activity.isChangingConfigurations) viewModel.leaveProfile()
         }
     }

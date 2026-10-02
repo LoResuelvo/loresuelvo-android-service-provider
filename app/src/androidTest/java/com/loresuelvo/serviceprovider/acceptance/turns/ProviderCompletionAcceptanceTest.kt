@@ -139,7 +139,7 @@ class ProviderCompletionAcceptanceTest {
             override suspend fun getPendingJobRequests(): ActivityLoadOutcome<JobRequest> =
                 ActivityLoadOutcome.Success(emptyList())
             override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome = error("Unused")
-        }), GetScheduledWorkUseCase(orders) { 0L })
+        }), GetScheduledWorkUseCase(orders))
         var form by mutableStateOf(false)
         var turns by mutableStateOf(ProviderTurnsUiState.Ready(listOf(order)))
         var pickerResult = emptyList<Uri>()

@@ -19,6 +19,9 @@ import org.junit.Assert.assertTrue
 internal class ProviderCalendarSteps {
     private val world = ProfileCalendarFixture()
     private var failure: String? = null
+    private var expectedPosts = 0
+    private var callsBeforeReturn = 0
+    private var obsoleteAttempt = ""
 
     @Given("que soy un prestador autenticado con el calendario {string}")
     fun authenticatedCalendarHasStatus(status: String) = world.configureStatus(status)
@@ -174,6 +177,74 @@ internal class ProviderCalendarSteps {
         assertEquals(1, world.launches.size)
         assertEquals(1, world.postCalls)
         assertEquals("test-server-code", world.postedCode)
+    }
+
+    @Given("que inicié una vinculación de Google Calendar")
+    fun beginLifecycleConnection() { world.open(); world.start(); callsBeforeReturn = world.accountCalls }
+
+    @When("{string}")
+    fun returnToProfile(returnPath: String) {
+        world.provider = world.provider.copy(calendarConnectionStatus = CalendarConnectionStatus.Connected)
+        when (returnPath) {
+            "regreso del consentimiento" -> {
+                world.viewModel.onProfilePaused()
+                world.result(CalendarConsentResult.Authorized("consumed-code"))
+                world.open()
+                expectedPosts = 1
+            }
+            "reabro Perfil" -> { world.viewModel.leaveProfile(); world.open() }
+            "se recrea la pantalla" -> {
+                world.viewModel.onProfilePaused()
+                world.viewModel.abandonUnlaunchedCalendarConsent()
+                world.open()
+            }
+            "reinicio la aplicación" -> { world.restart(); world.open() }
+            else -> error("Unsupported Profile return: $returnPath")
+        }
+    }
+
+    @Then("Perfil recupera un estado coherente con la plataforma")
+    fun profileRecoversAuthoritativeState() {
+        assertEquals(CalendarConnectionStatus.Connected, world.status())
+        assertTrue(world.accountCalls > callsBeforeReturn)
+        assertFalse(world.viewModel.calendarState.value.loading)
+    }
+
+    @And("no abre automáticamente otro consentimiento ni reenvía un código consumido")
+    fun noConsentOrCodeReplay() {
+        assertEquals(1, world.launches.size)
+        assertEquals(expectedPosts, world.postCalls)
+        world.open()
+        assertEquals(expectedPosts, world.postCalls)
+        assertEquals(1, world.launches.size)
+    }
+
+    @Given("que inicié el consentimiento de Google con una sesión que ya finalizó")
+    fun consentBelongsToExpiredSession() {
+        world.open(); obsoleteAttempt = world.start().attemptId
+        world.sessionStore.clearSession(); world.drain()
+        assertEquals(ProviderProfileUiState.SessionExpired, world.viewModel.uiState.value)
+        world.provider = world.provider.copy(id = 99, name = "Otra", email = "other@example.com")
+        world.sessionStore.saveSession(com.loresuelvo.serviceprovider.domain.auth.AuthSession(
+            com.loresuelvo.serviceprovider.domain.auth.User("other", "other@example.com"), "other-token"))
+        world.open()
+    }
+
+    @When("llega el resultado de ese consentimiento")
+    fun oldConsentResultArrives() {
+        world.viewModel.onCalendarResult(obsoleteAttempt, CalendarConsentResult.Authorized("obsolete-code"))
+        world.drain()
+    }
+
+    @Then("no se vincula el calendario a otra sesión")
+    fun oldConsentCannotLinkNewSession() { assertEquals(0, world.postCalls) }
+
+    @And("no se muestra información privada de la sesión anterior")
+    fun oldPrivateProfileIsAbsent() {
+        val provider = (world.viewModel.uiState.value as ProviderProfileUiState.Ready).provider
+        assertEquals(99, provider.id)
+        assertEquals("other@example.com", provider.email)
+        assertEquals("Otra", provider.name)
     }
 
     @After

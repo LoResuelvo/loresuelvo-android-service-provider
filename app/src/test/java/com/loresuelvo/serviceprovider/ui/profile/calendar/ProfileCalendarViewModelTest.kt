@@ -16,6 +16,121 @@ import org.junit.Test
 
 class ProfileCalendarViewModelTest {
     @Test
+    fun interrupted_resolution_recovers_and_discards_delayed_result() = ProfileCalendarFixture().use { f ->
+        f.open(); val old = f.start()
+        f.viewModel.onProfilePaused()
+        f.viewModel.abandonUnlaunchedCalendarConsent()
+        assertFalse(f.viewModel.calendarState.value.loading)
+        f.open(); val current = f.start()
+        assertFalse(old.attemptId == current.attemptId)
+        f.viewModel.onCalendarResult(old.attemptId, CalendarConsentResult.Authorized("obsolete")); f.drain()
+        assertEquals(0, f.postCalls)
+        assertTrue(f.viewModel.calendarState.value.loading)
+        f.result(CalendarConsentResult.Cancelled)
+    }
+
+    @Test
+    fun rotation_during_consumed_post_does_not_cancel_or_replay() = ProfileCalendarFixture().use { f ->
+        f.open(); val launch = f.start()
+        val post = CompletableDeferred<ConnectCalendarOutcome>()
+        f.postResponse = { post.await() }
+        f.result(CalendarConsentResult.Authorized("code"))
+        f.viewModel.onProfilePaused(); f.viewModel.abandonUnlaunchedCalendarConsent(); f.open()
+        assertTrue(f.viewModel.calendarState.value.loading)
+        assertEquals(1, f.postCalls)
+        f.provider = f.provider.copy(calendarConnectionStatus = CalendarConnectionStatus.Connected)
+        post.complete(ConnectCalendarOutcome.Submitted); f.drain()
+        f.viewModel.onCalendarResult(launch.attemptId, CalendarConsentResult.Authorized("duplicate")); f.drain()
+        assertEquals(1, f.postCalls)
+        assertEquals(CalendarConnectionStatus.Connected, f.status())
+        assertFalse(f.viewModel.calendarState.value.loading)
+    }
+
+    @Test
+    fun new_view_model_rejects_saved_result_even_after_another_attempt_starts() = ProfileCalendarFixture().use { f ->
+        f.open(); val old = f.start()
+        f.restart(); f.open(); val fresh = f.start()
+        assertFalse(old.attemptId == fresh.attemptId)
+        f.viewModel.onCalendarResult(old.attemptId, CalendarConsentResult.Authorized("obsolete")); f.drain()
+        assertEquals(0, f.postCalls)
+        assertTrue(f.viewModel.calendarState.value.loading)
+        f.result(CalendarConsentResult.Cancelled)
+    }
+
+    @Test
+    fun restart_after_submission_queries_authoritative_state_without_reusing_code() = ProfileCalendarFixture().use { f ->
+        f.open(); f.start()
+        f.accountResponse = { CurrentAccountOutcome.Failure.Server(503) }
+        f.result(CalendarConsentResult.Authorized("consumed"))
+        assertTrue(f.viewModel.calendarState.value.confirmationRetry)
+        f.restart()
+        f.provider = f.provider.copy(calendarConnectionStatus = CalendarConnectionStatus.Connected)
+        f.accountResponse = { CurrentAccountOutcome.Success(f.provider) }
+        f.open()
+        assertEquals(CalendarConnectionStatus.Connected, f.status())
+        assertEquals(1, f.postCalls)
+        assertEquals(1, f.launches.size)
+        assertFalse(f.viewModel.calendarState.value.confirmationRetry)
+    }
+
+    @Test
+    fun noncancellable_refresh_from_previous_visit_cannot_overwrite_reentry() = ProfileCalendarFixture().use { f ->
+        f.open()
+        val old = f.provider
+        val response = CompletableDeferred<CurrentAccountOutcome>()
+        f.accountResponse = { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { response.await() } }
+        f.viewModel.refresh(); f.drain()
+        f.viewModel.leaveProfile()
+        f.provider = old.copy(calendarConnectionStatus = CalendarConnectionStatus.Connected)
+        f.accountResponse = { CurrentAccountOutcome.Success(f.provider) }
+        f.open()
+        response.complete(CurrentAccountOutcome.Success(old)); f.drain()
+        assertEquals(CalendarConnectionStatus.Connected, f.status())
+        assertEquals(0, f.postCalls)
+    }
+
+    @Test
+    fun noncancellable_old_refresh_cannot_overwrite_new_session_profile() = ProfileCalendarFixture().use { f ->
+        f.open()
+        val old = f.provider
+        val response = CompletableDeferred<CurrentAccountOutcome>()
+        f.accountResponse = { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { response.await() } }
+        f.viewModel.refresh(); f.drain()
+        f.sessionStore.saveSession(AuthSession(User("other", "other@example.com"), "other-token")); f.drain()
+        assertEquals(ProviderProfileUiState.SessionExpired, f.viewModel.uiState.value)
+        f.provider = old.copy(id = 99, name = "New", email = "other@example.com")
+        f.accountResponse = { CurrentAccountOutcome.Success(f.provider) }
+        f.open()
+        assertEquals(99, (f.viewModel.uiState.value as ProviderProfileUiState.Ready).provider.id)
+        response.complete(CurrentAccountOutcome.Success(old)); f.drain()
+        assertEquals(99, (f.viewModel.uiState.value as ProviderProfileUiState.Ready).provider.id)
+    }
+
+    @Test
+    fun late_confirmation_and_payment_cannot_replace_new_private_profile() = ProfileCalendarFixture().use { f ->
+        val payment = CompletableDeferred<com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome>()
+        f.paymentResponse = { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { payment.await() } }
+        f.open(); f.start()
+        val old = f.provider
+        val confirmation = CompletableDeferred<CurrentAccountOutcome>()
+        f.accountResponse = { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { confirmation.await() } }
+        f.result(CalendarConsentResult.Authorized("consumed"))
+        f.sessionStore.saveSession(AuthSession(User("other", "other@example.com"), "other-token")); f.drain()
+        f.provider = old.copy(id = 99, email = "other@example.com")
+        f.accountResponse = { CurrentAccountOutcome.Success(f.provider) }
+        f.paymentResponse = { com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome.Success(
+            com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus(com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus.PENDING)) }
+        f.open()
+        confirmation.complete(CurrentAccountOutcome.Success(old))
+        payment.complete(com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome.Failure.Unauthorized)
+        f.drain()
+        assertEquals(99, (f.viewModel.uiState.value as ProviderProfileUiState.Ready).provider.id)
+        assertEquals("other", f.sessionStore.getSession()?.user?.id)
+        assertEquals(1, f.postCalls)
+        assertFalse(f.viewModel.calendarState.value.loading)
+    }
+
+    @Test
     fun post_does_not_confirm_connected_until_get_finishes() = ProfileCalendarFixture().use { f ->
         f.open(); f.start()
         val response = CompletableDeferred<CurrentAccountOutcome>()

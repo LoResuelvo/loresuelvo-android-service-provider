@@ -43,4 +43,4 @@ data class ProfileCalendarUiState(
 
 enum class CalendarFeedback { Cancelled, Denied, ConsentFailed, SubmissionFailed, CodeRejected, ConfirmationFailed }
 
-data class ProfileCalendarLaunch(val attemptId: Long)
+data class ProfileCalendarLaunch(val attemptId: String)

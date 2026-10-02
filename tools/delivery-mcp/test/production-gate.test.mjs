@@ -236,7 +236,12 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
   const policy = await loadDeliveryPolicy({ repoRoot: ROOT });
   const features = policy.analysis.dependencyImpact.features;
   const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore','pipe','pipe'] }).trim();
-  const before = readFeatureGateTree(ROOT, git('rev-parse', 'HEAD'));
+  // The index is the actual candidate tree during preparation and HEAD in clean CI.
+  const realTree = readFeatureGateTree(ROOT, git('write-tree'));
+  // This graph fixture exercises the analyzer's supported source sets only. Keep
+  // the complete candidate separately to prove unsupported sets still fail closed.
+  const before = new Map([...realTree].filter(([file]) =>
+    !/^app\/src\/(?!main\/|test\/|androidTest\/).*\.kt$/.test(file)));
   // Exercise graph decisions independently of previously committed build-topology drift.
   const sourceTopology = Object.fromEntries(Object.keys(policy.analysis.dependencyImpact.sourceTopology)
     .map(file => [file, crypto.createHash('sha256').update(before.get(file)).digest('hex')]));
@@ -309,6 +314,13 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
     return (byFile.get(key) || []).map(fact => ({ ...fact, id: id + fact.id.slice(key.length) }));
   });
   const policyTopology = policy.analysis.dependencyImpact.sourceTopology;
+  if (before.size !== realTree.size) {
+    const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenarios[0], features,
+      before: realTree, after: realTree, sourceTopology, parse });
+    assert.equal(impact.reason, 'ANDROID_UNSUPPORTED_SOURCE_TOPOLOGY');
+    assert.equal(selectGate({ policy, snapshot: { stagedFiles: scenarios[0].files }, intent: 'close_scenario',
+      featureFile: scenarios[0].featureFile, dependencyImpact: impact }).gate.id, 'C');
+  }
   if (Object.keys(sourceTopology).some(file => sourceTopology[file] !== policyTopology[file])) {
     const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenarios[0], features,
       sourceTopology: policyTopology, parse });
