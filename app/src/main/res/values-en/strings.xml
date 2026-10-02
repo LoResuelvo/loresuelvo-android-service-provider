@@ -377,4 +377,5 @@
     <string name="provider_audio_cancel">Cancel recording</string>
     <string name="provider_audio_seek">Seek audio</string>
     <string name="provider_audio_format_error">Choose a WebM/Opus audio clip.</string>
+    <string name="provider_conversation_new_message">New message</string>
 </resources>

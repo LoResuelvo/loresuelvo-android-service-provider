@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.bdd.messaging.realtime
 import com.loresuelvo.serviceprovider.domain.conversation.MediaReference
 import com.loresuelvo.serviceprovider.ui.realtime.RealtimeChatFixture
 import com.loresuelvo.serviceprovider.ui.screens.conversation.ProviderConversationUiState
+import com.loresuelvo.serviceprovider.ui.screens.conversation.ConversationReadingPosition
 import io.cucumber.java.After
 import io.cucumber.java.Before
 import io.cucumber.java.es.*
@@ -10,6 +11,12 @@ import org.junit.Assert.*
 
 class ProviderRealtimeChatSteps {
     private lateinit var world: RealtimeChatFixture
+    private var reading = ConversationReadingPosition()
+    private var atBottom = false
+    private var followed = false
+    private var originalItems = emptyList<String>()
+    private var draft = ""
+    private var selectedTarget: String? = null
     private var beforeForeignMessage: ProviderConversationUiState? = null
 
     @Before("@batch1 or @batch2 or @batch3") fun setUp() { world = RealtimeChatFixture() }
@@ -38,6 +45,73 @@ class ProviderRealtimeChatSteps {
 
     @Cuando("Ana me envía información adicional por el chat")
     fun additionalInformation() { world.receive() }
+
+    @Dado("que estoy leyendo el último mensaje de Ana")
+    fun readingLatest() { arrangeReading(true) }
+
+    @Dado("que estoy leyendo mensajes anteriores de Ana")
+    fun readingHistory() { arrangeReading(false) }
+
+    private fun arrangeReading(bottom: Boolean) {
+        world.open()
+        reading = ConversationReadingPosition()
+        reading.onItems(world.ready().items, true, false)
+        atBottom = bottom
+        originalItems = world.ready().items.map { it.key }
+    }
+
+    @Dado("tengo una respuesta escrita sin enviar")
+    fun unsentReply() {
+        draft = "A reply still being written"
+        world.conversation.onPromptChange(draft)
+    }
+
+    @Cuando("Ana envía un nuevo mensaje")
+    fun arrivalWhileReading() {
+        world.receive()
+        followed = reading.onItems(world.ready().items, atBottom, false)
+    }
+
+    @Entonces("veo el mensaje nuevo al final de la conversación")
+    fun latestAtEnd() { assertEquals(world.incoming, world.serverMessages().last()) }
+
+    @Entonces("no necesito desplazarme para encontrarlo")
+    fun followsLatest() { assertTrue(followed); assertFalse(reading.hasNewMessage) }
+
+    @Entonces("conservo mi posición de lectura y mi respuesta escrita")
+    fun preservesReadingAndDraft() {
+        assertFalse(followed)
+        assertEquals(originalItems, world.ready().items.take(originalItems.size).map { it.key })
+        assertEquals(draft, world.ready().promptInput)
+    }
+
+    @Entonces("veo el aviso Nuevo mensaje")
+    fun newMessageNotice() { assertTrue(reading.hasNewMessage) }
+
+    @Dado("veo el aviso Nuevo mensaje porque recibí dos mensajes más")
+    fun twoArrivals() {
+        arrivalWhileReading()
+        world.receive(id = 4, time = 40)
+        followed = reading.onItems(world.ready().items, atBottom, false)
+        assertTrue(reading.hasNewMessage)
+    }
+
+    @Cuando("selecciono Nuevo mensaje")
+    fun selectNotice() {
+        selectedTarget = reading.selectNewMessages(world.ready().items)?.let { world.ready().items[it].key }
+    }
+
+    @Entonces("veo el mensaje más reciente de Ana")
+    fun newestMessage() {
+        assertEquals(world.incoming!!.id.toString(), selectedTarget)
+        assertEquals(world.incoming, world.serverMessages().last())
+    }
+
+    @Entonces("el aviso desaparece")
+    fun noticeGone() { assertFalse(reading.hasNewMessage) }
+
+    @Entonces("los dos mensajes recibidos permanecen en la conversación")
+    fun bothArrivalsRemain() { assertEquals(listOf(1, 2, 3, 4), world.serverMessages().map { it.id }) }
 
     @Entonces("veo el nuevo mensaje de Ana sin salir de la conversación")
     fun seeNewMessage() { assertTrue(world.serverMessages().contains(world.incoming)); assertEquals(42, world.ready().detail.id) }

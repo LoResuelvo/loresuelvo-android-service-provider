@@ -37,14 +37,14 @@ Característica: Mantener actualizada la conversación con el consumidor
     Y se indica que debo aceptar la solicitud para responder
     Y no puedo enviar mensajes ni adjuntos hasta aceptarla
 
-  @wip @batch2
+  @batch2
   Escenario: 04-PRC Seguir la conversación desde su último mensaje
     Dado que estoy leyendo el último mensaje de Ana
     Cuando Ana envía un nuevo mensaje
     Entonces veo el mensaje nuevo al final de la conversación
     Y no necesito desplazarme para encontrarlo
 
-  @wip @batch2
+  @batch2
   Escenario: 05-PRC Continuar leyendo mensajes anteriores sin interrupciones
     Dado que estoy leyendo mensajes anteriores de Ana
     Y tengo una respuesta escrita sin enviar
@@ -52,7 +52,7 @@ Característica: Mantener actualizada la conversación con el consumidor
     Entonces conservo mi posición de lectura y mi respuesta escrita
     Y veo el aviso Nuevo mensaje
 
-  @wip @batch2
+  @batch2
   Escenario: 06-PRC Ir a los mensajes nuevos cuando termino de leer
     Dado que estoy leyendo mensajes anteriores de Ana
     Y veo el aviso Nuevo mensaje porque recibí dos mensajes más

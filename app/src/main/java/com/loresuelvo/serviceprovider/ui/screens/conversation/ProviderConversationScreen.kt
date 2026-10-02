@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,6 +33,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -75,8 +83,7 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.components.Message
  *    counterpart name in the top bar, a reverse-stacked
  *    [LazyColumn] of bubbles, the [ChatInputBar] at the bottom,
  *    and a [MediaAttachSheet] modal triggered by the attach
- *    button. Newly arrived bubbles auto-scroll into view so the
- *    user doesn't have to chase the conversation on every send.
+ *    button. Incoming messages follow only while reading at the end.
  *
  * US-B additions:
  *  - The input bar swaps the text field for a [MediaPreviewCard]
@@ -358,24 +365,67 @@ private fun ReadyState(
     listState: androidx.compose.foundation.lazy.LazyListState,
     contentPadding: PaddingValues,
 ) {
-    LaunchedEffect(state.items.size) {
-        if (state.items.isNotEmpty()) {
-            listState.animateScrollToItem(state.items.lastIndex)
+    val reading = remember(state.detail.id) { ConversationReadingPosition() }
+    val keys = state.items.map { it.key }
+    val currentItems by rememberUpdatedState(state.items)
+    // Read the old layout during composition, before LazyColumn measures the new items.
+    // Do not let a later layout/snapshotFlow overwrite the insertion's reading intent.
+    val beforeInsertion = remember(state.detail.id, keys) {
+        (!listState.canScrollForward) to listState.isScrollInProgress
+    }
+    var notice by remember(state.detail.id) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(state.detail.id, keys) {
+        if (reading.onItems(state.items, beforeInsertion.first, beforeInsertion.second)) {
+            listState.scrollToLatest(state.items.lastIndex)
+        }
+        notice = reading.hasNewMessage
+    }
+    LaunchedEffect(state.detail.id, listState, keys) {
+        snapshotFlow {
+            listState.layoutInfo.totalItemsCount == keys.size &&
+                !listState.canScrollForward && !listState.isScrollInProgress
+        }.collect { atBottom ->
+            if (atBottom) {
+                reading.reachedBottom()
+                notice = false
+            }
         }
     }
-    MessagesList(
-        items = state.items,
-        retryEnabled = state.canStartComposerOperation,
-        onRetrySendFailedBubble = onRetrySendFailedBubble,
-        onPlayAudio = onPlayAudio,
-        onPauseAudio = onPauseAudio,
-        onSeekAudio = onSeekAudio,
-        playingMediaKey = state.playingMediaKey,
-        playingPositionMillis = state.playingPositionMillis,
-        isPlaying = state.isPlaying,
-        listState = listState,
-        contentPadding = contentPadding,
-    )
+    Box(Modifier.fillMaxSize().padding(contentPadding)) {
+        MessagesList(
+            items = state.items,
+            retryEnabled = state.canStartComposerOperation,
+            onRetrySendFailedBubble = onRetrySendFailedBubble,
+            onPlayAudio = onPlayAudio,
+            onPauseAudio = onPauseAudio,
+            onSeekAudio = onSeekAudio,
+            playingMediaKey = state.playingMediaKey,
+            playingPositionMillis = state.playingPositionMillis,
+            isPlaying = state.isPlaying,
+            listState = listState,
+            contentPadding = PaddingValues(),
+        )
+        if (notice) {
+            Button(
+                onClick = {
+                    scope.launch {
+                        reading.selectNewMessages(currentItems)?.let { listState.scrollToLatest(it) }
+                        notice = false
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp)
+                    .heightIn(min = 48.dp).testTag(PROVIDER_CONVERSATION_NEW_MESSAGE_TAG)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+            ) { Text(stringResource(R.string.provider_conversation_new_message)) }
+        }
+    }
+}
+
+private suspend fun androidx.compose.foundation.lazy.LazyListState.scrollToLatest(index: Int) {
+    scrollToItem(index)
+    // A last bubble taller than the viewport must show its end, not only its top.
+    scrollBy((layoutInfo.visibleItemsInfo.lastOrNull()?.size ?: 0).toFloat() + layoutInfo.afterContentPadding)
 }
 
 @Composable
@@ -437,3 +487,5 @@ const val PROVIDER_CONVERSATION_RETRY_LOAD_TAG: String = "provider-conversation-
 const val PROVIDER_CONVERSATION_READY_TAG: String = "provider-conversation-ready"
 const val PROVIDER_CONVERSATION_MESSAGES_TAG: String = "provider-conversation-messages"
 const val PROVIDER_CONVERSATION_BACK_TAG: String = "provider-conversation-back"
+
+const val PROVIDER_CONVERSATION_NEW_MESSAGE_TAG: String = "provider-conversation-new-message"
