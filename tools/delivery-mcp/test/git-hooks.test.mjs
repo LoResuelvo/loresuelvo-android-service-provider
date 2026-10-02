@@ -165,6 +165,20 @@ test("commit-msg validates a file and rejects the legacy [US-33] spelling", asyn
   assert.equal(Object.hasOwn(staleContext, "contextValidation"), false);
 });
 
+test("commit-msg rejects the failed multi-story message and an empty verification trailer", async t => {
+  const root = await createTempRepo(t);
+  const messagePath = path.join(root, "verification-message.txt");
+  for (const message of [
+    "fix[50.1]: complete chat audio recording and playback\n\nDelivery-Verify-US: 50.1\nDelivery-Verify-US: 47\n",
+    "fix[50.1]: validate final verification trailers before commit\n\nDelivery-Verify-US:\n",
+  ]) {
+    await fs.writeFile(messagePath, message);
+    const result = await runCommitMsgHook({ repoRoot: root, messageFilePath: messagePath });
+    assert.equal(result.passed, false);
+    assert.equal(result.reason, "INVALID_VERIFICATION_TRAILER");
+  }
+});
+
 test("post-commit remains advisory and does not mutate evidence", async (t) => {
   const root = await createTempRepo(t);
   await fs.writeFile(path.join(root, "manual.txt"), "human change\n", "utf8");

@@ -111,6 +111,25 @@ export function validateCommitMessage(rawMessage) {
     };
   }
 
+  const verificationTrailers = execFileSync("git", ["interpret-trailers", "--parse"], {
+    input: rawMessage, encoding: "utf8",
+  }).split(/\r?\n/).filter(line => /^Delivery-Verify-US:/i.test(line));
+  if (verificationTrailers.length > 0) {
+    const verificationUs = verificationTrailers[0].slice(verificationTrailers[0].indexOf(":") + 1).trim();
+    if (verificationTrailers.length !== 1 || !/^[0-9]+(?:\.[0-9]+)?$/.test(verificationUs)) {
+      return {
+        valid: false, reason: "INVALID_VERIFICATION_TRAILER",
+        message: "Delivery-Verify-US must contain exactly one numeric User Story ID",
+      };
+    }
+    if (verificationUs !== usId || rawType !== type) {
+      return {
+        valid: false, reason: "VERIFICATION_US_MISMATCH",
+        message: "Delivery-Verify-US must match the User Story in a lowercase-type commit subject",
+      };
+    }
+  }
+
   return { valid: true, type, usId: usId || null, description };
 }
 

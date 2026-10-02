@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { validateCommitMessage } from "../lib/git-hooks.mjs";
 
 test("CI executes devices only for a final commit trailer matching its User Story", async t => {
   const workflow = await fs.readFile(new URL("../../../.github/workflows/ci.yml", import.meta.url), "utf8");
@@ -22,6 +23,10 @@ test("CI executes devices only for a final commit trailer matching its User Stor
   const output = path.join(root, "output");
   const cases = [
     ["feat[54]: integrate proposal navigation", "false"],
+    ["chore: maintain delivery tooling", "false"],
+    ["Fix[54]: preserve ordinary commit compatibility", "false"],
+    ["Fix[54]: request final verification\n\nDelivery-Verify-US: 54", null],
+    ["fix[54]: document trailer usage\n\nDelivery-Verify-US: 55\nThis is explanatory body text, not a trailer block.", "false"],
     ["test[54]: cover proposal navigation\n\nDelivery-Verify-US: 54", "true"],
     ["fix[54]: repair final proposal verification\n\nDelivery-Verify-US: 54", "true"],
     ["test[54.1]: cover proposal detail\n\nDelivery-Verify-US: 54.1", "true"],
@@ -29,8 +34,11 @@ test("CI executes devices only for a final commit trailer matching its User Stor
     ["test[55]: mention [54]: without changing the story\n\nDelivery-Verify-US: 54", null],
     ["test[54]: cover proposal navigation\n\nDelivery-Verify-US: 54\nDelivery-Verify-US: 54", null],
     ["test[54]: cover proposal navigation\n\nDelivery-Verify-US: invalid", null],
+    ["fix[50.1]: complete chat audio recording and playback\n\nDelivery-Verify-US: 50.1\nDelivery-Verify-US: 47", null],
+    ["chore: maintain delivery tooling\n\nDelivery-Verify-US: 54", null],
   ];
   for (const [message, expected] of cases) {
+    assert.equal(validateCommitMessage(message).valid, expected !== null, message);
     git(["commit", "--allow-empty", "-m", message]);
     await fs.writeFile(output, "");
     const execute = () => execFileSync("bash", ["-e", "-o", "pipefail", "-c", script], {
