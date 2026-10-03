@@ -19,7 +19,7 @@ import com.loresuelvo.serviceprovider.ui.statistics.ActivityFilters
 @Composable
 internal fun ActivityPeriodControls(filters: ActivityFilters, onEditDates: (String, String) -> Unit,
     onApplyDates: () -> Unit, onGranularity: (ActivityGranularity) -> Unit, onComparison: (Boolean) -> Unit,
-    expanded: Boolean, onExpansion: (Boolean) -> Unit) {
+    expanded: Boolean, showEvolutionOptions: Boolean = true, onExpansion: (Boolean) -> Unit) {
     val comparisonLabel = stringResource(R.string.activity_compare_previous)
     val expansion = stringResource(if (expanded) R.string.activity_expanded else R.string.activity_collapsed)
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
@@ -45,24 +45,26 @@ internal fun ActivityPeriodControls(filters: ActivityFilters, onEditDates: (Stri
                     Text(stringResource(message), color = MaterialTheme.colorScheme.error)
                 }
                 Button(onClick = onApplyDates) { Text(stringResource(R.string.activity_apply_period)) }
-                Text(stringResource(R.string.activity_group_by))
-                // Wrapping controls retain their labels at large font sizes and narrow widths.
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActivityGranularity.entries.forEach { granularity ->
-                        FilterChip(selected = filters.query.granularity == granularity,
-                            onClick = { onGranularity(granularity) }, label = {
-                                Text(stringResource(when (granularity) {
-                                    ActivityGranularity.DAY -> R.string.activity_day
-                                    ActivityGranularity.WEEK -> R.string.activity_week
-                                    ActivityGranularity.MONTH -> R.string.activity_month
-                                }))
-                            }, modifier = Modifier.heightIn(min = 48.dp))
+                if (showEvolutionOptions) {
+                    Text(stringResource(R.string.activity_group_by))
+                    // Wrapping controls retain their labels at large font sizes and narrow widths.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ActivityGranularity.entries.forEach { granularity ->
+                            FilterChip(selected = filters.query.granularity == granularity,
+                                onClick = { onGranularity(granularity) }, label = {
+                                    Text(stringResource(when (granularity) {
+                                        ActivityGranularity.DAY -> R.string.activity_day
+                                        ActivityGranularity.WEEK -> R.string.activity_week
+                                        ActivityGranularity.MONTH -> R.string.activity_month
+                                    }))
+                                }, modifier = Modifier.heightIn(min = 48.dp))
+                        }
                     }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Switch(checked = filters.query.comparePrevious, onCheckedChange = onComparison,
-                        modifier = Modifier.semantics { contentDescription = comparisonLabel })
-                    Text(stringResource(R.string.activity_compare_previous), modifier = Modifier.weight(1f))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Switch(checked = filters.query.comparePrevious, onCheckedChange = onComparison,
+                            modifier = Modifier.semantics { contentDescription = comparisonLabel })
+                        Text(stringResource(R.string.activity_compare_previous), modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }

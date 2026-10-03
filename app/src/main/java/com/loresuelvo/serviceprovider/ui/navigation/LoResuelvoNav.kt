@@ -234,7 +234,7 @@ fun LoResuelvoNav(
                                     },
                                 )
                             },
-                            activity = { com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderActivityRoute() },
+                            activity = { com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute() },
                             profile = {
                                 ProviderProfileRoute(
                                     identityLauncher = identityVerificationLauncher,

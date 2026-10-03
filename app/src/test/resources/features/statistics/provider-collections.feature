@@ -4,7 +4,6 @@ Característica: Consultar mis cobros como prestador
   Quiero conocer mis cobros verificados y los saldos pendientes
   Para entender de dónde provienen los importes de mis trabajos
 
-  @wip
   Escenario: 71.1-COL Consultar mis cobros verificados
     Dado que tengo señas y saldos verificados durante el período elegido en Actividad
     Cuando abro Cobros dentro de Desempeño
@@ -12,7 +11,6 @@ Característica: Consultar mis cobros como prestador
     Y veo señas, saldos y su total en pesos argentinos sin comisiones
     Y se aclara que los importes no representan un saldo bancario
 
-  @wip
   Escenario: 71.2-COL Consultar sin cobros recientes
     Dado que no tengo cobros verificados durante el período
     Y tengo trabajos con saldos pendientes
@@ -20,7 +18,6 @@ Característica: Consultar mis cobros como prestador
     Entonces veo los cobros del período en cero
     Y sigo viendo mis saldos pendientes actuales
 
-  @wip
   Escenario: 71.3-COL Distinguir los saldos pendientes actuales
     Dado que tengo trabajos programados y finalizados con saldo pendiente
     Cuando consulto mis cobros
@@ -28,7 +25,6 @@ Característica: Consultar mis cobros como prestador
     Y esos saldos no dependen del período consultado
     Y no incluyen señas ya cobradas ni comisiones
 
-  @wip
   Escenario: 71.4-COL Consultar con la cuenta de cobros desconectada
     Dado que mi cuenta de Mercado Pago está desconectada
     Y tengo cobros verificados anteriores

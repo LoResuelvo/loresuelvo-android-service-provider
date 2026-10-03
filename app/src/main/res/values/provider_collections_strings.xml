@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collections_section">Cobros</string>
+    <string name="collections_loading">Consultando tus cobros…</string>
+    <string name="collections_error">No pudimos consultar tus cobros. Reintentá para ver los importes registrados.</string>
+    <string name="collections_session_expired">Ingresá nuevamente para consultar tus cobros.</string>
+    <string name="collections_verified_total">Total verificado</string>
+    <string name="collections_deposits">Señas verificadas</string>
+    <string name="collections_balances">Saldos verificados</string>
+    <string name="collections_money_note">Importes en ARS, sin comisiones. Los cobros registrados no representan un saldo bancario.</string>
+    <string name="collections_empty">No hubo cobros verificados durante este período.</string>
+    <string name="collections_pending_note">Saldos actuales del servicio, sin filtro de período. No incluyen señas ya cobradas ni comisiones.</string>
+    <string name="collections_pending_orders">Trabajos: %1$d</string>
+</resources>
