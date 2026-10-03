@@ -13,7 +13,11 @@ import java.time.format.DateTimeParseException
 @Singleton
 class ApiProviderActivityRepository @Inject constructor(private val api: ProviderActivityApi) : ProviderActivityRepository {
     override suspend fun getActivity(query: ActivityQuery): ActivityOutcome = try {
-        ActivityOutcome.Success(api.getActivity(query.from.toString(), query.to.toString()).toDomain())
+        val granularity = query.granularity.name.lowercase(java.util.Locale.ROOT)
+        val activity = api.getActivity(query.from.toString(), query.to.toString(), granularity, query.comparePrevious).toDomain()
+        require(activity.period.from == query.from && activity.period.to == query.to && activity.period.granularity == granularity)
+        require((activity.comparison != null) == query.comparePrevious)
+        ActivityOutcome.Success(activity)
     } catch (e: CancellationException) { throw e
     } catch (e: HttpException) {
         when (e.code()) {

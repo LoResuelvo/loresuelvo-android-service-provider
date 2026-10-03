@@ -13,6 +13,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.statistics.ProviderActivity
+import com.loresuelvo.serviceprovider.domain.statistics.ActivityGranularity
+import com.loresuelvo.serviceprovider.ui.statistics.ActivityFilters
 import com.loresuelvo.serviceprovider.ui.statistics.ProviderActivityUiState
 import com.loresuelvo.serviceprovider.ui.statistics.ProviderActivityViewModel
 import java.math.BigDecimal
@@ -26,11 +28,16 @@ import java.util.Locale
 @Composable
 fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ProviderActivityScreen(state, viewModel::retry)
+    val filters by viewModel.filters.collectAsStateWithLifecycle()
+    ProviderActivityScreen(state, viewModel::retry, filters, viewModel::editDates, viewModel::applyDates,
+        viewModel::selectGranularity, viewModel::comparePrevious)
 }
 
 @Composable
-fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit) {
+fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
+    filters: ActivityFilters? = null, onEditDates: (String, String) -> Unit = { _, _ -> },
+    onApplyDates: () -> Unit = {}, onGranularity: (ActivityGranularity) -> Unit = {},
+    onComparison: (Boolean) -> Unit = {}) {
     LazyColumn(modifier = Modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -40,6 +47,9 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit) 
             Text(stringResource(R.string.activity_section), color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.titleMedium)
             HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 2.dp)
+        }
+        if (filters != null && state != ProviderActivityUiState.SessionExpired) {
+            item { ActivityPeriodControls(filters, onEditDates, onApplyDates, onGranularity, onComparison) }
         }
         when (state) {
             ProviderActivityUiState.Loading -> item {
@@ -78,6 +88,10 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit) 
                         Text(stringResource(R.string.activity_money_note), style = MaterialTheme.typography.bodySmall)
                     }
                 }
+                activity.comparison?.let { comparison ->
+                    item { ActivityComparisonSection(activity.results, comparison) }
+                }
+                item { ActivityEvolution(activity.evolution) }
                 item {
                     HorizontalDivider()
                     Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
@@ -96,7 +110,7 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit) 
 private fun Period(activity: ProviderActivity) {
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(stringResource(R.string.activity_last_30_days), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.activity_effective_period), style = MaterialTheme.typography.titleSmall)
             Text(stringResource(R.string.activity_period, formatActivityInstant(activity.period.from),
                 formatActivityInstant(activity.period.to)), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.activity_calculated, formatActivityInstant(activity.calculatedAt)),
@@ -108,7 +122,7 @@ private fun Period(activity: ProviderActivity) {
 @Composable
 private fun Metric(label: String, value: Long, modifier: Modifier) {
     Surface(modifier, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.semantics(mergeDescendants = true) {}.padding(16.dp)) {
             Text(value.toString(), style = MaterialTheme.typography.headlineMedium)
             Text(label, style = MaterialTheme.typography.bodyMedium)
         }

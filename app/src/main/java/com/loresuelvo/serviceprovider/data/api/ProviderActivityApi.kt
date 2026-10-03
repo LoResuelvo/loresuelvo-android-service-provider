@@ -8,5 +8,6 @@ import retrofit2.http.Query
 interface ProviderActivityApi {
     @GET("providers/me/statistics/activity")
     @Headers("Cache-Control: no-store")
-    suspend fun getActivity(@Query("from") from: String, @Query("to") to: String): ProviderActivityDto
+    suspend fun getActivity(@Query("from") from: String, @Query("to") to: String,
+        @Query("granularity") granularity: String, @Query("compare_previous") comparePrevious: Boolean): ProviderActivityDto
 }

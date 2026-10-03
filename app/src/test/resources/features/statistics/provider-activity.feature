@@ -26,14 +26,12 @@ Característica: Consultar mi actividad como prestador
     Entonces veo esos pendientes separados de los resultados del período
     Y se indica que corresponden a mi situación actual
 
-  @wip
   Escenario: 70.4-ACT Consultar otro período
     Dado que estoy consultando mi actividad
     Cuando elijo un período válido diferente
     Entonces veo los resultados y las fechas del período elegido
     Y mis pendientes actuales conservan su significado
 
-  @wip
   Esquema del escenario: 70.5-ACT Corregir un período inválido
     Dado que estoy eligiendo las fechas de consulta
     Cuando selecciono un período "<periodo>"
@@ -45,7 +43,6 @@ Característica: Consultar mi actividad como prestador
       | de más de 365 días       |
       | que termina en el futuro |
 
-  @wip
   Esquema del escenario: 70.6-ACT Consultar la evolución
     Dado que tuve actividad e intervalos sin trabajos durante el período
     Cuando elijo ver la evolución por "<agrupacion>"
@@ -57,7 +54,6 @@ Característica: Consultar mi actividad como prestador
       | semana     |
       | mes        |
 
-  @wip
   Escenario: 70.7-ACT Comparar períodos sin inventar crecimiento
     Dado que algunas de mis métricas tienen resultados en el período anterior y otras no
     Cuando activo la comparación con el período anterior

@@ -106,4 +106,105 @@ class ProviderActivitySteps {
     @Entonces("durante la espera se informa que se están consultando") fun loading() { assertTrue(retryLoading) }
     @Entonces("el error anterior no se presenta como falta de actividad")
     fun errorNotEmpty() { assertEquals(8L, activity().results.confirmedBookings) }
+
+    private var lastValid: ProviderActivity? = null
+    private var expectedDateError: ActivityDateError? = null
+    private var selectedGranularity: ActivityGranularity? = null
+
+    @Dado("que estoy consultando mi actividad")
+    fun alreadyConsulting() { repository.respondToQuery = true; open(); lastValid = activity() }
+    @Cuando("elijo un período válido diferente")
+    fun choosePeriod() {
+        requireNotNull(viewModel).editDates("2026-08-01", "2026-08-31")
+        requireNotNull(viewModel).applyDates(); scheduler.advanceUntilIdle()
+    }
+    @Entonces("veo los resultados y las fechas del período elegido")
+    fun selectedResults() {
+        val query = repository.queries.last()
+        assertEquals(Instant.parse("2026-08-01T03:00:00Z"), query.from)
+        assertEquals(Instant.parse("2026-09-01T03:00:00Z"), query.to)
+        period()
+        assertEquals(3L, activity().results.confirmedBookings)
+        assertEquals(2L, activity().results.reportedCompletions)
+        assertEquals(1L, activity().results.fullyPaidWorkOrders)
+        assertEquals(200000L, activity().results.agreedValueCents)
+        assertNotEquals(requireNotNull(lastValid).results, activity().results)
+        assertEquals(3L, activity().evolution.sumOf { it.confirmedBookings })
+        assertEquals(2L, activity().evolution.sumOf { it.reportedCompletions })
+        assertEquals(1L, activity().evolution.sumOf { it.fullyPaidWorkOrders })
+        assertNotEquals(requireNotNull(lastValid).period, activity().period)
+    }
+    @Entonces("mis pendientes actuales conservan su significado")
+    fun pendingUnfiltered() { assertEquals(requireNotNull(lastValid).currentPending, activity().currentPending) }
+    @Dado("que estoy eligiendo las fechas de consulta")
+    fun choosingDates() = alreadyConsulting()
+    @Cuando("selecciono un período {string}")
+    fun invalidPeriod(period: String) {
+        val dates = when (period) {
+            "con fechas invertidas" -> { expectedDateError = ActivityDateError.REVERSED; "2026-09-20" to "2026-09-10" }
+            "de más de 365 días" -> { expectedDateError = ActivityDateError.TOO_LONG; "2025-01-01" to "2026-09-30" }
+            "que termina en el futuro" -> { expectedDateError = ActivityDateError.FUTURE; "2026-09-01" to "2026-10-04" }
+            else -> error("Unexpected period example")
+        }
+        requireNotNull(viewModel).editDates(dates.first, dates.second)
+        requireNotNull(viewModel).applyDates(); scheduler.advanceUntilIdle()
+    }
+    @Entonces("se explica cómo corregir las fechas")
+    fun correction() { assertEquals(expectedDateError, requireNotNull(viewModel).filters.value.dateError) }
+    @Entonces("no se reemplazan los últimos resultados válidos")
+    fun preservesResults() { assertEquals(lastValid, activity()); assertEquals(1, repository.queries.size) }
+    @Dado("que tuve actividad e intervalos sin trabajos durante el período")
+    fun workAndGaps() {
+        repository.respondToQuery = true; open()
+        requireNotNull(viewModel).editDates("2026-07-01", "2026-09-30")
+        requireNotNull(viewModel).applyDates(); scheduler.advanceUntilIdle()
+    }
+    @Cuando("elijo ver la evolución por {string}")
+    fun chooseGrouping(grouping: String) {
+        selectedGranularity = when (grouping) {
+            "día" -> ActivityGranularity.DAY
+            "semana" -> ActivityGranularity.WEEK
+            "mes" -> ActivityGranularity.MONTH
+            else -> error("Unexpected grouping example")
+        }
+        requireNotNull(viewModel).selectGranularity(requireNotNull(selectedGranularity)); scheduler.advanceUntilIdle()
+    }
+    @Entonces("distingo contrataciones, finalizaciones informadas y pagos completos")
+    fun series() {
+        assertEquals(selectedGranularity, repository.queries.last().granularity)
+        val buckets = activity().evolution
+        assertEquals(activity().results.confirmedBookings, buckets.sumOf { it.confirmedBookings })
+        assertEquals(activity().results.reportedCompletions, buckets.sumOf { it.reportedCompletions })
+        assertEquals(activity().results.fullyPaidWorkOrders, buckets.sumOf { it.fullyPaidWorkOrders })
+    }
+    @Entonces("puedo consultar sus cantidades incluyendo los intervalos en cero")
+    fun zeroIntervals() {
+        val buckets = activity().evolution
+        assertTrue(buckets.any { it.confirmedBookings == 0L && it.reportedCompletions == 0L && it.fullyPaidWorkOrders == 0L })
+        assertEquals(activity().period.from, buckets.first().from); assertEquals(activity().period.to, buckets.last().to)
+        assertTrue(buckets.zipWithNext().all { (left, right) -> left.to == right.from })
+    }
+    @Dado("que algunas de mis métricas tienen resultados en el período anterior y otras no")
+    fun previousActivity() = alreadyConsulting()
+    @Cuando("activo la comparación con el período anterior")
+    fun compare() { requireNotNull(viewModel).comparePrevious(true); scheduler.advanceUntilIdle() }
+    @Entonces("veo ambos períodos de igual duración y sus diferencias")
+    fun equalPeriods() {
+        val result = activity(); val previous = requireNotNull(result.comparison)
+        assertTrue(repository.queries.last().comparePrevious)
+        assertEquals(result.period.from, previous.period.to)
+        assertEquals(java.time.Duration.between(result.period.from, result.period.to),
+            java.time.Duration.between(previous.period.from, previous.period.to))
+        assertEquals(result.results.confirmedBookings - previous.results.confirmedBookings, previous.changes.confirmedBookings.absolute)
+        assertEquals(100.0, previous.changes.confirmedBookings.percentage!!, 0.0)
+    }
+    @Entonces("los porcentajes sin una base de comparación figuran como no disponibles")
+    fun undefinedPercentages() {
+        val previous = requireNotNull(activity().comparison)
+        assertEquals(0L, previous.results.fullyPaidWorkOrders); assertNull(previous.changes.fullyPaidWorkOrders.percentage)
+        assertNull(previous.results.averageValueCents); assertNull(previous.changes.averageValueCents.absolute)
+        assertNull(previous.changes.averageValueCents.percentage)
+    }
+    @Entonces("mis pendientes actuales no se comparan con el pasado")
+    fun noPendingComparison() { pendingUnfiltered() }
 }

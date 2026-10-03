@@ -26,6 +26,8 @@ class ApiProviderActivityRepositoryTest {
             val request = server.takeRequest()
             assertEquals("GET", request.method)
             assertEquals("/providers/me/statistics/activity", request.requestUrl!!.encodedPath)
+            assertEquals("day", request.requestUrl!!.queryParameter("granularity"))
+            assertEquals("false", request.requestUrl!!.queryParameter("compare_previous"))
             assertEquals(query.from.toString(), request.requestUrl!!.queryParameter("from"))
             assertEquals(query.to.toString(), request.requestUrl!!.queryParameter("to"))
             assertEquals("Bearer test-token", request.getHeader("Authorization"))
@@ -78,6 +80,75 @@ class ApiProviderActivityRepositoryTest {
                 assertEquals(ActivityOutcome.Failure.Malformed, repo.getActivity(query))
             }
         }
+    }
+
+    @Test fun `all groupings and comparison are sent and undefined changes survive DTO mapping`() = runTest {
+        MockWebServer().use { server ->
+            val repo = repository(server)
+            ActivityGranularity.entries.forEach { grouping ->
+                val name = grouping.name.lowercase(java.util.Locale.ROOT)
+                server.enqueue(MockResponse().setBody(comparisonPayload(name)))
+                val result = repo.getActivity(query.copy(granularity = grouping, comparePrevious = true)) as ActivityOutcome.Success
+                val request = server.takeRequest()
+                assertEquals(name, request.requestUrl!!.queryParameter("granularity"))
+                assertEquals("true", request.requestUrl!!.queryParameter("compare_previous"))
+                val comparison = requireNotNull(result.activity.comparison)
+                assertEquals(query.from, comparison.period.to)
+                assertEquals(java.time.Duration.between(query.from, query.to),
+                    java.time.Duration.between(comparison.period.from, comparison.period.to))
+                assertEquals(9007199254740993L, comparison.changes.agreedValueCents.absolute)
+                assertNull(comparison.changes.reportedCompletions.percentage)
+                assertNull(comparison.results.averageValueCents)
+                assertNull(comparison.changes.averageValueCents.absolute)
+                assertNull(comparison.changes.averageValueCents.percentage)
+                assertEquals(CurrentPending(2, 7, 4), result.activity.currentPending)
+            }
+        }
+    }
+
+    @Test fun `missing comparison invalid previous periods and nullable count deltas are rejected`() = runTest {
+        MockWebServer().use { server ->
+            val repo = repository(server)
+            val withComparison = comparisonPayload("day")
+            listOf(payload, withComparison.replace("2026-10-03T08:00:00Z", "2026-10-03T07:00:00Z"),
+                withComparison.replace("\"absolute\":0", "\"absolute\":null")).forEach { body ->
+                server.enqueue(MockResponse().setBody(body))
+                assertEquals(ActivityOutcome.Failure.Malformed, repo.getActivity(query.copy(comparePrevious = true)))
+            }
+        }
+    }
+
+
+    @Test fun `signed differences and nonzero percentages remain distinct from unavailable changes`() = runTest {
+        MockWebServer().use { server ->
+            val body = comparisonPayload("day").replace("\"confirmed_bookings\":0,\"reported_completions\":0",
+                "\"confirmed_bookings\":2,\"reported_completions\":0")
+                .replace("\"confirmed_bookings\":{\"absolute\":0,\"percentage\":null}",
+                    "\"confirmed_bookings\":{\"absolute\":-2,\"percentage\":-100.0}")
+            server.enqueue(MockResponse().setBody(body))
+            val result = repository(server).getActivity(query.copy(comparePrevious = true)) as ActivityOutcome.Success
+            assertEquals(2L, result.activity.comparison!!.results.confirmedBookings)
+            assertEquals(-2L, result.activity.comparison!!.changes.confirmedBookings.absolute)
+            assertEquals(-100.0, result.activity.comparison!!.changes.confirmedBookings.percentage!!, 0.0)
+        }
+    }
+
+    private fun comparisonPayload(granularity: String): String {
+        val current = payload.replace("\"granularity\":\"day\"", "\"granularity\":\"$granularity\"")
+        val previousResults = """{"confirmed_bookings":0,"reported_completions":0,"fully_paid_work_orders":0,
+            "clients_served":0,"new_clients":0,"returning_clients":0,"agreed_value_cents":0,
+            "average_value_cents":null,"currency":"ARS"}"""
+        val changes = """{"confirmed_bookings":{"absolute":0,"percentage":null},
+            "reported_completions":{"absolute":1,"percentage":null},
+            "fully_paid_work_orders":{"absolute":0,"percentage":null},
+            "clients_served":{"absolute":1,"percentage":null},"new_clients":{"absolute":1,"percentage":null},
+            "returning_clients":{"absolute":0,"percentage":null},
+            "agreed_value_cents":{"absolute":9007199254740993,"percentage":null},
+            "average_value_cents":{"absolute":null,"percentage":null}}"""
+        return current.trimEnd().dropLast(1) + """, "comparison": {
+            "period":{"from":"2026-10-03T08:00:00Z","to":"2026-10-03T10:00:00Z",
+            "granularity":"$granularity","time_zone":"America/Argentina/Buenos_Aires"},
+            "results":$previousResults,"changes":$changes}}"""
     }
     private val payload = """{
       "period":{"from":"2026-10-03T07:00:00-03:00","to":"2026-10-03T12:00:00Z",
