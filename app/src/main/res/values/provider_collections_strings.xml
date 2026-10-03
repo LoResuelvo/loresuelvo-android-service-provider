@@ -11,4 +11,17 @@
     <string name="collections_empty">No hubo cobros verificados durante este período.</string>
     <string name="collections_pending_note">Saldos actuales del servicio, sin filtro de período. No incluyen señas ya cobradas ni comisiones.</string>
     <string name="collections_pending_orders">Trabajos: %1$d</string>
+    <string name="collections_transactions">Movimientos verificados</string>
+    <string name="collections_filter_all">Todos</string>
+    <string name="collections_filter_deposits">Señas</string>
+    <string name="collections_filter_balances">Saldos</string>
+    <string name="collections_transactions_totals">Movimientos del filtro: %1$d · Total: %2$s</string>
+    <string name="collections_transactions_empty">No hay movimientos verificados para este filtro.</string>
+    <string name="collections_transactions_loading">Consultando movimientos…</string>
+    <string name="collections_transactions_error">No pudimos consultar los movimientos. Reintentá para continuar.</string>
+    <string name="collections_transactions_restart">La continuación dejó de ser válida. Reintentá para consultar el filtro desde el inicio.</string>
+    <string name="collections_load_more">Cargar más</string>
+    <string name="collections_verified_on">Verificado: %1$s</string>
+    <string name="collections_proposal_reference">Propuesta #%1$d</string>
+    <string name="collections_order_reference">Orden #%1$d</string>
 </resources>

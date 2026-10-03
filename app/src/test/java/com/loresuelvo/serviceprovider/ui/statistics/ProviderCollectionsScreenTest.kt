@@ -71,9 +71,12 @@ class ProviderCollectionsScreenTest {
             .also { store.put("activity", it) }
         val collections = ProviderCollectionsViewModel(GetProviderCollectionsUseCase(collectionsRepository), sessions)
             .also { store.put("collections", it) }
+        val transactions = CollectionTransactionsViewModel(
+            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetCollectionTransactionsUseCase(TransactionsTestRepository()), sessions)
+            .also { store.put("transactions", it) }
         try {
             compose.setContent { LoresuelvoTheme {
-                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute(activity, collections)
+                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute(activity, collections, transactions)
             } }
             compose.onNodeWithText("Opciones del período").performClick()
             compose.onNodeWithText("Desde (AAAA-MM-DD)").performTextReplacement("2026-08-01")

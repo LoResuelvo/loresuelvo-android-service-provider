@@ -31,7 +31,6 @@ Característica: Consultar mis cobros como prestador
     Cuando consulto mis cobros
     Entonces puedo ver los importes registrados sin conectar la cuenta
 
-  @wip
   Escenario: 71.5-COL Entender el origen de mis cobros
     Dado que tengo varios cobros verificados durante el período
     Cuando consulto los movimientos
@@ -39,7 +38,6 @@ Característica: Consultar mis cobros como prestador
     Y veo sus referencias de propuesta y orden cuando están disponibles
     Y veo la cantidad y el importe total de todos los movimientos del período
 
-  @wip
   Esquema del escenario: 71.6-COL Consultar movimientos por tipo
     Dado que tengo señas y saldos en el período
     Cuando elijo mostrar "<tipo>"
@@ -51,7 +49,6 @@ Característica: Consultar mis cobros como prestador
       | Saldos |
       | Todos |
 
-  @wip
   Escenario: 71.7-COL Continuar leyendo los movimientos
     Dado que todavía quedan movimientos del período por mostrar
     Cuando elijo cargar más

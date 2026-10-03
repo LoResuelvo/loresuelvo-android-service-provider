@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.statistics.ActivityGranularity
 import com.loresuelvo.serviceprovider.domain.statistics.PendingCollectionBalance
+import com.loresuelvo.serviceprovider.domain.statistics.CollectionPurpose
+import com.loresuelvo.serviceprovider.ui.statistics.CollectionTransactionsUiState
 import com.loresuelvo.serviceprovider.ui.statistics.ActivityFilters
 import com.loresuelvo.serviceprovider.ui.statistics.ProviderCollectionsUiState
 
@@ -26,13 +28,17 @@ internal fun PerformanceTabs(collections: Boolean, onActivity: () -> Unit, onCol
     }
 }
 
-// The callbacks form one shared period-control contract; keeping them explicit matches Activity.
+// Explicit callbacks keep the shared Activity period controls and independent transaction events visible.
 @Composable
 fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> Unit,
     onActivity: () -> Unit = {}, filters: ActivityFilters? = null,
     onEditDates: (String, String) -> Unit = { _, _ -> }, onApplyDates: () -> Unit = {},
     onGranularity: (ActivityGranularity) -> Unit = {}, onComparison: (Boolean) -> Unit = {},
-    periodExpanded: Boolean = false, onPeriodExpansion: (Boolean) -> Unit = {}) {
+    periodExpanded: Boolean = false, onPeriodExpansion: (Boolean) -> Unit = {},
+    transactions: CollectionTransactionsUiState =
+        CollectionTransactionsUiState(),
+    onPurpose: (CollectionPurpose?) -> Unit = {},
+    onLoadMore: () -> Unit = {}, onTransactionsRetry: () -> Unit = {}) {
     LazyColumn(modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_collections"),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -81,6 +87,7 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
                 }
                 item { PendingBalance(stringResource(R.string.activity_scheduled), collections.currentPending.scheduled) }
                 item { PendingBalance(stringResource(R.string.activity_awaiting_payment), collections.currentPending.awaitingPayment) }
+                collectionTransactionsItems(transactions, onPurpose, onLoadMore, onTransactionsRetry)
             }
         }
     }

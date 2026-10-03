@@ -1,5 +1,9 @@
 package com.loresuelvo.serviceprovider.di
 
+import com.loresuelvo.serviceprovider.data.api.ApiCollectionTransactionsRepository
+import com.loresuelvo.serviceprovider.data.api.CollectionTransactionsApi
+import com.loresuelvo.serviceprovider.domain.statistics.CollectionTransactionsRepository
+import com.loresuelvo.serviceprovider.domain.usecase.statistics.GetCollectionTransactionsUseCase
 import com.loresuelvo.serviceprovider.data.api.ApiProviderCollectionsRepository
 import com.loresuelvo.serviceprovider.data.api.ProviderCollectionsApi
 import com.loresuelvo.serviceprovider.domain.statistics.ProviderCollectionsRepository
@@ -24,12 +28,30 @@ import okhttp3.MediaType.Companion.toMediaType
 @InstallIn(SingletonComponent::class)
 abstract class StatisticsModule {
     @Binds @Singleton
+    abstract fun bindTransactionsRepository(impl: ApiCollectionTransactionsRepository):
+        CollectionTransactionsRepository
+
+    @Binds @Singleton
     abstract fun bindRepository(impl: ApiProviderActivityRepository): ProviderActivityRepository
 
     @Binds @Singleton
     abstract fun bindCollectionsRepository(impl: ApiProviderCollectionsRepository): ProviderCollectionsRepository
 
     companion object {
+        @Provides @Singleton
+        fun provideTransactionsApi(retrofit: Retrofit): CollectionTransactionsApi =
+            createTransactionsApi(retrofit)
+
+        internal fun createTransactionsApi(retrofit: Retrofit): CollectionTransactionsApi =
+            retrofit.newBuilder().apply { converterFactories().clear() }
+                .addConverterFactory(Json { ignoreUnknownKeys = true; explicitNulls = true; coerceInputValues = false }
+                    .asConverterFactory("application/json".toMediaType()))
+                .build().create(CollectionTransactionsApi::class.java)
+
+        @Provides
+        fun provideTransactionsUseCase(repository: CollectionTransactionsRepository) =
+            GetCollectionTransactionsUseCase(repository)
+
         @Provides @Singleton
         fun provideCollectionsApi(retrofit: Retrofit): ProviderCollectionsApi = createCollectionsApi(retrofit)
 

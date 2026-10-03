@@ -11,4 +11,17 @@
     <string name="collections_empty">No verified collections during this period.</string>
     <string name="collections_pending_note">Current service balances, without a period filter. Excludes collected deposits and fees.</string>
     <string name="collections_pending_orders">Jobs: %1$d</string>
+    <string name="collections_transactions">Verified transactions</string>
+    <string name="collections_filter_all">All</string>
+    <string name="collections_filter_deposits">Deposits</string>
+    <string name="collections_filter_balances">Balances</string>
+    <string name="collections_transactions_totals">Transactions for filter: %1$d · Total: %2$s</string>
+    <string name="collections_transactions_empty">No verified transactions for this filter.</string>
+    <string name="collections_transactions_loading">Loading transactions…</string>
+    <string name="collections_transactions_error">We could not load transactions. Retry to continue.</string>
+    <string name="collections_transactions_restart">The continuation is no longer valid. Retry to reload this filter from the beginning.</string>
+    <string name="collections_load_more">Load more</string>
+    <string name="collections_verified_on">Verified: %1$s</string>
+    <string name="collections_proposal_reference">Proposal #%1$d</string>
+    <string name="collections_order_reference">Order #%1$d</string>
 </resources>
