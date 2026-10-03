@@ -2,11 +2,17 @@ package com.loresuelvo.serviceprovider.acceptance.auth
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -19,6 +25,9 @@ import com.loresuelvo.serviceprovider.domain.account.CurrentAccountOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.User
 import com.loresuelvo.serviceprovider.domain.category.Category
+import com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
+import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatusOutcome
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_TAG
 import com.loresuelvo.serviceprovider.ui.navigation.Route
@@ -57,6 +66,9 @@ class ProviderLogoutNavigationAcceptanceTest {
         entry.accounts().outcome = CurrentAccountOutcome.Success(CurrentAccount.Provider(
             1, "Carlos", "Gomez", "provider@example.test", Category(1, "Plumbing"), null,
         ))
+        entry.paymentAccount().outcome = PaymentAccountStatusOutcome.Success(
+            PaymentAccountStatus(ConnectionStatus.PENDING),
+        )
         sessionStore.saveSession(AuthSession(User("auth0|logout", "provider@example.test"), "synthetic-token"))
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }
@@ -65,7 +77,28 @@ class ProviderLogoutNavigationAcceptanceTest {
 
     @Test fun confirmed_sign_out_returns_to_welcome_after_recreation_and_back_cannot_reopen_private_screen() {
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Profile.path).performClick()
-        compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).performScrollTo().performClick()
+        // Profile loading starts when the destination reaches RESUMED after navigation.
+        compose.waitForIdle()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag(PROVIDER_PROFILE_DATA_TAG).fetchSemanticsNodes().size == 1
+        }
+        compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).performScrollTo()
+        // Reveal the bottom clearance so the overlaid navigation bar cannot intercept the tap.
+        val scrollRange = compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG)
+            .fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange]
+        compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG)
+            .performSemanticsAction(SemanticsActions.ScrollBy) { scroll -> scroll(0f, scrollRange.maxValue()) }
+        compose.waitForIdle()
+        val actionBounds = compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).fetchSemanticsNode().boundsInRoot
+        val barBounds = compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("Logout action must be above the navigation overlay", actionBounds.bottom <= barBounds.top)
+        compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).assertIsDisplayed().performClick()
+        compose.waitForIdle()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag(PROVIDER_LOGOUT_CONFIRM_TAG).fetchSemanticsNodes().size == 1 &&
+                compose.onNodeWithTag(PROVIDER_LOGOUT_CONFIRM_TAG).isDisplayed() &&
+                compose.onNodeWithText(context.getString(R.string.provider_logout_title)).isDisplayed()
+        }
         compose.onNodeWithText(context.getString(R.string.provider_logout_title)).assertIsDisplayed()
         assertNotNull(sessionStore.getSession())
         compose.onNodeWithTag(PROVIDER_LOGOUT_CONFIRM_TAG).performClick()
@@ -86,6 +119,13 @@ class ProviderLogoutNavigationAcceptanceTest {
     }
 
     private fun assertWelcome() {
+        compose.waitForIdle()
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText(context.getString(R.string.welcome_login))
+                .fetchSemanticsNodes().size == 1 &&
+                compose.onNodeWithText(context.getString(R.string.welcome_login)).isDisplayed() &&
+                compose.onAllNodesWithTag(PROVIDER_BOTTOM_BAR_TAG).fetchSemanticsNodes().isEmpty()
+        }
         compose.onNodeWithText(context.getString(R.string.welcome_login)).assertIsDisplayed()
         compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertDoesNotExist()
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_TAG).assertDoesNotExist()
@@ -98,4 +138,5 @@ interface LogoutTestEntryPoint {
     fun sessionStore(): ProviderSignupSessionStore
     fun browser(): ProviderSignupBrowserAuthenticationLauncher
     fun accounts(): ProviderSignupCurrentAccountRepository
+    fun paymentAccount(): ProviderSignupPaymentAccountRepository
 }
