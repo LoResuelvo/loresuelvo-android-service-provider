@@ -25,3 +25,14 @@ fun collectionsFixture(query: ActivityQuery = ActivityQuery(Instant.parse("2026-
         CurrentCollectionPending(PendingCollectionBalance(3, 210000), PendingCollectionBalance(2, 90000)),
         listOf(CollectionBucket(query.from, query.to, amounts)))
 }
+
+fun collectionsEvolutionFixture(query: ActivityQuery): ProviderCollections {
+    val base = collectionsFixture(query)
+    val duration = java.time.Duration.between(query.from, query.to)
+    val midpoint = query.from.plus(duration.dividedBy(2))
+    val zero = CollectionAmounts(0, 0, 0)
+    return base.copy(evolution = listOf(CollectionBucket(query.from, midpoint, base.results),
+        CollectionBucket(midpoint, query.to, zero)), comparison = CollectionComparison(
+        base.period.copy(from = query.from.minus(duration), to = query.from), zero,
+        CollectionChanges(ActivityChange(120000, null), ActivityChange(280000, null), ActivityChange(400000, null))))
+}

@@ -1,12 +1,16 @@
 package com.loresuelvo.serviceprovider.ui.screens.statistics
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -17,6 +21,8 @@ import com.loresuelvo.serviceprovider.domain.statistics.CollectionPurpose
 import com.loresuelvo.serviceprovider.ui.statistics.CollectionTransactionsUiState
 import com.loresuelvo.serviceprovider.ui.statistics.ActivityFilters
 import com.loresuelvo.serviceprovider.ui.statistics.ProviderCollectionsUiState
+
+val COLLECTIONS_READING_POSITION = SemanticsPropertyKey<Pair<Int, Int>>("CollectionsReadingPosition")
 
 @Composable
 internal fun PerformanceTabs(collections: Boolean, onActivity: () -> Unit, onCollections: () -> Unit) {
@@ -29,6 +35,7 @@ internal fun PerformanceTabs(collections: Boolean, onActivity: () -> Unit, onCol
 }
 
 // Explicit callbacks keep the shared Activity period controls and independent transaction events visible.
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> Unit,
     onActivity: () -> Unit = {}, filters: ActivityFilters? = null,
@@ -38,16 +45,19 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
     transactions: CollectionTransactionsUiState =
         CollectionTransactionsUiState(),
     onPurpose: (CollectionPurpose?) -> Unit = {},
-    onLoadMore: () -> Unit = {}, onTransactionsRetry: () -> Unit = {}) {
-    LazyColumn(modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_collections"),
+    onLoadMore: () -> Unit = {}, onTransactionsRetry: () -> Unit = {},
+    listState: LazyListState = rememberLazyListState()) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_collections").semantics {
+        this[COLLECTIONS_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+    },
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.semantics { heading() }) }
-        item { PerformanceTabs(true, onActivity, {}) }
+        stickyHeader { PerformanceTabs(true, onActivity, {}) }
         if (filters != null && state != ProviderCollectionsUiState.SessionExpired) {
             item { ActivityPeriodControls(filters, onEditDates, onApplyDates, onGranularity, onComparison,
-                periodExpanded, showEvolutionOptions = false, onExpansion = onPeriodExpansion) }
+                periodExpanded, showEvolutionOptions = true, onExpansion = onPeriodExpansion) }
         }
         when (state) {
             ProviderCollectionsUiState.Loading -> item {
@@ -87,6 +97,13 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
                 }
                 item { PendingBalance(stringResource(R.string.activity_scheduled), collections.currentPending.scheduled) }
                 item { PendingBalance(stringResource(R.string.activity_awaiting_payment), collections.currentPending.awaitingPayment) }
+                collections.comparison?.let { comparison ->
+                    item { CollectionComparisonSection(collections.results, comparison) }
+                }
+                item { CollectionEvolutionHeading() }
+                collections.evolution.forEach { bucket ->
+                    item(key = "collection_bucket_${bucket.from}") { CollectionEvolutionBucket(bucket) }
+                }
                 collectionTransactionsItems(transactions, onPurpose, onLoadMore, onTransactionsRetry)
             }
         }

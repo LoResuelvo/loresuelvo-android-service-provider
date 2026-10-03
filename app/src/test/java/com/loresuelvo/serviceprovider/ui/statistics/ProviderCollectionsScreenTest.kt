@@ -103,4 +103,21 @@ class ProviderCollectionsScreenTest {
         compose.onNode(hasScrollAction()).performScrollToNode(matcher)
         compose.onNode(matcher).assertExists()
     }
+    @Test fun `evolution labels deposits balances total and zero buckets with unavailable comparison percentage`() {
+        val result = collectionsEvolutionFixture(com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(
+            java.time.Instant.parse("2026-09-03T12:00:00Z"), java.time.Instant.parse("2026-10-03T12:00:00Z"),
+            comparePrevious = true))
+        compose.setContent { LoresuelvoTheme { ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(result), {}) } }
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val zero = context.getString(com.loresuelvo.serviceprovider.R.string.collections_bucket_values,
+            formatActivityMoney(0), formatActivityMoney(0), formatActivityMoney(0))
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(zero))
+        compose.onNodeWithText(zero).assertIsDisplayed()
+        val unavailable = context.getString(com.loresuelvo.serviceprovider.R.string.activity_unavailable)
+        val change = context.getString(com.loresuelvo.serviceprovider.R.string.activity_comparison_change,
+            formatActivityMoney(400000), unavailable)
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(change))
+        compose.onNodeWithText(change).assertIsDisplayed()
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.statistics
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
@@ -21,8 +22,10 @@ data class CollectionTransactionsUiState(val purpose: CollectionPurpose? = null,
 class CollectionTransactionsViewModel @Inject constructor(
     private val getTransactions: GetCollectionTransactionsUseCase,
     private val sessionStore: AuthSessionStore,
+    private val savedState: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(CollectionTransactionsUiState())
+    private val mutableState = MutableStateFlow(CollectionTransactionsUiState(purpose =
+        savedState.get<String>("collections.purpose")?.let(CollectionPurpose::valueOf)))
     val uiState = mutableState.asStateFlow()
     private var query: CollectionTransactionsQuery? = null
     private var job: Job? = null
@@ -41,9 +44,26 @@ class CollectionTransactionsViewModel @Inject constructor(
         }
     }
 
+    val readingIndex: Int get() = savedState["collections.readingIndex"] ?: 0
+    val readingOffset: Int get() = savedState["collections.readingOffset"] ?: 0
+    fun rememberReadingPosition(index: Int, offset: Int) {
+        savedState["collections.readingIndex"] = index
+        savedState["collections.readingOffset"] = offset
+    }
+
+    fun invalidatePeriod(selected: ActivityQuery) {
+        val current = query ?: return
+        if (current.from == selected.from && current.to == selected.to) return
+        invalidate()
+        query = null
+        rememberReadingPosition(0, 0)
+        mutableState.value = CollectionTransactionsUiState(purpose = mutableState.value.purpose, loading = true)
+    }
+
     fun selectPeriod(period: ActivityPeriod) {
         val selected = CollectionTransactionsQuery(period.from, period.to, mutableState.value.purpose)
         if (query == selected) return
+        if (query != null) rememberReadingPosition(0, 0)
         query = selected
         invalidate()
         mutableState.value = CollectionTransactionsUiState(purpose = selected.purpose)
@@ -53,6 +73,8 @@ class CollectionTransactionsViewModel @Inject constructor(
     fun selectPurpose(purpose: CollectionPurpose?) {
         val current = query ?: return
         if (purpose == current.purpose) return
+        savedState["collections.purpose"] = purpose?.name
+        rememberReadingPosition(0, 0)
         query = current.copy(purpose = purpose, cursor = null)
         invalidate()
         mutableState.value = CollectionTransactionsUiState(purpose = purpose)

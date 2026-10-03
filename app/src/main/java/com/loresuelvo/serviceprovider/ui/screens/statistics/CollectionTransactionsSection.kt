@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -26,7 +27,8 @@ internal fun LazyListScope.collectionTransactionsItems(state: CollectionTransact
             listOf(null, CollectionPurpose.BOOKING_DEPOSIT, CollectionPurpose.SERVICE_BALANCE).forEach { purpose ->
                 FilterChip(selected = state.purpose == purpose, onClick = { onPurpose(purpose) },
                     enabled = !state.sessionExpired,
-                    label = { Text(stringResource(purposeLabel(purpose))) })
+                    label = { Text(stringResource(purposeLabel(purpose))) },
+                    modifier = Modifier.heightIn(min = 48.dp))
             }
         }
     }
@@ -58,7 +60,8 @@ internal fun LazyListScope.collectionTransactionsItems(state: CollectionTransact
 
 @Composable
 private fun TransactionRow(row: CollectionTransaction) {
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+    Surface(modifier = Modifier.testTag("collection_transaction_${row.id}"),
+        shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(16.dp)) {
             Text(stringResource(purposeLabel(row.purpose)), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.collections_verified_on, formatActivityInstant(row.verifiedOn)))

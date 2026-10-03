@@ -24,4 +24,6 @@
     <string name="collections_verified_on">Verified: %1$s</string>
     <string name="collections_proposal_reference">Proposal #%1$d</string>
     <string name="collections_order_reference">Order #%1$d</string>
+    <string name="collections_evolution_note">Verified deposits, balances and total per interval. Intervals without collections show zero.</string>
+    <string name="collections_bucket_values">Deposits: %1$s · Balances: %2$s · Total: %3$s</string>
 </resources>

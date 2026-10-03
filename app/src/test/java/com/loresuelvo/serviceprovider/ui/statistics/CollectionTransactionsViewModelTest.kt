@@ -100,4 +100,48 @@ class CollectionTransactionsViewModelTest {
         assertEquals(2L, page().totalCount); assertEquals(170000L, page().totalAmountCents)
         assertNull(repository.queries.last().cursor)
     }
+    @Test fun `saved purpose and reading survive restored model while a new period resets the reading`() {
+        val saved = androidx.lifecycle.SavedStateHandle()
+        val first = CollectionTransactionsViewModel(GetCollectionTransactionsUseCase(repository), sessions, saved)
+        store.put("first", first)
+        first.selectPeriod(period); dispatcher.scheduler.advanceUntilIdle()
+        first.selectPurpose(CollectionPurpose.BOOKING_DEPOSIT); dispatcher.scheduler.advanceUntilIdle()
+        first.rememberReadingPosition(18, 43)
+        val restored = CollectionTransactionsViewModel(GetCollectionTransactionsUseCase(repository), sessions, saved)
+        store.put("restored", restored)
+        restored.selectPeriod(period); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(CollectionPurpose.BOOKING_DEPOSIT, restored.uiState.value.purpose)
+        assertEquals(18, restored.readingIndex); assertEquals(43, restored.readingOffset)
+        restored.selectPeriod(period.copy(from = period.from.minusSeconds(60)))
+        assertNull(restored.uiState.value.page)
+        assertEquals(0, restored.readingIndex); assertEquals(0, restored.readingOffset)
+        dispatcher.scheduler.advanceUntilIdle()
+        assertNull(repository.queries.last().cursor)
+    }
+
+    @Test fun `late uncancellable continuation cannot overwrite the new period first page`() {
+        val release = CompletableDeferred<Unit>()
+        var delayed = false
+        val fake = object : CollectionTransactionsRepository {
+            override suspend fun getTransactions(query: CollectionTransactionsQuery): CollectionTransactionsOutcome {
+                if (query.cursor != null) {
+                    delayed = true
+                    withContext(NonCancellable) { release.await() }
+                }
+                return TransactionsTestRepository().getTransactions(query)
+            }
+        }
+        val subject = CollectionTransactionsViewModel(GetCollectionTransactionsUseCase(fake), sessions)
+        store.put("late", subject)
+        subject.selectPeriod(period); dispatcher.scheduler.advanceUntilIdle()
+        subject.loadMore(); dispatcher.scheduler.runCurrent(); assertTrue(delayed)
+        val next = period.copy(from = period.from.minusSeconds(3600), to = period.to.minusSeconds(3600))
+        subject.selectPeriod(next); dispatcher.scheduler.runCurrent()
+        assertEquals(next.from, subject.uiState.value.page!!.from)
+        val first = subject.uiState.value.page
+        release.complete(Unit); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(first, subject.uiState.value.page)
+        assertEquals(1, subject.uiState.value.page!!.transactions.size)
+    }
+
 }

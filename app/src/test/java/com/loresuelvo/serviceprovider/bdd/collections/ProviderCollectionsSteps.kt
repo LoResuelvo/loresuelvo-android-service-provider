@@ -14,6 +14,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
 import org.junit.Assert.*
 
+// One scenario-scoped world owns the shared summary/detail ViewModels and scheduler.
+// If another journey is added, extract transaction arrangements rather than split lifecycle ownership.
 @OptIn(ExperimentalCoroutinesApi::class)
 class ProviderCollectionsSteps {
     private val scheduler = TestCoroutineScheduler()
@@ -173,4 +175,89 @@ class ProviderCollectionsSteps {
         assertEquals(expectedTotalCount, page().totalCount); assertEquals(expectedTotalAmount, page().totalAmountCents)
         assertTrue(page().totalCount > page().transactions.size)
     }
+    @Dado("que veo un resumen válido y falló la consulta de movimientos") fun failedDetail() {
+        openTransactions()
+        transactions.selectPurpose(CollectionPurpose.BOOKING_DEPOSIT); scheduler.advanceUntilIdle()
+        transactionsRepository.outcomes.add(CollectionTransactionsOutcome.Failure(CollectionsOutcome.Failure.Network))
+        transactions.loadMore(); scheduler.advanceUntilIdle()
+        assertEquals(CollectionsOutcome.Failure.Network, transactions.uiState.value.failure)
+        expectedQuery = collections.query
+    }
+    @Dado("la información vuelve a estar disponible") fun availableAgain() {
+        transactionsRepository.gate = kotlinx.coroutines.CompletableDeferred()
+    }
+    @Cuando("reintento consultar los movimientos") fun retryDetail() {
+        transactions.retry(); scheduler.runCurrent()
+        assertTrue(transactions.uiState.value.loading)
+        assertTrue(collections.uiState.value is ProviderCollectionsUiState.Ready)
+        assertEquals(expectedQuery, collections.query)
+        transactionsRepository.gate!!.complete(Unit); scheduler.advanceUntilIdle()
+    }
+    @Entonces("veo los movimientos solicitados conservando sus filtros") fun retainedDetailFilters() {
+        assertNull(transactions.uiState.value.failure)
+        assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions.uiState.value.purpose)
+        assertTrue(page().transactions.all { it.purpose == CollectionPurpose.BOOKING_DEPOSIT })
+        assertEquals("opaque+/cursor=", transactionsRepository.queries.last().cursor)
+    }
+    @Entonces("el resumen permanece disponible durante el reintento") fun summaryRetained() {
+        assertTrue(collections.uiState.value is ProviderCollectionsUiState.Ready)
+        assertEquals(1, repository.queries.size)
+    }
+    @Dado("que cargué más movimientos de un período") fun loadedMore() {
+        openTransactions(); transactions.loadMore(); scheduler.advanceUntilIdle()
+        expectedRows = page().transactions
+        assertEquals(3, expectedRows.size)
+    }
+    @Cuando("elijo otro período") fun anotherPeriod() {
+        activity.editDates("2026-08-01", "2026-08-31"); activity.applyDates(); openTransactions()
+    }
+    @Entonces("veo su resumen y sus primeros movimientos") fun newFirstPage() {
+        assertEquals(result().period.from, page().from)
+        assertEquals(result().period.to, page().to)
+        assertNull(transactionsRepository.queries.last().cursor)
+        assertEquals(1, page().transactions.size)
+    }
+    @Entonces("no se mezclan con los movimientos del período anterior") fun noOldRows() {
+        assertTrue(page().transactions.none { it in expectedRows })
+    }
+    @Dado("que tengo cobros verificados en distintos momentos") fun evolutionPayments() {
+        repository.outcome = CollectionsOutcome.Success(collectionsEvolutionFixture(activity.query.copy(comparePrevious = true)))
+    }
+    @Cuando("consulto su evolución con comparación con el período anterior") fun compareEvolution() {
+        activity.comparePrevious(true); scheduler.advanceUntilIdle(); open()
+        assertTrue(repository.queries.last().comparePrevious)
+    }
+    @Entonces("distingo señas, saldos y total por intervalo") fun evolutionSeries() {
+        assertEquals(CollectionAmounts(120000, 280000, 400000), result().evolution.first().amounts)
+        assertEquals(2, result().evolution.size)
+    }
+    @Entonces("los intervalos sin cobros muestran cero") fun zeroIntervals() {
+        assertEquals(CollectionAmounts(0, 0, 0), result().evolution.last().amounts)
+    }
+    @Entonces("veo las diferencias entre períodos de igual duración") fun equalDuration() {
+        val comparison = result().comparison!!
+        assertEquals(java.time.Duration.between(result().period.from, result().period.to),
+            java.time.Duration.between(comparison.period.from, comparison.period.to))
+        assertEquals(400000L, comparison.changes.totalCents.absolute)
+    }
+    @Entonces("los porcentajes sin base figuran como no disponibles") fun noPercentageBase() {
+        assertNull(result().comparison!!.changes.totalCents.percentage)
+    }
+    @Dado("que estaba leyendo movimientos con un período y tipo elegidos") fun readingChosenFilter() {
+        openTransactions(); transactions.selectPurpose(CollectionPurpose.BOOKING_DEPOSIT)
+        scheduler.advanceUntilIdle(); transactions.loadMore(); scheduler.advanceUntilIdle()
+        transactions.rememberReadingPosition(15, 37)
+        expectedQuery = collections.query
+        expectedRows = page().transactions
+    }
+    @Cuando("vuelvo a Cobros después de consultar Actividad") fun returnFromActivity() {
+        activity.retry(); scheduler.advanceUntilIdle(); openTransactions()
+    }
+    @Entonces("conservo las opciones y mi posición de lectura") fun restoredReading() {
+        assertEquals(expectedQuery, collections.query)
+        assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions.uiState.value.purpose)
+        assertEquals(15, transactions.readingIndex); assertEquals(37, transactions.readingOffset)
+        assertEquals(expectedRows, page().transactions)
+    }
+
 }

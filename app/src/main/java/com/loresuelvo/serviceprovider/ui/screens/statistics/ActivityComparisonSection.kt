@@ -35,7 +35,7 @@ internal fun ActivityComparisonSection(current: ActivityResults, previous: Activ
 }
 
 @Composable
-private fun ComparisonValue(label: Int, current: Long?, previous: Long?, change: ActivityChange, money: Boolean = false) {
+internal fun ComparisonValue(label: Int, current: Long?, previous: Long?, change: ActivityChange, money: Boolean = false) {
     val unavailable = stringResource(R.string.activity_unavailable)
     fun value(number: Long?) = number?.let { if (money) formatActivityMoney(it) else it.toString() } ?: unavailable
     val locale = LocalConfiguration.current.locales[0]

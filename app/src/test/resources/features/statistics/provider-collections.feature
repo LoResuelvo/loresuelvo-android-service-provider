@@ -56,7 +56,6 @@ Característica: Consultar mis cobros como prestador
     Y conservo los que ya estaba leyendo
     Y la cantidad y el importe total no se limitan a los movimientos visibles
 
-  @wip
   Escenario: 71.8-COL Recuperar los movimientos sin perder el resumen
     Dado que veo un resumen válido y falló la consulta de movimientos
     Y la información vuelve a estar disponible
@@ -64,14 +63,12 @@ Característica: Consultar mis cobros como prestador
     Entonces veo los movimientos solicitados conservando sus filtros
     Y el resumen permanece disponible durante el reintento
 
-  @wip
   Escenario: 71.9-COL Cambiar la consulta después de cargar más movimientos
     Dado que cargué más movimientos de un período
     Cuando elijo otro período
     Entonces veo su resumen y sus primeros movimientos
     Y no se mezclan con los movimientos del período anterior
 
-  @wip
   Escenario: 71.10-COL Comparar la evolución de mis cobros
     Dado que tengo cobros verificados en distintos momentos
     Cuando consulto su evolución con comparación con el período anterior
@@ -80,7 +77,6 @@ Característica: Consultar mis cobros como prestador
     Y veo las diferencias entre períodos de igual duración
     Y los porcentajes sin base figuran como no disponibles
 
-  @wip
   Escenario: 71.11-COL Retomar la lectura de mis movimientos
     Dado que estaba leyendo movimientos con un período y tipo elegidos
     Cuando vuelvo a Cobros después de consultar Actividad

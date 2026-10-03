@@ -148,6 +148,12 @@ class ProviderActivityNavigationAcceptanceTest {
         @Provides @Singleton fun statistics() = NavigationActivityRepository()
         @Provides fun repository(fake: NavigationActivityRepository): ProviderActivityRepository = fake
         @Provides fun useCase(repository: ProviderActivityRepository) = GetProviderActivityUseCase(repository)
+        @Provides fun collectionsRepository(): ProviderCollectionsRepository = NavigationCollectionsRepository()
+        @Provides fun collectionsUseCase(repository: ProviderCollectionsRepository) =
+            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderCollectionsUseCase(repository)
+        @Provides fun transactionsRepository(): CollectionTransactionsRepository = NavigationTransactionsRepository()
+        @Provides fun transactionsUseCase(repository: CollectionTransactionsRepository) =
+            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetCollectionTransactionsUseCase(repository)
         @Provides fun clock(): Clock = Clock.fixed(Instant.parse("2026-10-03T12:00:00Z"), ZoneOffset.UTC)
     }
 }
