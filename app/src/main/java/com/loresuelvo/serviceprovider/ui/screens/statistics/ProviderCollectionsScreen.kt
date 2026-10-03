@@ -6,7 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -46,7 +47,10 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
         CollectionTransactionsUiState(),
     onPurpose: (CollectionPurpose?) -> Unit = {},
     onLoadMore: () -> Unit = {}, onTransactionsRetry: () -> Unit = {},
-    listState: LazyListState = rememberLazyListState()) {
+    listState: LazyListState = rememberLazyListState(), evolutionExpansion: Boolean? = null,
+    onEvolutionExpansion: ((Boolean) -> Unit)? = null) {
+    var localExpansion by rememberSaveable { mutableStateOf(false) }
+    val evolutionExpanded = evolutionExpansion ?: localExpansion
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_collections").semantics {
         this[COLLECTIONS_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
     },
@@ -100,8 +104,10 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
                 collections.comparison?.let { comparison ->
                     item { CollectionComparisonSection(collections.results, comparison) }
                 }
-                item { CollectionEvolutionHeading() }
-                collections.evolution.forEach { bucket ->
+                item(key = "collection_evolution") { CollectionEvolutionHeading(evolutionExpanded) {
+                    if (onEvolutionExpansion != null) onEvolutionExpansion(it) else localExpansion = it
+                } }
+                if (evolutionExpanded) collections.evolution.forEach { bucket ->
                     item(key = "collection_bucket_${bucket.from}") { CollectionEvolutionBucket(bucket) }
                 }
                 collectionTransactionsItems(transactions, onPurpose, onLoadMore, onTransactionsRetry)

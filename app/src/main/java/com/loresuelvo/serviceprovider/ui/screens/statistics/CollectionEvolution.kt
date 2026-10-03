@@ -7,15 +7,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.statistics.*
 
 @Composable
-internal fun CollectionEvolutionHeading() {
-    Text(stringResource(R.string.activity_evolution), style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.semantics { heading() })
-    Text(stringResource(R.string.collections_evolution_note), style = MaterialTheme.typography.bodySmall)
+internal fun CollectionEvolutionHeading(expanded: Boolean, onExpansion: (Boolean) -> Unit) {
+    val expansion = stringResource(if (expanded) R.string.activity_expanded else R.string.activity_collapsed)
+    TextButton(onClick = { onExpansion(!expanded) }, modifier = Modifier.heightIn(min = 48.dp).semantics {
+        heading()
+        stateDescription = expansion
+    }) {
+        Text(stringResource(R.string.collections_evolution), style = MaterialTheme.typography.titleMedium)
+    }
+    if (expanded) Text(stringResource(R.string.collections_evolution_note), style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable

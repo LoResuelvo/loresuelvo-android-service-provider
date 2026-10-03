@@ -10,7 +10,12 @@ class NavigationCollectionsRepository : ProviderCollectionsRepository {
         val period = ActivityPeriod(query.from, query.to, query.granularity.name.lowercase(), "America/Argentina/Buenos_Aires")
         return CollectionsOutcome.Success(ProviderCollections(period, query.to, "ARS", amounts,
             CurrentCollectionPending(PendingCollectionBalance(3, 210000), PendingCollectionBalance(2, 90000)),
-            listOf(CollectionBucket(query.from, query.to, amounts))))
+            (0L..29L).map { interval ->
+                val length = java.time.Duration.between(query.from, query.to)
+                CollectionBucket(query.from.plus(length.dividedBy(30).multipliedBy(interval)),
+                    if (interval == 29L) query.to else query.from.plus(length.dividedBy(30).multipliedBy(interval + 1)),
+                    if (interval == 0L) amounts else CollectionAmounts(0, 0, 0))
+            }))
     }
 }
 

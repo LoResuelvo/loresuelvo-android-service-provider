@@ -81,4 +81,20 @@ class ProviderCollectionsViewModelTest {
         assertEquals(latest, vm.uiState.value)
         assertEquals(next.from, (latest as ProviderCollectionsUiState.Ready).collections.period.from)
     }
+    @Test fun `collection evolution defaults collapsed and restores expansion independently of query changes`() {
+        val saved = androidx.lifecycle.SavedStateHandle()
+        val first = ProviderCollectionsViewModel(GetProviderCollectionsUseCase(repository), sessions, saved)
+        store.put("first", first)
+        assertFalse(first.evolutionExpanded.value)
+        first.expandEvolution(true)
+        val restored = ProviderCollectionsViewModel(GetProviderCollectionsUseCase(repository), sessions, saved)
+        store.put("restored", restored)
+        assertTrue(restored.evolutionExpanded.value)
+        restored.selectQuery(query); dispatcher.scheduler.advanceUntilIdle()
+        restored.selectQuery(query.copy(to = query.to.minusSeconds(60))); dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(restored.evolutionExpanded.value)
+        restored.expandEvolution(false)
+        assertFalse(first.evolutionExpanded.value)
+    }
+
 }

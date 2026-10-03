@@ -1,15 +1,16 @@
 package com.loresuelvo.serviceprovider.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 /**
  * Material 3 color scheme mapped to the LoResuelvo brand palette
- * ([Color.kt], mirrored from the web design system). The app has a
- * single light scheme for now; dark mode can be added later by
- * providing a `darkColorScheme` and selecting on
- * `isSystemInDarkTheme()`.
+ * ([Color.kt], mirrored from the web design system). Dark colors follow
+ * the approved performance design and use opaque accessible containers.
  */
 private val LoresuelvoColorScheme = lightColorScheme(
     primary = BrandPrimary,
@@ -30,6 +31,34 @@ private val LoresuelvoColorScheme = lightColorScheme(
     onError = TextWhite,
 )
 
+private val LoresuelvoDarkColorScheme = darkColorScheme(
+    primary = Color(0xFF75D6BA),
+    onPrimary = Color(0xFF171D24),
+    primaryContainer = Color(0xFF25303A),
+    onPrimaryContainer = Color(0xFF75D6BA),
+    secondary = Color(0xFF75D6BA),
+    onSecondary = Color(0xFF171D24),
+    secondaryContainer = Color(0xFF25303A),
+    onSecondaryContainer = Color(0xFF75D6BA),
+    tertiary = BrandTertiary,
+    onTertiary = Color(0xFF171D24),
+    background = Color(0xFF171D24),
+    onBackground = Color(0xFFF0F4F8),
+    surface = Color(0xFF25303A),
+    onSurface = Color(0xFFF0F4F8),
+    surfaceVariant = Color(0xFF25303A),
+    onSurfaceVariant = Color(0xFFBDC8D2),
+    surfaceContainer = Color(0xFF25303A),
+    surfaceContainerLow = Color(0xFF171D24),
+    surfaceContainerHigh = Color(0xFF25303A),
+    surfaceContainerHighest = Color(0xFF25303A),
+    outline = Color(0xFF45515E),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+)
+
 /**
  * App-wide theme. Wrap the composition root
  * ([com.loresuelvo.serviceprovider.ui.navigation.LoResuelvoNav]) so
@@ -39,7 +68,7 @@ private val LoresuelvoColorScheme = lightColorScheme(
 @Composable
 fun LoresuelvoTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = LoresuelvoColorScheme,
+        colorScheme = if (isSystemInDarkTheme()) LoresuelvoDarkColorScheme else LoresuelvoColorScheme,
         content = content,
     )
 }

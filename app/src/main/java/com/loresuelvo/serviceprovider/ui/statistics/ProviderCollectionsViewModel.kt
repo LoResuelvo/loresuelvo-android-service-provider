@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.statistics
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
@@ -25,9 +26,12 @@ sealed interface ProviderCollectionsUiState {
 class ProviderCollectionsViewModel @Inject constructor(
     private val getCollections: GetProviderCollectionsUseCase,
     private val sessionStore: AuthSessionStore,
+    private val savedState: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<ProviderCollectionsUiState>(ProviderCollectionsUiState.Loading)
     val uiState = mutableState.asStateFlow()
+    val evolutionExpanded = savedState.getStateFlow("collections.evolutionExpanded", false)
+    fun expandEvolution(expanded: Boolean) { savedState["collections.evolutionExpanded"] = expanded }
     var query: ActivityQuery? = null
         private set
     private var requestId = 0L

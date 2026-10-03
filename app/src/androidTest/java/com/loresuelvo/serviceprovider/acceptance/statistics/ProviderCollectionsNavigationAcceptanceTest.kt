@@ -56,8 +56,14 @@ class ProviderCollectionsNavigationAcceptanceTest {
 
     @Test fun tabs_filters_continuation_and_reading_survive_navigation_recreation_and_rotation() {
         openCollections()
-        reveal(R.string.collections_filter_deposits).performClick()
-        reveal(R.string.collections_load_more).performClick()
+        revealControl(R.string.collections_evolution).assert(SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
+            context.getString(R.string.activity_collapsed))).performClick()
+        revealControl(R.string.collections_evolution).assert(SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
+            context.getString(R.string.activity_expanded)))
+        revealControl(R.string.collections_filter_deposits).performClick()
+        revealControl(R.string.collections_load_more).performClick()
         compose.waitForIdle()
         assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions.queries.last().purpose)
         assertEquals("next", transactions.queries.last().cursor)
@@ -97,13 +103,16 @@ class ProviderCollectionsNavigationAcceptanceTest {
         compose.onNodeWithTag("collection_transaction_19").assertIsDisplayed()
         assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions.queries.last().purpose)
         assertEquals(collections.queries.last().from, transactions.queries.last().from)
+        revealControl(R.string.collections_evolution).assert(SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
+            context.getString(R.string.activity_expanded)))
     }
 
     @Test fun detail_retry_preserves_summary_and_selected_filter() {
         openCollections()
         transactions.failNext = true
-        reveal(R.string.collections_filter_deposits).performClick()
-        reveal(R.string.activity_retry).assertHasClickAction().performClick()
+        revealControl(R.string.collections_filter_deposits).performClick()
+        revealControl(R.string.activity_retry).assertHasClickAction().performClick()
         compose.waitForIdle()
         assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions.queries.last().purpose)
         assertEquals(1, collections.queries.size)
@@ -114,15 +123,15 @@ class ProviderCollectionsNavigationAcceptanceTest {
 
     @Test fun period_and_granularity_controls_reset_continuation_and_preserve_purpose() {
         openCollections()
-        reveal(R.string.collections_filter_deposits).performClick()
-        reveal(R.string.collections_load_more).performClick()
+        revealControl(R.string.collections_filter_deposits).performClick()
+        revealControl(R.string.collections_load_more).performClick()
         compose.waitForIdle()
         assertEquals("next", transactions.queries.last().cursor)
-        reveal(R.string.activity_period_options).performClick()
+        revealControl(R.string.activity_period_options).performClick()
         compose.onNodeWithTag("activity_from_day").performTextReplacement("2026-08-01")
         compose.onNodeWithTag("activity_through_day").performTextReplacement("2026-08-31")
         androidx.test.espresso.Espresso.closeSoftKeyboard()
-        reveal(R.string.activity_apply_period).performClick()
+        revealControl(R.string.activity_apply_period).performClick()
         compose.waitForIdle()
         assertEquals(Instant.parse("2026-08-01T03:00:00Z"), transactions.queries.last().from)
         assertNull(transactions.queries.last().cursor)
@@ -130,7 +139,7 @@ class ProviderCollectionsNavigationAcceptanceTest {
         listOf(R.string.activity_week to ActivityGranularity.WEEK,
             R.string.activity_month to ActivityGranularity.MONTH,
             R.string.activity_day to ActivityGranularity.DAY).forEach { (label, granularity) ->
-            reveal(label).performClick(); compose.waitForIdle()
+            revealControl(label).performClick(); compose.waitForIdle()
             assertEquals(granularity, collections.queries.last().granularity)
         }
         compose.onNodeWithContentDescription(context.getString(R.string.activity_compare_previous))
@@ -150,6 +159,11 @@ class ProviderCollectionsNavigationAcceptanceTest {
     private fun reveal(id: Int): SemanticsNodeInteraction {
         compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(context.getString(id)))
         return text(id).performScrollTo()
+    }
+    private fun revealControl(id: Int): SemanticsNodeInteraction {
+        val matcher = hasText(context.getString(id)) and hasClickAction()
+        compose.onNodeWithTag("provider_collections").performScrollToNode(matcher)
+        return compose.onNode(matcher).performScrollTo()
     }
     private fun readingPosition() = compose.onNodeWithTag("provider_collections")
         .fetchSemanticsNode().config[COLLECTIONS_READING_POSITION]

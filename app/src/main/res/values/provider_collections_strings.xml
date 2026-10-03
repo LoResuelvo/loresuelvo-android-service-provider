@@ -26,4 +26,5 @@
     <string name="collections_order_reference">Orden #%1$d</string>
     <string name="collections_evolution_note">Señas, saldos y total verificados por intervalo. Los intervalos sin cobros muestran cero.</string>
     <string name="collections_bucket_values">Señas: %1$s · Saldos: %2$s · Total: %3$s</string>
+    <string name="collections_evolution">Evolución de cobros</string>
 </resources>

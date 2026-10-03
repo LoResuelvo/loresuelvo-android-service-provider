@@ -21,6 +21,7 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
     val filters by activity.filters.collectAsStateWithLifecycle()
     val transactionState by transactions.uiState.collectAsStateWithLifecycle()
     val collectionState by collections.uiState.collectAsStateWithLifecycle()
+    val evolutionExpanded by collections.evolutionExpanded.collectAsStateWithLifecycle()
     val periodExpanded by activity.periodExpanded.collectAsStateWithLifecycle()
     LaunchedEffect(showingCollections, filters.query) {
         if (showingCollections) {
@@ -73,7 +74,8 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
                     CollectionTransactionsUiState(purpose = state.purpose, loading = true)
                 else state
             }, onPurpose = transactions::selectPurpose,
-            onLoadMore = transactions::loadMore, onTransactionsRetry = transactions::retry, listState = collectionList)
+            onLoadMore = transactions::loadMore, onTransactionsRetry = transactions::retry, listState = collectionList,
+            evolutionExpansion = evolutionExpanded, onEvolutionExpansion = collections::expandEvolution)
     } else {
         ProviderActivityRoute(activity, onCollections = { showingCollections = true })
     }

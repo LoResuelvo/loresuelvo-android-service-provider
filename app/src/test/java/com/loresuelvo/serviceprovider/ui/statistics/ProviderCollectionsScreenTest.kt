@@ -109,6 +109,9 @@ class ProviderCollectionsScreenTest {
             comparePrevious = true))
         compose.setContent { LoresuelvoTheme { ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(result), {}) } }
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val evolution = context.getString(com.loresuelvo.serviceprovider.R.string.collections_evolution)
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(evolution) and hasClickAction())
+        compose.onNode(hasText(evolution) and hasClickAction()).performClick()
         val zero = context.getString(com.loresuelvo.serviceprovider.R.string.collections_bucket_values,
             formatActivityMoney(0), formatActivityMoney(0), formatActivityMoney(0))
         compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(zero))
@@ -118,6 +121,41 @@ class ProviderCollectionsScreenTest {
             formatActivityMoney(400000), unavailable)
         compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(change))
         compose.onNodeWithText(change).assertIsDisplayed()
+    }
+
+    @Test fun `a year of buckets stays collapsed until requested and collapse makes movements reachable again`() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val from = java.time.Instant.parse("2025-10-03T12:00:00Z")
+        val base = collectionsFixture(com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(
+            from, from.plusSeconds(365 * 86400L)))
+        val buckets = (0L..364L).map { day ->
+            com.loresuelvo.serviceprovider.domain.statistics.CollectionBucket(
+                base.period.from.plusSeconds(day * 86400), base.period.from.plusSeconds((day + 1) * 86400),
+                com.loresuelvo.serviceprovider.domain.statistics.CollectionAmounts(day * 100, 0, day * 100))
+        }
+        compose.setContent { LoresuelvoTheme {
+            ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(base.copy(evolution = buckets)), {})
+        } }
+        val evolution = hasText(context.getString(com.loresuelvo.serviceprovider.R.string.collections_evolution)) and hasClickAction()
+        val movements = hasText(context.getString(com.loresuelvo.serviceprovider.R.string.collections_transactions))
+        val last = context.getString(com.loresuelvo.serviceprovider.R.string.collections_bucket_values,
+            formatActivityMoney(36400), formatActivityMoney(0), formatActivityMoney(36400))
+        fun reveal(matcher: SemanticsMatcher) = compose.onNodeWithTag("provider_collections").performScrollToNode(matcher)
+        reveal(movements)
+        assertTrue(compose.onNodeWithTag("provider_collections").fetchSemanticsNode().config[
+            com.loresuelvo.serviceprovider.ui.screens.statistics.COLLECTIONS_READING_POSITION].first < 25)
+        compose.onNodeWithText(last).assertDoesNotExist()
+        reveal(evolution); compose.onNode(evolution).assert(SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
+            context.getString(com.loresuelvo.serviceprovider.R.string.activity_collapsed))).performClick()
+        reveal(hasText(last)); compose.onNodeWithText(last).assertIsDisplayed()
+        assertTrue(compose.onNodeWithTag("provider_collections").fetchSemanticsNode().config[
+            com.loresuelvo.serviceprovider.ui.screens.statistics.COLLECTIONS_READING_POSITION].first > 300)
+        reveal(evolution); compose.onNode(evolution).performClick()
+        reveal(movements); compose.onNode(movements).assertIsDisplayed()
+        compose.onNodeWithText(last).assertDoesNotExist()
+        assertTrue(compose.onNodeWithTag("provider_collections").fetchSemanticsNode().config[
+            com.loresuelvo.serviceprovider.ui.screens.statistics.COLLECTIONS_READING_POSITION].first < 25)
     }
 
 }
