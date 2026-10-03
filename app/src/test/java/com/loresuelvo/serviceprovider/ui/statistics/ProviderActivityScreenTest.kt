@@ -161,6 +161,16 @@ class ProviderActivityScreenTest {
         comparisonLocale("Difference: 1 · Change: 14.29%", "Difference: 3 · Change: Not available", "Fully paid jobs")
     }
 
+    @Test fun `session expiry removes all private values and prompts login`() {
+        val state = mutableStateOf<ProviderActivityUiState>(ProviderActivityUiState.Ready(activityFixture()))
+        compose.setContent { LoresuelvoTheme { ProviderActivityScreen(state.value, {}) } }
+        compose.onNode(hasText("Contrataciones confirmadas") and hasText("8")).performScrollTo().assertExists()
+        compose.runOnIdle { state.value = ProviderActivityUiState.SessionExpired }
+        compose.onNodeWithText("Ingresá nuevamente para consultar tu actividad.").assertExists()
+        compose.onNodeWithText("Contrataciones confirmadas").assertDoesNotExist()
+        compose.onNodeWithText("Pendientes actuales").assertDoesNotExist()
+    }
+
     private fun comparisonLocale(defined: String, undefined: String, paidLabel: String) {
         val original = activityFixture()
         val query = com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(original.period.from, original.period.to,

@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
@@ -19,8 +18,7 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.statistics.ActivityBucket
 
 @Composable
-internal fun ActivityEvolution(buckets: List<ActivityBucket>) {
-    var showValues by rememberSaveable { mutableStateOf(false) }
+internal fun ActivityEvolution(buckets: List<ActivityBucket>, showValues: Boolean, onToggleValues: () -> Unit) {
     val colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onSurface,
         MaterialTheme.colorScheme.secondary)
     val expansion = stringResource(if (showValues) R.string.activity_expanded else R.string.activity_collapsed)
@@ -55,7 +53,7 @@ internal fun ActivityEvolution(buckets: List<ActivityBucket>) {
             }
         }
         Text(stringResource(R.string.activity_evolution_legend), style = MaterialTheme.typography.bodySmall)
-        TextButton(onClick = { showValues = !showValues }, modifier = Modifier.semantics { stateDescription = expansion }) {
+        TextButton(onClick = onToggleValues, modifier = Modifier.semantics { stateDescription = expansion }) {
             Text(stringResource(R.string.activity_evolution_values))
         }
         if (showValues) {

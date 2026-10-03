@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -31,10 +32,10 @@ internal fun ActivityPeriodControls(filters: ActivityFilters, onEditDates: (Stri
                 Text(stringResource(R.string.activity_dates_hint), style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(value = filters.fromDay, onValueChange = { onEditDates(it, filters.throughDay) },
                     label = { Text(stringResource(R.string.activity_from_day)) }, singleLine = true,
-                    isError = filters.dateError != null, modifier = Modifier.fillMaxWidth())
+                    isError = filters.dateError != null, modifier = Modifier.fillMaxWidth().testTag("activity_from_day"))
                 OutlinedTextField(value = filters.throughDay, onValueChange = { onEditDates(filters.fromDay, it) },
                     label = { Text(stringResource(R.string.activity_through_day)) }, singleLine = true,
-                    isError = filters.dateError != null, modifier = Modifier.fillMaxWidth())
+                    isError = filters.dateError != null, modifier = Modifier.fillMaxWidth().testTag("activity_through_day"))
                 filters.dateError?.let {
                     val message = when (it) {
                         ActivityDateError.FORMAT -> R.string.activity_date_format_error

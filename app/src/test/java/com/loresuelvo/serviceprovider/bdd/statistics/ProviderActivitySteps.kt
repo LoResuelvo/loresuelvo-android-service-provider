@@ -207,4 +207,65 @@ class ProviderActivitySteps {
     }
     @Entonces("mis pendientes actuales no se comparan con el pasado")
     fun noPendingComparison() { pendingUnfiltered() }
+    private var retainedQuery: ActivityQuery? = null
+    private var retainedFilters: ActivityFilters? = null
+    private val savedState = androidx.lifecycle.SavedStateHandle()
+
+    @Dado("que elegí un período y estaba leyendo su evolución")
+    fun readingEvolution() {
+        repository.respondToQuery = true
+        viewModel = ProviderActivityViewModel(GetProviderActivityUseCase(repository), sessions,
+            Clock.fixed(Instant.parse("2026-10-03T12:00:00Z"), ZoneOffset.UTC), savedState)
+            .also { viewModelStore.put("activity", it) }
+        scheduler.advanceUntilIdle()
+        choosePeriod()
+        requireNotNull(viewModel).selectGranularity(ActivityGranularity.WEEK)
+        requireNotNull(viewModel).comparePrevious(true)
+        scheduler.advanceUntilIdle()
+        requireNotNull(viewModel).rememberReadingPosition(7, 42)
+        retainedQuery = requireNotNull(viewModel).query
+        retainedFilters = requireNotNull(viewModel).filters.value
+    }
+    @Cuando("{string}")
+    fun resumeReading(returnAction: String) {
+        when (returnAction) {
+            "vuelvo a Desempeño después de ver Mensajes" -> Unit // The NavHost retention is verified on Android.
+            "giro el dispositivo mientras leo mis datos" -> {
+                viewModelStore.clear()
+                viewModel = ProviderActivityViewModel(GetProviderActivityUseCase(repository), sessions,
+                    Clock.fixed(Instant.parse("2026-10-03T12:00:00Z"), ZoneOffset.UTC), savedState)
+                    .also { viewModelStore.put("activity", it) }
+            }
+            else -> error("Unexpected return action")
+        }
+        scheduler.advanceUntilIdle()
+    }
+    @Entonces("continúo en Actividad con el período y las opciones elegidas")
+    fun retainedSelection() {
+        assertEquals(retainedQuery, requireNotNull(viewModel).query)
+        assertEquals(retainedFilters, requireNotNull(viewModel).filters.value)
+        period()
+    }
+    @Entonces("conservo mi posición de lectura")
+    fun retainedPosition() {
+        assertEquals(7, requireNotNull(viewModel).readingIndex)
+        assertEquals(42, requireNotNull(viewModel).readingOffset)
+    }
+    @Dado("que mi sesión dejó de estar vigente")
+    fun expiredSession() {
+        repository.respondToQuery = true; open()
+        assertTrue(requireNotNull(viewModel).uiState.value is ProviderActivityUiState.Ready)
+        repository.respondToQuery = false
+        repository.outcome = ActivityOutcome.Failure.Unauthorized
+    }
+    @Cuando("intento consultar mi actividad")
+    fun consultExpired() { requireNotNull(viewModel).retry(); scheduler.advanceUntilIdle() }
+    @Entonces("se me solicita ingresar nuevamente")
+    fun loginRequired() {
+        assertEquals(ProviderActivityUiState.SessionExpired, requireNotNull(viewModel).uiState.value)
+        assertNull(sessions.getSession())
+    }
+    @Entonces("mis estadísticas privadas no quedan visibles")
+    fun noPrivateResults() { assertFalse(requireNotNull(viewModel).uiState.value is ProviderActivityUiState.Ready) }
+
 }

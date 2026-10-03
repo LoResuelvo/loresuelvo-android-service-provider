@@ -127,4 +127,28 @@ class ProviderActivityViewModelTest {
             }
         }
     }
+    @Test fun `saved state restores options and position without storing private statistics`() {
+        repository.respondToQuery = true
+        val saved = androidx.lifecycle.SavedStateHandle()
+        fun restored() = ProviderActivityViewModel(GetProviderActivityUseCase(repository), sessions,
+            Clock.fixed(Instant.parse("2026-10-03T12:00:00Z"), ZoneOffset.UTC), saved)
+            .also { viewModelStore.put("activity", it) }
+        val original = restored(); dispatcher.scheduler.advanceUntilIdle()
+        original.editDates("2026-08-01", "2026-08-31"); original.applyDates()
+        original.selectGranularity(ActivityGranularity.MONTH); original.comparePrevious(true)
+        original.rememberReadingPosition(7, 42); dispatcher.scheduler.advanceUntilIdle()
+        val query = original.query
+        viewModelStore.clear()
+        repository.gate = CompletableDeferred()
+        val recreated = restored(); dispatcher.scheduler.runCurrent()
+        assertEquals(query, recreated.query)
+        assertEquals(original.filters.value, recreated.filters.value)
+        assertEquals(7, recreated.readingIndex); assertEquals(42, recreated.readingOffset)
+        assertEquals(ProviderActivityUiState.Loading, recreated.uiState.value)
+        assertTrue(saved.keys().all { saved.get<Any>(it) is String || saved.get<Any>(it) is Boolean || saved.get<Any>(it) is Int })
+        sessions.clearSession(); dispatcher.scheduler.runCurrent()
+        repository.gate!!.complete(Unit); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(ProviderActivityUiState.SessionExpired, recreated.uiState.value)
+    }
+
 }

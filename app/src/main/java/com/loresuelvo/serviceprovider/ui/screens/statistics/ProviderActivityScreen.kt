@@ -2,6 +2,11 @@ package com.loresuelvo.serviceprovider.ui.screens.statistics
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -29,16 +34,31 @@ import java.util.Locale
 fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState(viewModel.readingIndex, viewModel.readingOffset)
+    var restored by remember { mutableStateOf(false) }
+    LaunchedEffect(state) {
+        if (state is ProviderActivityUiState.Ready && !restored) {
+            listState.scrollToItem(viewModel.readingIndex, viewModel.readingOffset)
+            restored = true
+        }
+    }
+    LaunchedEffect(listState, state, restored) {
+        if (state is ProviderActivityUiState.Ready && restored) {
+            snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+                .collect { (index, offset) -> viewModel.rememberReadingPosition(index, offset) }
+        }
+    }
     ProviderActivityScreen(state, viewModel::retry, filters, viewModel::editDates, viewModel::applyDates,
-        viewModel::selectGranularity, viewModel::comparePrevious)
+        viewModel::selectGranularity, viewModel::comparePrevious, listState)
 }
 
 @Composable
 fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
     filters: ActivityFilters? = null, onEditDates: (String, String) -> Unit = { _, _ -> },
     onApplyDates: () -> Unit = {}, onGranularity: (ActivityGranularity) -> Unit = {},
-    onComparison: (Boolean) -> Unit = {}) {
-    LazyColumn(modifier = Modifier.fillMaxSize().statusBarsPadding(),
+    onComparison: (Boolean) -> Unit = {}, listState: LazyListState = rememberLazyListState()) {
+    var showValues by rememberSaveable { mutableStateOf(false) }
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_activity"),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
@@ -73,14 +93,10 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                 item {
                     val result = activity.results
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Metric(stringResource(R.string.activity_bookings), result.confirmedBookings, Modifier.weight(1f))
-                            Metric(stringResource(R.string.activity_completions), result.reportedCompletions, Modifier.weight(1f))
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Metric(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders, Modifier.weight(1f))
-                            Metric(stringResource(R.string.activity_clients), result.clientsServed, Modifier.weight(1f))
-                        }
+                        MetricPair(stringResource(R.string.activity_bookings), result.confirmedBookings,
+                            stringResource(R.string.activity_completions), result.reportedCompletions)
+                        MetricPair(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders,
+                            stringResource(R.string.activity_clients), result.clientsServed)
                         Text(stringResource(R.string.activity_client_breakdown, result.newClients, result.returningClients))
                         ValueRow(stringResource(R.string.activity_agreed_value), formatActivityMoney(result.agreedValueCents))
                         ValueRow(stringResource(R.string.activity_average), result.averageValueCents?.let(::formatActivityMoney)
@@ -91,7 +107,7 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                 activity.comparison?.let { comparison ->
                     item { ActivityComparisonSection(activity.results, comparison) }
                 }
-                item { ActivityEvolution(activity.evolution) }
+                item { ActivityEvolution(activity.evolution, showValues) { showValues = !showValues } }
                 item {
                     HorizontalDivider()
                     Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
@@ -115,6 +131,23 @@ private fun Period(activity: ProviderActivity) {
                 formatActivityInstant(activity.period.to)), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.activity_calculated, formatActivityInstant(activity.calculatedAt)),
                 style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun MetricPair(firstLabel: String, firstValue: Long, secondLabel: String, secondValue: Long) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        if (maxWidth < 328.dp || LocalDensity.current.fontScale > 1.3f) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Metric(firstLabel, firstValue, Modifier.fillMaxWidth())
+                Metric(secondLabel, secondValue, Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Metric(firstLabel, firstValue, Modifier.weight(1f))
+                Metric(secondLabel, secondValue, Modifier.weight(1f))
+            }
         }
     }
 }

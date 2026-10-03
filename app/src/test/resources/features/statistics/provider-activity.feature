@@ -69,7 +69,6 @@ Característica: Consultar mi actividad como prestador
     Y durante la espera se informa que se están consultando
     Y el error anterior no se presenta como falta de actividad
 
-  @wip
   Esquema del escenario: 70.9-ACT Retomar mi consulta
     Dado que elegí un período y estaba leyendo su evolución
     Cuando "<regreso>"
@@ -80,7 +79,6 @@ Característica: Consultar mi actividad como prestador
       | vuelvo a Desempeño después de ver Mensajes   |
       | giro el dispositivo mientras leo mis datos  |
 
-  @wip
   Escenario: 70.10-ACT Proteger mis resultados al vencer la sesión
     Dado que mi sesión dejó de estar vigente
     Cuando intento consultar mi actividad

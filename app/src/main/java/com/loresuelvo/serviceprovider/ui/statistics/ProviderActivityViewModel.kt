@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.statistics
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
@@ -33,13 +34,19 @@ class ProviderActivityViewModel @Inject constructor(
     private val getActivity: GetProviderActivityUseCase,
     private val sessionStore: AuthSessionStore,
     private val clock: Clock,
+    private val savedState: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
     private val end = clock.instant()
     private val zone = ZoneId.of("America/Argentina/Buenos_Aires")
-    var query = ActivityQuery(end.minus(Duration.ofDays(30)), end)
+    var query = ActivityQuery(
+        savedState.get<String>("activity.from")?.let(java.time.Instant::parse) ?: end.minus(Duration.ofDays(30)),
+        savedState.get<String>("activity.to")?.let(java.time.Instant::parse) ?: end,
+        savedState.get<String>("activity.granularity")?.let(ActivityGranularity::valueOf) ?: ActivityGranularity.DAY,
+        savedState["activity.compare"] ?: false)
         private set
     private val mutableFilters = MutableStateFlow(ActivityFilters(
-        query.from.atZone(zone).toLocalDate().toString(), query.to.atZone(zone).toLocalDate().toString(), query))
+        savedState["activity.fromDay"] ?: query.from.atZone(zone).toLocalDate().toString(),
+        savedState["activity.throughDay"] ?: query.to.atZone(zone).toLocalDate().toString(), query))
     val filters = mutableFilters.asStateFlow()
     private val mutableState = MutableStateFlow<ProviderActivityUiState>(ProviderActivityUiState.Loading)
     val uiState = mutableState.asStateFlow()
@@ -61,8 +68,17 @@ class ProviderActivityViewModel @Inject constructor(
         retry()
     }
 
+    val readingIndex: Int get() = savedState["activity.readingIndex"] ?: 0
+    val readingOffset: Int get() = savedState["activity.readingOffset"] ?: 0
+    fun rememberReadingPosition(index: Int, offset: Int) {
+        savedState["activity.readingIndex"] = index
+        savedState["activity.readingOffset"] = offset
+    }
+
     fun editDates(fromDay: String, throughDay: String) {
         mutableFilters.value = mutableFilters.value.copy(fromDay = fromDay, throughDay = throughDay)
+        savedState["activity.fromDay"] = fromDay
+        savedState["activity.throughDay"] = throughDay
     }
 
     fun applyDates() {
@@ -105,6 +121,10 @@ class ProviderActivityViewModel @Inject constructor(
         mutableFilters.value = mutableFilters.value.copy(query = next, dateError = null)
         if (next == query) return
         query = next
+        savedState["activity.from"] = next.from.toString()
+        savedState["activity.to"] = next.to.toString()
+        savedState["activity.granularity"] = next.granularity.name
+        savedState["activity.compare"] = next.comparePrevious
         requestId++
         loadJob?.cancel()
         loadJob = null
