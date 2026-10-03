@@ -100,6 +100,22 @@
           ]
         },
         {
+          "featureFile": "app/src/test/resources/features/auth/provider-logout.feature",
+          "entryPoints": [
+            "com.loresuelvo.serviceprovider.ui.entry.ProviderEntryViewModel",
+            "com.loresuelvo.serviceprovider.ui.screens.profile.ProviderProfileScreen",
+            "com.loresuelvo.serviceprovider.ui.screens.auth.WelcomeScreen"
+          ],
+          "integrationFiles": [
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/navigation/LoResuelvoNav.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/ui/screens/profile/ProviderProfileRoute.kt",
+            "app/src/main/java/com/loresuelvo/serviceprovider/platform/auth/Auth0BrowserAuthenticationLauncher.kt"
+          ],
+          "deviceTestClasses": [
+            "com.loresuelvo.serviceprovider.acceptance.auth.ProviderLogoutNavigationAcceptanceTest"
+          ]
+        },
+        {
           "featureFile": "app/src/test/resources/features/auth/provider-welcome.feature",
           "entryPoints": [
             "com.loresuelvo.serviceprovider.ui.auth.WelcomeViewModel",

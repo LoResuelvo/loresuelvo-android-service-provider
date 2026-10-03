@@ -51,6 +51,17 @@ import kotlinx.coroutines.flow.StateFlow
 class ProviderSignupBrowserAuthenticationLauncher : BrowserAuthenticationLauncher {
 
     var nextOutcome: AuthenticationOutcome = AuthenticationOutcome.Cancelled
+    var logoutCalls = 0
+        private set
+    var nextLogoutOutcome: com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome =
+        com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome.Success
+
+    override fun logout(activityContext: android.content.Context,
+        onResult: (com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome) -> Unit,
+    ) {
+        logoutCalls += 1
+        onResult(nextLogoutOutcome)
+    }
     var signupCalls: Int = 0
         private set
 

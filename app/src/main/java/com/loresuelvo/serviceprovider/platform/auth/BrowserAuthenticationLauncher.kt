@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.platform.auth
 import android.content.Context
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
+import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
 
 /**
  * Outer-platform bridge for an Activity-bound identity-provider launch.
@@ -18,4 +19,8 @@ fun interface BrowserAuthenticationLauncher {
         action: AuthenticationAction,
         onResult: (AuthenticationOutcome) -> Unit,
     )
+
+    fun logout(activityContext: Context, onResult: (LogoutOutcome) -> Unit) {
+        onResult(LogoutOutcome.Failure.Provider(null))
+    }
 }

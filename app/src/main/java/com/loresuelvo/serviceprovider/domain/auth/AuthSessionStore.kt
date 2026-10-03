@@ -11,4 +11,15 @@ interface AuthSessionStore {
     fun saveSession(session: AuthSession)
 
     fun clearSession()
+
+    /** Reports durable removal while retaining the existing expiration cleanup contract. */
+    fun clearSessionDurably(): SessionClearOutcome {
+        clearSession()
+        return SessionClearOutcome.Cleared
+    }
+}
+
+sealed interface SessionClearOutcome {
+    data object Cleared : SessionClearOutcome
+    data object PersistenceFailure : SessionClearOutcome
 }

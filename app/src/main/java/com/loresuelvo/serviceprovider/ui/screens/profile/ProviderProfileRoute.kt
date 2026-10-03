@@ -40,6 +40,10 @@ fun ProviderProfileRoute(
     onIncompleteProfile: () -> Unit = {},
     onAccountMismatch: () -> Unit = {},
     onConnectMercadoPago: () -> Unit = {},
+    logoutConfirmationVisible: Boolean = false,
+    onRequestLogout: () -> Unit = {},
+    onDismissLogout: () -> Unit = {},
+    onConfirmLogout: () -> Unit = {},
     viewModel: ProviderProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -132,6 +136,10 @@ fun ProviderProfileRoute(
 
     ProviderProfileScreen(
         state = state,
+        logoutConfirmationVisible = logoutConfirmationVisible,
+        onRequestLogout = onRequestLogout,
+        onDismissLogout = onDismissLogout,
+        onConfirmLogout = onConfirmLogout,
         identityState = identityState,
         calendarState = calendarState,
         onAuthorizeCalendar = viewModel::authorizeCalendar,

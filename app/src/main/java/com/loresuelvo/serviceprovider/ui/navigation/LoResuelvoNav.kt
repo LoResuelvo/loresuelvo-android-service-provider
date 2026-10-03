@@ -17,6 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -76,6 +79,21 @@ fun LoResuelvoNav(
 ) {
     val entryViewModel: ProviderEntryViewModel = hiltViewModel()
     val entryState by entryViewModel.uiState.collectAsStateWithLifecycle()
+    val logoutState by entryViewModel.logoutState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(entryViewModel, browserAuthenticationLauncher, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            entryViewModel.logoutState.collect { state ->
+                val id = state.launchId ?: return@collect
+                if (entryViewModel.claimLogoutLaunch(id)) {
+                    browserAuthenticationLauncher.logout(context) { outcome ->
+                        entryViewModel.onLogoutResult(id, outcome)
+                    }
+                }
+            }
+        }
+    }
     val returnUrl by paymentReturnUrl.collectAsStateWithLifecycle()
     var onboardingReturnHint by remember { mutableStateOf<PaymentAccountReturnHint?>(null) }
     var profileReturnRefresh by remember { mutableStateOf(0) }
@@ -125,7 +143,7 @@ fun LoResuelvoNav(
                             navController = navController,
                             startDestination = startDestination,
                             contentPadding = contentPadding,
-                            welcome = { WelcomeRoute(browserAuthenticationLauncher) },
+                            welcome = { WelcomeRoute(browserAuthenticationLauncher, entryViewModel) },
                             professionalProfile = { CompleteProviderProfileRoute(navController) },
                             optionalIdentityVerification = {
                                 OptionalIdentityVerificationRoute(
@@ -213,6 +231,10 @@ fun LoResuelvoNav(
                                     identityLauncher = identityVerificationLauncher,
                                     calendarLauncher = calendarConsentLauncher,
                                     returnRefreshKey = profileReturnRefresh,
+                                    logoutConfirmationVisible = logoutState.confirmationVisible,
+                                    onRequestLogout = entryViewModel::requestLogout,
+                                    onDismissLogout = entryViewModel::dismissLogout,
+                                    onConfirmLogout = entryViewModel::confirmLogout,
                                     onBack = {
                                         val fromProposal = navController.currentBackStackEntry
                                             ?.savedStateHandle?.remove<Boolean>(Route.Profile.proposalPaymentOrigin) == true
@@ -299,26 +321,38 @@ fun LoResuelvoNav(
 @Composable
 private fun WelcomeRoute(
     browserAuthenticationLauncher: BrowserAuthenticationLauncher,
+    entryViewModel: ProviderEntryViewModel,
 ) {
     val viewModel: WelcomeViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val logoutState by entryViewModel.logoutState.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel, browserAuthenticationLauncher) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect.LaunchAuthentication ->
+                is com.loresuelvo.serviceprovider.ui.auth.WelcomeEffect.LaunchAuthentication -> {
+                    val generation = entryViewModel.authenticationGeneration()
                     browserAuthenticationLauncher.launch(
                         activityContext = context,
                         action = effect.action,
-                        onResult = viewModel::onAuthenticationResult,
+                        onResult = { outcome ->
+                            viewModel.onAuthenticationResult(
+                                if (entryViewModel.acceptsAuthentication(generation)) outcome
+                                else com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome.Cancelled,
+                            )
+                        },
                     )
+                }
             }
         }
     }
 
     WelcomeScreen(
-        loading = state.loading,
+        loading = state.loading || logoutState.processing || logoutState.localRemovalPending,
+        logoutState = logoutState,
+        onRetryLogout = entryViewModel::retryLogout,
+        logoutRetryEnabled = !state.loading,
         error = state.error,
         categories = state.categories,
         onRegisterClick = viewModel::signup,

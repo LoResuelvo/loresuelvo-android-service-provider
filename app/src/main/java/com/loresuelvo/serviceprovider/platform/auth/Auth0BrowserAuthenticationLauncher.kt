@@ -8,6 +8,7 @@ import com.loresuelvo.serviceprovider.data.auth.Auth0CredentialsMapper
 import com.loresuelvo.serviceprovider.data.auth.Auth0WebAuthLauncher
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
+import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,6 +23,25 @@ class Auth0BrowserAuthenticationLauncher @Inject constructor(
     private val credentialsMapper: Auth0CredentialsMapper,
     private val webAuthLauncher: Auth0WebAuthLauncher,
 ) : BrowserAuthenticationLauncher {
+
+    override fun logout(activityContext: Context, onResult: (LogoutOutcome) -> Unit) {
+        val delivered = AtomicBoolean(false)
+        fun deliver(outcome: LogoutOutcome) {
+            if (delivered.compareAndSet(false, true)) onResult(outcome)
+        }
+        val callback = object : Callback<Void?, AuthenticationException> {
+            override fun onSuccess(result: Void?) = deliver(LogoutOutcome.Success)
+            override fun onFailure(error: AuthenticationException) = deliver(
+                if (error.getCode() == "a0.authentication_canceled") LogoutOutcome.Cancelled
+                else LogoutOutcome.Failure.Provider(error),
+            )
+        }
+        try {
+            webAuthLauncher.startLogout(activityContext, callback)
+        } catch (error: Exception) {
+            deliver(LogoutOutcome.Failure.Provider(error))
+        }
+    }
 
     override fun launch(
         activityContext: Context,

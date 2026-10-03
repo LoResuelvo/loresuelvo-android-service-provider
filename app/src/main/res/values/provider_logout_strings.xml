@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_logout_action">Cerrar sesión</string>
+    <string name="provider_logout_title">¿Cerrar sesión?</string>
+    <string name="provider_logout_body">Vas a salir de tu cuenta en este dispositivo.</string>
+    <string name="provider_logout_cancel">Volver</string>
+    <string name="provider_logout_processing">Cerrando sesión…</string>
+    <string name="provider_logout_external_pending">El cierre externo quedó pendiente. Podés reintentarlo.</string>
+    <string name="provider_logout_local_pending">No se pudo eliminar la sesión del dispositivo. Reintentá antes de iniciar sesión.</string>
+    <string name="provider_logout_retry">Reintentar cierre</string>
+</resources>

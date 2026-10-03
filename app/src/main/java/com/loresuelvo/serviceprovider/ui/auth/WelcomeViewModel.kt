@@ -83,6 +83,12 @@ class WelcomeViewModel @Inject constructor(
         requestAuthentication(AuthenticationAction.GoogleLogin)
     }
 
+    override fun onCleared() {
+        authenticationInFlight.set(false)
+        _effects.close()
+        super.onCleared()
+    }
+
     private fun requestAuthentication(action: AuthenticationAction) {
         if (!authenticationInFlight.compareAndSet(false, true)) return
 

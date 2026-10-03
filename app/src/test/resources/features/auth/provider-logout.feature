@@ -4,7 +4,6 @@ Característica: Cerrar sesión desde Perfil
   Quiero cerrar mi sesión con confirmación
   Para finalizar el acceso a mi cuenta desde el dispositivo
 
-  @wip
   Escenario: 5.1-LOG Solicitar confirmación desde Perfil
     Dado que estoy en mi Perfil con una sesión activa
     Y el botón rojo "Cerrar sesión" está al final del contenido
@@ -13,14 +12,12 @@ Característica: Cerrar sesión desde Perfil
     Y ofrece "Volver" y "Cerrar sesión"
     Y mi sesión permanece activa hasta confirmar
 
-  @wip
   Escenario: 5.2-LOG Volver sin cerrar sesión
     Dado que está abierto el popup de confirmación
     Cuando pulso "Volver"
     Entonces se cierra el popup y permanezco en Perfil
     Y mi sesión permanece activa sin iniciar el cierre externo
 
-  @wip
   Esquema del escenario: 5.3-LOG Confirmar el cierre de sesión
     Dado que inicié sesión con "<metodo>"
     Y está abierto el popup de confirmación
@@ -34,7 +31,6 @@ Característica: Cerrar sesión desde Perfil
       | email y contraseña  |
       | Google              |
 
-  @wip
   Escenario: 5.4-LOG Mantener el cierre local si falla Auth0
     Dado que está abierto el popup de confirmación
     Y Auth0 no puede completar el cierre externo

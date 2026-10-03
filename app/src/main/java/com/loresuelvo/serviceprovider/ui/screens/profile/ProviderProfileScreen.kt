@@ -5,6 +5,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -47,7 +53,30 @@ fun ProviderProfileScreen(
     calendarState: ProfileCalendarUiState = ProfileCalendarUiState(),
     onAuthorizeCalendar: () -> Unit = {},
     onRetryCalendar: () -> Unit = {},
+    logoutConfirmationVisible: Boolean = false,
+    onRequestLogout: () -> Unit = {},
+    onDismissLogout: () -> Unit = {},
+    onConfirmLogout: () -> Unit = {},
 ) {
+    if (logoutConfirmationVisible) {
+        AlertDialog(
+            onDismissRequest = onDismissLogout,
+            shape = RoundedCornerShape(32.dp),
+            title = { Text(stringResource(R.string.provider_logout_title)) },
+            text = { Text(stringResource(R.string.provider_logout_body)) },
+            dismissButton = {
+                TextButton(onClick = onDismissLogout) { Text(stringResource(R.string.provider_logout_cancel)) }
+            },
+            confirmButton = {
+                Button(onClick = onConfirmLogout, colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ), modifier = Modifier.testTag(PROVIDER_LOGOUT_CONFIRM_TAG)) {
+                    Text(stringResource(R.string.provider_logout_action))
+                }
+            },
+        )
+    }
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -81,7 +110,7 @@ fun ProviderProfileScreen(
                 identityState,
                 onVerifyIdentity,
                 onRetry,
-                calendarState, onAuthorizeCalendar, onRetryCalendar,
+                calendarState, onAuthorizeCalendar, onRetryCalendar, onRequestLogout,
             )
         }
     }
@@ -158,6 +187,7 @@ private fun ProfileReadyState(
     calendarState: ProfileCalendarUiState,
     onAuthorizeCalendar: () -> Unit,
     onRetryCalendar: () -> Unit,
+    onRequestLogout: () -> Unit,
 ) {
     Box(
         modifier = Modifier.fillMaxSize().padding(contentPadding),
@@ -185,6 +215,14 @@ private fun ProfileReadyState(
             ProfilePaymentCard(state.payment, onConnectMercadoPago, onRetryPaymentStatus)
             ProfileCalendarCard(state.provider.calendarConnectionStatus, calendarState, onAuthorizeCalendar, onRetryCalendar, onReloadProfile,
                 actionEnabled = !identityState.loading)
+            Button(
+                onClick = onRequestLogout,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(PROVIDER_LOGOUT_ACTION_TAG),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
+            ) { Text(stringResource(R.string.provider_logout_action)) }
         }
     }
 }
@@ -193,3 +231,6 @@ const val PROVIDER_PROFILE_SCREEN_TAG = "provider-profile-screen"
 const val PROVIDER_PROFILE_LOADING_TAG = "provider-profile-loading"
 const val PROVIDER_PROFILE_DATA_TAG = "provider-profile-data"
 const val PROVIDER_PROFILE_NAME_TAG = "provider-profile-name"
+
+const val PROVIDER_LOGOUT_ACTION_TAG = "provider-logout-action"
+const val PROVIDER_LOGOUT_CONFIRM_TAG = "provider-logout-confirm"

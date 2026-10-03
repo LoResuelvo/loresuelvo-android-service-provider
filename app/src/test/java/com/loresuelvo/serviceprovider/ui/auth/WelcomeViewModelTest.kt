@@ -47,6 +47,19 @@ class WelcomeViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
+    fun cleared_welcome_rejects_late_authentication_callback() = runTest(scheduler) {
+        val viewModel = newViewModel()
+        val owner = androidx.lifecycle.ViewModelStore()
+        owner.put("welcome", viewModel)
+        viewModel.login()
+        owner.clear()
+        viewModel.onAuthenticationResult(AuthenticationOutcome.Success(
+            AuthSession(User("auth0|late", "late@example.test"), "synthetic-token"),
+        ))
+        assertEquals(null, sessionStore.getSession())
+    }
+
+    @Test
     fun should_load_categories_into_ready_state_when_backend_returns_six() = runTest(scheduler) {
         categoryRepository.nextOutcome = CategoriesOutcome.Success((1..6).map { Category(it, "Category $it") })
         val viewModel = newViewModel()

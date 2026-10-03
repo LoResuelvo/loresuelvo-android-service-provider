@@ -8,6 +8,7 @@ import com.loresuelvo.serviceprovider.data.auth.Auth0CredentialsMapper
 import com.loresuelvo.serviceprovider.data.auth.Auth0WebAuthLauncher
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationAction
 import com.loresuelvo.serviceprovider.domain.auth.AuthenticationOutcome
+import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -49,9 +50,42 @@ class Auth0BrowserAuthenticationLauncherTest {
         assertEquals(AuthenticationOutcome.Cancelled, outcome)
     }
 
+    @Test
+    fun logout_success_is_delivered_only_once() {
+        val results = mutableListOf<LogoutOutcome>()
+        launcher.logout(context) { results += it }
+        webAuthLauncher.logoutCallback.onSuccess(null)
+        webAuthLauncher.logoutCallback.onSuccess(null)
+        assertEquals(listOf(LogoutOutcome.Success), results)
+    }
+
+    @Test
+    fun logout_cancellation_and_failure_are_mapped_to_domain_outcomes() {
+        val error = mockk<AuthenticationException>()
+        every { error.getCode() } returns "a0.authentication_canceled"
+        var result: LogoutOutcome? = null
+        launcher.logout(context) { result = it }
+        webAuthLauncher.logoutCallback.onFailure(error)
+        assertEquals(LogoutOutcome.Cancelled, result)
+        every { error.getCode() } returns "provider_failure"
+        launcher.logout(context) { result = it }
+        webAuthLauncher.logoutCallback.onFailure(error)
+        assertEquals(LogoutOutcome.Failure.Provider(error), result)
+    }
+
+    @Test
+    fun logout_launch_exception_is_reported_without_throwing() {
+        webAuthLauncher.logoutThrows = true
+        var result: LogoutOutcome? = null
+        launcher.logout(context) { result = it }
+        org.junit.Assert.assertTrue(result is LogoutOutcome.Failure.Provider)
+    }
+
     private class RecordingWebAuthLauncher : Auth0WebAuthLauncher {
         lateinit var authenticationCallback: Callback<Credentials, AuthenticationException>
         var lastAction: AuthenticationAction? = null
+        lateinit var logoutCallback: Callback<Void?, AuthenticationException>
+        var logoutThrows = false
 
         override fun startLogin(
             context: Context,
@@ -71,7 +105,10 @@ class Auth0BrowserAuthenticationLauncherTest {
         override fun startLogout(
             context: Context,
             callback: Callback<Void?, AuthenticationException>,
-        ) = Unit
+        ) {
+            if (logoutThrows) throw IllegalStateException("synthetic browser failure")
+            logoutCallback = callback
+        }
 
         private fun record(
             action: AuthenticationAction,

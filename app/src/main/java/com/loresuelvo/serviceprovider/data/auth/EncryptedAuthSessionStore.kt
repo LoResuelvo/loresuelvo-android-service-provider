@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.User
+import com.loresuelvo.serviceprovider.domain.auth.SessionClearOutcome
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +14,9 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Encrypted [SharedPreferences]-backed [AuthSessionStore]. Owns the
- * `MutableStateFlow<AuthSession?>` so the in-memory cache and the
- * persisted blob never disagree: every `saveSession` / `clearSession`
- * writes to both, in that order.
+ * `MutableStateFlow<AuthSession?>` used by every session consumer. Clearing
+ * blocks in-memory access before durable removal; a failed write is reported
+ * so callers can retry without exposing stale persisted credentials.
  *
  * `@Singleton` so the cached session is shared across the whole
  * process — multiple call sites (the navigation graph, the
@@ -40,7 +41,7 @@ class EncryptedAuthSessionStore @Inject constructor(
         _sessionFlow.update { it ?: readSession() }
     }
 
-    override fun getSession(): AuthSession? = readSession()
+    override fun getSession(): AuthSession? = _sessionFlow.value
 
     override fun saveSession(session: AuthSession) {
         preferences
@@ -54,12 +55,17 @@ class EncryptedAuthSessionStore @Inject constructor(
     }
 
     override fun clearSession() {
-        preferences
-            .edit()
-            .clear()
-            .commit()
+        clearSessionDurably()
+    }
 
+    override fun clearSessionDurably(): SessionClearOutcome {
         _sessionFlow.value = null
+        val removed = try {
+            preferences.edit().clear().commit()
+        } catch (_: RuntimeException) {
+            false
+        }
+        return if (removed) SessionClearOutcome.Cleared else SessionClearOutcome.PersistenceFailure
     }
 
     private fun readSession(): AuthSession? {

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
+import com.loresuelvo.serviceprovider.ui.entry.ProviderLogoutUiState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,9 +53,27 @@ fun WelcomeScreen(
     onRegisterClick: () -> Unit = {},
     onLoginClick: () -> Unit = {},
     onGoogleClick: () -> Unit = {},
+    logoutState: ProviderLogoutUiState = ProviderLogoutUiState(),
+    onRetryLogout: () -> Unit = {},
+    logoutRetryEnabled: Boolean = true,
 ) {
     val errorMessage = error?.let { welcomeErrorMessage(it) }
     WelcomeScaffold {
+        if (logoutState.processing || logoutState.localRemovalPending || logoutState.externalLogoutPending) {
+            Text(
+                stringResource(when {
+                    logoutState.processing -> R.string.provider_logout_processing
+                    logoutState.localRemovalPending -> R.string.provider_logout_local_pending
+                    else -> R.string.provider_logout_external_pending
+                }),
+                modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.error,
+            )
+            if (!logoutState.processing) {
+                TextButton(onClick = onRetryLogout, enabled = logoutRetryEnabled) { Text(stringResource(R.string.provider_logout_retry)) }
+            }
+        }
         WelcomeTopBar(
             onLoginClick = onLoginClick,
             enabled = !loading,

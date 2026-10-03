@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_logout_action">Sign out</string>
+    <string name="provider_logout_title">Sign out?</string>
+    <string name="provider_logout_body">You will sign out of your account on this device.</string>
+    <string name="provider_logout_cancel">Go back</string>
+    <string name="provider_logout_processing">Signing out…</string>
+    <string name="provider_logout_external_pending">External sign-out is pending. You can retry.</string>
+    <string name="provider_logout_local_pending">The session could not be removed from this device. Retry before signing in.</string>
+    <string name="provider_logout_retry">Retry sign-out</string>
+</resources>
