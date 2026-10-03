@@ -29,6 +29,7 @@ import dagger.hilt.components.SingletonComponent
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import javax.inject.Inject
 import javax.inject.Singleton
 import org.junit.*
 import org.junit.Assert.*
@@ -42,6 +43,7 @@ class ProviderActivityNavigationAcceptanceTest {
     @get:Rule(order = 1) val compose = createEmptyComposeRule()
     private lateinit var scenario: ActivityScenario<MainActivity>
     private lateinit var entry: ActivityTestEntryPoint
+    @Inject lateinit var statistics: NavigationActivityRepository
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Before fun setup() {
@@ -50,8 +52,8 @@ class ProviderActivityNavigationAcceptanceTest {
         entry.accounts().outcome = CurrentAccountOutcome.Success(CurrentAccount.Provider(
             1, "Carlos", "Gomez", "provider@example.test", Category(1, "Plumbing"), null))
         entry.sessions().saveSession(AuthSession(User("auth0|activity", "provider@example.test"), "synthetic-token"))
-        entry.statistics().unauthorized = false
-        entry.statistics().queries.clear()
+        statistics.unauthorized = false
+        statistics.queries.clear()
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }
     @After fun close() { scenario.close() }
@@ -66,7 +68,7 @@ class ProviderActivityNavigationAcceptanceTest {
         text(R.string.activity_apply_period).performScrollTo().performClick()
         text(R.string.activity_week).performScrollTo().performClick()
         compose.waitForIdle()
-        val query = entry.statistics().queries.last()
+        val query = statistics.queries.last()
         assertEquals(Instant.parse("2026-08-01T03:00:00Z"), query.from)
         assertEquals(ActivityGranularity.WEEK, query.granularity)
         text(R.string.activity_evolution_values).performScrollTo().performClick()
@@ -81,14 +83,14 @@ class ProviderActivityNavigationAcceptanceTest {
         compose.waitForIdle()
         text(R.string.activity_pending).assertIsDisplayed()
         assertEquals(before, scrollPosition())
-        assertEquals(query, entry.statistics().queries.last())
+        assertEquals(query, statistics.queries.last())
         scenario.onActivity { it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
         compose.waitUntil(5_000) {
             context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE &&
                 compose.onAllNodesWithText(context.getString(R.string.activity_pending)).fetchSemanticsNodes().isNotEmpty()
         }
         text(R.string.activity_pending).assertIsDisplayed()
-        assertEquals(query, entry.statistics().queries.last())
+        assertEquals(query, statistics.queries.last())
         // The expanded values remain in the tree after the loading branch and recreation.
         compose.onNodeWithTag("provider_activity").performScrollToNode(
             hasText(context.getString(R.string.activity_bucket_values, 8L, 5L, 3L)))
@@ -98,7 +100,7 @@ class ProviderActivityNavigationAcceptanceTest {
     @Test fun expired_query_returns_to_login_and_private_results_cannot_be_reopened() {
         openActivity()
         text(R.string.activity_bookings).performScrollTo().assertExists()
-        entry.statistics().unauthorized = true
+        statistics.unauthorized = true
         text(R.string.activity_period_options).performScrollTo().performClick()
         text(R.string.activity_week).performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithText(context.getString(R.string.welcome_login)).fetchSemanticsNodes().isNotEmpty() }
@@ -145,7 +147,6 @@ class NavigationActivityRepository : ProviderActivityRepository {
 interface ActivityTestEntryPoint {
     fun sessions(): ProviderSignupSessionStore
     fun accounts(): ProviderSignupCurrentAccountRepository
-    fun statistics(): NavigationActivityRepository
 }
 
 @RunWith(AndroidJUnit4::class)
