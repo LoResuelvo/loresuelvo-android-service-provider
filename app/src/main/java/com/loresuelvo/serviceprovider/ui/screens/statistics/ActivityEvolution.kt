@@ -56,15 +56,15 @@ internal fun ActivityEvolution(buckets: List<ActivityBucket>, showValues: Boolea
         TextButton(onClick = onToggleValues, modifier = Modifier.semantics { stateDescription = expansion }) {
             Text(stringResource(R.string.activity_evolution_values))
         }
-        if (showValues) {
-            buckets.forEach { bucket ->
-                Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 8.dp)) {
-                    Text(stringResource(R.string.activity_period, formatActivityInstant(bucket.from), formatActivityInstant(bucket.to)),
-                        style = MaterialTheme.typography.labelLarge)
-                    Text(stringResource(R.string.activity_bucket_values, bucket.confirmedBookings,
-                        bucket.reportedCompletions, bucket.fullyPaidWorkOrders))
-                }
-            }
-        }
+    }
+}
+
+@Composable
+internal fun ActivityEvolutionBucket(bucket: ActivityBucket) {
+    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 8.dp)) {
+        Text(stringResource(R.string.activity_period, formatActivityInstant(bucket.from), formatActivityInstant(bucket.to)),
+            style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.activity_bucket_values, bucket.confirmedBookings,
+            bucket.reportedCompletions, bucket.fullyPaidWorkOrders))
     }
 }

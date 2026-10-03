@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -30,10 +31,14 @@ import java.time.format.DateTimeFormatter
 import java.util.Currency
 import java.util.Locale
 
+val ACTIVITY_READING_POSITION = SemanticsPropertyKey<Pair<Int, Int>>("ActivityReadingPosition")
+
 @Composable
 fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
+    val periodExpanded by viewModel.periodExpanded.collectAsStateWithLifecycle()
+    val evolutionExpanded by viewModel.evolutionExpanded.collectAsStateWithLifecycle()
     val listState = rememberLazyListState(viewModel.readingIndex, viewModel.readingOffset)
     var restored by remember { mutableStateOf(false) }
     LaunchedEffect(state) {
@@ -45,20 +50,34 @@ fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel()
     LaunchedEffect(listState, state, restored) {
         if (state is ProviderActivityUiState.Ready && restored) {
             snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-                .collect { (index, offset) -> viewModel.rememberReadingPosition(index, offset) }
+                .collect { (index, offset) ->
+                    viewModel.rememberReadingPosition(index, offset)
+                }
+        }
+    }
+    DisposableEffect(viewModel, listState) {
+        onDispose {
+            if (restored) viewModel.rememberReadingPosition(
+                listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset)
         }
     }
     ProviderActivityScreen(state, viewModel::retry, filters, viewModel::editDates, viewModel::applyDates,
-        viewModel::selectGranularity, viewModel::comparePrevious, listState)
+        viewModel::selectGranularity, viewModel::comparePrevious, listState,
+        periodExpanded, evolutionExpanded, viewModel::expandPeriod, viewModel::expandEvolution)
 }
 
 @Composable
 fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
     filters: ActivityFilters? = null, onEditDates: (String, String) -> Unit = { _, _ -> },
     onApplyDates: () -> Unit = {}, onGranularity: (ActivityGranularity) -> Unit = {},
-    onComparison: (Boolean) -> Unit = {}, listState: LazyListState = rememberLazyListState()) {
+    onComparison: (Boolean) -> Unit = {}, listState: LazyListState = rememberLazyListState(),
+    periodExpansion: Boolean? = null, evolutionExpansion: Boolean? = null,
+    onPeriodExpansion: ((Boolean) -> Unit)? = null, onEvolutionExpansion: ((Boolean) -> Unit)? = null) {
     var showValues by rememberSaveable { mutableStateOf(false) }
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_activity"),
+    var periodExpanded by rememberSaveable { mutableStateOf(false) }
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_activity").semantics {
+        this[ACTIVITY_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+    },
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
@@ -69,7 +88,10 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
             HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 2.dp)
         }
         if (filters != null && state != ProviderActivityUiState.SessionExpired) {
-            item { ActivityPeriodControls(filters, onEditDates, onApplyDates, onGranularity, onComparison) }
+            item { ActivityPeriodControls(filters, onEditDates, onApplyDates, onGranularity, onComparison,
+                periodExpansion ?: periodExpanded) {
+                    if (onPeriodExpansion != null) onPeriodExpansion(it) else periodExpanded = it
+                } }
         }
         when (state) {
             ProviderActivityUiState.Loading -> item {
@@ -90,24 +112,32 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                     activity.results.fullyPaidWorkOrders == 0L) {
                     item { Text(stringResource(R.string.activity_empty)) }
                 }
+                val result = activity.results
                 item {
-                    val result = activity.results
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MetricPair(stringResource(R.string.activity_bookings), result.confirmedBookings,
-                            stringResource(R.string.activity_completions), result.reportedCompletions)
-                        MetricPair(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders,
-                            stringResource(R.string.activity_clients), result.clientsServed)
-                        Text(stringResource(R.string.activity_client_breakdown, result.newClients, result.returningClients))
-                        ValueRow(stringResource(R.string.activity_agreed_value), formatActivityMoney(result.agreedValueCents))
-                        ValueRow(stringResource(R.string.activity_average), result.averageValueCents?.let(::formatActivityMoney)
-                            ?: stringResource(R.string.activity_unavailable))
-                        Text(stringResource(R.string.activity_money_note), style = MaterialTheme.typography.bodySmall)
-                    }
+                    MetricPair(stringResource(R.string.activity_bookings), result.confirmedBookings,
+                        stringResource(R.string.activity_completions), result.reportedCompletions)
                 }
+                item {
+                    MetricPair(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders,
+                        stringResource(R.string.activity_clients), result.clientsServed)
+                }
+                item { Text(stringResource(R.string.activity_client_breakdown, result.newClients, result.returningClients)) }
+                item { ValueRow(stringResource(R.string.activity_agreed_value), formatActivityMoney(result.agreedValueCents)) }
+                item { ValueRow(stringResource(R.string.activity_average), result.averageValueCents?.let(::formatActivityMoney)
+                    ?: stringResource(R.string.activity_unavailable)) }
+                item { Text(stringResource(R.string.activity_money_note), style = MaterialTheme.typography.bodySmall) }
                 activity.comparison?.let { comparison ->
                     item { ActivityComparisonSection(activity.results, comparison) }
                 }
-                item { ActivityEvolution(activity.evolution, showValues) { showValues = !showValues } }
+                item { ActivityEvolution(activity.evolution, evolutionExpansion ?: showValues) {
+                    if (onEvolutionExpansion != null) onEvolutionExpansion(!(evolutionExpansion ?: showValues))
+                    else showValues = !showValues
+                } }
+                if (evolutionExpansion ?: showValues) {
+                    activity.evolution.forEach { bucket ->
+                        item(key = "activity_bucket_${bucket.from}") { ActivityEvolutionBucket(bucket) }
+                    }
+                }
                 item {
                     HorizontalDivider()
                     Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,

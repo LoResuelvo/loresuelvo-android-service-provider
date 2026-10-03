@@ -19,6 +19,7 @@ import com.loresuelvo.serviceprovider.domain.statistics.*
 import com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderActivityUseCase
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
 import com.loresuelvo.serviceprovider.ui.navigation.Route
+import com.loresuelvo.serviceprovider.ui.screens.statistics.ACTIVITY_READING_POSITION
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.EntryPoint
@@ -65,36 +66,50 @@ class ProviderActivityNavigationAcceptanceTest {
         text(R.string.activity_period_options).performScrollTo().performClick()
         compose.onNodeWithTag("activity_from_day").performTextReplacement("2026-08-01")
         compose.onNodeWithTag("activity_through_day").performTextReplacement("2026-08-31")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
         text(R.string.activity_apply_period).performScrollTo().performClick()
         text(R.string.activity_week).performScrollTo().performClick()
+        text(R.string.activity_day).performScrollTo().performClick()
         compose.waitForIdle()
         val query = statistics.queries.last()
         assertEquals(Instant.parse("2026-08-01T03:00:00Z"), query.from)
-        assertEquals(ActivityGranularity.WEEK, query.granularity)
-        text(R.string.activity_evolution_values).performScrollTo().performClick()
-        text(R.string.activity_pending).performScrollTo().assertIsDisplayed()
-        val before = scrollPosition()
-        assertTrue("Restoration must preserve a scrolled reading position", before > 0f)
+        assertEquals(ActivityGranularity.DAY, query.granularity)
+        revealText(R.string.activity_evolution_values).performClick()
+        val bucketValues = context.getString(R.string.activity_bucket_values, 8L, 5L, 3L)
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(bucketValues))
+        compose.onNodeWithText(bucketValues).performScrollTo().assertIsDisplayed()
+        val viewportTop = compose.onNodeWithTag("provider_activity").fetchSemanticsNode().boundsInRoot.top
+        val bucketTop = compose.onNodeWithText(bucketValues).fetchSemanticsNode().boundsInRoot.top
+        compose.onNodeWithTag("provider_activity").performSemanticsAction(
+            androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { scroll -> scroll(0f, bucketTop - viewportTop) }
+        compose.onNodeWithText(bucketValues).assertIsDisplayed()
+        assertEquals("The chosen bucket must anchor the first visible reading item", viewportTop,
+            compose.onNodeWithText(bucketValues).fetchSemanticsNode().boundsInRoot.top, 1f)
+        val before = readingPosition()
+        assertTrue("Reading must start beyond the initial viewport", before.first > 0)
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
         openActivity()
-        text(R.string.activity_pending).assertIsDisplayed()
-        assertEquals(before, scrollPosition())
+        compose.onNodeWithText(bucketValues).assertIsDisplayed()
+        assertEquals("Returning must preserve the first visible item and its pixel offset", before, readingPosition())
+        assertEquals(query, statistics.queries.last())
         scenario.recreate()
         compose.waitForIdle()
-        text(R.string.activity_pending).assertIsDisplayed()
-        assertEquals(before, scrollPosition())
+        compose.onNodeWithText(bucketValues).assertIsDisplayed()
+        assertEquals("Recreation must preserve the first visible item and its pixel offset", before, readingPosition())
         assertEquals(query, statistics.queries.last())
         scenario.onActivity { it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
         compose.waitUntil(5_000) {
             context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE &&
-                compose.onAllNodesWithText(context.getString(R.string.activity_pending)).fetchSemanticsNodes().isNotEmpty()
+                compose.onAllNodesWithText(bucketValues).fetchSemanticsNodes().isNotEmpty()
         }
-        text(R.string.activity_pending).assertIsDisplayed()
+        compose.onNodeWithText(bucketValues).assertIsDisplayed()
         assertEquals(query, statistics.queries.last())
-        // The expanded values remain in the tree after the loading branch and recreation.
-        compose.onNodeWithTag("provider_activity").performScrollToNode(
-            hasText(context.getString(R.string.activity_bucket_values, 8L, 5L, 3L)))
-        compose.onNodeWithText(context.getString(R.string.activity_bucket_values, 8L, 5L, 3L)).assertExists()
+        revealText(R.string.activity_period_options).assert(
+            SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
+                context.getString(R.string.activity_expanded)))
+        compose.onNodeWithTag("activity_from_day").assertTextContains("2026-08-01")
+        compose.onNodeWithTag("activity_through_day").assertTextContains("2026-08-31")
     }
 
     @Test fun expired_query_returns_to_login_and_private_results_cannot_be_reopened() {
@@ -115,11 +130,18 @@ class ProviderActivityNavigationAcceptanceTest {
     private fun openActivity() {
         compose.waitUntil(5_000) { compose.onAllNodesWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Activity.path).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Activity.path).assertHasClickAction().performClick()
-        compose.waitUntil(5_000) { compose.onAllNodesWithText(context.getString(R.string.activity_results)).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag("provider_activity").fetchSemanticsNodes().isNotEmpty() &&
+                compose.onAllNodesWithText(context.getString(R.string.activity_loading)).fetchSemanticsNodes().isEmpty()
+        }
     }
     private fun text(id: Int) = compose.onNodeWithText(context.getString(id))
-    private fun scrollPosition(): Float = compose.onNodeWithTag("provider_activity").fetchSemanticsNode()
-        .config[androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange].value()
+    private fun revealText(id: Int): SemanticsNodeInteraction {
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(context.getString(id)))
+        return text(id).performScrollTo()
+    }
+    private fun readingPosition(): Pair<Int, Int> = compose.onNodeWithTag("provider_activity")
+        .fetchSemanticsNode().config[ACTIVITY_READING_POSITION]
 
     @Module @InstallIn(SingletonComponent::class)
     object ActivityTestModule {
@@ -139,8 +161,27 @@ class NavigationActivityRepository : ProviderActivityRepository {
         return ActivityOutcome.Success(ProviderActivity(
             ActivityPeriod(query.from, query.to, query.granularity.name.lowercase(), "America/Argentina/Buenos_Aires"),
             query.to, ActivityResults(8, 5, 3, 4, 3, 1, 12345678, 2469136, "ARS"),
-            listOf(ActivityBucket(query.from, query.to, 8, 5, 3)), CurrentPending(2, 7, 4)))
+            buckets(query), CurrentPending(2, 7, 4)))
     }
+    private fun buckets(query: ActivityQuery): List<ActivityBucket> {
+        val zone = java.time.ZoneId.of("America/Argentina/Buenos_Aires")
+        val result = mutableListOf<ActivityBucket>()
+        var cursor = query.from
+        while (cursor < query.to) {
+            val day = cursor.atZone(zone).toLocalDate()
+            val nextDay = when (query.granularity) {
+                ActivityGranularity.DAY -> day.plusDays(1)
+                ActivityGranularity.WEEK -> day.with(java.time.temporal.TemporalAdjusters.next(java.time.DayOfWeek.MONDAY))
+                ActivityGranularity.MONTH -> day.withDayOfMonth(1).plusMonths(1)
+            }
+            val next = minOf(nextDay.atStartOfDay(zone).toInstant(), query.to)
+            result += ActivityBucket(cursor, next, if (result.isEmpty()) 8 else 0,
+                if (result.isEmpty()) 5 else 0, if (result.isEmpty()) 3 else 0)
+            cursor = next
+        }
+        return result
+    }
+
 }
 
 @EntryPoint @InstallIn(SingletonComponent::class)
@@ -175,10 +216,13 @@ class ProviderActivityCompactLayoutTest {
         listOf(R.string.activity_bookings, R.string.activity_completions, R.string.activity_paid,
             R.string.activity_clients, R.string.activity_evolution_values, R.string.activity_awaiting_payment).forEach { id ->
             val node = compose.onNodeWithText(context.getString(id))
+            compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(context.getString(id)))
             node.performScrollTo().assertIsDisplayed()
             val bounds = node.fetchSemanticsNode().boundsInRoot
             val viewport = compose.onNodeWithTag("provider_activity").fetchSemanticsNode().boundsInRoot
-            assertTrue("Label must fit the compact viewport", bounds.left >= viewport.left && bounds.right <= viewport.right)
+            assertTrue("Label ${context.getString(id)} must fit the compact viewport",
+                bounds.left >= viewport.left && bounds.right <= viewport.right &&
+                    bounds.top >= viewport.top && bounds.bottom <= viewport.bottom)
         }
     }
 }

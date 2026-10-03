@@ -3,7 +3,6 @@ package com.loresuelvo.serviceprovider.ui.screens.statistics
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -19,13 +18,13 @@ import com.loresuelvo.serviceprovider.ui.statistics.ActivityFilters
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ActivityPeriodControls(filters: ActivityFilters, onEditDates: (String, String) -> Unit,
-    onApplyDates: () -> Unit, onGranularity: (ActivityGranularity) -> Unit, onComparison: (Boolean) -> Unit) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    onApplyDates: () -> Unit, onGranularity: (ActivityGranularity) -> Unit, onComparison: (Boolean) -> Unit,
+    expanded: Boolean, onExpansion: (Boolean) -> Unit) {
     val comparisonLabel = stringResource(R.string.activity_compare_previous)
     val expansion = stringResource(if (expanded) R.string.activity_expanded else R.string.activity_collapsed)
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { expanded = !expanded }, modifier = Modifier.semantics { stateDescription = expansion }) {
+            TextButton(onClick = { onExpansion(!expanded) }, modifier = Modifier.semantics { stateDescription = expansion }) {
                 Text(stringResource(R.string.activity_period_options))
             }
             if (expanded) {

@@ -222,6 +222,8 @@ class ProviderActivitySteps {
         requireNotNull(viewModel).selectGranularity(ActivityGranularity.WEEK)
         requireNotNull(viewModel).comparePrevious(true)
         scheduler.advanceUntilIdle()
+        requireNotNull(viewModel).expandPeriod(true)
+        requireNotNull(viewModel).expandEvolution(true)
         requireNotNull(viewModel).rememberReadingPosition(7, 42)
         retainedQuery = requireNotNull(viewModel).query
         retainedFilters = requireNotNull(viewModel).filters.value
@@ -244,6 +246,8 @@ class ProviderActivitySteps {
     fun retainedSelection() {
         assertEquals(retainedQuery, requireNotNull(viewModel).query)
         assertEquals(retainedFilters, requireNotNull(viewModel).filters.value)
+        assertTrue(requireNotNull(viewModel).periodExpanded.value)
+        assertTrue(requireNotNull(viewModel).evolutionExpanded.value)
         period()
     }
     @Entonces("conservo mi posición de lectura")

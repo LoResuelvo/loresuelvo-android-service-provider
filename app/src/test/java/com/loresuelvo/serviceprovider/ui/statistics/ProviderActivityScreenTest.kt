@@ -30,7 +30,7 @@ class ProviderActivityScreenTest {
         compose.onNodeWithText("Reintentar").assertDoesNotExist()
         compose.runOnIdle { state.value = ProviderActivityUiState.Ready(activityFixture(empty = true)) }
         compose.onNodeWithText("No hubo actividad durante este período.").performScrollTo().assertExists()
-        compose.onNodeWithText("No disponible").performScrollTo().assertExists()
+        assertScrollableText("No disponible")
         assertScrollableText("Al momento de la consulta, sin filtro de período.")
         assertScrollableText("Finalizados con saldo pendiente")
     }
@@ -44,9 +44,8 @@ class ProviderActivityScreenTest {
         compose.setContent {
             LoresuelvoTheme { ProviderActivityScreen(ProviderActivityUiState.Ready(outcome.activity), {}) }
         }
-        compose.onNodeWithText("Valor pactado de trabajos finalizados").performScrollTo().assertExists()
-        compose.onNodeWithText("Importes en ARS, sin comisiones. El valor pactado no indica cuánto cobraste.")
-            .performScrollTo().assertExists()
+        assertScrollableText("Valor pactado de trabajos finalizados")
+        assertScrollableText("Importes en ARS, sin comisiones. El valor pactado no indica cuánto cobraste.")
         assertScrollableText("Pendientes actuales")
         assertScrollableText("Al momento de la consulta, sin filtro de período.")
     }
@@ -127,13 +126,14 @@ class ProviderActivityScreenTest {
     @Test fun `different valid period renders the new backend totals`() {
         val state = mutableStateOf<ProviderActivityUiState>(ProviderActivityUiState.Ready(activityFixture()))
         compose.setContent { LoresuelvoTheme { ProviderActivityScreen(state.value, {}) } }
-        compose.onNode(hasText("Contrataciones confirmadas") and hasText("8")).performScrollTo().assertExists()
+        assertScrollableText("8", "Contrataciones confirmadas")
         val august = com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(
             java.time.Instant.parse("2026-08-01T03:00:00Z"), java.time.Instant.parse("2026-09-01T03:00:00Z"))
         compose.runOnIdle { state.value = ProviderActivityUiState.Ready(activityForQuery(august)) }
-        compose.onNode(hasText("Contrataciones confirmadas") and hasText("3")).performScrollTo().assertExists()
-        compose.onNode(hasText("Finalizaciones informadas") and hasText("2")).performScrollTo().assertExists()
-        compose.onNode(hasText("Pagados por completo") and hasText("1")).performScrollTo().assertExists()
+        assertScrollableText("3", "Contrataciones confirmadas")
+        assertScrollableText("2", "Finalizaciones informadas")
+        assertScrollableText("1", "Pagados por completo")
+        assertScrollableText("3", "Contrataciones confirmadas")
         compose.onNode(hasText("Contrataciones confirmadas") and hasText("8")).assertDoesNotExist()
     }
 
@@ -147,8 +147,7 @@ class ProviderActivityScreenTest {
             .performScrollTo().assertIsDisplayed()
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Ver valores de la evolución"))
         compose.onNodeWithText("Ver valores de la evolución").performClick()
-        compose.onNodeWithText("Contrataciones: 8 · Finalizaciones informadas: 5 · Pagados por completo: 3", substring = true)
-            .performScrollTo().assertExists()
+        assertScrollableText("Contrataciones: 8 · Finalizaciones informadas: 5 · Pagados por completo: 3")
     }
 
     @Test fun `Spanish comparison formats decimals while zero bases remain unavailable`() {

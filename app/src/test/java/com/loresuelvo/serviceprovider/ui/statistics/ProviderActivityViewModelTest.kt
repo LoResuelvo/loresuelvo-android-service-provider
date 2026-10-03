@@ -136,7 +136,9 @@ class ProviderActivityViewModelTest {
         val original = restored(); dispatcher.scheduler.advanceUntilIdle()
         original.editDates("2026-08-01", "2026-08-31"); original.applyDates()
         original.selectGranularity(ActivityGranularity.MONTH); original.comparePrevious(true)
-        original.rememberReadingPosition(7, 42); dispatcher.scheduler.advanceUntilIdle()
+        original.rememberReadingPosition(7, 42)
+        original.expandPeriod(true); original.expandEvolution(true)
+        dispatcher.scheduler.advanceUntilIdle()
         val query = original.query
         viewModelStore.clear()
         repository.gate = CompletableDeferred()
@@ -144,6 +146,7 @@ class ProviderActivityViewModelTest {
         assertEquals(query, recreated.query)
         assertEquals(original.filters.value, recreated.filters.value)
         assertEquals(7, recreated.readingIndex); assertEquals(42, recreated.readingOffset)
+        assertTrue(recreated.periodExpanded.value); assertTrue(recreated.evolutionExpanded.value)
         assertEquals(ProviderActivityUiState.Loading, recreated.uiState.value)
         assertTrue(saved.keys().all { saved.get<Any>(it) is String || saved.get<Any>(it) is Boolean || saved.get<Any>(it) is Int })
         sessions.clearSession(); dispatcher.scheduler.runCurrent()
