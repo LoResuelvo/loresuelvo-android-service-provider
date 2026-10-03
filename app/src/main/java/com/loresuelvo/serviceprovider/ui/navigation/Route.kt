@@ -72,6 +72,8 @@ sealed class Route(val path: String) {
      */
     data object Messages : Route("messages")
 
+    data object Activity : Route("activity")
+
     /** Authenticated provider profile destination. */
     data object Profile : Route("profile") {
         const val proposalPaymentOrigin = "proposalPaymentOrigin"

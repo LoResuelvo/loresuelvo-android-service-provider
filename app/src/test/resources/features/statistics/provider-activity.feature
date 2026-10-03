@@ -4,7 +4,6 @@ Característica: Consultar mi actividad como prestador
   Quiero conocer mis resultados y pendientes
   Para entender el trabajo realizado y lo que requiere atención
 
-  @wip
   Escenario: 70.1-ACT Consultar mis resultados recientes
     Dado que conseguí y realicé trabajos durante los últimos 30 días
     Cuando abro Desempeño desde la barra inferior
@@ -14,14 +13,12 @@ Característica: Consultar mi actividad como prestador
     Y veo el valor pactado y el promedio de los trabajos finalizados en pesos argentinos
     Y se distingue el valor pactado del dinero cobrado
 
-  @wip
   Escenario: 70.2-ACT Consultar un período sin actividad
     Dado que no tuve actividad durante el período consultado
     Cuando consulto mis resultados
     Entonces veo las cantidades y los importes totales en cero
     Y el promedio figura como no disponible
 
-  @wip
   Escenario: 70.3-ACT Distinguir los pendientes actuales
     Dado que tengo solicitudes pendientes, trabajos programados y finalizados con saldo pendiente
     Y esos pendientes se originaron antes del período consultado
@@ -68,7 +65,6 @@ Característica: Consultar mi actividad como prestador
     Y los porcentajes sin una base de comparación figuran como no disponibles
     Y mis pendientes actuales no se comparan con el pasado
 
-  @wip
   Escenario: 70.8-ACT Recuperar una consulta que falló
     Dado que no se pudieron obtener mis resultados y veo una opción para reintentar
     Y la información vuelve a estar disponible

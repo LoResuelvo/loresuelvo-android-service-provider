@@ -381,4 +381,31 @@
     <string name="provider_chat_refresh_pending">Updating conversation…</string>
     <string name="provider_chat_refresh_error">Conversation could not be updated. Your reply is kept.</string>
     <string name="provider_chat_accept_to_reply">Accept the request to reply.</string>
+
+    <string name="provider_bottom_nav_activity">Performance</string>
+    <string name="activity_title">My performance</string>
+    <string name="activity_section">Activity</string>
+    <string name="activity_loading">Loading your activity…</string>
+    <string name="activity_error">We could not load your activity. Try again.</string>
+    <string name="activity_retry">Retry</string>
+    <string name="activity_session_expired">Sign in again to view your activity.</string>
+    <string name="activity_results">Period results</string>
+    <string name="activity_empty">There was no activity during this period.</string>
+    <string name="activity_bookings">Confirmed bookings</string>
+    <string name="activity_completions">Reported completions</string>
+    <string name="activity_paid">Fully paid jobs</string>
+    <string name="activity_clients">Clients served</string>
+    <string name="activity_client_breakdown">Clients: %1$d new · %2$d returning</string>
+    <string name="activity_agreed_value">Agreed value of completed jobs</string>
+    <string name="activity_average">Average per completed job</string>
+    <string name="activity_unavailable">Not available</string>
+    <string name="activity_money_note">Amounts in ARS, excluding fees. Agreed value does not indicate how much you collected.</string>
+    <string name="activity_pending">Current pending work</string>
+    <string name="activity_pending_note">At query time, without a period filter.</string>
+    <string name="activity_pending_requests">Pending requests</string>
+    <string name="activity_scheduled">Scheduled jobs</string>
+    <string name="activity_awaiting_payment">Completed jobs with outstanding balance</string>
+    <string name="activity_last_30_days">Last 30 days</string>
+    <string name="activity_period">From %1$s (inclusive) to %2$s (exclusive)</string>
+    <string name="activity_calculated">Calculated at %1$s</string>
 </resources>

@@ -5,6 +5,8 @@ import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.loresuelvo.serviceprovider.ui.theme.LoresuelvoTheme
@@ -39,6 +41,16 @@ class LoresuelvoBottomBarTest {
                 .onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + destination.route)
                 .assertExists()
         }
+    }
+
+    @Test
+    fun activity_has_visible_label_and_selected_state() {
+        composeTestRule.setContent {
+            LoresuelvoTheme { LoresuelvoBottomBar(Route.Activity.path, {}) }
+        }
+        composeTestRule.onNodeWithText("Desempeño").assertExists()
+        composeTestRule.onNodeWithContentDescription("Desempeño").assertIsSelected()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Activity.path).assertIsSelected()
     }
 
     @Test

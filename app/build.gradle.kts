@@ -65,6 +65,7 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -203,6 +204,8 @@ gradle.taskGraph.whenReady {
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.android.desugar.jdk.libs)
+
     // Icons & Core
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.core.ktx)

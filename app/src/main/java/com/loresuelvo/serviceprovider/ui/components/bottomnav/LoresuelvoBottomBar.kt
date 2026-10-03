@@ -1,7 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.components.bottomnav
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -9,7 +11,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -55,57 +58,31 @@ fun LoresuelvoBottomBar(
             .testTag(PROVIDER_BOTTOM_BAR_TAG),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BottomDestination.all.forEach { destination ->
                 val isSelected = currentRoute == destination.route
+                val label = stringResource(destination.labelRes)
 
-                Box(
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .size(48.dp)
-                        // `clip(CircleShape)` MUST sit **before**
-                        // `clickable` so the [Box]'s rectangular
-                        // bounds stop clipping the ripple —
-                        // `clickable`'s default indication is rendered
-                        // at the end of the modifier chain and is
-                        // clipped by every `clip` that came before
-                        // it. Without this clip the ripple painted a
-                        // visible square around the icon.
-                        .clip(CircleShape)
-                        .clickable(onClick = { onNavigate(destination) })
-                        .semantics { selected = isSelected }
-                        .testTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + destination.route),
-                    contentAlignment = Alignment.Center,
+                Column(
+                    modifier = Modifier.weight(1f).heightIn(min = 64.dp).clip(RoundedCornerShape(16.dp))
+                        .selectable(selected = isSelected, role = Role.Tab, onClick = { onNavigate(destination) })
+                        .semantics(mergeDescendants = true) { selected = isSelected; contentDescription = label }
+                        .testTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + destination.route)
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    if (isSelected) {
-                        // Selected bubble: a circular
-                        // `secondaryContainer` painted **before** the
-                        // [Icon] so the icon rests on top of the
-                        // bubble. The 48.dp circle reads as a subtle
-                        // "medallion" inside the capsule rather than
-                        // a card behind the dock.
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    shape = CircleShape,
-                                ),
-                        )
+                    Box(Modifier.size(32.dp).background(
+                        if (isSelected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                        RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                        Icon(destination.icon, contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
                     }
-                    Icon(
-                        imageVector = destination.icon,
-                        contentDescription = stringResource(destination.labelRes),
-                        tint = if (isSelected) {
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.size(if (isSelected) 30.dp else 27.dp),
-                    )
+                    androidx.compose.material3.Text(label,
+                        style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -120,7 +97,7 @@ fun LoresuelvoBottomBar(
  *    assert "the bar is rendered / not rendered".
  *  - [PROVIDER_BOTTOM_BAR_ITEM_PREFIX]` + route — one per tab; lets
  *    a test target the click target without depending on the
- *    localised label copy (the bar is icon-only).
+ *    localised label copy (the bar includes visible labels).
  */
 const val PROVIDER_BOTTOM_BAR_TAG: String = "provider-bottom-bar"
 const val PROVIDER_BOTTOM_BAR_ITEM_PREFIX: String = "bottom-bar-item-"

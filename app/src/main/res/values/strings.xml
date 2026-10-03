@@ -392,4 +392,31 @@
     <string name="provider_chat_refresh_pending">Actualizando la conversación…</string>
     <string name="provider_chat_refresh_error">No se pudo actualizar la conversación. Tu respuesta se conserva.</string>
     <string name="provider_chat_accept_to_reply">Aceptá la solicitud para responder.</string>
+
+    <string name="provider_bottom_nav_activity">Desempeño</string>
+    <string name="activity_title">Mi desempeño</string>
+    <string name="activity_section">Actividad</string>
+    <string name="activity_loading">Consultando tu actividad…</string>
+    <string name="activity_error">No pudimos consultar tu actividad. Reintentá la consulta.</string>
+    <string name="activity_retry">Reintentar</string>
+    <string name="activity_session_expired">Ingresá nuevamente para consultar tu actividad.</string>
+    <string name="activity_results">Resultados del período</string>
+    <string name="activity_empty">No hubo actividad durante este período.</string>
+    <string name="activity_bookings">Contrataciones confirmadas</string>
+    <string name="activity_completions">Finalizaciones informadas</string>
+    <string name="activity_paid">Pagados por completo</string>
+    <string name="activity_clients">Clientes atendidos</string>
+    <string name="activity_client_breakdown">Clientes: %1$d nuevos · %2$d recurrentes</string>
+    <string name="activity_agreed_value">Valor pactado de trabajos finalizados</string>
+    <string name="activity_average">Promedio por trabajo finalizado</string>
+    <string name="activity_unavailable">No disponible</string>
+    <string name="activity_money_note">Importes en ARS, sin comisiones. El valor pactado no indica cuánto cobraste.</string>
+    <string name="activity_pending">Pendientes actuales</string>
+    <string name="activity_pending_note">Al momento de la consulta, sin filtro de período.</string>
+    <string name="activity_pending_requests">Solicitudes pendientes</string>
+    <string name="activity_scheduled">Trabajos programados</string>
+    <string name="activity_awaiting_payment">Finalizados con saldo pendiente</string>
+    <string name="activity_last_30_days">Últimos 30 días</string>
+    <string name="activity_period">Desde %1$s (incluido) hasta %2$s (excluido)</string>
+    <string name="activity_calculated">Calculado el %1$s</string>
 </resources>

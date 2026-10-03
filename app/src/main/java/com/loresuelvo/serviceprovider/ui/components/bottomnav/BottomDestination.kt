@@ -3,6 +3,7 @@ package com.loresuelvo.serviceprovider.ui.components.bottomnav
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Message
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -16,11 +17,11 @@ import com.loresuelvo.serviceprovider.ui.navigation.Route
  *    stays decoupled from the [Route] sealed class in
  *    [com.loresuelvo.serviceprovider.ui.navigation]),
  *  - the Material icon the bar renders inside the capsule item,
- *  - the localised label used as the icon's content description.
+ *  - the localized visible and accessible tab label.
  *
  * The composable ([LoresuelvoBottomBar]) iterates over [all] and
- * renders one click target per entry; adding a third tab later
- * (Profile, Activity, …) is a single new `val` in [Companion] plus
+ * renders one click target per entry; adding a destination
+ * requires a new `val` in [Companion] plus
  * a line in [Companion.all]. No composable changes required.
  *
  * The selection state is driven by the current `NavBackStackEntry`
@@ -57,6 +58,9 @@ data class BottomDestination(
             labelRes = R.string.provider_bottom_nav_messages,
         )
 
+        val Activity = BottomDestination(Route.Activity.path, Icons.Outlined.BarChart,
+            R.string.provider_bottom_nav_activity)
+
         val Profile: BottomDestination = BottomDestination(
             route = Route.Profile.path,
             icon = Icons.Outlined.Person,
@@ -68,11 +72,11 @@ data class BottomDestination(
          * capsule renders the items in the order declared here, so
          * re-ordering the tabs is a one-line edit.
          */
-        val all: List<BottomDestination> = listOf(Home, Messages, Profile)
+        val all: List<BottomDestination> = listOf(Home, Messages, Activity, Profile)
 
         /**
          * The bar is visible on any route that maps to a
-         * [BottomDestination.route] (Home or the messages list).
+         * [BottomDestination.route].
          * Detail / auth routes are excluded by this membership
          * test — no per-screen `if` required.
          *
@@ -83,7 +87,7 @@ data class BottomDestination(
          * test against `all.map { it.route }`.
          */
         fun shouldShow(currentRoute: String?): Boolean = when (currentRoute) {
-            Home.route, Messages.route, Profile.route -> true
+            Home.route, Messages.route, Activity.route, Profile.route -> true
             else -> false
         }
     }

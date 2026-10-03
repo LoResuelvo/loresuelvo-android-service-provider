@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -12,6 +13,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -115,6 +119,8 @@ fun LoResuelvoNav(
                 val navController = rememberNavController()
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route
+                var bottomBarHeight by remember { mutableIntStateOf(0) }
+                val bottomBarHeightDp = with(LocalDensity.current) { bottomBarHeight.toDp() }
 
                 LaunchedEffect(returnUrl, currentRoute) {
                     val hint = returnUrl?.let(paymentReturnLinkParser::parse) ?: return@LaunchedEffect
@@ -142,7 +148,9 @@ fun LoResuelvoNav(
                         LoResuelvoNavHost(
                             navController = navController,
                             startDestination = startDestination,
-                            contentPadding = contentPadding,
+                            contentPadding = if (currentRoute == Route.Activity.path) PaddingValues(
+                                top = contentPadding.calculateTopPadding(), bottom = bottomBarHeightDp,
+                            ) else contentPadding,
                             welcome = { WelcomeRoute(browserAuthenticationLauncher, entryViewModel) },
                             professionalProfile = { CompleteProviderProfileRoute(navController) },
                             optionalIdentityVerification = {
@@ -226,6 +234,7 @@ fun LoResuelvoNav(
                                     },
                                 )
                             },
+                            activity = { com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderActivityRoute() },
                             profile = {
                                 ProviderProfileRoute(
                                     identityLauncher = identityVerificationLauncher,
@@ -304,7 +313,7 @@ fun LoResuelvoNav(
                                     restoreState = true
                                 }
                             },
-                            modifier = Modifier.align(Alignment.BottomCenter),
+                            modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { bottomBarHeight = it.height },
                         )
                     }
                 }
