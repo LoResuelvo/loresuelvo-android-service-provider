@@ -20,4 +20,9 @@
     <string name="reputation_percentage">%1$s %%</string>
     <string name="reputation_coverage_counts">%1$d of %2$d paid jobs received a review.</string>
     <string name="reputation_session_expired">Sign in again to view your reputation.</string>
+    <string name="reputation_load_more">Load more reviews</string>
+    <string name="reputation_refresh">Refresh reputation</string>
+    <string name="reputation_more_error">We could not load the reviews. The information you were reading is preserved.</string>
+    <string name="reputation_restart_error">The query changed. Start again from the first reviews.</string>
+    <string name="reputation_restart">Start again</string>
 </resources>

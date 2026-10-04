@@ -22,5 +22,5 @@ sealed interface ReputationOutcome {
     }
 }
 interface ProviderReputationRepository {
-    suspend fun getReputation(): ReputationOutcome
+    suspend fun getReputation(cursor: String? = null): ReputationOutcome
 }

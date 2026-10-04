@@ -113,7 +113,7 @@ class ApiProviderReputationRepositoryTest {
     @Test fun `network failures remain typed and cancellation propagates`() = runTest {
         val api = object : ProviderReputationApi {
             var cancelled = false
-            override suspend fun getReputation(limit: Int): ProviderReputationDto {
+            override suspend fun getReputation(limit: Int, cursor: String?): ProviderReputationDto {
                 if (cancelled) throw CancellationException("Cancelled test request")
                 throw java.io.IOException("Offline test transport")
             }
@@ -122,6 +122,23 @@ class ApiProviderReputationRepositoryTest {
         assertEquals(ReputationOutcome.Failure.Network, repo.getReputation())
         api.cancelled = true
         try { repo.getReputation(); fail("Cancellation must propagate") } catch (_: CancellationException) { }
+    }
+    @Test fun `continuation preserves opaque cursor and fixed limit without period parameters`() = runTest {
+        MockWebServer().use { server ->
+            val repo = repository(server)
+            server.enqueue(MockResponse().setBody(payload.replace("\"opaque+/cursor=\"", "null")))
+            val outcome = repo.getReputation("opaque+/cursor=") as ReputationOutcome.Success
+            assertNull(outcome.reputation.nextCursor)
+            val url = requireNotNull(server.takeRequest().requestUrl)
+            assertEquals(setOf("limit", "cursor"), url.queryParameterNames)
+            assertEquals("20", url.queryParameter("limit"))
+            assertEquals("opaque+/cursor=", url.queryParameter("cursor"))
+            server.enqueue(MockResponse().setBody(payload.replace("\"review_count\":24", "\"review_count\":25")))
+            assertEquals(ReputationOutcome.Failure.Malformed, repo.getReputation("opaque+/cursor="))
+            server.enqueue(MockResponse().setResponseCode(400))
+            assertEquals(ReputationOutcome.Failure.InvalidQuery, repo.getReputation("opaque+/cursor="))
+            assertEquals(3, server.requestCount)
+        }
     }
     private val payload = """{
       "calculated_at":"2026-10-03T12:00:00Z","average_rating":4.63,"review_count":24,

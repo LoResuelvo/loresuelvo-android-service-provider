@@ -84,4 +84,29 @@ class ProviderReputationScreenTest {
         compose.onNodeWithText("Conversión").assertDoesNotExist()
         compose.onNodeWithText("Opciones del período").assertDoesNotExist()
     }
+    @Test fun `continuation controls preserve real rows and sticky tabs while error retry and refresh remain reachable`() {
+        val state = mutableStateOf(ProviderReputationUiState.Ready(reputationFixture()))
+        var more = 0; var retries = 0; var refreshes = 0
+        compose.setContent { LoresuelvoTheme { ProviderReputationScreen(state.value, { retries++ },
+            onLoadMore = { more++ }, onRefresh = { refreshes++ }) } }
+        reveal("Cargar más reseñas"); compose.onNodeWithText("Cargar más reseñas").performClick()
+        assertEquals(1, more)
+        compose.onNodeWithText("Actividad").assertIsDisplayed()
+        compose.onNodeWithText("Cobros").assertIsDisplayed()
+        compose.runOnIdle { state.value = state.value.copy(loading = true) }
+        reveal("Cargando tu reputación…")
+        compose.onNodeWithText("Cargar más reseñas").assertDoesNotExist()
+        reveal("Trabajo #184")
+        compose.runOnIdle { state.value = state.value.copy(loading = false, failure = ReputationOutcome.Failure.Network) }
+        reveal("Reintentar"); compose.onNodeWithText("Reintentar").performClick(); assertEquals(1, retries)
+        reveal("Trabajo #179")
+        compose.runOnIdle { state.value = state.value.copy(restartRequired = true) }
+        reveal("Consultar desde el principio")
+        compose.onNodeWithText("Consultar desde el principio").performClick(); assertEquals(2, retries)
+        reveal("Actualizar reputación"); compose.onNodeWithText("Actualizar reputación").performClick()
+        assertEquals(1, refreshes)
+        compose.runOnIdle { state.value = ProviderReputationUiState.Ready(reputationFixture().copy(nextCursor = null)) }
+        compose.onNodeWithText("Cargar más reseñas").assertDoesNotExist()
+    }
+
 }

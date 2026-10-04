@@ -31,7 +31,6 @@ Característica: Consultar mi reputación como prestador
     Y no se agregan nombres, fechas ni opiniones que no fueron informados
     Y no se presentan como las reseñas más recientes
 
-  @wip
   Escenario: 72.4-REP Seguir leyendo mis reseñas
     Dado que estoy leyendo mis reseñas y quedan otras por mostrar
     Cuando elijo cargar más reseñas
@@ -39,7 +38,6 @@ Característica: Consultar mi reputación como prestador
     Y conservo las reseñas anteriores y mi posición de lectura
     Y los indicadores siguen representando toda mi trayectoria
 
-  @wip
   Esquema del escenario: 72.5-REP Recuperar una consulta que falló
     Dado que falló "<consulta>" y se informó el problema sin mostrar resultados inventados
     Y la información vuelve a estar disponible
@@ -51,7 +49,6 @@ Característica: Consultar mi reputación como prestador
       | la consulta de reputación  | desde las primeras reseñas   |
       | la carga de más reseñas    | desde las siguientes reseñas |
 
-  @wip
   Escenario: 72.6-REP Actualizar mi reputación
     Dado que ya cargué varias reseñas y recibí una nueva calificación
     Cuando actualizo mi reputación
@@ -59,7 +56,6 @@ Característica: Consultar mi reputación como prestador
     Y no se mezclan con las reseñas cargadas anteriormente
     Y veo cuándo se consultó la información
 
-  @wip
   Escenario: 72.7-REP Retomar la lectura de mi reputación
     Dado que estaba leyendo mis reseñas y fui a otra sección de Desempeño
     Cuando vuelvo a Reputación

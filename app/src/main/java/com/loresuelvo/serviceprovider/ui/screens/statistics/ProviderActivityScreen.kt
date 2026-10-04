@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.statistics
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -66,6 +67,7 @@ fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel()
         periodExpanded, evolutionExpanded, viewModel::expandPeriod, viewModel::expandEvolution, onCollections, onReputation)
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
     filters: ActivityFilters? = null, onEditDates: (String, String) -> Unit = { _, _ -> },
@@ -82,7 +84,7 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.semantics { heading() }) }
-        item {
+        stickyHeader {
             if (onCollections != null) PerformanceTabs(PerformanceSection.ACTIVITY) { section ->
                 when (section) {
                     PerformanceSection.COLLECTIONS -> onCollections()

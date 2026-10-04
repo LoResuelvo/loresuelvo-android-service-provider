@@ -157,7 +157,7 @@ class ProviderActivityNavigationAcceptanceTest {
         @Provides fun reputationUseCase() =
             com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderReputationUseCase(
                 object : com.loresuelvo.serviceprovider.domain.statistics.ProviderReputationRepository {
-                    override suspend fun getReputation() =
+                    override suspend fun getReputation(cursor: String?) =
                         com.loresuelvo.serviceprovider.domain.statistics.ReputationOutcome.Failure.Network
                 })
         @Provides fun clock(): Clock = Clock.fixed(Instant.parse("2026-10-03T12:00:00Z"), ZoneOffset.UTC)

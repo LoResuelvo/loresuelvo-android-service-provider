@@ -20,4 +20,9 @@
     <string name="reputation_percentage">%1$s %%</string>
     <string name="reputation_coverage_counts">%1$d de %2$d trabajos pagados recibieron una reseña.</string>
     <string name="reputation_session_expired">Ingresá nuevamente para consultar tu reputación.</string>
+    <string name="reputation_load_more">Cargar más reseñas</string>
+    <string name="reputation_refresh">Actualizar reputación</string>
+    <string name="reputation_more_error">No pudimos cargar las reseñas. Conservamos la información que ya estabas leyendo.</string>
+    <string name="reputation_restart_error">La consulta cambió. Volvé a consultar desde las primeras reseñas.</string>
+    <string name="reputation_restart">Consultar desde el principio</string>
 </resources>

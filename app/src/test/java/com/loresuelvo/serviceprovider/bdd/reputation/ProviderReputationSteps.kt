@@ -2,7 +2,7 @@ package com.loresuelvo.serviceprovider.bdd.reputation
 
 import androidx.lifecycle.ViewModelStore
 import com.loresuelvo.serviceprovider.domain.statistics.*
-import com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderReputationUseCase
+import com.loresuelvo.serviceprovider.domain.usecase.statistics.*
 import com.loresuelvo.serviceprovider.ui.statistics.*
 import io.cucumber.java.After
 import io.cucumber.java.es.*
@@ -75,4 +75,90 @@ class ProviderReputationSteps {
         assertEquals(listOf(184, 179), result().reviews.map { it.workOrderId })
         // The Screen explicitly explains work-number order rather than recency.
     }
+    private var retained = emptyList<ReceivedReview>()
+    private var activity: ProviderActivityViewModel? = null
+    private var transactions: CollectionTransactionsViewModel? = null
+    private fun settle() = scheduler.advanceUntilIdle()
+    private fun followingPage() = expected.copy(reviews = listOf(expected.reviews.last(),
+        ReceivedReview(172, 5, "Following actual comment")), nextCursor = null)
+
+    @Dado("que estoy leyendo mis reseñas y quedan otras por mostrar")
+    fun readingWithContinuation() {
+        open(); retained = result().reviews; vm.rememberReadingPosition(9, 37)
+        repository.outcome = ReputationOutcome.Success(followingPage())
+    }
+    @Cuando("elijo cargar más reseñas") fun loadMore() { vm.loadMore(); settle() }
+    @Entonces("se agregan las siguientes sin repetir trabajos")
+    fun appendedWithoutDuplicates() {
+        assertEquals(listOf(184, 179, 172), result().reviews.map { it.workOrderId })
+        assertEquals(result().reviews.size, result().reviews.distinctBy { it.workOrderId }.size)
+    }
+    @Entonces("conservo las reseñas anteriores y mi posición de lectura")
+    fun retainRowsAndReading() {
+        assertTrue(result().reviews.containsAll(retained)); assertEquals(9, vm.readingIndex); assertEquals(37, vm.readingOffset)
+    }
+    @Entonces("los indicadores siguen representando toda mi trayectoria")
+    fun globalIndicators() { assertEquals(24L, result().reviewCount); assertEquals(expected.ratingDistribution, result().ratingDistribution) }
+    @Dado("que falló {string} y se informó el problema sin mostrar resultados inventados")
+    fun failedQuery(query: String) {
+        if (query == "la carga de más reseñas") {
+            open(); retained = result().reviews; repository.outcome = ReputationOutcome.Failure.Network
+            vm.loadMore(); settle()
+            assertEquals(ReputationOutcome.Failure.Network, (vm.uiState.value as ProviderReputationUiState.Ready).failure)
+            assertEquals(retained, result().reviews)
+        } else {
+            repository.outcome = ReputationOutcome.Failure.Network; open()
+            assertEquals(ProviderReputationUiState.Error(ReputationOutcome.Failure.Network), vm.uiState.value)
+        }
+    }
+    @Dado("la información vuelve a estar disponible")
+    fun availableAgain() { repository.outcome = ReputationOutcome.Success(if (retained.isEmpty()) expected else followingPage()) }
+    @Cuando("elijo reintentar") fun retry() { vm.retry(); settle() }
+    @Entonces("puedo continuar {string}")
+    fun continuedReading(reading: String) {
+        if (reading == "desde las siguientes reseñas") {
+            assertEquals("opaque+/cursor=", repository.cursors.last()); appendedWithoutDuplicates()
+        } else { assertNull(repository.cursors.last()); assertEquals(expected.reviews, result().reviews) }
+    }
+    @Entonces("conservo la información válida que ya estaba leyendo")
+    fun retainedValidInformation() { assertTrue(result().reviews.containsAll(retained)) }
+    @Dado("que ya cargué varias reseñas y recibí una nueva calificación")
+    fun newRatingAfterPages() {
+        readingWithContinuation(); loadMore()
+        expected = expected.copy(calculatedAt = java.time.Instant.parse("2026-10-04T12:00:00Z"),
+            averageRating = 4.64, reviewCount = 25, reviewedPaidOrders = 25, coveragePercentage = 83.33,
+            ratingDistribution = expected.ratingDistribution.map { if (it.rating == 5) it.copy(count = 18) else it },
+            reviews = listOf(ReceivedReview(200, 5, "New actual rating")))
+        repository.outcome = ReputationOutcome.Success(expected)
+    }
+    @Cuando("actualizo mi reputación") fun refresh() { vm.refresh(); settle() }
+    @Entonces("veo los indicadores actualizados y las primeras reseñas de la nueva consulta")
+    fun updatedFirstPage() { assertEquals(expected, result()); assertNull(repository.cursors.last()); assertEquals(0, vm.readingIndex) }
+    @Entonces("no se mezclan con las reseñas cargadas anteriormente")
+    fun noMixedOldRows() { assertEquals(listOf(200), result().reviews.map { it.workOrderId }) }
+    @Entonces("veo cuándo se consultó la información")
+    fun calculatedTimestamp() { assertEquals(java.time.Instant.parse("2026-10-04T12:00:00Z"), result().calculatedAt) }
+    @Dado("que estaba leyendo mis reseñas y fui a otra sección de Desempeño")
+    fun otherPerformanceSection() {
+        readingWithContinuation(); loadMore()
+        val sessions = ActivityTestSessionStore()
+        activity = ProviderActivityViewModel(GetProviderActivityUseCase(ActivityTestRepository()), sessions,
+            java.time.Clock.fixed(expected.calculatedAt, java.time.ZoneOffset.UTC)).also { store.put("activity", it) }
+        activity!!.selectGranularity(ActivityGranularity.WEEK); activity!!.comparePrevious(true)
+        transactions = CollectionTransactionsViewModel(GetCollectionTransactionsUseCase(object : CollectionTransactionsRepository {
+            override suspend fun getTransactions(query: CollectionTransactionsQuery) = CollectionTransactionsOutcome.Failure(CollectionsOutcome.Failure.Network)
+        }), sessions).also { store.put("transactions", it) }
+        transactions!!.selectPeriod(activityFixture().period); transactions!!.selectPurpose(CollectionPurpose.BOOKING_DEPOSIT)
+        settle()
+    }
+    @Cuando("vuelvo a Reputación") fun returnToReputation() { vm.open(); settle() }
+    @Entonces("retomo mi posición de lectura") fun resumedPosition() { assertEquals(9, vm.readingIndex); assertEquals(37, vm.readingOffset) }
+    @Entonces("Actividad y Cobros conservan sus propias opciones")
+    fun independentOptions() {
+        assertEquals(ActivityGranularity.WEEK, activity!!.query.granularity); assertTrue(activity!!.query.comparePrevious)
+        assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions!!.uiState.value.purpose)
+    }
+    @Entonces("Reputación sigue mostrando toda mi trayectoria sin pedir un período")
+    fun noPeriodForReputation() { globalIndicators(); assertEquals(listOf(null, "opaque+/cursor="), repository.cursors) }
+
 }

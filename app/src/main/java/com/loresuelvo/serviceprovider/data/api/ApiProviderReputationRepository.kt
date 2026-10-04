@@ -13,8 +13,8 @@ import java.time.format.DateTimeParseException
 
 @Singleton
 class ApiProviderReputationRepository @Inject constructor(private val api: ProviderReputationApi) : ProviderReputationRepository {
-    override suspend fun getReputation(): ReputationOutcome = try {
-        ReputationOutcome.Success(api.getReputation(20).toDomain())
+    override suspend fun getReputation(cursor: String?): ReputationOutcome = try {
+        ReputationOutcome.Success(api.getReputation(20, cursor).toDomain())
     } catch (e: CancellationException) { throw e
     } catch (e: HttpException) {
         when (e.code()) {

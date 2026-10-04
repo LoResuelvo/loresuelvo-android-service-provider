@@ -14,9 +14,11 @@ fun reputationFixture(eligible: Long = 30, empty: Boolean = false): ProviderRepu
 class ReputationTestRepository : ProviderReputationRepository {
     var outcome: ReputationOutcome = ReputationOutcome.Success(reputationFixture())
     var calls = 0
+    val cursors = mutableListOf<String?>()
     var gate: CompletableDeferred<Unit>? = null
-    override suspend fun getReputation(): ReputationOutcome {
+    override suspend fun getReputation(cursor: String?): ReputationOutcome {
         calls++
+        cursors += cursor
         gate?.await()
         return outcome
     }

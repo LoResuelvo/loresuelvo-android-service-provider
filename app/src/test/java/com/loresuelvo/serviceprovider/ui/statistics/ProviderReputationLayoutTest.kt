@@ -79,6 +79,8 @@ class ProviderReputationLayoutTest {
         textFits("Trabajo #184", contentLtr = true)
         textFits("5 de 5 estrellas", contentLtr = true)
         textFits(comment)
+        textFits("Cargar más reseñas", contentLtr = true)
+        textFits("Actualizar reputación", contentLtr = true)
         saveRender("reputation-dark-large-type-rtl-review")
         textFits("Reseñas ordenadas por número de trabajo, no por fecha.", contentLtr = true)
         textFits("Consultado el ${com.loresuelvo.serviceprovider.ui.screens.statistics.formatActivityInstant(fixture.calculatedAt)} · Buenos Aires",
