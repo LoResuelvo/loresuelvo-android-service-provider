@@ -34,7 +34,7 @@ import java.util.Locale
 val ACTIVITY_READING_POSITION = SemanticsPropertyKey<Pair<Int, Int>>("ActivityReadingPosition")
 
 @Composable
-fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel(), onCollections: (() -> Unit)? = null) {
+fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel(), onCollections: (() -> Unit)? = null, onReputation: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val periodExpanded by viewModel.periodExpanded.collectAsStateWithLifecycle()
@@ -63,7 +63,7 @@ fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel()
     }
     ProviderActivityScreen(state, viewModel::retry, filters, viewModel::editDates, viewModel::applyDates,
         viewModel::selectGranularity, viewModel::comparePrevious, listState,
-        periodExpanded, evolutionExpanded, viewModel::expandPeriod, viewModel::expandEvolution, onCollections)
+        periodExpanded, evolutionExpanded, viewModel::expandPeriod, viewModel::expandEvolution, onCollections, onReputation)
 }
 
 @Composable
@@ -72,7 +72,7 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
     onApplyDates: () -> Unit = {}, onGranularity: (ActivityGranularity) -> Unit = {},
     onComparison: (Boolean) -> Unit = {}, listState: LazyListState = rememberLazyListState(),
     periodExpansion: Boolean? = null, evolutionExpansion: Boolean? = null,
-    onPeriodExpansion: ((Boolean) -> Unit)? = null, onEvolutionExpansion: ((Boolean) -> Unit)? = null, onCollections: (() -> Unit)? = null) {
+    onPeriodExpansion: ((Boolean) -> Unit)? = null, onEvolutionExpansion: ((Boolean) -> Unit)? = null, onCollections: (() -> Unit)? = null, onReputation: () -> Unit = {}) {
     var showValues by rememberSaveable { mutableStateOf(false) }
     var periodExpanded by rememberSaveable { mutableStateOf(false) }
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_activity").semantics {
@@ -83,7 +83,13 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
         item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.semantics { heading() }) }
         item {
-            if (onCollections != null) PerformanceTabs(false, {}, onCollections)
+            if (onCollections != null) PerformanceTabs(PerformanceSection.ACTIVITY) { section ->
+                when (section) {
+                    PerformanceSection.COLLECTIONS -> onCollections()
+                    PerformanceSection.REPUTATION -> onReputation()
+                    PerformanceSection.ACTIVITY -> Unit
+                }
+            }
             else {
                 Text(stringResource(R.string.activity_section), color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.titleMedium)

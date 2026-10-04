@@ -62,7 +62,7 @@ class CollectionTransactionsScreenTest {
         scroll(hasText("Total verificado") and hasText(formatActivityMoney(400000)))
     }
     private fun scroll(matcher: SemanticsMatcher) {
-        compose.onNode(hasScrollAction()).performScrollToNode(matcher)
+        compose.onNodeWithTag("provider_collections").performScrollToNode(matcher)
         compose.onNode(matcher).assertExists()
     }
 }

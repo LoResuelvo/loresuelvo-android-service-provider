@@ -4,7 +4,6 @@ Característica: Consultar mi reputación como prestador
   Quiero conocer cómo valoran mis clientes mis trabajos
   Para entender mi calificación y cuántos trabajos la respaldan
 
-  @wip
   Escenario: 72.1-REP Conocer mi reputación real
     Dado que tengo 30 trabajos pagados y 24 recibieron una reseña
     Cuando abro Reputación dentro de Mi desempeño
@@ -13,7 +12,6 @@ Característica: Consultar mi reputación como prestador
     Y veo que 24 de mis 30 trabajos pagados tienen reseña, con una cobertura del 80 por ciento
     Y se aclara que la información corresponde a toda mi trayectoria
 
-  @wip
   Esquema del escenario: 72.2-REP Entender una reputación todavía sin reseñas
     Dado que tengo <trabajos> trabajos pagados y ninguno recibió una reseña
     Cuando consulto mi reputación
@@ -25,7 +23,6 @@ Característica: Consultar mi reputación como prestador
       | 0        | no disponible |
       | 3        | cero por ciento |
 
-  @wip
   Escenario: 72.3-REP Leer lo que recibí de mis clientes
     Dado que recibí calificaciones con y sin comentario escrito
     Cuando consulto mis reseñas

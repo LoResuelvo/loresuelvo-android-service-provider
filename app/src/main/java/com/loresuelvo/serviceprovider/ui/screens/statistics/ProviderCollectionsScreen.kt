@@ -25,21 +25,11 @@ import com.loresuelvo.serviceprovider.ui.statistics.ProviderCollectionsUiState
 
 val COLLECTIONS_READING_POSITION = SemanticsPropertyKey<Pair<Int, Int>>("CollectionsReadingPosition")
 
-@Composable
-internal fun PerformanceTabs(collections: Boolean, onActivity: () -> Unit, onCollections: () -> Unit) {
-    TabRow(selectedTabIndex = if (collections) 1 else 0) {
-        Tab(selected = !collections, onClick = onActivity,
-            text = { Text(stringResource(R.string.activity_section)) }, modifier = Modifier.heightIn(min = 48.dp))
-        Tab(selected = collections, onClick = onCollections,
-            text = { Text(stringResource(R.string.collections_section)) }, modifier = Modifier.heightIn(min = 48.dp))
-    }
-}
-
 // Explicit callbacks keep the shared Activity period controls and independent transaction events visible.
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> Unit,
-    onActivity: () -> Unit = {}, filters: ActivityFilters? = null,
+    onActivity: () -> Unit = {}, onReputation: () -> Unit = {}, filters: ActivityFilters? = null,
     onEditDates: (String, String) -> Unit = { _, _ -> }, onApplyDates: () -> Unit = {},
     onGranularity: (ActivityGranularity) -> Unit = {}, onComparison: (Boolean) -> Unit = {},
     periodExpanded: Boolean = false, onPeriodExpansion: (Boolean) -> Unit = {},
@@ -58,7 +48,13 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.semantics { heading() }) }
-        stickyHeader { PerformanceTabs(true, onActivity, {}) }
+        stickyHeader { PerformanceTabs(PerformanceSection.COLLECTIONS) { section ->
+            when (section) {
+                PerformanceSection.ACTIVITY -> onActivity()
+                PerformanceSection.REPUTATION -> onReputation()
+                PerformanceSection.COLLECTIONS -> Unit
+            }
+        } }
         if (filters != null && state != ProviderCollectionsUiState.SessionExpired) {
             item { ActivityPeriodControls(filters, onEditDates, onApplyDates, onGranularity, onComparison,
                 periodExpanded, showEvolutionOptions = true, onExpansion = onPeriodExpansion) }

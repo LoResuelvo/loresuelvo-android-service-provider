@@ -63,7 +63,7 @@ class ProviderProfileLayoutTest {
         assertTextFits("Diego Fernando Herrera")
         assertTextFits(provider.category.name)
         assertTextFits(provider.email)
-        compose.onNodeWithTag("provider-profile-rating-demo-label").assertIsDisplayed()
+        compose.onNodeWithTag("provider-profile-rating-demo-label").assertDoesNotExist()
     }
 
     @Test

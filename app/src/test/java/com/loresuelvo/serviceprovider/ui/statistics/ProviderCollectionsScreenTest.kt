@@ -74,15 +74,18 @@ class ProviderCollectionsScreenTest {
         val transactions = CollectionTransactionsViewModel(
             com.loresuelvo.serviceprovider.domain.usecase.statistics.GetCollectionTransactionsUseCase(TransactionsTestRepository()), sessions)
             .also { store.put("transactions", it) }
+        val reputation = ProviderReputationViewModel(
+            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderReputationUseCase(ReputationTestRepository()), sessions)
+            .also { store.put("reputation", it) }
         try {
             compose.setContent { LoresuelvoTheme {
-                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute(activity, collections, transactions)
+                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute(activity, collections, transactions, reputation)
             } }
             compose.onNodeWithText("Opciones del período").performClick()
             compose.onNodeWithText("Desde (AAAA-MM-DD)").performTextReplacement("2026-08-01")
             compose.onNodeWithText("Hasta (día incluido)").performTextReplacement("2026-08-31")
             compose.onNodeWithText("Consultar período").performScrollTo().performClick()
-            compose.onNode(hasScrollAction()).performScrollToNode(hasText("Cobros"))
+            compose.onNodeWithTag("provider_activity").performScrollToNode(hasText("Cobros"))
             compose.onNodeWithText("Cobros").performClick()
             compose.onNodeWithTag("provider_collections").assertExists()
             compose.runOnIdle {
@@ -100,7 +103,7 @@ class ProviderCollectionsScreenTest {
 
     private fun assertScrollableText(text: String, paired: String? = null) {
         val matcher = if (paired == null) hasText(text) else hasText(text) and hasText(paired)
-        compose.onNode(hasScrollAction()).performScrollToNode(matcher)
+        compose.onNodeWithTag("provider_collections").performScrollToNode(matcher)
         compose.onNode(matcher).assertExists()
     }
     @Test fun `evolution labels deposits balances total and zero buckets with unavailable comparison percentage`() {

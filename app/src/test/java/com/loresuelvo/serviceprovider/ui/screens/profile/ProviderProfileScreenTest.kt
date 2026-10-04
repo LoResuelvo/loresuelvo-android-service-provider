@@ -37,7 +37,7 @@ class ProviderProfileScreenTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun profile_includes_a_non_interactive_sample_rating() {
+    fun profile_does_not_fabricate_a_rating() {
         composeTestRule.setContent {
             LoresuelvoTheme {
                 ProviderProfileScreen(state = ProviderProfileUiState.Ready(provider()), onBack = {})
@@ -45,8 +45,8 @@ class ProviderProfileScreenTest {
         }
 
         composeTestRule.onNodeWithTag("provider-profile-rating-demo")
-            .performScrollTo().assertIsDisplayed().assertHasNoClickAction()
-        composeTestRule.onNodeWithTag("provider-profile-rating-demo-label").assertIsDisplayed()
+            .assertDoesNotExist()
+        composeTestRule.onNodeWithTag("provider-profile-rating-demo-label").assertDoesNotExist()
     }
 
     @Test

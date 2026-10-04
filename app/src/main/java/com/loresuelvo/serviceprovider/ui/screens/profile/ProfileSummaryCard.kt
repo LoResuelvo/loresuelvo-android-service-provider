@@ -6,10 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -18,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -47,7 +42,6 @@ internal fun ProfileSummaryCard(provider: CurrentAccount.Provider) {
                 }
             }
         }
-        ProfileSampleRating()
     }
 }
 
@@ -86,44 +80,6 @@ private fun ProfileNameAndCategory(provider: CurrentAccount.Provider, modifier: 
                 text = provider.category.name,
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ProfileSampleRating() {
-    // ponytail: display-only Figma sample; replace with provider ratings when that read flow is added.
-    Surface(
-        modifier = Modifier.fillMaxWidth().testTag("provider-profile-rating-demo"),
-        color = MaterialTheme.colorScheme.background,
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Filled.Star, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(20.dp))
-                Text(
-                    text = stringResource(R.string.provider_profile_rating, 4.9),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Text(
-                text = pluralStringResource(R.plurals.provider_profile_reviews, 48, 48),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = stringResource(R.string.provider_profile_sample_rating),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("provider-profile-rating-demo-label"),
             )
         }
     }

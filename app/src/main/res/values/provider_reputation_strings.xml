@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reputation_section">Reputación</string>
+    <string name="reputation_lifetime">Toda tu trayectoria</string>
+    <string name="reputation_loading">Cargando tu reputación…</string>
+    <string name="reputation_error">No pudimos cargar tu reputación. Intentá de nuevo.</string>
+    <string name="reputation_distribution">Distribución de calificaciones</string>
+    <string name="reputation_reviews">Reseñas recibidas</string>
+    <string name="reputation_empty_reviews">Aún no recibiste reseñas.</string>
+    <string name="reputation_work">Trabajo #%1$d</string>
+    <string name="reputation_review_rating">%1$d de 5 estrellas</string>
+    <string name="reputation_order_note">Reseñas ordenadas por número de trabajo, no por fecha.</string>
+    <string name="reputation_calculated">Consultado el %1$s · Buenos Aires</string>
+    <string name="reputation_average">%1$s / 5</string>
+    <string name="reputation_no_rating">Todavía sin calificaciones</string>
+    <string name="reputation_sample">%1$d reseñas de trabajos pagados</string>
+    <string name="reputation_bucket">%1$d estrellas: %2$d calificaciones</string>
+    <string name="reputation_paid_note">Solo cuentan trabajos pagados. Un trabajo sin reseña no baja tu calificación.</string>
+    <string name="reputation_coverage">Trabajos con reseña</string>
+    <string name="reputation_percentage">%1$s %%</string>
+    <string name="reputation_coverage_counts">%1$d de %2$d trabajos pagados recibieron una reseña.</string>
+    <string name="reputation_session_expired">Ingresá nuevamente para consultar tu reputación.</string>
+</resources>

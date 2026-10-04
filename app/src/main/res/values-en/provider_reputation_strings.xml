@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reputation_section">Reputation</string>
+    <string name="reputation_lifetime">Your entire history</string>
+    <string name="reputation_loading">Loading your reputation…</string>
+    <string name="reputation_error">We could not load your reputation. Try again.</string>
+    <string name="reputation_distribution">Rating distribution</string>
+    <string name="reputation_reviews">Received reviews</string>
+    <string name="reputation_empty_reviews">You have not received reviews yet.</string>
+    <string name="reputation_work">Work #%1$d</string>
+    <string name="reputation_review_rating">%1$d out of 5 stars</string>
+    <string name="reputation_order_note">Reviews ordered by work number, not by date.</string>
+    <string name="reputation_calculated">Calculated on %1$s · Buenos Aires</string>
+    <string name="reputation_average">%1$s / 5</string>
+    <string name="reputation_no_rating">No ratings yet</string>
+    <string name="reputation_sample">%1$d reviews of paid work</string>
+    <string name="reputation_bucket">%1$d stars: %2$d ratings</string>
+    <string name="reputation_paid_note">Only paid work counts. Work without a review does not lower your rating.</string>
+    <string name="reputation_coverage">Work with reviews</string>
+    <string name="reputation_percentage">%1$s %%</string>
+    <string name="reputation_coverage_counts">%1$d of %2$d paid jobs received a review.</string>
+    <string name="reputation_session_expired">Sign in again to view your reputation.</string>
+</resources>

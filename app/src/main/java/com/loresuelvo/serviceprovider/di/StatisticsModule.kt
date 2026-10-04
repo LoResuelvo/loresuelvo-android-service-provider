@@ -12,6 +12,10 @@ import com.loresuelvo.serviceprovider.data.api.ApiProviderActivityRepository
 import com.loresuelvo.serviceprovider.data.api.ProviderActivityApi
 import com.loresuelvo.serviceprovider.domain.statistics.ProviderActivityRepository
 import com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderActivityUseCase
+import com.loresuelvo.serviceprovider.data.api.ApiProviderReputationRepository
+import com.loresuelvo.serviceprovider.data.api.ProviderReputationApi
+import com.loresuelvo.serviceprovider.domain.statistics.ProviderReputationRepository
+import com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderReputationUseCase
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -37,7 +41,25 @@ abstract class StatisticsModule {
     @Binds @Singleton
     abstract fun bindCollectionsRepository(impl: ApiProviderCollectionsRepository): ProviderCollectionsRepository
 
+    @Binds @Singleton
+    abstract fun bindReputationRepository(impl: ApiProviderReputationRepository):
+        ProviderReputationRepository
+
     companion object {
+        @Provides @Singleton
+        fun provideReputationApi(retrofit: Retrofit): ProviderReputationApi =
+            createReputationApi(retrofit)
+
+        internal fun createReputationApi(retrofit: Retrofit): ProviderReputationApi =
+            retrofit.newBuilder().apply { converterFactories().clear() }
+                .addConverterFactory(Json { ignoreUnknownKeys = true; explicitNulls = true; coerceInputValues = false }
+                    .asConverterFactory("application/json".toMediaType()))
+                .build().create(ProviderReputationApi::class.java)
+
+        @Provides
+        fun provideReputationUseCase(repository: ProviderReputationRepository) =
+            GetProviderReputationUseCase(repository)
+
         @Provides @Singleton
         fun provideTransactionsApi(retrofit: Retrofit): CollectionTransactionsApi =
             createTransactionsApi(retrofit)

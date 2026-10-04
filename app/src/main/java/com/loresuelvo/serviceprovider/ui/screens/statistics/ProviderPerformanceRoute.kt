@@ -10,14 +10,17 @@ import com.loresuelvo.serviceprovider.ui.statistics.CollectionTransactionsUiStat
 import com.loresuelvo.serviceprovider.ui.statistics.ProviderActivityViewModel
 import com.loresuelvo.serviceprovider.ui.statistics.ProviderCollectionsViewModel
 import com.loresuelvo.serviceprovider.ui.statistics.ProviderCollectionsUiState
+import com.loresuelvo.serviceprovider.ui.statistics.ProviderReputationViewModel
 
 // This route coordinates the shared period and tab lifetime; it owns no repository or money rules.
-// Its next extraction seam is reading-state restoration if another performance tab is introduced.
+// Reading metadata remains owned by the existing Activity and Collections ViewModels.
 @Composable
 fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel(),
     collections: ProviderCollectionsViewModel = hiltViewModel(),
-    transactions: CollectionTransactionsViewModel = hiltViewModel()) {
-    var showingCollections by rememberSaveable { mutableStateOf(false) }
+    transactions: CollectionTransactionsViewModel = hiltViewModel(),
+    reputation: ProviderReputationViewModel = hiltViewModel()) {
+    var selectedSection by rememberSaveable { mutableStateOf(PerformanceSection.ACTIVITY) }
+    val showingCollections = selectedSection == PerformanceSection.COLLECTIONS
     val filters by activity.filters.collectAsStateWithLifecycle()
     val transactionState by transactions.uiState.collectAsStateWithLifecycle()
     val collectionState by collections.uiState.collectAsStateWithLifecycle()
@@ -62,9 +65,12 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
                 collectionList.firstVisibleItemScrollOffset)
         }
     }
-    if (showingCollections) {
+    if (selectedSection == PerformanceSection.REPUTATION) {
+        ProviderReputationRoute(reputation) { selectedSection = it }
+    } else if (showingCollections) {
         val visibleState = if (collections.query == filters.query) collectionState else ProviderCollectionsUiState.Loading
-        ProviderCollectionsScreen(visibleState, collections::retry, onActivity = { showingCollections = false },
+        ProviderCollectionsScreen(visibleState, collections::retry, onActivity = { selectedSection = PerformanceSection.ACTIVITY },
+            onReputation = { selectedSection = PerformanceSection.REPUTATION },
             filters = filters, onEditDates = activity::editDates, onApplyDates = activity::applyDates,
             onGranularity = activity::selectGranularity, onComparison = activity::comparePrevious,
             periodExpanded = periodExpanded, onPeriodExpansion = activity::expandPeriod,
@@ -77,6 +83,7 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
             onLoadMore = transactions::loadMore, onTransactionsRetry = transactions::retry, listState = collectionList,
             evolutionExpansion = evolutionExpanded, onEvolutionExpansion = collections::expandEvolution)
     } else {
-        ProviderActivityRoute(activity, onCollections = { showingCollections = true })
+        ProviderActivityRoute(activity, onCollections = { selectedSection = PerformanceSection.COLLECTIONS },
+            onReputation = { selectedSection = PerformanceSection.REPUTATION })
     }
 }
