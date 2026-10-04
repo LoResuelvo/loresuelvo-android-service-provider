@@ -119,6 +119,7 @@ fun LoResuelvoNav(
                 val navController = rememberNavController()
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route
+                val bottomRoute = if (currentRoute == Route.Conversion.path) Route.Activity.path else currentRoute
                 var bottomBarHeight by remember { mutableIntStateOf(0) }
                 val bottomBarHeightDp = with(LocalDensity.current) { bottomBarHeight.toDp() }
 
@@ -148,7 +149,7 @@ fun LoResuelvoNav(
                         LoResuelvoNavHost(
                             navController = navController,
                             startDestination = startDestination,
-                            contentPadding = if (currentRoute == Route.Activity.path) PaddingValues(
+                            contentPadding = if (bottomRoute == Route.Activity.path) PaddingValues(
                                 top = contentPadding.calculateTopPadding(), bottom = bottomBarHeightDp,
                             ) else contentPadding,
                             welcome = { WelcomeRoute(browserAuthenticationLauncher, entryViewModel) },
@@ -234,7 +235,15 @@ fun LoResuelvoNav(
                                     },
                                 )
                             },
-                            activity = { com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute() },
+                            activity = {
+                                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute(onConversion = {
+                                    navController.navigate(Route.Conversion.path) { launchSingleTop = true }
+                                })
+                            },
+                            conversion = {
+                                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderConversionRoute(
+                                    onBack = { navController.popBackStack() })
+                            },
                             profile = {
                                 ProviderProfileRoute(
                                     identityLauncher = identityVerificationLauncher,
@@ -301,16 +310,20 @@ fun LoResuelvoNav(
                         )
                     }
 
-                    if (BottomDestination.shouldShow(currentRoute)) {
+                    if (BottomDestination.shouldShow(bottomRoute)) {
                         LoresuelvoBottomBar(
-                            currentRoute = currentRoute,
+                            currentRoute = bottomRoute,
                             onNavigate = { destination ->
-                                navController.navigate(destination.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                                if (currentRoute == Route.Conversion.path && destination.route == Route.Activity.path) {
+                                    navController.popBackStack(Route.Activity.path, inclusive = false)
+                                } else {
+                                    navController.navigate(destination.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
                                 }
                             },
                             modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { bottomBarHeight = it.height },

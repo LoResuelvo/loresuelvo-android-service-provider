@@ -212,6 +212,12 @@ class ProviderReputationNavigationAcceptanceTest {
         @Provides fun transactionsUseCase(repository: CollectionTransactionsRepository) = GetCollectionTransactionsUseCase(repository)
         @Provides @Singleton fun reputation() = NavigationReputationRepository()
         @Provides fun reputationUseCase(fake: NavigationReputationRepository) = GetProviderReputationUseCase(fake)
+        @Provides fun conversionUseCase() =
+            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderConversionUseCase(
+                object : com.loresuelvo.serviceprovider.domain.statistics.ProviderConversionRepository {
+                    override suspend fun getConversion(query: com.loresuelvo.serviceprovider.domain.statistics.ConversionQuery) =
+                        com.loresuelvo.serviceprovider.domain.statistics.ConversionOutcome.Failure.Network
+                })
         @Provides fun clock(): Clock = Clock.fixed(Instant.parse("2026-10-03T12:00:00Z"), ZoneOffset.UTC)
     }
 }

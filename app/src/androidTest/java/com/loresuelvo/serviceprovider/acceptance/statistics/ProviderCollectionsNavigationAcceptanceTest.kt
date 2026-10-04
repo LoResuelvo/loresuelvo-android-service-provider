@@ -184,6 +184,12 @@ class ProviderCollectionsNavigationAcceptanceTest {
                     override suspend fun getReputation(cursor: String?) =
                         com.loresuelvo.serviceprovider.domain.statistics.ReputationOutcome.Failure.Network
                 })
+        @Provides fun conversionUseCase() =
+            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderConversionUseCase(
+                object : com.loresuelvo.serviceprovider.domain.statistics.ProviderConversionRepository {
+                    override suspend fun getConversion(query: com.loresuelvo.serviceprovider.domain.statistics.ConversionQuery) =
+                        com.loresuelvo.serviceprovider.domain.statistics.ConversionOutcome.Failure.Network
+                })
         @Provides fun clock(): Clock = Clock.fixed(Instant.parse("2026-10-03T12:00:00Z"), ZoneOffset.UTC)
     }
 }

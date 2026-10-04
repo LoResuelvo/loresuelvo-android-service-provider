@@ -18,7 +18,7 @@ import com.loresuelvo.serviceprovider.ui.statistics.ProviderReputationViewModel
 fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel(),
     collections: ProviderCollectionsViewModel = hiltViewModel(),
     transactions: CollectionTransactionsViewModel = hiltViewModel(),
-    reputation: ProviderReputationViewModel = hiltViewModel()) {
+    reputation: ProviderReputationViewModel = hiltViewModel(), onConversion: () -> Unit = {}) {
     var selectedSection by rememberSaveable { mutableStateOf(PerformanceSection.ACTIVITY) }
     val showingCollections = selectedSection == PerformanceSection.COLLECTIONS
     val filters by activity.filters.collectAsStateWithLifecycle()
@@ -84,6 +84,6 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
             evolutionExpansion = evolutionExpanded, onEvolutionExpansion = collections::expandEvolution)
     } else {
         ProviderActivityRoute(activity, onCollections = { selectedSection = PerformanceSection.COLLECTIONS },
-            onReputation = { selectedSection = PerformanceSection.REPUTATION })
+            onReputation = { selectedSection = PerformanceSection.REPUTATION }, onConversion = onConversion)
     }
 }

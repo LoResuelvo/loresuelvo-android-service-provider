@@ -18,6 +18,21 @@ import org.robolectric.annotation.Config
 @Config(qualifiers = "es-rAR", sdk = [34])
 class ProviderActivityScreenTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun `conversion entry is visible and invokes the detail integration callback`() {
+        var opened = 0
+        compose.setContent {
+            LoresuelvoTheme {
+                androidx.compose.material3.Surface {
+                    ProviderActivityScreen(ProviderActivityUiState.Ready(activityFixture()), {},
+                        onConversion = { opened++ })
+                }
+            }
+        }
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasText("Conversión de propuestas"))
+        compose.onNodeWithText("Conversión de propuestas").assertIsDisplayed().performClick()
+        assertEquals(1, opened)
+    }
+
     @Test fun `error retry loading and empty remain distinct`() {
         val state = mutableStateOf<ProviderActivityUiState>(ProviderActivityUiState.Error(ActivityOutcome.Failure.Network))
         var retries = 0

@@ -45,7 +45,25 @@ abstract class StatisticsModule {
     abstract fun bindReputationRepository(impl: ApiProviderReputationRepository):
         ProviderReputationRepository
 
+    @Binds @Singleton
+    abstract fun bindConversionRepository(impl: com.loresuelvo.serviceprovider.data.api.ApiProviderConversionRepository):
+        com.loresuelvo.serviceprovider.domain.statistics.ProviderConversionRepository
+
     companion object {
+        @Provides @Singleton
+        fun provideConversionApi(retrofit: Retrofit): com.loresuelvo.serviceprovider.data.api.ProviderConversionApi =
+            createConversionApi(retrofit)
+
+        internal fun createConversionApi(retrofit: Retrofit): com.loresuelvo.serviceprovider.data.api.ProviderConversionApi =
+            retrofit.newBuilder().apply { converterFactories().clear() }
+                .addConverterFactory(Json { ignoreUnknownKeys = true; explicitNulls = true; coerceInputValues = false }
+                    .asConverterFactory("application/json".toMediaType()))
+                .build().create(com.loresuelvo.serviceprovider.data.api.ProviderConversionApi::class.java)
+
+        @Provides
+        fun provideConversionUseCase(repository: com.loresuelvo.serviceprovider.domain.statistics.ProviderConversionRepository) =
+            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderConversionUseCase(repository)
+
         @Provides @Singleton
         fun provideReputationApi(retrofit: Retrofit): ProviderReputationApi =
             createReputationApi(retrofit)

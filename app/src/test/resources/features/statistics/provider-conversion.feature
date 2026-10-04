@@ -4,7 +4,6 @@ Característica: Consultar la conversión de mis propuestas
   Quiero saber cómo avanzaron las propuestas que emití
   Para entender cuántas se convierten en contrataciones y trabajos pagados
 
-  @wip
   Escenario: 73.1-CON Entender el avance de mis propuestas
     Dado que emití 20 propuestas en los últimos 30 días
     Y de esas propuestas 12 se contrataron, 9 tienen finalización informada y 8 se pagaron por completo
@@ -22,7 +21,6 @@ Característica: Consultar la conversión de mis propuestas
     Y veo el período elegido y se aclara que corresponde a la emisión de las propuestas
     Y los resultados anteriores se reemplazan sin mezclarse con esta consulta
 
-  @wip
   Esquema del escenario: 73.3-CON Interpretar la falta de avances
     Dado que emití <emitidas> propuestas en el período y ninguna se contrató
     Cuando consulto su conversión
@@ -34,7 +32,6 @@ Característica: Consultar la conversión de mis propuestas
       | 0        | no disponible    |
       | 5        | cero por ciento  |
 
-  @wip
   Escenario: 73.4-CON Distinguir solicitudes de contrataciones
     Dado que recibí 5 solicitudes en el período, acepté 3 y tengo 2 pendientes
     Y todavía no emití propuestas durante ese período

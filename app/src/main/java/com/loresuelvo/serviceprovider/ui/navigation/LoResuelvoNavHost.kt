@@ -41,6 +41,7 @@ fun LoResuelvoNavHost(
     messages: @Composable () -> Unit,
     profile: @Composable () -> Unit,
     activity: @Composable () -> Unit = {},
+    conversion: @Composable () -> Unit = {},
     jobRequestDetail: @Composable (Int) -> Unit,
     conversation: @Composable (Int) -> Unit,
     mercadoPago: @Composable () -> Unit = { MercadoPagoPlaceholder() },
@@ -65,6 +66,7 @@ fun LoResuelvoNavHost(
             composable(Route.Messages.path) { messages() }
             composable(Route.Profile.path) { profile() }
             composable(Route.Activity.path) { activity() }
+            composable(Route.Conversion.path) { conversion() }
             composable(
                 route = Route.JobRequestDetail.path,
                 arguments = listOf(
