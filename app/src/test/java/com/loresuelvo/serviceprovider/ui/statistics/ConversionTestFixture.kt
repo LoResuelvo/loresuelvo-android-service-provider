@@ -25,9 +25,15 @@ class ConversionTestRepository : ProviderConversionRepository {
     var outcome: ConversionOutcome = ConversionOutcome.Success(conversionFixture())
     val queries = mutableListOf<ConversionQuery>()
     var gate: CompletableDeferred<Unit>? = null
+    var respondToQuery = false
     override suspend fun getConversion(query: ConversionQuery): ConversionOutcome {
         queries += query
         gate?.await()
-        return outcome
+        return if (respondToQuery) {
+            val base = if (query.from?.toInstant() == Instant.parse("2026-09-01T03:00:00Z")) conversionFixture()
+                else conversionFixture(5, true)
+            ConversionOutcome.Success(base.copy(period = ConversionPeriod(query.from!!.toInstant(),
+                query.to!!.toInstant(), "America/Argentina/Buenos_Aires")))
+        } else outcome
     }
 }

@@ -26,7 +26,7 @@ class ProviderConversionScreenTest {
     }
     private fun productionResult(issued: Long = 20, empty: Boolean = false): ProviderConversionUiState.Ready {
         val repository = ConversionTestRepository().apply { outcome = ConversionOutcome.Success(conversionFixture(issued, empty)) }
-        return ProviderConversionUiState.Ready((runBlocking { GetProviderConversionUseCase(repository)(com.loresuelvo.serviceprovider.domain.statistics.ConversionQuery()) }
+        return ProviderConversionUiState.Ready((runBlocking { GetProviderConversionUseCase(repository, java.time.Clock.fixed(java.time.Instant.parse("2026-10-04T12:00:00Z"), java.time.ZoneOffset.UTC))(com.loresuelvo.serviceprovider.domain.statistics.ConversionQuery()) }
             as ConversionOutcome.Success).conversion)
     }
     @Test fun `production cohort displays supplied stages expandable advances neutral status and distinct requests`() {
@@ -71,5 +71,55 @@ class ProviderConversionScreenTest {
         compose.onNodeWithText("0 %").assertDoesNotExist()
         compose.runOnIdle { state.value = ProviderConversionUiState.SessionExpired }
         compose.onNodeWithText("Reintentar").assertDoesNotExist(); compose.onNodeWithText("Recibidas: 5").assertDoesNotExist()
+    }
+
+    @Test fun `independent date controls retain draft show inline correction and apply without Activity options`() {
+        val filters = mutableStateOf(ConversionFilters("2026-09-01", "2026-09-30"))
+        var applied = 0
+        compose.setContent { LoresuelvoTheme { Surface {
+            ProviderConversionScreen(productionResult(), filters = filters.value,
+                onEditDates = { from, to -> filters.value = ConversionFilters(from, to) },
+                onApplyDates = { applied++; filters.value = filters.value.copy(dateError = ConversionDateError.INCOMPLETE) },
+                periodExpanded = true)
+        } } }
+        compose.onNodeWithTag("provider_conversion").performScrollToNode(hasTestTag("conversion_from_day"))
+        compose.onNodeWithTag("conversion_from_day").performTextReplacement("")
+        compose.onNodeWithTag("provider_conversion").performScrollToNode(hasTestTag("conversion_apply_period"))
+        compose.onNodeWithTag("conversion_apply_period").performClick()
+        assertEquals(1, applied)
+        reveal("Completá las dos fechas para consultar el período.")
+        compose.onNodeWithText("Agrupar por").assertDoesNotExist()
+        compose.onNodeWithTag("provider_conversion").performScrollToNode(hasTestTag("conversion_from_day"))
+        compose.onNodeWithTag("conversion_from_day").performTextReplacement("2026-09-02")
+        assertNull(filters.value.dateError)
+        reveal("Se convirtieron en contrataciones")
+    }
+
+    @Test fun `route waits for measured ready layout while expansion changes during metadata restoration`() {
+        val clock = java.time.Clock.fixed(java.time.Instant.parse("2026-10-04T12:00:00Z"), java.time.ZoneOffset.UTC)
+        val repository = ConversionTestRepository().apply { gate = kotlinx.coroutines.CompletableDeferred() }
+        val saved = androidx.lifecycle.SavedStateHandle(mapOf(
+            "conversion.from" to "2026-09-01T00:00:00-03:00", "conversion.to" to "2026-10-01T00:00:00-03:00",
+            "conversion.fromDay" to "2026-09-01", "conversion.throughDay" to "2026-09-30",
+            "conversion.expanded" to true, "conversion.readingIndex" to 8, "conversion.readingOffset" to 17))
+        val vm = ProviderConversionViewModel(GetProviderConversionUseCase(repository, clock), ActivityTestSessionStore(), clock, saved)
+        val store = androidx.lifecycle.ViewModelStore().apply { put("conversion", vm) }
+        try {
+            compose.setContent { LoresuelvoTheme { Surface {
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(
+                        androidx.compose.ui.platform.LocalDensity.current.density, 2f)) {
+                    ProviderConversionRoute(vm) {}
+                }
+            } } }
+            compose.waitForIdle()
+            assertEquals(ProviderConversionUiState.Loading, vm.uiState.value)
+            assertEquals(8, vm.readingIndex)
+            compose.runOnIdle { vm.expandAdvances(false); repository.gate!!.complete(Unit) }
+            compose.waitForIdle()
+            assertFalse(vm.advancesExpanded.value)
+            assertEquals(8 to 17, compose.onNodeWithTag("provider_conversion").fetchSemanticsNode().config[CONVERSION_READING_POSITION])
+            assertEquals(8, vm.readingIndex); assertEquals(17, vm.readingOffset)
+        } finally { compose.runOnIdle { store.clear() } }
     }
 }

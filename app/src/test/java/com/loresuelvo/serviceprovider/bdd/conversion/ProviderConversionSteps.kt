@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.bdd.conversion
 
 import androidx.lifecycle.ViewModelStore
 import com.loresuelvo.serviceprovider.domain.statistics.*
+import com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderActivityUseCase
 import com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderConversionUseCase
 import com.loresuelvo.serviceprovider.ui.statistics.*
 import io.cucumber.java.After
@@ -19,11 +20,17 @@ class ProviderConversionSteps {
     private val scheduler = TestCoroutineScheduler()
     private val repository = ConversionTestRepository()
     private val store = ViewModelStore()
+    private val clock = Clock.fixed(Instant.parse("2026-10-04T12:00:00Z"), ZoneOffset.UTC)
+    private val sessions = ActivityTestSessionStore()
+    private var activityVm: ProviderActivityViewModel? = null
+    private var activityQuery: ActivityQuery? = null
+    private var chosenQuery: ConversionQuery? = null
+    private var previous: ProviderConversion? = null
+    private var expectedError: ConversionDateError? = null
     private val vm: ProviderConversionViewModel
     init {
         Dispatchers.setMain(StandardTestDispatcher(scheduler))
-        vm = ProviderConversionViewModel(GetProviderConversionUseCase(repository), ActivityTestSessionStore(),
-            Clock.fixed(Instant.parse("2026-10-04T12:00:00Z"), ZoneOffset.UTC))
+        vm = ProviderConversionViewModel(GetProviderConversionUseCase(repository, clock), sessions, clock)
         store.put("conversion", vm)
     }
     @After fun close() { store.clear(); scheduler.advanceUntilIdle(); Dispatchers.resetMain() }
@@ -79,4 +86,75 @@ class ProviderConversionSteps {
     fun separateCohorts() { assertEquals(0L, result().proposals.stages.issued); assertEquals(5L, result().requests.received) }
     @Entonces("aceptar una solicitud no se presenta como una contratación")
     fun notContracting() { assertEquals(3L, result().requests.accepted); assertEquals(0L, result().proposals.stages.contracted) }
+
+    private fun september() {
+        vm.editDates("2026-09-01", "2026-09-30"); vm.applyDates(); scheduler.advanceUntilIdle()
+        chosenQuery = vm.query
+    }
+    @Dado("que emití propuestas durante septiembre y algunas se contrataron en octubre")
+    fun septemberCohort() { repository.respondToQuery = true; open(); previous = result() }
+    @Cuando("elijo consultar las propuestas emitidas en septiembre") fun selectSeptember() = september()
+    @Entonces("veo solamente el avance de esas propuestas, incluidas las contrataciones de octubre")
+    fun laterMilestones() {
+        assertEquals(20L, result().proposals.stages.issued); assertEquals(12L, result().proposals.stages.contracted)
+        assertTrue(result().observedAt > result().period.to)
+        assertEquals(ConversionRatio(12, 20, 60.0), result().proposals.rates.contracted.cohort)
+    }
+    @Entonces("veo el período elegido y se aclara que corresponde a la emisión de las propuestas")
+    fun issuedPeriod() {
+        assertEquals(Instant.parse("2026-09-01T03:00:00Z"), result().period.from)
+        assertEquals(Instant.parse("2026-10-01T03:00:00Z"), result().period.to)
+        assertEquals(vm.query.from!!.toInstant(), result().period.from)
+    }
+    @Entonces("los resultados anteriores se reemplazan sin mezclarse con esta consulta")
+    fun replacement() { assertEquals(5L, previous!!.proposals.stages.issued); assertNotEquals(previous, result()); assertEquals(2, repository.queries.size) }
+    @Dado("que no se pudieron consultar mis resultados y se informó el problema sin mostrar ceros inventados")
+    fun queryFailed() {
+        open(); repository.outcome = ConversionOutcome.Failure.Network; september()
+        assertEquals(ProviderConversionUiState.Error(ConversionOutcome.Failure.Network), vm.uiState.value)
+    }
+    @Dado("la información vuelve a estar disponible") fun available() { repository.respondToQuery = true }
+    @Cuando("elijo reintentar") fun retry() { vm.retry(); scheduler.advanceUntilIdle() }
+    @Entonces("veo los resultados del período que había elegido")
+    fun samePeriod() { assertEquals(chosenQuery, repository.queries.last()); assertEquals(chosenQuery!!.from!!.toInstant(), result().period.from) }
+    @Dado("que estoy viendo resultados y elegí {string}")
+    fun invalidDraft(label: String) {
+        open(); previous = result(); chosenQuery = vm.query
+        val dates = when (label) {
+            "un inicio posterior al final" -> { expectedError = ConversionDateError.REVERSED; "2026-09-30" to "2026-09-01" }
+            "una fecha final futura" -> { expectedError = ConversionDateError.FUTURE; "2026-09-01" to "2026-10-05" }
+            else -> { expectedError = ConversionDateError.TOO_LONG; "2025-09-01" to "2026-09-30" }
+        }
+        vm.editDates(dates.first, dates.second)
+    }
+    @Cuando("intento consultar ese período") fun invalidApply() { vm.applyDates(); scheduler.advanceUntilIdle() }
+    @Entonces("se explica qué debo corregir") fun correction() { assertEquals(expectedError, vm.filters.value.dateError); assertEquals(1, repository.queries.size) }
+    @Entonces("puedo ajustar las fechas sin perder mi última consulta válida")
+    fun preserveValid() {
+        assertEquals(chosenQuery, vm.query); assertEquals(previous, result())
+        vm.editDates("2026-09-01", "2026-09-30"); assertNull(vm.filters.value.dateError)
+        assertEquals(chosenQuery, vm.query); assertEquals(previous, result())
+        repository.respondToQuery = true; vm.applyDates(); scheduler.advanceUntilIdle()
+        assertEquals(Instant.parse("2026-09-01T03:00:00Z"), result().period.from)
+    }
+    @Dado("que estaba leyendo Actividad con sus opciones elegidas")
+    fun activityContext() {
+        activityVm = ProviderActivityViewModel(GetProviderActivityUseCase(ActivityTestRepository()), sessions, clock)
+            .also { store.put("activity", it) }
+        activityVm!!.editDates("2026-08-01", "2026-08-31"); activityVm!!.applyDates()
+        activityVm!!.selectGranularity(ActivityGranularity.WEEK); activityVm!!.comparePrevious(true)
+        scheduler.advanceUntilIdle(); activityVm!!.rememberReadingPosition(6, 23); activityQuery = activityVm!!.query
+        assertTrue(repository.queries.isEmpty())
+    }
+    @Dado("desde allí abrí Conversión de propuestas y elegí otro período para ese detalle")
+    fun independentDetail() { repository.respondToQuery = true; open(); september(); vm.expandAdvances(true); vm.rememberReadingPosition(7, 31, vm.readingVersion) }
+    @Cuando("vuelvo a Actividad") fun returnToActivity() { vm.open(); scheduler.advanceUntilIdle() }
+    @Entonces("retomo las opciones y la posición que tenía en Actividad")
+    fun retainedActivity() { assertEquals(activityQuery, activityVm!!.query); assertEquals(6, activityVm!!.readingIndex); assertEquals(23, activityVm!!.readingOffset) }
+    @Entonces("el detalle de conversión conserva su propio período y posición para la próxima consulta")
+    fun retainedDetail() {
+        vm.open(); scheduler.advanceUntilIdle(); assertEquals(chosenQuery, vm.query)
+        assertEquals(7, vm.readingIndex); assertEquals(31, vm.readingOffset); assertTrue(vm.advancesExpanded.value)
+        assertEquals(2, repository.queries.size)
+    }
 }

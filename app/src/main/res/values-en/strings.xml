@@ -468,4 +468,5 @@
     <string name="conversion_pending">Pending: %1$d</string>
     <string name="conversion_request_sample">%1$d of %2$d received requests</string>
     <string name="conversion_acceptance_note">Accepting a request opens the conversation; it does not confirm a booking.</string>
+    <string name="conversion_date_incomplete">Enter both dates to consult the period.</string>
 </resources>

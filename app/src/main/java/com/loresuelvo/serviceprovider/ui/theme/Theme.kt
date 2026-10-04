@@ -20,14 +20,15 @@ private val LoresuelvoColorScheme = lightColorScheme(
     secondaryContainer = BrandSecondary.copy(alpha = 0.12f),
     onSecondaryContainer = BrandSecondary,
     primaryContainer = BrandSecondary.copy(alpha = 0.12f),
-    onPrimaryContainer = BrandSecondary,
+    // Text needs stronger contrast over the translucent green container in light mode.
+    onPrimaryContainer = Color(0xFF116450),
     tertiary = BrandTertiary,
     onTertiary = BrandAccept,
     background = BrandNeutral,
     onBackground = BrandAccept,
     surface = SurfaceWhite,
     onSurface = BrandAccept,
-    error = BrandDanger,
+    error = Color(0xFFB91C1C),
     onError = TextWhite,
 )
 

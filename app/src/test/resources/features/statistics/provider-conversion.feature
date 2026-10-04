@@ -13,7 +13,6 @@ Característica: Consultar la conversión de mis propuestas
     Y veo 8 propuestas sin contratación observada sin considerarlas rechazadas
     Y veo cuándo se consultó la información y que las propuestas todavía pueden avanzar
 
-  @wip
   Escenario: 73.2-CON Consultar las propuestas emitidas en otro período
     Dado que emití propuestas durante septiembre y algunas se contrataron en octubre
     Cuando elijo consultar las propuestas emitidas en septiembre
@@ -41,14 +40,12 @@ Característica: Consultar la conversión de mis propuestas
     Y las solicitudes aparecen separadas de las propuestas
     Y aceptar una solicitud no se presenta como una contratación
 
-  @wip
   Escenario: 73.5-CON Recuperar los resultados sin cambiar mi consulta
     Dado que no se pudieron consultar mis resultados y se informó el problema sin mostrar ceros inventados
     Y la información vuelve a estar disponible
     Cuando elijo reintentar
     Entonces veo los resultados del período que había elegido
 
-  @wip
   Esquema del escenario: 73.6-CON Corregir un período que no se puede consultar
     Dado que estoy viendo resultados y elegí "<periodo>"
     Cuando intento consultar ese período
@@ -60,7 +57,6 @@ Característica: Consultar la conversión de mis propuestas
       | una fecha final futura         |
       | un intervalo mayor a 365 días   |
 
-  @wip
   Escenario: 73.7-CON Volver a Actividad sin perder el contexto
     Dado que estaba leyendo Actividad con sus opciones elegidas
     Y desde allí abrí Conversión de propuestas y elegí otro período para ese detalle

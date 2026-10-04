@@ -79,6 +79,25 @@ class ProviderConversionLayoutTest {
         textFits("Aceptar una solicitud abre la conversación; no confirma una contratación.", contentLtr = true)
         saveRender("conversion-dark-large-type-rtl-requests")
     }
+    @Test
+    @Config(qualifiers = "es-w320dp-h800dp-night-mdpi")
+    fun `custom period controls and inline correction render at compact large rtl`() {
+        compose.setContent {
+            renderView = LocalView.current
+            CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f),
+                LocalLayoutDirection provides LayoutDirection.Rtl) {
+                LoresuelvoTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    ProviderConversionScreen(ProviderConversionUiState.Ready(conversionFixture()),
+                        filters = ConversionFilters("2026-09-30", "2026-09-01", ConversionDateError.REVERSED),
+                        periodExpanded = true)
+                } }
+            }
+        }
+        textFits("Opciones del período")
+        saveRender("conversion-dark-large-type-rtl-dates")
+        textFits("La fecha inicial debe ser anterior o igual a la final.")
+        saveRender("conversion-dark-large-type-rtl-date-error")
+    }
     private fun textFits(text: String, contentLtr: Boolean = false) {
         compose.onNodeWithTag("provider_conversion").performScrollToNode(hasText(text))
         val results = mutableListOf<TextLayoutResult>()

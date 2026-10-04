@@ -241,7 +241,9 @@ fun LoResuelvoNav(
                                 })
                             },
                             conversion = {
+                                val activityEntry = remember(navController, backStackEntry) { navController.getBackStackEntry(Route.Activity.path) }
                                 com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderConversionRoute(
+                                    viewModel = hiltViewModel(activityEntry),
                                     onBack = { navController.popBackStack() })
                             },
                             profile = {

@@ -61,8 +61,8 @@ abstract class StatisticsModule {
                 .build().create(com.loresuelvo.serviceprovider.data.api.ProviderConversionApi::class.java)
 
         @Provides
-        fun provideConversionUseCase(repository: com.loresuelvo.serviceprovider.domain.statistics.ProviderConversionRepository) =
-            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderConversionUseCase(repository)
+        fun provideConversionUseCase(repository: com.loresuelvo.serviceprovider.domain.statistics.ProviderConversionRepository, clock: Clock) =
+            com.loresuelvo.serviceprovider.domain.usecase.statistics.GetProviderConversionUseCase(repository, clock)
 
         @Provides @Singleton
         fun provideReputationApi(retrofit: Retrofit): ProviderReputationApi =

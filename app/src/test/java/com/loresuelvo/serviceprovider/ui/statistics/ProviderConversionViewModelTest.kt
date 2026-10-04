@@ -22,7 +22,7 @@ class ProviderConversionViewModelTest {
     @Before fun setup() = Dispatchers.setMain(dispatcher)
     @After fun close() { store.clear(); dispatcher.scheduler.advanceUntilIdle(); Dispatchers.resetMain() }
     private fun create(port: ProviderConversionRepository = repository) = ProviderConversionViewModel(
-        GetProviderConversionUseCase(port), sessions,
+        GetProviderConversionUseCase(port, Clock.fixed(Instant.parse("2026-10-04T12:00:00Z"), ZoneOffset.UTC)), sessions,
         Clock.fixed(Instant.parse("2026-10-04T12:00:00Z"), ZoneOffset.UTC)).also { store.put("conversion", it) }
     private fun settle() = dispatcher.scheduler.advanceUntilIdle()
     @Test fun `lazy independent query is captured for retries and duplicate loads are ignored`() {
