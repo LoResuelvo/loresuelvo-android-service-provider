@@ -97,7 +97,14 @@ The app uses native `messages` and `services` channels. On Android 13+, the
 permission prompt appears once after provider entry. Profile opens the phone's
 notification settings after a denial. Installation secrets and login bindings
 are encrypted separately from session storage and excluded from backup and
-device transfer.
+device transfer. Authenticated foreground entry and Firebase token changes renew
+registration without blocking normal screens. Offline logout invalidates local
+notices immediately; the next verified provider login reconciles the server
+binding using encrypted installation possession metadata, without retaining the
+logged-out session. Unacknowledged binding candidates are bounded and retained until a confirmed
+registration resolves them;
+registration stops safely at capacity instead of discarding an uncertain server
+predecessor.
 
 JVM tests simulate receipt and cannot prove API → FCM → phone delivery. Real
 delivery verification remains pending until a matching configured Firebase

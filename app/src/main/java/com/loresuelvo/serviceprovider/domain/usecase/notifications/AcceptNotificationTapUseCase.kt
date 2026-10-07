@@ -17,6 +17,7 @@ class AcceptNotificationTapUseCase @Inject constructor(
         val session = sessions.getSession()
         val record = state.handled.firstOrNull { it.tapId != null && it.tapId == tapId }
         if (session == null || local.isInvalidated() || binding?.active != true || binding.subject != session.user.id ||
+            binding.sessionKey == null || !VerifiedNotificationAccount(binding.subject, binding.sessionKey, binding.recipientId).matches(session) ||
             record == null || record.bindingId != binding.id || record.expiresAt <= clock.nowMillis()
         ) { local.queue(null); return@synchronized }
         local.queue(record)

@@ -111,7 +111,7 @@ class ProviderConversationScreenTest {
             }
         }
         val context = ApplicationProvider.getApplicationContext<Context>()
-        composeTestRule.onNodeWithText(context.getString(R.string.provider_conversation_error_not_found)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_conversation_error_forbidden)).assertIsDisplayed()
         composeTestRule.onNodeWithText("private diagnostic").assertDoesNotExist()
         composeTestRule.onNodeWithTag(PROVIDER_CONVERSATION_RETRY_LOAD_TAG).assertDoesNotExist()
         composeTestRule.onNodeWithTag(PROVIDER_CHAT_ATTACH_BUTTON_TAG).assertDoesNotExist()

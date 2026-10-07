@@ -90,10 +90,15 @@ class RealtimeChatFixture(private val notifications: com.loresuelvo.serviceprovi
 }
 
 class RealtimeTestSessions : AuthSessionStore {
+    var notificationCleanup: com.loresuelvo.serviceprovider.domain.notifications.NotificationSessionCleanup? = null
     override val sessionFlow = MutableStateFlow<AuthSession?>(AuthSession(User("provider-a", "a@example.test"), "token-a"))
     override fun getSession() = sessionFlow.value
-    override fun saveSession(session: AuthSession) { sessionFlow.value = session }
-    override fun clearSession() { sessionFlow.value = null }
+    override fun saveSession(session: AuthSession) {
+        if (sessionFlow.value != session) notificationCleanup?.invalidate()
+        notificationCleanup?.establish(session)
+        sessionFlow.value = session
+    }
+    override fun clearSession() { notificationCleanup?.invalidate(); sessionFlow.value = null }
 }
 
 class FakeRealtimeClient : RealtimeClient {

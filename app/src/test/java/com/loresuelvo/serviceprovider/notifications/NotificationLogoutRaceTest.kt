@@ -47,7 +47,7 @@ class NotificationLogoutRaceTest {
             }
             val replacement = AuthSession(User("new-provider", "new@example.test"), "new-token")
             world.sessions.saveSession(replacement)
-            world.chat.scope.launch { world.registerUseCase(8, "en") }
+            world.chat.scope.launch { world.registerUseCase(world.verifyProvider(8), "en") }
             world.chat.scheduler.runCurrent()
             val replacementBinding = world.store.read().binding
             assertEquals("new-provider", replacementBinding!!.subject)

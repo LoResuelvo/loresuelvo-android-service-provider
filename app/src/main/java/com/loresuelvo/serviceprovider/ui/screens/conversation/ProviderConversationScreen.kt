@@ -487,7 +487,7 @@ private fun errorCopy(failure: ConversationDetailOutcome.Failure): Pair<String, 
         stringResource(R.string.provider_conversation_error_network) to true
     is ConversationDetailOutcome.Failure.Server ->
         if (failure.code == 403) {
-            stringResource(R.string.provider_conversation_error_not_found) to false
+            stringResource(R.string.provider_conversation_error_forbidden) to false
         } else stringResource(R.string.provider_conversation_error_server) to true
     is ConversationDetailOutcome.Failure.Unauthorized ->
         stringResource(R.string.provider_conversation_error_unauthorized) to false

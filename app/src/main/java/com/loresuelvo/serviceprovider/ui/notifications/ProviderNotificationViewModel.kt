@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.notifications
 
+import com.loresuelvo.serviceprovider.domain.notifications.NotificationDestination
+import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.usecase.notifications.RegisterNotificationInstallationUseCase
@@ -17,15 +19,19 @@ class ProviderNotificationViewModel @Inject constructor(
     private val register: RegisterNotificationInstallationUseCase,
     private val permission: RequestNotificationPermissionUseCase,
     private val consume: ConsumeNotificationTargetUseCase,
-    local: NotificationLocalSession,
+    private val local: NotificationLocalSession,
+    private val sessions: AuthSessionStore,
 ) : ViewModel() {
     val target = local.target
     private val pendingEffects = Channel<NotificationUiEffect>(Channel.BUFFERED)
     val effects = pendingEffects.receiveAsFlow()
     fun openSettings() { pendingEffects.trySend(NotificationUiEffect.OpenSettings) }
-    fun enter(recipientId: Int, locale: String) { viewModelScope.launch { register(recipientId, locale) } }
+    fun enter(recipientId: Int, locale: String) {
+        val account = local.accountFor(sessions.getSession())?.takeIf { it.recipientId == recipientId } ?: return
+        viewModelScope.launch { register(account, locale) }
+    }
     fun requestPermissionOnce(): Boolean = permission()
-    fun consumeTarget(): Int? = consume()
+    fun consumeTarget(): NotificationDestination? = consume()
 }
 
 enum class NotificationUiEffect { OpenSettings }

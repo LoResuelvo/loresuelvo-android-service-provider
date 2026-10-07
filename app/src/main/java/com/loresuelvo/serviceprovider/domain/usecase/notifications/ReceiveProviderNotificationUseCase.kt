@@ -20,16 +20,17 @@ class ReceiveProviderNotificationUseCase @Inject constructor(
         val binding = state.binding ?: return@synchronized ReceiptOutcome.Rejected
         val now = clock.nowMillis()
         if (local.isInvalidated() || !binding.active || !binding.acknowledged || binding.subject != session.user.id ||
+            binding.sessionKey == null || !VerifiedNotificationAccount(binding.subject, binding.sessionKey, binding.recipientId).matches(session) ||
             notice.recipientId != binding.recipientId || notice.installationId != state.id || notice.bindingId != binding.id ||
-            notice.conversationId <= 0 || notice.eventId.isBlank() || notice.title.isBlank() || notice.body.isBlank() || notice.expiresAt <= now
+            notice.destination.id <= 0 || notice.eventId.isBlank() || notice.title.isBlank() || notice.body.isBlank() || notice.expiresAt <= now
         ) return@synchronized ReceiptOutcome.Rejected
         val handled = state.handled.filter { it.expiresAt > now }
         if (handled.any { it.eventId == notice.eventId }) return@synchronized ReceiptOutcome.Duplicate
         // ponytail: retain at most 512 unexpired IDs; drop overflow rather than replay alerts. Add a database if volume requires it.
         if (handled.size >= 512) return@synchronized ReceiptOutcome.Rejected
-        val suppressed = conversations.suppress(session, notice.conversationId)
+        val suppressed = (notice.destination as? NotificationDestination.Conversation)?.let { conversations.suppress(session, it.id) } == true
         val tapId = if (suppressed) null else UUID.randomUUID().toString()
-        val record = HandledNotification(notice.eventId, binding.id, notice.conversationId, notice.expiresAt, tapId)
+        val record = HandledNotification(notice.eventId, binding.id, notice.destination, notice.expiresAt, tapId)
         if (!store.write(state.copy(handled = handled + record))) return@synchronized ReceiptOutcome.Rejected
         if (suppressed) return@synchronized ReceiptOutcome.Suppressed
         if (!display.canPost() || sessions.getSession() != session || local.isInvalidated() || notice.expiresAt <= clock.nowMillis()) return@synchronized ReceiptOutcome.Rejected

@@ -54,6 +54,7 @@ class EncryptedAuthSessionStore @Inject constructor(
             .putString(KEY_ACCESS_TOKEN, session.accessToken)
             .commit()
 
+        notificationCleanup?.establish(session)
         _sessionFlow.value = session
     }
 

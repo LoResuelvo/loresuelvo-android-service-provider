@@ -19,7 +19,7 @@ Característica: Recibir avisos de mensajes y novedades del servicio
       | sin LoResuelvo en ejecución       | audio       |
       | leyendo otra conversación         | texto       |
 
-  @wip @batch2
+  @batch2
   Esquema del escenario: 20.2-PUSH Recibir las novedades importantes de mis servicios
     Dado que tengo una sesión activa y permití los avisos en este teléfono
     Y no estoy usando LoResuelvo
@@ -40,7 +40,7 @@ Característica: Recibir avisos de mensajes y novedades del servicio
     Y no se vuelve a pedir el permiso automáticamente
     Y desde Perfil puedo abrir los ajustes de notificaciones del teléfono
 
-  @wip @batch2
+  @batch2
   Escenario: 20.4-PUSH Recuperar la recepción después de una interrupción
     Dado que no se pudo habilitar la recepción de avisos por falta de conexión
     Y conservé mi sesión y el permiso para recibirlos
@@ -65,7 +65,7 @@ Característica: Recibir avisos de mensajes y novedades del servicio
       | un aviso que ya recibí                    |
       | un aviso cuyo plazo para mostrarse venció |
 
-  @wip @batch2
+  @batch2
   Esquema del escenario: 20.7-PUSH Abrir el mensaje o servicio desde su aviso
     Dado que tengo un aviso vigente de "<aviso>" de mi cuenta actual
     Y LoResuelvo está "<estado>"
@@ -80,7 +80,7 @@ Característica: Recibir avisos de mensajes y novedades del servicio
       | turno próximo         | abierta | la orden del turno           |
       | pago final confirmado | cerrada | la orden con el saldo pagado |
 
-  @wip @batch2
+  @batch2
   Esquema del escenario: 20.8-PUSH Resolver un aviso que no puedo abrir
     Dado que recibí un aviso y "<situacion>"
     Cuando toco ese aviso
@@ -106,7 +106,7 @@ Característica: Recibir avisos de mensajes y novedades del servicio
       | con conexión  |
       | sin conexión  |
 
-  @wip @batch2
+  @batch2
   Escenario: 20.10-PUSH Recibir solo los avisos de la cuenta actual
     Dado que cerré mi sesión sin conexión y después ingresé con otra cuenta de prestador
     Y la nueva cuenta quedó habilitada para recibir avisos en este teléfono

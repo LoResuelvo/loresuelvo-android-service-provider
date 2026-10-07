@@ -32,7 +32,7 @@ class ProviderNotificationsTest {
         world.register()
         val good = world.notice()
         listOf(good.copy(recipientId = 8), good.copy(installationId = "other"), good.copy(bindingId = "other"),
-            good.copy(conversationId = 0), good.copy(eventId = ""), good.copy(title = ""), good.copy(body = "")).forEach {
+            good.copy(destination = com.loresuelvo.serviceprovider.domain.notifications.NotificationDestination.Conversation(0)), good.copy(eventId = ""), good.copy(title = ""), good.copy(body = "")).forEach {
             assertEquals(ReceiptOutcome.Rejected, world.notifications.receive(it))
         }
         world.display.enabled = false
@@ -74,7 +74,7 @@ class ProviderNotificationsTest {
         world.notifications.acceptTap("forged")
         assertNull(world.notifications.consumeTarget())
         world.notifications.acceptTap(tap)
-        assertEquals(42, world.notifications.consumeTarget())
+        assertEquals(com.loresuelvo.serviceprovider.domain.notifications.NotificationDestination.Conversation(42), world.notifications.consumeTarget())
         world.notifications.acceptTap(tap)
         assertNull(world.notifications.consumeTarget())
         world.notifications.receive(world.notice("message:124:7"))
@@ -126,6 +126,17 @@ class ProviderNotificationsTest {
         world.store.writable = false
         assertEquals(ReceiptOutcome.Rejected, world.notifications.receive(world.notice()))
         assertTrue(world.display.notices.isEmpty())
+    }
+
+    @Test fun same_subject_new_login_cannot_reuse_a_previous_session_tap_or_notification() = NotificationFixture().use { world ->
+        world.register()
+        val notice = world.notice(); world.notifications.receive(notice)
+        val tap = world.display.notices.single().second
+        val current = world.sessions.getSession()!!
+        world.sessions.saveSession(current.copy(accessToken = "new-login-token"))
+        world.notifications.acceptTap(tap)
+        assertNull(world.notifications.consumeTarget())
+        assertEquals(ReceiptOutcome.Rejected, world.notifications.receive(notice.copy(eventId = "message:124:7")))
     }
 
     @Test fun logout_at_final_posting_check_prevents_native_notice_and_pending_tap() = NotificationFixture().use { world ->

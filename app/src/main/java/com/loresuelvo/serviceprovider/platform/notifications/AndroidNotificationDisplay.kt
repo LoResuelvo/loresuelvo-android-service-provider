@@ -16,6 +16,7 @@ import com.loresuelvo.serviceprovider.MainActivity
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.notifications.NotificationDisplay
 import com.loresuelvo.serviceprovider.domain.notifications.ProviderNotification
+import com.loresuelvo.serviceprovider.domain.notifications.NotificationDestination
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,6 +39,7 @@ class AndroidNotificationDisplay @Inject constructor(@ApplicationContext private
     override fun post(notice: ProviderNotification, tapId: String): Boolean {
         createChannels()
         if (!canPost()) return false
+        val channel = if (notice.destination is NotificationDestination.Conversation) MESSAGES_CHANNEL else SERVICES_CHANNEL
         val intent = Intent(context, MainActivity::class.java).apply {
             action = TAP_ACTION
             data = Uri.parse("loresuelvo-notification://tap/$tapId")
@@ -45,11 +47,11 @@ class AndroidNotificationDisplay @Inject constructor(@ApplicationContext private
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val tap = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification = NotificationCompat.Builder(context, MESSAGES_CHANNEL)
+        val notification = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_provider_notification)
             .setContentTitle(notice.title).setContentText(notice.body)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setPublicVersion(NotificationCompat.Builder(context, MESSAGES_CHANNEL)
+            .setPublicVersion(NotificationCompat.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_provider_notification).setContentTitle(notice.title).setContentText(notice.body).build())
             .setContentIntent(tap).setAutoCancel(true).setOnlyAlertOnce(true)
             .setTimeoutAfter((notice.expiresAt - System.currentTimeMillis()).coerceAtLeast(1))

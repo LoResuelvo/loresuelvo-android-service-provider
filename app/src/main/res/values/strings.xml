@@ -480,4 +480,5 @@
     <string name="conversion_request_sample">%1$d de %2$d solicitudes recibidas</string>
     <string name="conversion_acceptance_note">Aceptar una solicitud abre la conversación; no confirma una contratación.</string>
     <string name="conversion_date_incomplete">Completá las dos fechas para consultar el período.</string>
+    <string name="provider_conversation_error_forbidden">Ya no tenés acceso a esta conversación.</string>
 </resources>

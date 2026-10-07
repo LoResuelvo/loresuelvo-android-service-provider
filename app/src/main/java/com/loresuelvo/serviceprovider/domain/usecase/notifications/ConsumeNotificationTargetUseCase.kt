@@ -10,17 +10,18 @@ class ConsumeNotificationTargetUseCase @Inject constructor(
     private val local: NotificationLocalSession,
     private val clock: NotificationClock,
 ) {
-    operator fun invoke(): Int? = synchronized(store) {
+    operator fun invoke(): NotificationDestination? = synchronized(store) {
         val target = local.target.value ?: return@synchronized null
         local.queue(null)
         val binding = store.read().binding
         val session = sessions.getSession() ?: return@synchronized null
         val state = store.read()
         if (local.isInvalidated() || binding?.active != true || binding.subject != session.user.id ||
+            binding.sessionKey == null || !VerifiedNotificationAccount(binding.subject, binding.sessionKey, binding.recipientId).matches(session) ||
             target.bindingId != binding.id || target.expiresAt <= clock.nowMillis() ||
             state.handled.none { it.tapId == target.tapId && it == target }
         ) return@synchronized null
         if (!store.write(state.copy(handled = state.handled.map { if (it == target) it.copy(tapId = null) else it }))) null
-        else target.conversationId
+        else target.destination
     }
 }

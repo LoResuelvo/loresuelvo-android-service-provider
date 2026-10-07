@@ -1,5 +1,8 @@
 package com.loresuelvo.serviceprovider.ui.navigation
 
+import kotlinx.coroutines.awaitCancellation
+import androidx.compose.ui.platform.LocalConfiguration
+import com.loresuelvo.serviceprovider.domain.notifications.NotificationDestination
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -117,8 +120,12 @@ fun LoResuelvoNav(
             val provider = (state as? ProviderEntryUiState.Home)?.account
             if (provider != null) {
                 com.loresuelvo.serviceprovider.ui.notifications.ProviderNotificationPermission(notificationViewModel)
-                LaunchedEffect(provider.id) {
-                    notificationViewModel.enter(provider.id, context.resources.configuration.locales[0].language)
+                val notificationLocale = LocalConfiguration.current.locales[0].language
+                LaunchedEffect(provider.id, notificationLocale, lifecycleOwner) {
+                    lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                        notificationViewModel.enter(provider.id, notificationLocale)
+                        awaitCancellation()
+                    }
                 }
             }
 
@@ -129,8 +136,12 @@ fun LoResuelvoNav(
                 val notificationTarget by notificationViewModel.target.collectAsStateWithLifecycle()
                 LaunchedEffect(notificationTarget, provider?.id, currentRoute) {
                     if (provider == null || currentRoute == null || notificationTarget == null) return@LaunchedEffect
-                    val conversationId = notificationViewModel.consumeTarget() ?: return@LaunchedEffect
-                    navController.navigate(Route.Conversation.buildPath(conversationId)) { launchSingleTop = true }
+                    val target = notificationViewModel.consumeTarget() ?: return@LaunchedEffect
+                    val path = when (target) {
+                        is NotificationDestination.Conversation -> Route.Conversation.buildPath(target.id)
+                        is NotificationDestination.WorkOrder -> Route.ProviderTurnDetail.buildPath(target.id)
+                    }
+                    navController.navigate(path) { launchSingleTop = true }
                 }
                 val bottomRoute = if (currentRoute == Route.Conversion.path) Route.Activity.path else currentRoute
                 var bottomBarHeight by remember { mutableIntStateOf(0) }

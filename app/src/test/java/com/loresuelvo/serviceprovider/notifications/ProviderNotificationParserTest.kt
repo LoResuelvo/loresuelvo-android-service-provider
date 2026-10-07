@@ -8,12 +8,25 @@ class ProviderNotificationParserTest {
     @Test fun supported_data_schema_requires_every_routing_field_and_rejects_unknown_types() {
         val parser = ProviderNotificationParser()
         val valid = payload()
-        assertEquals(42, parser.parse(valid)?.conversationId)
+        assertEquals(com.loresuelvo.serviceprovider.domain.notifications.NotificationDestination.Conversation(42), parser.parse(valid)?.destination)
         valid.keys.forEach { field -> assertNull("Missing $field", parser.parse(valid - field)) }
         mapOf("version" to "2", "recipient_app" to "consumer", "type" to "unknown", "destination" to "work_order",
             "resource_type" to "work_order", "resource_id" to "0", "recipient_user_id" to "auth0|subject",
             "installation_id" to "not-uuid", "binding_id" to "not-uuid", "expires_at" to "bad", "title" to " ", "body" to " ").forEach { (field, value) ->
             assertNull("Invalid $field", parser.parse(valid + (field to value)))
+        }
+    }
+
+    @Test fun service_schemas_route_only_to_authoritative_work_order_ids_and_event_namespaces_are_distinct() {
+        val parser = ProviderNotificationParser()
+        listOf("service_proposal_accepted", "work_order_close_to_scheduled_time", "work_order_final_payment_approved").forEach { type ->
+            val service = payload() + mapOf("type" to type, "event_id" to "notification:$type:123",
+                "destination" to "work_order", "resource_type" to "work_order", "resource_id" to "55")
+            assertEquals(com.loresuelvo.serviceprovider.domain.notifications.NotificationDestination.WorkOrder(55), parser.parse(service)?.destination)
+            service.keys.forEach { assertNull(parser.parse(service - it)) }
+            assertNull(parser.parse(service + ("event_id" to "message:123:7")))
+            assertNull(parser.parse(service + ("resource_type" to "service_proposal")))
+            assertNull(parser.parse(service + ("destination" to "conversation")))
         }
     }
 
