@@ -38,6 +38,9 @@ fun envVar(name: String, default: String = ""): String {
         ?: default
 }
 
+val configuredVersionCode = envVar("VERSION_CODE", "20").toInt()
+val configuredVersionName = envVar("VERSION_NAME", "0.22.1")
+
 android {
     flavorDimensions += "environment"
     namespace = "com.loresuelvo.serviceprovider"
@@ -47,6 +50,8 @@ android {
         applicationId = "com.loresuelvo.serviceprovider"
         minSdk = 24
         targetSdk = 35
+        versionCode = configuredVersionCode
+        versionName = configuredVersionName
 
         buildConfigField("String", "GOOGLE_MAPS_MAP_ID", "\"${envVar("GOOGLE_MAPS_MAP_ID")}\"")
         manifestPlaceholders["googleMapsApiKey"] = envVar("GOOGLE_MAPS_API_KEY")
