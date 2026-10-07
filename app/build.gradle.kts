@@ -22,6 +22,14 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
 }
 
+// Use the standard Firebase resource generator only for variants with real client configuration.
+if (fileTree(projectDir) { include("google-services.json", "src/**/google-services.json") }.files.isNotEmpty()) {
+    apply(plugin = "com.google.gms.google-services")
+    tasks.withType<com.google.gms.googleservices.GoogleServicesTask>().configureEach {
+        onlyIf { googleServicesJsonFiles.get().any { it.isFile } }
+    }
+}
+
 // ==========================================
 // Lectura segura de variables de entorno
 // Prioridad: local.properties (dev) > gradle.properties global (CI) > default
@@ -234,6 +242,7 @@ dependencies {
     implementation(libs.google.maps)
     implementation(libs.google.auth)
     implementation(libs.didit.sdk.autodetection)
+    implementation(libs.firebase.messaging)
 
     // Hilt (added in Fase 1)
     implementation(libs.hilt.android)

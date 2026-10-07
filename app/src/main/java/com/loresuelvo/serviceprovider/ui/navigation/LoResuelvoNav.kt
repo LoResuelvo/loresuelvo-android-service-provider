@@ -82,6 +82,7 @@ fun LoResuelvoNav(
     onPaymentReturnConsumed: () -> Unit,
 ) {
     val entryViewModel: ProviderEntryViewModel = hiltViewModel()
+    val notificationViewModel: com.loresuelvo.serviceprovider.ui.notifications.ProviderNotificationViewModel = hiltViewModel()
     val entryState by entryViewModel.uiState.collectAsStateWithLifecycle()
     val logoutState by entryViewModel.logoutState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -114,11 +115,23 @@ fun LoResuelvoNav(
                 else -> error("Unsupported provider entry state")
             }
             val provider = (state as? ProviderEntryUiState.Home)?.account
+            if (provider != null) {
+                com.loresuelvo.serviceprovider.ui.notifications.ProviderNotificationPermission(notificationViewModel)
+                LaunchedEffect(provider.id) {
+                    notificationViewModel.enter(provider.id, context.resources.configuration.locales[0].language)
+                }
+            }
 
             key(startDestination) {
                 val navController = rememberNavController()
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = backStackEntry?.destination?.route
+                val notificationTarget by notificationViewModel.target.collectAsStateWithLifecycle()
+                LaunchedEffect(notificationTarget, provider?.id, currentRoute) {
+                    if (provider == null || currentRoute == null || notificationTarget == null) return@LaunchedEffect
+                    val conversationId = notificationViewModel.consumeTarget() ?: return@LaunchedEffect
+                    navController.navigate(Route.Conversation.buildPath(conversationId)) { launchSingleTop = true }
+                }
                 val bottomRoute = if (currentRoute == Route.Conversion.path) Route.Activity.path else currentRoute
                 var bottomBarHeight by remember { mutableIntStateOf(0) }
                 val bottomBarHeightDp = with(LocalDensity.current) { bottomBarHeight.toDp() }

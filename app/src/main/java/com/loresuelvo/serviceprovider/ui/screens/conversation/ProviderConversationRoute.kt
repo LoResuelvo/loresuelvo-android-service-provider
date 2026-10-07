@@ -64,6 +64,12 @@ fun ProviderConversationRoute(
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.onNotificationVisibilityChanged(true)
+            try { kotlinx.coroutines.awaitCancellation() } finally { viewModel.onNotificationVisibilityChanged(false) }
+        }
+    }
     val proposalSnackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(proposalViewModel, lifecycleOwner, proposalSnackbarHostState) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {

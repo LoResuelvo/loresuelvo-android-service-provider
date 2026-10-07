@@ -93,6 +93,7 @@ class ProviderConversationViewModel @Inject constructor(
     private val receivedDuringLoad = mutableMapOf<Int, ConversationMessage>()
     private var loadJob: Job? = null
     private var refreshPending = false
+    fun onNotificationVisibilityChanged(visible: Boolean) { realtime?.setVisible(visible) }
     private var sessionInvalidated = false
 
     init {

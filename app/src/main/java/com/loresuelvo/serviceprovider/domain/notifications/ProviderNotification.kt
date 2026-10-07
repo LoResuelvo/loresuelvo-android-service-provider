@@ -1,0 +1,62 @@
+package com.loresuelvo.serviceprovider.domain.notifications
+
+data class ProviderNotification(
+    val eventId: String,
+    val conversationId: Int,
+    val recipientId: Int,
+    val installationId: String,
+    val bindingId: String,
+    val title: String,
+    val body: String,
+    val expiresAt: Long,
+)
+
+data class NotificationBinding(
+    val id: String,
+    val subject: String,
+    val recipientId: Int,
+    val active: Boolean,
+    val acknowledged: Boolean = false,
+)
+
+data class HandledNotification(
+    val eventId: String,
+    val bindingId: String,
+    val conversationId: Int,
+    val expiresAt: Long,
+    val tapId: String?,
+)
+
+data class NotificationInstallation(
+    val id: String,
+    val secret: String,
+    val binding: NotificationBinding? = null,
+    val previousBindingId: String? = null,
+    val handled: List<HandledNotification> = emptyList(),
+    val permissionRequested: Boolean = false,
+)
+
+interface NotificationStateStore {
+    fun read(): NotificationInstallation
+    /** False means receipt must fail closed rather than risk replay after process death. */
+    fun write(state: NotificationInstallation): Boolean
+}
+
+interface NotificationDisplay {
+    fun canPost(): Boolean
+    fun post(notice: ProviderNotification, tapId: String): Boolean
+    fun cancelAll()
+}
+
+interface NotificationTokenSource {
+    suspend fun token(): String?
+}
+
+fun interface NotificationClock {
+    fun nowMillis(): Long
+}
+
+/** Shared by explicit logout, expiration, and account replacement before auth storage changes. */
+fun interface NotificationSessionCleanup {
+    fun invalidate()
+}

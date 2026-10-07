@@ -19,12 +19,24 @@ class ConversationRealtimeObserver @Inject constructor(
     private val observeEvents: ObserveProviderEventsUseCase,
     private val observeSession: ObserveProviderSessionUseCase,
     private val observeState: ObserveRealtimeStateUseCase,
+    private val notifications: com.loresuelvo.serviceprovider.domain.notifications.NotificationConversationState? = null,
 ) {
     private val conversationId: Int = checkNotNull(savedStateHandle[Route.Conversation.argument])
     val hasSession: Boolean get() = observeSession().value != null
+    fun setVisible(visible: Boolean) {
+        if (visible) observeSession().value?.let { notifications?.visible(it, conversationId) }
+        else notifications?.hide(conversationId)
+    }
 
     fun start(scope: CoroutineScope, onMessage: (ConversationMessage) -> Unit, onSessionChanged: () -> Unit, onConnected: () -> Unit) {
         val originalSession = observeSession().value
+        notifications?.let { notificationState ->
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                notificationState.refreshes.collect { (session, id) ->
+                    if (session == originalSession && observeSession().value == originalSession && id == conversationId) onConnected()
+                }
+            }
+        }
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             observeEvents().collect { envelope ->
                 val event = envelope.event as? ProviderEvent.MessageCreated ?: return@collect

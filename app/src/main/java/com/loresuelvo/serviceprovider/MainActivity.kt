@@ -33,14 +33,19 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var identityVerificationLauncher: IdentityVerificationLauncher
     @Inject lateinit var paymentAccountBrowserLauncher: PaymentAccountBrowserLauncher
     @Inject lateinit var paymentAccountReturnLinkParser: PaymentAccountReturnLinkParser
+    @Inject lateinit var acceptNotificationTap: com.loresuelvo.serviceprovider.domain.usecase.notifications.AcceptNotificationTapUseCase
+    @Inject lateinit var notificationDisplay: com.loresuelvo.serviceprovider.platform.notifications.AndroidNotificationDisplay
 
     private val paymentReturnUrl = MutableStateFlow<String?>(null)
     private var paymentReturnConsumed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        notificationDisplay.createChannels()
+        val notificationIntent = acceptNotification(intent)
         paymentReturnConsumed = savedInstanceState?.getBoolean(PAYMENT_RETURN_CONSUMED) ?: false
-        if (!paymentReturnConsumed) paymentReturnUrl.value = intent?.dataString
+        if (!paymentReturnConsumed) paymentReturnUrl.value = savedInstanceState?.getString(PAYMENT_RETURN_URL)
+            ?: intent?.dataString?.takeUnless { notificationIntent }
         setContent {
             LoresuelvoTheme {
                 LoResuelvoNav(
@@ -70,7 +75,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        acceptPaymentReturn(intent)
+        setIntent(intent)
+        if (!acceptNotification(intent)) acceptPaymentReturn(intent)
     }
 
     internal fun acceptPaymentReturn(intent: Intent) {
@@ -80,6 +86,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(PAYMENT_RETURN_CONSUMED, paymentReturnConsumed)
+        outState.putString(PAYMENT_RETURN_URL, paymentReturnUrl.value)
         super.onSaveInstanceState(outState)
     }
 
@@ -88,7 +95,16 @@ class MainActivity : ComponentActivity() {
         paymentReturnUrl.value = null
     }
 
+    private fun acceptNotification(intent: Intent?): Boolean {
+        if (intent?.action == com.loresuelvo.serviceprovider.platform.notifications.AndroidNotificationDisplay.TAP_ACTION) {
+            acceptNotificationTap(intent.getStringExtra(com.loresuelvo.serviceprovider.platform.notifications.AndroidNotificationDisplay.TAP_EXTRA))
+            return true
+        }
+        return false
+    }
+
     private companion object {
         const val PAYMENT_RETURN_CONSUMED = "payment-return-consumed"
+        const val PAYMENT_RETURN_URL = "payment-return-url"
     }
 }

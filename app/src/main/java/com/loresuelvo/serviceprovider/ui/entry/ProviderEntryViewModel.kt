@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loresuelvo.serviceprovider.domain.account.ProviderEntryOutcome
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
+import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.LogoutOutcome
 import com.loresuelvo.serviceprovider.domain.auth.SessionClearOutcome
 import com.loresuelvo.serviceprovider.domain.usecase.account.ResolveProviderEntryUseCase
@@ -21,6 +22,8 @@ class ProviderEntryViewModel @Inject constructor(
     private val sessionStore: AuthSessionStore,
     private val resolveProviderEntry: ResolveProviderEntryUseCase,
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    private val notificationLogout: com.loresuelvo.serviceprovider.domain.usecase.notifications.LogoutNotificationSessionUseCase? = null,
+    private val notificationCleanup: com.loresuelvo.serviceprovider.domain.notifications.NotificationSessionCleanup? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ProviderEntryUiState>(ProviderEntryUiState.Loading)
@@ -48,12 +51,14 @@ class ProviderEntryViewModel @Inject constructor(
 
     fun confirmLogout() {
         if (!_logoutState.value.confirmationVisible || _logoutState.value.processing) return
+        val originatingSession = sessionStore.getSession()
+        notificationCleanup?.invalidate()
         sessionGeneration += 1
         resolutionJob?.cancel()
         resolutionJob = null
         _uiState.value = ProviderEntryUiState.Welcome
         setLogoutState(ProviderLogoutUiState(processing = true, externalLogoutPending = true))
-        clearLocalSessionAndLaunch()
+        clearLocalSessionAndLaunch(originatingSession)
     }
 
     fun retryLogout() {
@@ -64,8 +69,22 @@ class ProviderEntryViewModel @Inject constructor(
         if (state.localRemovalPending) clearLocalSessionAndLaunch() else queueLogoutLaunch()
     }
 
-    private fun clearLocalSessionAndLaunch() {
-        when (sessionStore.clearSessionDurably()) {
+    private fun clearLocalSessionAndLaunch(originatingSession: AuthSession? = sessionStore.getSession()) {
+        val generation = sessionGeneration
+        if (notificationLogout == null) {
+            finishLocalSessionClear(sessionStore.clearSessionDurably())
+            return
+        }
+        viewModelScope.launch {
+            if (generation != sessionGeneration || sessionStore.getSession() != originatingSession) return@launch
+            val outcome = notificationLogout(originatingSession)
+            if (generation != sessionGeneration || sessionStore.getSession() != null) return@launch
+            finishLocalSessionClear(outcome)
+        }
+    }
+
+    private fun finishLocalSessionClear(outcome: SessionClearOutcome) {
+        when (outcome) {
             SessionClearOutcome.Cleared -> {
                 setLogoutState(_logoutState.value.copy(localRemovalPending = false))
                 queueLogoutLaunch()
@@ -121,6 +140,7 @@ class ProviderEntryViewModel @Inject constructor(
                     _uiState.value = ProviderEntryUiState.Welcome
                 } else if (sessionStore.getSession() == session && !_logoutState.value.localRemovalPending) {
                     // New authentication supersedes callbacks from a former logout attempt.
+                    sessionGeneration += 1
                     claimedLogout = null
                     setLogoutState(ProviderLogoutUiState())
                     resolve()

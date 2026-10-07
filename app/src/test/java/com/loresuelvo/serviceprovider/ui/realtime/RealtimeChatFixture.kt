@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class RealtimeChatFixture : AutoCloseable {
+class RealtimeChatFixture(private val notifications: com.loresuelvo.serviceprovider.domain.notifications.NotificationConversationState? = null) : AutoCloseable {
     val scheduler = TestCoroutineScheduler()
     val dispatcher = StandardTestDispatcher(scheduler)
     val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -47,7 +47,7 @@ class RealtimeChatFixture : AutoCloseable {
             object : MediaReader { override suspend fun read(uri: String): MediaUpload { repository.mediaReads++; return MediaUpload.Image(byteArrayOf(1), "image/jpeg", "photo.jpg") } },
             recorder, player, object : RecordingTimeSource() { override fun nowMillis() = scheduler.currentTime },
             ConversationRealtimeObserver(SavedStateHandle(mapOf(Route.Conversation.argument to 42)),
-                ObserveProviderEventsUseCase(client, sessions), ObserveProviderSessionUseCase(sessions), ObserveRealtimeStateUseCase(client)),
+                ObserveProviderEventsUseCase(client, sessions), ObserveProviderSessionUseCase(sessions), ObserveRealtimeStateUseCase(client), notifications),
         ).also(models::add)
         inbox = MessagesListViewModel(GetConversationsUseCase(repository), ObserveProviderEventsUseCase(client, sessions), ObserveProviderSessionUseCase(sessions), ObserveRealtimeStateUseCase(client)).also(models::add)
         if (completeLoad) scheduler.advanceUntilIdle() else scheduler.runCurrent()

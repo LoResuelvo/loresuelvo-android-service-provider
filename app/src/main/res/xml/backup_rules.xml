@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Backup rules for Fase 0 (placeholder). -->
+    <exclude domain="sharedpref" path="provider_notifications_secure.xml" />
+    <exclude domain="sharedpref" path="auth_session_secure.xml" />
 </full-backup-content>

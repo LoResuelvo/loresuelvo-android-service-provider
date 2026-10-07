@@ -37,6 +37,22 @@ import retrofit2.http.Path
  */
 interface BackendApi {
 
+    @retrofit2.http.PUT("installations/{installationId}")
+    @retrofit2.http.Headers("Cache-Control: no-store")
+    suspend fun registerInstallation(
+        @Path("installationId") installationId: String,
+        @Body request: com.loresuelvo.serviceprovider.data.api.dto.InstallationRequestDto,
+        @retrofit2.http.Tag session: com.loresuelvo.serviceprovider.domain.auth.AuthSession,
+    ): retrofit2.Response<Unit>
+
+    @retrofit2.http.HTTP(method = "DELETE", path = "installations/{installationId}", hasBody = true)
+    @retrofit2.http.Headers("Cache-Control: no-store")
+    suspend fun removeInstallation(
+        @Path("installationId") installationId: String,
+        @Body request: com.loresuelvo.serviceprovider.data.api.dto.RemoveInstallationRequestDto,
+        @retrofit2.http.Tag session: com.loresuelvo.serviceprovider.domain.auth.AuthSession,
+    ): retrofit2.Response<Unit>
+
     @POST("ws-tickets")
     suspend fun createWebSocketTicket(
         @retrofit2.http.Tag session: com.loresuelvo.serviceprovider.domain.auth.AuthSession,

@@ -47,10 +47,22 @@ fun ProviderProfileRoute(
     viewModel: ProviderProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val notificationViewModel: com.loresuelvo.serviceprovider.ui.notifications.ProviderNotificationViewModel = hiltViewModel()
     val calendarState by viewModel.calendarState.collectAsStateWithLifecycle()
     val identityState by viewModel.identityState.collectAsStateWithLifecycle()
     val activity = LocalContext.current.findActivity()
     val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(notificationViewModel, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            notificationViewModel.effects.collect { effect ->
+                when (effect) {
+                    com.loresuelvo.serviceprovider.ui.notifications.NotificationUiEffect.OpenSettings ->
+                        activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, activity.packageName))
+                }
+            }
+        }
+    }
     val scope = rememberCoroutineScope()
     var calendarAttempt by rememberSaveable { mutableStateOf<String?>(null) }
     val registry = checkNotNull(LocalActivityResultRegistryOwner.current).activityResultRegistry
@@ -140,6 +152,7 @@ fun ProviderProfileRoute(
         onRequestLogout = onRequestLogout,
         onDismissLogout = onDismissLogout,
         onConfirmLogout = onConfirmLogout,
+        onNotificationSettings = notificationViewModel::openSettings,
         identityState = identityState,
         calendarState = calendarState,
         onAuthorizeCalendar = viewModel::authorizeCalendar,

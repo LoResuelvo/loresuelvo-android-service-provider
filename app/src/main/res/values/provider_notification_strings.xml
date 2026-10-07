@@ -1,0 +1,5 @@
+<resources>
+    <string name="provider_notification_messages_channel">Mensajes</string>
+    <string name="provider_notification_services_channel">Servicios</string>
+    <string name="provider_notification_settings">Ajustes de notificaciones</string>
+</resources>

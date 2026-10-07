@@ -26,7 +26,9 @@ import kotlinx.coroutines.flow.update
 @Singleton
 class EncryptedAuthSessionStore @Inject constructor(
     private val preferences: SharedPreferences,
+    private val notificationCleanup: com.loresuelvo.serviceprovider.domain.notifications.NotificationSessionCleanup? = null,
 ) : AuthSessionStore {
+    private val sessionWrites = Any()
 
     private val _sessionFlow: MutableStateFlow<AuthSession?> =
         MutableStateFlow(readSession())
@@ -43,7 +45,8 @@ class EncryptedAuthSessionStore @Inject constructor(
 
     override fun getSession(): AuthSession? = _sessionFlow.value
 
-    override fun saveSession(session: AuthSession) {
+    override fun saveSession(session: AuthSession) = synchronized(sessionWrites) {
+        if (_sessionFlow.value != session) notificationCleanup?.invalidate()
         preferences
             .edit()
             .putString(KEY_USER_ID, session.user.id)
@@ -58,14 +61,19 @@ class EncryptedAuthSessionStore @Inject constructor(
         clearSessionDurably()
     }
 
-    override fun clearSessionDurably(): SessionClearOutcome {
+    override fun clearSessionDurably(expectedSession: AuthSession?): SessionClearOutcome = synchronized(sessionWrites) {
+        if (_sessionFlow.value != expectedSession) SessionClearOutcome.Cleared else clearSessionDurably()
+    }
+
+    override fun clearSessionDurably(): SessionClearOutcome = synchronized(sessionWrites) {
+        notificationCleanup?.invalidate()
         _sessionFlow.value = null
         val removed = try {
             preferences.edit().clear().commit()
         } catch (_: RuntimeException) {
             false
         }
-        return if (removed) SessionClearOutcome.Cleared else SessionClearOutcome.PersistenceFailure
+        if (removed) SessionClearOutcome.Cleared else SessionClearOutcome.PersistenceFailure
     }
 
     private fun readSession(): AuthSession? {

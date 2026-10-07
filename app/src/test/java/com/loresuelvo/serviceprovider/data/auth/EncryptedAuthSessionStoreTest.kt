@@ -51,6 +51,44 @@ class EncryptedAuthSessionStoreTest {
         assertNull(failing.sessionFlow.value)
     }
 
+    @Test fun every_shared_clear_and_session_replacement_invalidates_notices_before_credentials_change() {
+        val observedSessions = mutableListOf<AuthSession?>()
+        lateinit var store: EncryptedAuthSessionStore
+        store = EncryptedAuthSessionStore(preferences,
+            com.loresuelvo.serviceprovider.domain.notifications.NotificationSessionCleanup { observedSessions += store.getSession() })
+        store.saveSession(session)
+        assertEquals(listOf<AuthSession?>(null), observedSessions)
+        store.saveSession(session)
+        assertEquals(1, observedSessions.size)
+        store.clearSession()
+        assertEquals(session, observedSessions.last())
+        assertNull(store.getSession())
+        store.saveSession(session)
+        val replacement = AuthSession(User("other", "other@example.test"), "other-token")
+        store.saveSession(replacement)
+        assertEquals(session, observedSessions.last())
+        store.clearSessionDurably()
+        assertEquals(replacement, observedSessions.last())
+        assertNull(store.getSession())
+    }
+
+    @Test fun expected_session_clear_preserves_replacement_credentials_and_notification_binding() {
+        var invalidations = 0
+        val store = EncryptedAuthSessionStore(preferences,
+            com.loresuelvo.serviceprovider.domain.notifications.NotificationSessionCleanup { invalidations++ })
+        store.saveSession(session)
+        val replacement = AuthSession(User("replacement", "replacement@example.test"), "replacement-token")
+        store.saveSession(replacement)
+        val before = invalidations
+        assertEquals(SessionClearOutcome.Cleared, store.clearSessionDurably(session))
+        assertEquals(replacement, store.getSession())
+        assertEquals(replacement, EncryptedAuthSessionStore(preferences).getSession())
+        assertEquals(before, invalidations)
+        assertEquals(SessionClearOutcome.Cleared, store.clearSessionDurably(replacement))
+        assertNull(store.getSession())
+        assertEquals(before + 1, invalidations)
+    }
+
     private fun verifyRemovalFailure(throws: Boolean) {
         EncryptedAuthSessionStore(preferences).saveSession(session)
         var fail = true

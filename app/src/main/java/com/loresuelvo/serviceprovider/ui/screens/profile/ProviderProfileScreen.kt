@@ -57,6 +57,7 @@ fun ProviderProfileScreen(
     onRequestLogout: () -> Unit = {},
     onDismissLogout: () -> Unit = {},
     onConfirmLogout: () -> Unit = {},
+    onNotificationSettings: () -> Unit = {},
 ) {
     if (logoutConfirmationVisible) {
         AlertDialog(
@@ -110,7 +111,7 @@ fun ProviderProfileScreen(
                 identityState,
                 onVerifyIdentity,
                 onRetry,
-                calendarState, onAuthorizeCalendar, onRetryCalendar, onRequestLogout,
+                calendarState, onAuthorizeCalendar, onRetryCalendar, onRequestLogout, onNotificationSettings,
             )
         }
     }
@@ -188,6 +189,7 @@ private fun ProfileReadyState(
     onAuthorizeCalendar: () -> Unit,
     onRetryCalendar: () -> Unit,
     onRequestLogout: () -> Unit,
+    onNotificationSettings: () -> Unit,
 ) {
     Box(
         modifier = Modifier.fillMaxSize().padding(contentPadding),
@@ -215,6 +217,10 @@ private fun ProfileReadyState(
             ProfilePaymentCard(state.payment, onConnectMercadoPago, onRetryPaymentStatus)
             ProfileCalendarCard(state.provider.calendarConnectionStatus, calendarState, onAuthorizeCalendar, onRetryCalendar, onReloadProfile,
                 actionEnabled = !identityState.loading)
+            Button(
+                onClick = onNotificationSettings,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("provider-notification-settings"),
+            ) { Text(stringResource(R.string.provider_notification_settings)) }
             Button(
                 onClick = onRequestLogout,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(PROVIDER_LOGOUT_ACTION_TAG),

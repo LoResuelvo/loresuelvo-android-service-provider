@@ -77,6 +77,32 @@ Próxima fase (**Fase 1 — Walking skeleton BDD/TDD**):
 
 ---
 
+## Firebase Messaging configuration
+
+Provider notifications use Firebase Messaging data-only delivery. Firebase
+infrastructure is configured after Android development. Builds and deterministic
+tests run without Firebase client configuration; absent configuration or Google
+Play Services disables token registration while normal app use continues.
+
+Place a real `google-services.json` in `app/src/dev/`, `app/src/staging/`, or
+`app/src/prod/`, matching `com.loresuelvo.serviceprovider.dev`,
+`com.loresuelvo.serviceprovider.staging`, or `com.loresuelvo.serviceprovider`.
+The normal Google Services plugin processes configured variants and skips
+variants without their own configuration. These files are ignored by Git.
+App Distribution configuration alone does not enable Messaging or authorize
+the API to send messages. Server credentials and CI workflow changes remain
+human-owned.
+
+The app uses native `messages` and `services` channels. On Android 13+, the
+permission prompt appears once after provider entry. Profile opens the phone's
+notification settings after a denial. Installation secrets and login bindings
+are encrypted separately from session storage and excluded from backup and
+device transfer.
+
+JVM tests simulate receipt and cannot prove API → FCM → phone delivery. Real
+delivery verification remains pending until a matching configured Firebase
+project, API sending credentials, and a Google Play phone are available.
+
 ## Comandos
 
 Todos los targets aceptan `FLAVOR=Dev|Staging|Prod` (default: `Dev`).

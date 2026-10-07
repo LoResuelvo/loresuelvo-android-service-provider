@@ -17,6 +17,12 @@ interface AuthSessionStore {
         clearSession()
         return SessionClearOutcome.Cleared
     }
+
+    /** Concurrent persistent stores override this to compare and clear within the same write lock. */
+    fun clearSessionDurably(expectedSession: AuthSession?): SessionClearOutcome {
+        if (getSession() != expectedSession) return SessionClearOutcome.Cleared
+        return clearSessionDurably()
+    }
 }
 
 sealed interface SessionClearOutcome {

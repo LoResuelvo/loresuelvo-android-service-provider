@@ -5,7 +5,7 @@ Característica: Recibir avisos de mensajes y novedades del servicio
   Quiero enterarme de mis mensajes y servicios desde el teléfono
   Para atenderlos aunque no esté usando LoResuelvo
 
-  @wip @batch1
+  @batch1
   Esquema del escenario: 20.1-PUSH Recibir un aviso de un mensaje del consumidor
     Dado que tengo una sesión activa y permití los avisos en este teléfono
     Y estoy "<situacion>"
@@ -32,7 +32,7 @@ Característica: Recibir avisos de mensajes y novedades del servicio
       | un turno dentro de las próximas 24 horas | turno próximo         |
       | la aprobación del saldo final            | pago final confirmado |
 
-  @wip @batch1
+  @batch1
   Escenario: 20.3-PUSH Seguir usando la aplicación sin permitir avisos
     Dado que rechacé el permiso para recibir avisos
     Cuando vuelvo a abrir LoResuelvo
@@ -48,14 +48,14 @@ Característica: Recibir avisos de mensajes y novedades del servicio
     Entonces el teléfono vuelve a quedar habilitado para recibir los próximos avisos de mi cuenta
     Y puedo seguir usando la aplicación durante la recuperación
 
-  @wip @batch1
+  @batch1
   Escenario: 20.5-PUSH Leer el chat abierto sin un aviso adicional
     Dado que estoy leyendo mi conversación con Ana
     Cuando llega el aviso de un nuevo mensaje de Ana
     Entonces la conversación se actualiza sin una notificación adicional del teléfono
     Y conservo mi posición de lectura y la respuesta que estaba escribiendo
 
-  @wip @batch1
+  @batch1
   Esquema del escenario: 20.6-PUSH Evitar avisos repetidos o fuera de tiempo
     Dado que tengo una sesión activa y permití los avisos
     Cuando llega "<aviso>"
@@ -93,7 +93,7 @@ Característica: Recibir avisos de mensajes y novedades del servicio
       | ya no tengo acceso al recurso     | se informa que no tengo acceso y puedo volver       |
       | mi sesión ya no está activa       | se solicita iniciar sesión sin abrir el aviso viejo |
 
-  @wip @batch1
+  @batch1
   Esquema del escenario: 20.9-PUSH Dejar de recibir avisos al cerrar sesión
     Dado que tengo avisos visibles de mi cuenta
     Y el teléfono está "<conexion>"

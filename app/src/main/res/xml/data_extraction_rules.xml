@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Data extraction rules for Fase 0 (placeholder). -->
+        <exclude domain="sharedpref" path="provider_notifications_secure.xml" />
+        <exclude domain="sharedpref" path="auth_session_secure.xml" />
     </cloud-backup>
     <device-transfer>
+        <exclude domain="sharedpref" path="provider_notifications_secure.xml" />
+        <exclude domain="sharedpref" path="auth_session_secure.xml" />
     </device-transfer>
 </data-extraction-rules>
