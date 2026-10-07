@@ -108,7 +108,9 @@ predecessor.
 
 JVM tests simulate receipt and cannot prove API → FCM → phone delivery. Real
 delivery verification remains pending until a matching configured Firebase
-project, API sending credentials, and a Google Play phone are available.
+project, API sending credentials, and a Google Play phone are available. See
+[notification verification](docs/notification-verification.md) for deterministic
+Android boundaries and the separate pending real-delivery checklist.
 
 ## Comandos
 

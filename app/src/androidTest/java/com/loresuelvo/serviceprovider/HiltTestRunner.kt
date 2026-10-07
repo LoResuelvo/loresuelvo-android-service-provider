@@ -2,6 +2,8 @@ package com.loresuelvo.serviceprovider
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
+import android.os.Bundle
 import androidx.test.runner.AndroidJUnitRunner
 import dagger.hilt.android.testing.HiltTestApplication
 
@@ -20,9 +22,28 @@ import dagger.hilt.android.testing.HiltTestApplication
  * `testInstrumentationRunner` (Fase 1).
  */
 class HiltTestRunner : AndroidJUnitRunner() {
+    private var messagingPreferences: SharedPreferences? = null
+    private var originalMessagingFlags = emptyMap<String, Boolean?>()
     override fun newApplication(
         cl: ClassLoader?,
         name: String?,
         context: Context?,
-    ): Application = super.newApplication(cl, HiltTestApplication::class.java.name, context)
+    ): Application {
+        // Before FirebaseInitProvider runs, isolate the pinned SDK even when a real flavor is configured.
+        // These SDK flags are test-process state, restored at finish; no app runtime switch is introduced.
+        val prefs = checkNotNull(context).getSharedPreferences("com.google.firebase.messaging", Context.MODE_PRIVATE)
+        messagingPreferences = prefs
+        originalMessagingFlags = listOf("auto_init", "export_to_big_query").associateWith {
+            if (prefs.contains(it)) prefs.getBoolean(it, false) else null
+        }
+        check(prefs.edit().putBoolean("auto_init", false).putBoolean("export_to_big_query", false).commit())
+        return super.newApplication(cl, HiltTestApplication::class.java.name, context)
+    }
+
+    override fun finish(resultCode: Int, results: Bundle?) {
+        messagingPreferences?.edit()?.apply {
+            originalMessagingFlags.forEach { (key, value) -> if (value == null) remove(key) else putBoolean(key, value) }
+        }?.commit()
+        super.finish(resultCode, results)
+    }
 }

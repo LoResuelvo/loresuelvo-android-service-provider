@@ -75,19 +75,27 @@ class ProviderSignupBrowserAuthenticationLauncher : BrowserAuthenticationLaunche
     }
 }
 
-class ProviderSignupSessionStore : AuthSessionStore {
+class ProviderSignupSessionStore(private val cleanup: com.loresuelvo.serviceprovider.domain.notifications.NotificationSessionCleanup) : AuthSessionStore {
+    private val writes = Any()
 
     private val state = MutableStateFlow<AuthSession?>(null)
     override val sessionFlow: StateFlow<AuthSession?> = state
 
     override fun getSession(): AuthSession? = state.value
 
-    override fun saveSession(session: AuthSession) {
+    override fun saveSession(session: AuthSession) = synchronized(writes) {
+        if (state.value != session) cleanup.invalidate()
+        cleanup.establish(session)
         state.value = session
     }
 
-    override fun clearSession() {
+    override fun clearSession() = synchronized(writes) {
+        cleanup.invalidate()
         state.value = null
+    }
+    override fun clearSessionDurably(expectedSession: AuthSession?): com.loresuelvo.serviceprovider.domain.auth.SessionClearOutcome = synchronized(writes) {
+        if (state.value == expectedSession) clearSession()
+        com.loresuelvo.serviceprovider.domain.auth.SessionClearOutcome.Cleared
     }
 }
 
@@ -134,8 +142,10 @@ class ProviderSignupCurrentAccountRepository : CurrentAccountRepository {
         private set
     var outcome: CurrentAccountOutcome = CurrentAccountOutcome.Failure.NotFound
 
+    var pending: kotlinx.coroutines.CompletableDeferred<Unit>? = null
     override suspend fun getCurrentAccount(): CurrentAccountOutcome {
         calls++
+        pending?.await()
         return outcome
     }
 }
@@ -150,8 +160,15 @@ class ProviderSignupJobRequestRepository : JobRequestRepository {
 }
 
 class ProviderSignupWorkOrderRepository : WorkOrderRepository {
-    override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> =
-        ActivityLoadOutcome.Success(emptyList())
+    var orders: List<WorkOrder> = emptyList()
+    var detail: com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome =
+        com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome.Failure.NotFound
+    var detailCalls = 0
+    override suspend fun getWorkOrders(): ActivityLoadOutcome<WorkOrder> = ActivityLoadOutcome.Success(orders)
+    override suspend fun getWorkOrder(id: Int): com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome {
+        detailCalls++
+        return detail
+    }
 }
 
 class ProviderSignupConversationRepository : ConversationRepository {
@@ -174,8 +191,14 @@ class ProviderSignupConversationRepository : ConversationRepository {
     override suspend fun getConversations(): ConversationsOutcome =
         outcome
 
-    override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome =
-        detailOutcome
+    var detailCalls = 0
+    override suspend fun getConversationById(conversationId: Int): ConversationDetailOutcome {
+        detailCalls++
+        return when (val current = detailOutcome) {
+            is ConversationDetailOutcome.Success -> current.copy(detail = current.detail.copy(id = conversationId))
+            is ConversationDetailOutcome.Failure -> current
+        }
+    }
 
     val sentTexts = mutableListOf<Pair<Int, String>>()
     var pendingSend: kotlinx.coroutines.CompletableDeferred<SendMessageOutcome>? = null
@@ -239,7 +262,7 @@ object ProviderSignupRepositoryTestModule {
 
     @Provides
     @Singleton
-    fun provideSessionStore(): ProviderSignupSessionStore = ProviderSignupSessionStore()
+    fun provideSessionStore(cleanup: com.loresuelvo.serviceprovider.domain.notifications.NotificationSessionCleanup): ProviderSignupSessionStore = ProviderSignupSessionStore(cleanup)
 
     @Provides
     @Singleton
@@ -352,7 +375,8 @@ class ProviderSignupPaymentAccountRepository : PaymentAccountRepository {
     var authorizationOutcome: PaymentAccountAuthorizationOutcome =
         PaymentAccountAuthorizationOutcome.Success("https://auth.mercadopago.com/authorization?client_id=123")
 
-    override suspend fun getStatus(): PaymentAccountStatusOutcome = outcome
+    var statusCalls = 0
+    override suspend fun getStatus(): PaymentAccountStatusOutcome { statusCalls++; return outcome }
     override suspend fun requestAuthorization(): PaymentAccountAuthorizationOutcome = authorizationOutcome
 }
 

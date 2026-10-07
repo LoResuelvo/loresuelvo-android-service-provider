@@ -57,8 +57,7 @@ fun ProviderProfileRoute(
             notificationViewModel.effects.collect { effect ->
                 when (effect) {
                     com.loresuelvo.serviceprovider.ui.notifications.NotificationUiEffect.OpenSettings ->
-                        activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                            .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, activity.packageName))
+                        com.loresuelvo.serviceprovider.platform.notifications.openNotificationSettings(activity)
                 }
             }
         }
