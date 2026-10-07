@@ -79,6 +79,7 @@ class NativeNotificationNavigationTest {
         val pending = native.waitNotice().notification.contentIntent
         native.closeActivity()
         native.tap(pending)
+        compose.waitUntil(10_000) { compose.onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG).isDisplayed() }
         compose.onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG).assertIsDisplayed()
         compose.onNodeWithText("Ana Perez").assertIsDisplayed()
         native.assertOneActivity()
@@ -93,6 +94,7 @@ class NativeNotificationNavigationTest {
 
     @Test fun warm_message_tap_and_cold_or_warm_service_taps_use_current_authorized_details_with_one_back_destination() {
         native.deliver(native.payload()); native.tap()
+        compose.waitUntil(10_000) { compose.onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG).isDisplayed() }
         compose.onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG).assertIsDisplayed()
         Espresso.pressBack(); native.assertHome()
         listOf(NativeNotificationHarness.ACCEPTED, NativeNotificationHarness.REMINDER, NativeNotificationHarness.PAID).forEachIndexed { index, type ->
@@ -102,6 +104,7 @@ class NativeNotificationNavigationTest {
             native.orders.detail = WorkOrderDetailOutcome.Success(native.order(if (type == NativeNotificationHarness.PAID) WorkOrderStatus.Paid else WorkOrderStatus.Scheduled))
             if (index != 1) native.closeActivity()
             native.tap(pending)
+            compose.waitUntil(10_000) { compose.onNodeWithText("Current authorized service detail").isDisplayed() }
             compose.onNodeWithText("Current authorized service detail").assertIsDisplayed()
             if (type == NativeNotificationHarness.PAID) compose.onNodeWithText(native.context.getString(R.string.provider_turns_status_paid)).assertExists()
             val calls = native.orders.detailCalls
@@ -126,18 +129,21 @@ class NativeNotificationNavigationTest {
                 WorkOrderDetailOutcome.Failure.NotFound -> R.string.provider_order_detail_missing
                 else -> R.string.provider_order_detail_forbidden
             }
+            compose.waitUntil(10_000) { compose.onNodeWithText(native.context.getString(resource)).isDisplayed() }
             compose.onNodeWithText(native.context.getString(resource)).assertIsDisplayed()
             compose.onNodeWithText("Current authorized service detail").assertDoesNotExist()
             compose.onNodeWithText("private offline diagnostic").assertDoesNotExist()
             if (failure is WorkOrderDetailOutcome.Failure.Network) {
                 native.orders.detail = WorkOrderDetailOutcome.Success(native.order())
                 compose.onNodeWithText(native.context.getString(R.string.provider_home_retry)).performClick()
+                compose.waitUntil(10_000) { compose.onNodeWithText("Current authorized service detail").isDisplayed() }
                 compose.onNodeWithText("Current authorized service detail").assertIsDisplayed()
             } else compose.onNodeWithText(native.context.getString(R.string.provider_home_retry)).assertDoesNotExist()
             Espresso.pressBack(); native.assertHome()
         }
         native.conversations.detailOutcome = ConversationDetailOutcome.Failure.Server(403, "private forbidden diagnostic")
         native.deliver(native.payload(event = "message:199:7")); native.tap()
+        compose.waitUntil(10_000) { compose.onNodeWithText(native.context.getString(R.string.provider_conversation_error_forbidden)).isDisplayed() }
         compose.onNodeWithText(native.context.getString(R.string.provider_conversation_error_forbidden)).assertIsDisplayed()
         compose.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).assertDoesNotExist()
         compose.onNodeWithText("Ana Perez").assertDoesNotExist()
@@ -149,6 +155,7 @@ class NativeNotificationNavigationTest {
         val pending = native.waitNotice().notification.contentIntent
         compose.runOnIdle { native.sessions.clearSession() }
         native.tap(pending)
+        compose.waitUntil(10_000) { compose.onNodeWithText(native.context.getString(R.string.welcome_login)).isDisplayed() }
         compose.onNodeWithText(native.context.getString(R.string.welcome_login)).assertIsDisplayed()
         compose.onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG).assertDoesNotExist()
         assertTrue(native.notices().isEmpty())

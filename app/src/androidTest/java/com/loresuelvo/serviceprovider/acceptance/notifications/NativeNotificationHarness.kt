@@ -190,12 +190,25 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
         return notices().single()
     }
     fun tap(pending: PendingIntent = waitNotice().notification.contentIntent) {
+        var previousActivity: MainActivity? = null
+        var previousIntent: Intent? = null
+        instrumentation.runOnMainSync {
+            previousActivity = resumedActivities().singleOrNull()
+            previousIntent = previousActivity?.intent
+        }
         val options = if (Build.VERSION.SDK_INT >= 34) ActivityOptions.makeBasic()
             .setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle() else null
         pending.send(context, 0, null, null, null, null, options)
         // SystemUI auto-cancels the tapped row; dispatching its native PendingIntent alone does not.
         notices().filter { it.notification.contentIntent == pending }.forEach { manager.cancel(it.tag, it.id) }
-        awaitActivity()
+        // Cold delivery creates an Activity; warm onNewIntent replaces its actual Intent.
+        compose.waitUntil(10_000) {
+            var arrived = false
+            instrumentation.runOnMainSync {
+                arrived = resumedActivities().any { it !== previousActivity || it.intent !== previousIntent }
+            }
+            arrived
+        }
         compose.waitForIdle()
     }
     fun hasPermission(): Boolean = Build.VERSION.SDK_INT < 33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED

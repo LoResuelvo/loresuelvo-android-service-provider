@@ -39,6 +39,7 @@ class NativeNotificationLifecycleTest {
         val messages = (1..60).map { ConversationMessage(it, ConversationSender.Consumer, "Historical message $it", it.toLong()) }
         native.conversations.detailOutcome = ConversationDetailOutcome.Success(native.detail(messages))
         native.deliver(native.payload()); native.tap()
+        compose.waitUntil(10_000) { compose.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).isDisplayed() }
         compose.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).performTextInput("Reply still being written")
         Espresso.closeSoftKeyboard()
         compose.onNodeWithTag(PROVIDER_CONVERSATION_MESSAGES_TAG).performScrollToIndex(0)
@@ -106,6 +107,7 @@ class NativeNotificationLifecycleTest {
         assertEquals("provider-current", native.sessions.getSession()!!.user.id)
         assertEquals(current.postTime, native.notices().single().postTime)
         native.tap(current.notification.contentIntent)
+        compose.waitUntil(10_000) { compose.onNodeWithText("Current account authorized message").isDisplayed() }
         compose.onNodeWithText("Current account authorized message").assertIsDisplayed()
     }
 
@@ -132,6 +134,7 @@ class NativeNotificationLifecycleTest {
         compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
         compose.onNodeWithText(native.context.getString(R.string.provider_profile_connection_connected)).performScrollTo().assertIsDisplayed()
         native.deliver(native.payload()); native.tap()
+        compose.waitUntil(10_000) { compose.onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG).isDisplayed() }
         compose.onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG).assertIsDisplayed()
         native.recreate()
         compose.onNodeWithTag(PROVIDER_CONVERSATION_READY_TAG).assertIsDisplayed()
