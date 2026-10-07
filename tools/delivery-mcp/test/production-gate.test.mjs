@@ -301,7 +301,7 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
   }
   // Deduplicate immutable syntax across snapshots; every scenario still rebuilds both graphs.
   const sources = new Map(), keys = new Map();
-  for (const scenario of scenarios) for (const tree of [scenario.before, scenario.after]) for (const [file, code] of tree) {
+  for (const tree of [realTree, ...scenarios.flatMap(scenario => [scenario.before, scenario.after])]) for (const [file, code] of tree) {
     if (!/\.(kt|xml)$/.test(file)) continue;
     const key = file + '\0' + code;
     if (!keys.has(key)) { const id = `${keys.size}/${file}`; keys.set(key, id); sources.set(id, code); }
@@ -313,6 +313,20 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
     const file = id.slice(2), key = keys.get(file + '\0' + code);
     return (byFile.get(key) || []).map(fact => ({ ...fact, id: id + fact.id.slice(key.length) }));
   });
+  const dynamic = fact => fact.flags.includes('reflection') || fact.references.includes('getIdentifier');
+  const hasDynamicSource = ([file, code]) => (byFile.get(keys.get(file + '\0' + code)) || []).some(dynamic);
+  // Real reflective consumers must retain the global full-gate guard. They cannot
+  // also be the static graph fixture for isolated feature/state-contract decisions.
+  if ([...before].some(hasDynamicSource)) {
+    const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenarios[0], features, sourceTopology, parse });
+    assert.equal(impact.scope, 'full');
+    assert.equal(impact.reason, 'ANDROID_DYNAMIC_CONSUMERS');
+    assert.equal(selectGate({ policy, snapshot: { stagedFiles: scenarios[0].files }, intent: 'close_scenario',
+      featureFile: scenarios[0].featureFile, dependencyImpact: impact }).gate.id, 'C');
+  }
+  // Remove entire dynamic source files only from this explicitly static fixture;
+  // never erase flags or change the production selector's candidate-tree facts.
+  const staticTree = tree => new Map([...tree].filter(entry => !hasDynamicSource(entry)));
   const policyTopology = policy.analysis.dependencyImpact.sourceTopology;
   if (before.size !== realTree.size) {
     const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenarios[0], features,
@@ -329,7 +343,8 @@ test('real Kotlin graph isolates mixed feature edits and preserves the US-53 reg
       featureFile: scenarios[0].featureFile, dependencyImpact: impact }).gate.id, 'C');
   }
   for (const scenario of scenarios) {
-    const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenario, features: scenario.features || features,
+    const impact = analyzeProductionGate({ repoRoot: ROOT, ...scenario,
+      before: staticTree(scenario.before), after: staticTree(scenario.after), features: scenario.features || features,
       sourceTopology, parse });
     if (scenario.reason) assert.equal(impact.reason, scenario.reason);
     if (scenario.deviceTestClasses) {

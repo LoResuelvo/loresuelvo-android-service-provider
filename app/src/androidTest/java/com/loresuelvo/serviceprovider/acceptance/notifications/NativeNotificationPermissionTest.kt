@@ -39,9 +39,10 @@ class NativeNotificationPermissionTest {
     }
     @After fun teardown() {
         if (::native.isInitialized) {
-            val automation = native.instrumentation.uiAutomation
-            val info = automation.serviceInfo; info.flags = accessibilityFlags; automation.serviceInfo = info
-            native.close()
+            try {
+                val automation = native.instrumentation.uiAutomation
+                val info = automation.serviceInfo; info.flags = accessibilityFlags; automation.serviceInfo = info
+            } finally { native.close() }
         }
     }
 
@@ -115,9 +116,7 @@ class NativeNotificationPermissionTest {
     }
 
     private fun backFromSettings() {
-        val automation = native.instrumentation.uiAutomation
-        assertTrue(automation.injectInputEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_BACK), true))
-        assertTrue(automation.injectInputEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_BACK), true))
+        native.systemBack()
     }
     private fun resetPrompt() { native.revokePermission(); native.store.write(native.store.read().copy(permissionRequested = false)) }
     private fun permissionButton(id: String) = nodes(native.instrumentation.uiAutomation.rootInActiveWindow)

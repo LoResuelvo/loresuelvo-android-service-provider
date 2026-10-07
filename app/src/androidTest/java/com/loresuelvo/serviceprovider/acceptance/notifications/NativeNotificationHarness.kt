@@ -15,9 +15,9 @@ import android.os.ParcelFileDescriptor
 import android.service.notification.StatusBarNotification
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
@@ -37,6 +37,7 @@ import com.loresuelvo.serviceprovider.platform.notifications.AndroidNotification
 import com.loresuelvo.serviceprovider.platform.notifications.ProviderFirebaseMessagingService
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
 import com.loresuelvo.serviceprovider.ui.navigation.Route
+import com.loresuelvo.serviceprovider.ui.screens.profile.PROVIDER_PROFILE_DATA_TAG
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -59,7 +60,6 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
     val orders = entry.orders()
     val installations = entry.installations()
     val display = entry.display()
-    private var scenario: ActivityScenario<MainActivity>? = null
     private val originallyGranted = hasPermission()
     private val originalPermissionFlags = if (Build.VERSION.SDK_INT >= 33) shell("dumpsys package ${context.packageName}")
         .lineSequence().firstOrNull { it.contains(Manifest.permission.POST_NOTIFICATIONS) && it.contains("flags=") }.orEmpty() else ""
@@ -93,25 +93,47 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
         System.currentTimeMillis() + 3_600_000, "Current authorized service detail", status, null,
         paidOn = if (status == WorkOrderStatus.Paid) System.currentTimeMillis() else null)
     fun launch(intent: Intent = Intent(context, MainActivity::class.java)) {
-        scenario = ActivityScenario.launch(intent)
+        // Warm notification/payment intents replace Activity.intent. ActivityScenario's launch-intent
+        // matcher then stops tracking it, so this native fixture owns the actual lifecycle instances.
+        instrumentation.startActivitySync(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        awaitActivity()
         compose.waitForIdle()
     }
     fun waitRegistered() = compose.waitUntil(10_000) { store.read().binding?.let { it.active && it.acknowledged } == true }
     fun closeActivity() {
-        scenario?.close(); scenario = null
         instrumentation.runOnMainSync {
-            ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).filterIsInstance<MainActivity>().forEach(Activity::finish)
+            appActivities().forEach(Activity::finish)
         }
-        instrumentation.waitForIdleSync()
+        compose.waitUntil(10_000) {
+            var closed = false
+            instrumentation.runOnMainSync { closed = appActivities().isEmpty() }
+            closed
+        }
     }
-    fun background() { checkNotNull(scenario).moveToState(androidx.lifecycle.Lifecycle.State.CREATED) }
-    fun resume() { checkNotNull(scenario).moveToState(androidx.lifecycle.Lifecycle.State.RESUMED); compose.waitForIdle() }
+    private fun appActivities() = Stage.values().filter { it != Stage.DESTROYED }.flatMap {
+        ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(it).filterIsInstance<MainActivity>()
+    }.distinct()
+    fun background() {
+        instrumentation.runOnMainSync { activity().moveTaskToBack(true) }
+        compose.waitUntil(10_000) {
+            var stopped = false
+            instrumentation.runOnMainSync {
+                stopped = resumedActivities().isEmpty() && ActivityLifecycleMonitorRegistry.getInstance()
+                    .getActivitiesInStage(Stage.STOPPED).any { it is MainActivity }
+            }
+            stopped
+        }
+    }
+    fun resume() {
+        context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        awaitActivity(); compose.waitForIdle()
+    }
     fun recreate() {
         lateinit var old: MainActivity
         instrumentation.runOnMainSync { old = activity(); old.recreate() }
         compose.waitUntil(10_000) {
             var replaced = false
-            instrumentation.runOnMainSync { replaced = resumedActivities().any { it !== old } }
+            instrumentation.runOnMainSync { replaced = old.isDestroyed && resumedActivities().any { it !== old } }
             replaced
         }
         compose.waitForIdle()
@@ -127,7 +149,10 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
     fun assertOneActivity() = instrumentation.runOnMainSync {
         assertEquals(1, ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).filterIsInstance<MainActivity>().size)
     }
-    fun openProfile() { compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Profile.path).performClick(); compose.waitForIdle() }
+    fun openProfile() {
+        compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Profile.path).performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag(PROVIDER_PROFILE_DATA_TAG).fetchSemanticsNodes().size == 1 }
+    }
     fun assertHome() = compose.waitUntil(10_000) { compose.onAllNodesWithText(context.getString(R.string.provider_home_title)).fetchSemanticsNodes().isNotEmpty() }
     fun payload(type: String = MESSAGE, resourceId: Int = 42, event: String? = null, expires: Long = System.currentTimeMillis() + 120_000): Map<String, String> {
         val state = store.read(); val binding = checkNotNull(state.binding)
@@ -183,7 +208,7 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
         // AOSP's notification-only TestApi avoids killing the instrumentation UID during native permission tests.
         // https://android.googlesource.com/platform/frameworks/base/+/c39d2cf4662903fc19f6550ec2fd468d25a19adb/core/java/android/permission/PermissionManager.java
         val automation = instrumentation.uiAutomation
-        automation.adoptShellPermissionIdentity("android.permission.REVOKE_POST_NOTIFICATIONS_WITHOUT_KILL")
+        automation.adoptShellPermissionIdentity("android.permission.REVOKE_POST_NOTIFICATIONS_WITHOUT_KILL", "android.permission.REVOKE_RUNTIME_PERMISSIONS")
         try {
             val manager = checkNotNull(context.getSystemService("permission"))
             manager.javaClass.getMethod("revokePostNotificationPermissionWithoutKillForTest", String::class.java, Int::class.javaPrimitiveType)
@@ -192,21 +217,29 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
     }
     private fun shell(command: String): String = ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command))
         .bufferedReader().use { it.readText() }
+    fun systemBack() { shell("input keyevent KEYCODE_BACK") }
     override fun close() {
+        var failure: Throwable? = null
+        fun cleanup(block: () -> Unit) {
+            try { block() } catch (error: Throwable) {
+                if (failure == null) failure = error else failure!!.addSuppressed(error)
+            }
+        }
         installations.removalGate?.complete(Unit)
-        closeActivity()
-        synchronized(connections) { connections.forEach(context::unbindService); connections.clear() }
-        context.stopService(Intent(context, ProviderFirebaseMessagingService::class.java))
-        instrumentation.waitForIdleSync()
-        FcmBroadcastProcessor.reset()
-        sessions.clearSession()
-        manager.cancelAll()
-        if (Build.VERSION.SDK_INT >= 33) {
+        cleanup { closeActivity() }
+        val bound = synchronized(connections) { connections.toList().also { connections.clear() } }
+        bound.forEach { connection -> cleanup { context.unbindService(connection) } }
+        cleanup { context.stopService(Intent(context, ProviderFirebaseMessagingService::class.java)); instrumentation.waitForIdleSync() }
+        cleanup { FcmBroadcastProcessor.reset() }
+        cleanup { sessions.clearSession() }
+        cleanup { manager.cancelAll() }
+        cleanup { if (Build.VERSION.SDK_INT >= 33) {
             if (originallyGranted) grantPermission() else revokeWithoutKill()
             shell("pm clear-permission-flags ${context.packageName} ${Manifest.permission.POST_NOTIFICATIONS} user-set user-fixed")
             val flags = listOf("USER_SET" to "user-set", "USER_FIXED" to "user-fixed").filter { originalPermissionFlags.contains(it.first) }.map { it.second }
             if (flags.isNotEmpty()) shell("pm set-permission-flags ${context.packageName} ${Manifest.permission.POST_NOTIFICATIONS} ${flags.joinToString(" ")}")
-        }
+        } }
+        failure?.let { throw it }
     }
     companion object {
         const val MESSAGE = "conversation.message.created"

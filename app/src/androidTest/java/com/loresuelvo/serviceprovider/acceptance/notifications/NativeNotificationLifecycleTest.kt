@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.loresuelvo.serviceprovider.MainActivity
@@ -16,6 +18,7 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.*
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_CHAT_INPUT_FIELD_TAG
 import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDER_MESSAGE_BUBBLE_TAG_PREFIX
 import com.loresuelvo.serviceprovider.ui.screens.profile.*
+import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_TAG
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.CompletableDeferred
@@ -67,9 +70,7 @@ class NativeNotificationLifecycleTest {
         val oldPayload = native.payload(event = "message:199:7")
         native.installations.removalGate = CompletableDeferred()
         native.installations.result = InstallationResult.TransientFailure
-        native.openProfile()
-        compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).performScrollTo().performClick()
-        compose.onNodeWithTag(PROVIDER_LOGOUT_CONFIRM_TAG).performClick()
+        confirmLogout()
         compose.waitUntil(3_000) { native.installations.removalStarted }
         assertNotNull(native.sessions.getSession())
         assertTrue(native.notices().isEmpty())
@@ -87,9 +88,7 @@ class NativeNotificationLifecycleTest {
         val oldTap = native.waitNotice().notification.contentIntent
         val oldPayload = native.payload(event = "message:201:7")
         native.installations.result = InstallationResult.TransientFailure
-        native.openProfile()
-        compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).performScrollTo().performClick()
-        compose.onNodeWithTag(PROVIDER_LOGOUT_CONFIRM_TAG).performClick()
+        confirmLogout()
         compose.onNodeWithText(native.context.getString(R.string.welcome_login)).assertIsDisplayed()
         native.installations.result = InstallationResult.Applied
         compose.runOnIdle {
@@ -139,6 +138,23 @@ class NativeNotificationLifecycleTest {
         native.assertOneActivity()
         Espresso.pressBack()
         compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
+    }
+
+    private fun confirmLogout() {
+        native.openProfile()
+        compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).performScrollTo()
+        val range = compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performSemanticsAction(SemanticsActions.ScrollBy) { scroll ->
+            scroll(0f, range.maxValue())
+        }
+        compose.waitForIdle()
+        val action = compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).fetchSemanticsNode().boundsInRoot
+        val bar = compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("Logout action must be above the navigation overlay", action.bottom <= bar.top)
+        compose.onNodeWithTag(PROVIDER_LOGOUT_ACTION_TAG).assertIsDisplayed().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag(PROVIDER_LOGOUT_CONFIRM_TAG).fetchSemanticsNodes().size == 1 }
+        compose.onNodeWithTag(PROVIDER_LOGOUT_CONFIRM_TAG).assertIsDisplayed().performClick()
     }
 
     private fun paymentReturn() = Intent(native.context, MainActivity::class.java).apply {

@@ -34,12 +34,21 @@ regression tests. Permission tests explicitly reset it before Activity creation.
 On Android 13+, tests grant/deny the actual system prompt. AOSP's notification-only
 [TestApi](https://android.googlesource.com/platform/frameworks/base/+/c39d2cf4662903fc19f6550ec2fd468d25a19adb/core/java/android/permission/PermissionManager.java)
 revokes POST_NOTIFICATIONS without killing the instrumentation UID, under a
-short-lived shell permission identity that is always released. Availability is
-verified by execution; reflection/permission failure is a failed prerequisite,
+short-lived shell identity adopting both `REVOKE_POST_NOTIFICATIONS_WITHOUT_KILL`
+and `REVOKE_RUNTIME_PERMISSIONS`, always released. API34 CI confirmed the TestApi
+exists; its underlying revoke additionally requires the ordinary revoke permission.
+Availability is verified by execution; reflection/permission failure is a failed prerequisite,
 never substituted by a fake permission result. Ordinary runtime-permission
 revocation would kill instrumentation. Permission grants and user-set/fixed flags
 are restored, SDK service bindings are unbound, Activities are closed, and the
-native channel-disable test restores its original channel setting. Android
+native channel-disable test restores its original channel setting. Native Activity
+instances are launched with Instrumentation and owned through the lifecycle monitor:
+warm intents legitimately replace the Activity intent, which would make an
+ActivityScenario launch-intent tracker ignore later lifecycle events. Cleanup
+always attempts every owned Activity/service/permission boundary and retains
+failures. Background/resume uses real task movement and a foreground app launch;
+recreation keeps the Activity's actual intent. System Back requires the actual
+returned Activity/screen, rather than a synthetic lifecycle callback. Android
 version-specific coverage requires an OS supporting that API; API24/25 settings
 fallback additionally has device-free Robolectric proof.
 
