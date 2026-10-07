@@ -41,7 +41,8 @@ class ProviderReputationLayoutTest {
             renderView = LocalView.current
             LoresuelvoTheme {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    ProviderReputationScreen(ProviderReputationUiState.Ready(reputationFixture()), {})
+                    ProviderReputationScreen(ProviderReputationUiState.Ready(reputationFixture()), {},
+                        listState = androidx.compose.runtime.remember { deterministicLazyListState() })
                 }
             }
         }
@@ -62,7 +63,8 @@ class ProviderReputationLayoutTest {
                 LocalLayoutDirection provides LayoutDirection.Rtl) {
                 LoresuelvoTheme {
                     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        ProviderReputationScreen(ProviderReputationUiState.Ready(fixture), {})
+                        ProviderReputationScreen(ProviderReputationUiState.Ready(fixture), {},
+                            listState = androidx.compose.runtime.remember { deterministicLazyListState() })
                     }
                 }
             }

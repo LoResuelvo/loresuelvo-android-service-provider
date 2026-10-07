@@ -40,7 +40,8 @@ class ProviderConversionLayoutTest {
         compose.setContent {
             renderView = LocalView.current
             LoresuelvoTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                ProviderConversionScreen(ProviderConversionUiState.Ready(conversionFixture()), true)
+                ProviderConversionScreen(ProviderConversionUiState.Ready(conversionFixture()), true,
+                    listState = androidx.compose.runtime.remember { deterministicLazyListState() })
             } }
         }
         saveRender("conversion-light")
@@ -60,7 +61,8 @@ class ProviderConversionLayoutTest {
             CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f),
                 LocalLayoutDirection provides LayoutDirection.Rtl) {
                 LoresuelvoTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    ProviderConversionScreen(ProviderConversionUiState.Ready(conversionFixture()), true)
+                    ProviderConversionScreen(ProviderConversionUiState.Ready(conversionFixture()), true,
+                    listState = androidx.compose.runtime.remember { deterministicLazyListState() })
                 } }
             }
         }
@@ -89,7 +91,8 @@ class ProviderConversionLayoutTest {
                 LoresuelvoTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     ProviderConversionScreen(ProviderConversionUiState.Ready(conversionFixture()),
                         filters = ConversionFilters("2026-09-30", "2026-09-01", ConversionDateError.REVERSED),
-                        periodExpanded = true)
+                        periodExpanded = true,
+                        listState = androidx.compose.runtime.remember { deterministicLazyListState() })
                 } }
             }
         }
