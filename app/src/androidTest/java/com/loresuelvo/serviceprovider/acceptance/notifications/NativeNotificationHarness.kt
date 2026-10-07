@@ -18,6 +18,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
@@ -37,6 +41,7 @@ import com.loresuelvo.serviceprovider.domain.paymentaccount.*
 import com.loresuelvo.serviceprovider.platform.notifications.AndroidNotificationDisplay
 import com.loresuelvo.serviceprovider.platform.notifications.ProviderFirebaseMessagingService
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
+import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_TAG
 import com.loresuelvo.serviceprovider.ui.navigation.Route
 import com.loresuelvo.serviceprovider.ui.screens.profile.PROVIDER_PROFILE_DATA_TAG
 import dagger.hilt.EntryPoint
@@ -154,6 +159,18 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
     fun openProfile() {
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Profile.path).performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithTag(PROVIDER_PROFILE_DATA_TAG).fetchSemanticsNodes().size == 1 }
+    }
+    fun revealProfileAction(tag: String) {
+        compose.onNodeWithTag(tag).performScrollTo()
+        val range = compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).fetchSemanticsNode()
+            .config[SemanticsProperties.VerticalScrollAxisRange]
+        compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performSemanticsAction(SemanticsActions.ScrollBy) { scroll ->
+            scroll(0f, range.maxValue())
+        }
+        compose.waitForIdle()
+        val action = compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+        val bar = compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("Profile action must be above the navigation overlay", action.bottom <= bar.top)
     }
     fun assertHome() = compose.waitUntil(10_000) { compose.onAllNodesWithText(context.getString(R.string.provider_home_title)).fetchSemanticsNodes().isNotEmpty() }
     fun payload(type: String = MESSAGE, resourceId: Int = 42, event: String? = null, expires: Long = System.currentTimeMillis() + 120_000): Map<String, String> {

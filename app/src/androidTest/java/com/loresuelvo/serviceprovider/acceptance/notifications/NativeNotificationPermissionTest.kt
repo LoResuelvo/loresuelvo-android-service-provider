@@ -89,9 +89,10 @@ class NativeNotificationPermissionTest {
         native.openProfile()
         Intents.init()
         try {
-            compose.onNodeWithTag("provider-notification-settings").performScrollTo().performClick()
-            Intents.intended(allOf(hasAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS), hasExtra(Settings.EXTRA_APP_PACKAGE, native.context.packageName)))
+            native.revealProfileAction("provider-notification-settings")
+            compose.onNodeWithTag("provider-notification-settings").assertIsDisplayed().performClick()
             compose.waitUntil(10_000) { native.instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString()?.contains("settings") == true }
+            Intents.intended(allOf(hasAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS), hasExtra(Settings.EXTRA_APP_PACKAGE, native.context.packageName)))
             backFromSettings()
             native.awaitActivity()
             compose.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).assertIsDisplayed()
