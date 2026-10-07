@@ -20,6 +20,7 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import org.hamcrest.Matchers.allOf
 import org.junit.*
+import org.junit.Assert.*
 import org.junit.runner.RunWith
 
 @HiltAndroidTest

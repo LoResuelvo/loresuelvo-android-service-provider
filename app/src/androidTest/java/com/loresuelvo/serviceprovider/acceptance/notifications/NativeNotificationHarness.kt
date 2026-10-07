@@ -13,7 +13,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.service.notification.StatusBarNotification
-import androidx.compose.ui.test.junit4.ComposeContentTestRule
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
 
 /** Native receipt is simulated through the real SDK/Android/Hilt service, never claimed as FCM delivery. */
-internal class NativeNotificationHarness(val compose: ComposeContentTestRule) : AutoCloseable {
+internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoCloseable {
     val context: Context = ApplicationProvider.getApplicationContext()
     val instrumentation = InstrumentationRegistry.getInstrumentation()
     val manager = context.getSystemService(NotificationManager::class.java)

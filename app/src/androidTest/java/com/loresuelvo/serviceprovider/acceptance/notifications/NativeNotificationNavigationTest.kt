@@ -16,6 +16,7 @@ import com.loresuelvo.serviceprovider.ui.screens.conversation.components.PROVIDE
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.*
+import org.junit.Assert.*
 import org.junit.runner.RunWith
 
 @HiltAndroidTest
