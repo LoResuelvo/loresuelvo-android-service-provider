@@ -99,8 +99,8 @@ class NativeNotificationPermissionTest {
         val initial = channelSwitch().isChecked
         assertTrue("The native message channel must start enabled for this delivery check", initial)
         try {
-            assertTrue(channelSwitch().performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            compose.waitUntil(10_000) { native.manager.getNotificationChannel(AndroidNotificationDisplay.MESSAGES_CHANNEL).importance == NotificationManager.IMPORTANCE_NONE }
+            toggleChannel()
+            compose.waitUntil(10_000) { !channelSwitch().isChecked && native.manager.getNotificationChannel(AndroidNotificationDisplay.MESSAGES_CHANNEL).importance == NotificationManager.IMPORTANCE_NONE }
             backFromSettings()
             native.awaitActivity()
             native.deliver(native.payload()); assertTrue(native.notices().isEmpty())
@@ -108,8 +108,8 @@ class NativeNotificationPermissionTest {
             native.waitNotice() // Independently enabled services channel remains usable.
         } finally {
             openChannel()
-            if (channelSwitch().isChecked != initial) assertTrue(channelSwitch().performAction(AccessibilityNodeInfo.ACTION_CLICK))
-            compose.waitUntil(10_000) { native.manager.getNotificationChannel(AndroidNotificationDisplay.MESSAGES_CHANNEL).importance != NotificationManager.IMPORTANCE_NONE }
+            if (channelSwitch().isChecked != initial) toggleChannel()
+            compose.waitUntil(10_000) { channelSwitch().isChecked == initial && native.manager.getNotificationChannel(AndroidNotificationDisplay.MESSAGES_CHANNEL).importance != NotificationManager.IMPORTANCE_NONE }
             backFromSettings()
             native.awaitActivity()
         }
@@ -133,6 +133,14 @@ class NativeNotificationPermissionTest {
         compose.waitUntil(10_000) { nodes(native.instrumentation.uiAutomation.rootInActiveWindow).any(::isSwitch) }
     }
     private fun channelSwitch() = nodes(native.instrumentation.uiAutomation.rootInActiveWindow).first(::isSwitch)
+    private fun toggleChannel() {
+        val control = channelSwitch()
+        val bounds = android.graphics.Rect()
+        control.getBoundsInScreen(bounds)
+        assertTrue("Native channel control must be visible", control.isVisibleToUser)
+        assertFalse("Native channel control must have screen bounds", bounds.isEmpty)
+        native.systemTap(bounds.centerX(), bounds.centerY())
+    }
     private fun isSwitch(node: AccessibilityNodeInfo) = node.isCheckable && node.isEnabled && node.className?.toString()?.contains("Switch") == true
     private fun nodes(root: AccessibilityNodeInfo?): List<AccessibilityNodeInfo> = if (root == null) emptyList()
         else listOf(root) + (0 until root.childCount).flatMap { nodes(root.getChild(it)) }

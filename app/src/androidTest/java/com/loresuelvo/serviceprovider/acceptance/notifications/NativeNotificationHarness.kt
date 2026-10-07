@@ -33,6 +33,7 @@ import com.loresuelvo.serviceprovider.domain.auth.*
 import com.loresuelvo.serviceprovider.domain.category.Category
 import com.loresuelvo.serviceprovider.domain.conversation.*
 import com.loresuelvo.serviceprovider.domain.notifications.*
+import com.loresuelvo.serviceprovider.domain.paymentaccount.*
 import com.loresuelvo.serviceprovider.platform.notifications.AndroidNotificationDisplay
 import com.loresuelvo.serviceprovider.platform.notifications.ProviderFirebaseMessagingService
 import com.loresuelvo.serviceprovider.ui.components.bottomnav.PROVIDER_BOTTOM_BAR_ITEM_PREFIX
@@ -77,6 +78,7 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
         manager.cancelAll()
         display.createChannels()
         setProvider(7)
+        entry.payment().outcome = PaymentAccountStatusOutcome.Success(PaymentAccountStatus(ConnectionStatus.PENDING))
         conversations.outcome = ConversationsOutcome.Success(listOf(Conversation(42, ConversationStatus.Active,
             ConversationCounterpart(3, "Ana", "Perez", null), null, 1)))
         conversations.detailOutcome = ConversationDetailOutcome.Success(detail())
@@ -218,6 +220,7 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
     private fun shell(command: String): String = ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command))
         .bufferedReader().use { it.readText() }
     fun systemBack() { shell("input keyevent KEYCODE_BACK") }
+    fun systemTap(x: Int, y: Int) { shell("input tap $x $y") }
     override fun close() {
         var failure: Throwable? = null
         fun cleanup(block: () -> Unit) {
