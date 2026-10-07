@@ -94,12 +94,12 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
     fun order(status: WorkOrderStatus = WorkOrderStatus.Scheduled) = WorkOrderDetail(55, 10, 3, 7, 123456,
         System.currentTimeMillis() + 3_600_000, "Current authorized service detail", status, null,
         paidOn = if (status == WorkOrderStatus.Paid) System.currentTimeMillis() else null)
-    fun launch(intent: Intent = Intent(context, MainActivity::class.java)) {
+    fun launch(intent: Intent = Intent(context, MainActivity::class.java), awaitResumed: Boolean = true) {
         // Warm notification/payment intents replace Activity.intent. ActivityScenario's launch-intent
         // matcher then stops tracking it, so this native fixture owns the actual lifecycle instances.
         instrumentation.startActivitySync(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        awaitActivity()
-        compose.waitForIdle()
+        // A real permission dialog pauses this Activity until the test answers it.
+        if (awaitResumed) { awaitActivity(); compose.waitForIdle() }
     }
     fun waitRegistered() = compose.waitUntil(10_000) { store.read().binding?.let { it.active && it.acknowledged } == true }
     fun closeActivity() {

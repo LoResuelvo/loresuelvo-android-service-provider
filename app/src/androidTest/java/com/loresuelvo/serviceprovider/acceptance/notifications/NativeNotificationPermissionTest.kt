@@ -54,8 +54,10 @@ class NativeNotificationPermissionTest {
         assertFalse(native.store.read().permissionRequested)
         assertNull(permissionButton("permission_allow_button"))
         native.closeActivity()
-        native.setProvider(7); native.launch()
+        native.setProvider(7); native.launch(awaitResumed = false)
         clickPermission("permission_allow_button")
+        native.awaitActivity()
+        compose.waitForIdle()
         compose.waitUntil(10_000) { native.hasPermission() }
         native.waitRegistered()
         assertTrue(native.store.read().permissionRequested)
@@ -66,8 +68,10 @@ class NativeNotificationPermissionTest {
 
     @Test @SdkSuppress(minSdkVersion = 33)
     fun denial_keeps_messages_services_and_profile_system_settings_usable_without_reprompting() {
-        resetPrompt(); native.launch()
+        resetPrompt(); native.launch(awaitResumed = false)
         clickPermission("permission_deny_button")
+        native.awaitActivity()
+        compose.waitForIdle()
         compose.waitUntil(10_000) { permissionButton("permission_deny_button") == null }
         assertFalse(native.hasPermission())
         native.assertHome(); native.waitRegistered()
