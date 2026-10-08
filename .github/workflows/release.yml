@@ -59,6 +59,17 @@ jobs:
           GOOGLE_CALENDAR_SERVER_CLIENT_ID_PROD=${{ vars.GOOGLE_CALENDAR_SERVER_CLIENT_ID_PROD }}
           EOF
 
+      - name: Configure Firebase Messaging for staging
+        env:
+          GOOGLE_SERVICES_JSON_STAGING: ${{ secrets.GOOGLE_SERVICES_JSON_STAGING }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GOOGLE_SERVICES_JSON_STAGING"
+          mkdir -p app/src/staging
+          umask 077
+          printf '%s' "$GOOGLE_SERVICES_JSON_STAGING" > app/src/staging/google-services.json
+
       - name: Run staging JVM tests and build artifacts
         run: ./gradlew :app:testStagingDebugUnitTest :app:assembleStagingRelease :app:bundleProdRelease --no-daemon
 
