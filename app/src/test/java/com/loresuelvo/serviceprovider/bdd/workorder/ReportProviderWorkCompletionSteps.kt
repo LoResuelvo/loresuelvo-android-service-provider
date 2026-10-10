@@ -815,8 +815,8 @@ class ReportProviderWorkCompletionSteps {
 
     @And("tengo las referencias Android consumidor y del resumen de US-55")
     fun referencedVisualFamily() {
-        assertEquals(Color(0xFF1A2B48), BrandPrimary)
-        assertEquals(Color(0xFF147560), BrandSecondary)
+        assertEquals(Color(0xFF031632), BrandPrimary)
+        assertEquals(Color(0xFF006A60), BrandSecondary)
     }
 
     @When("recorro el resumen, el formulario vacío y con fotos, la carga, el error y el éxito")

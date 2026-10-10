@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -46,7 +47,7 @@ fun LoResuelvoNavHost(
     conversation: @Composable (Int) -> Unit,
     mercadoPago: @Composable () -> Unit = { MercadoPagoPlaceholder() },
 ) {
-    Box(modifier = Modifier.padding(contentPadding)) {
+    Box(modifier = Modifier.padding(contentPadding).consumeWindowInsets(contentPadding)) {
         NavHost(
             navController = navController,
             startDestination = startDestination,

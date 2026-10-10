@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -158,11 +160,15 @@ fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Un
 
 @Composable
 private fun ReputationSummary(reputation: ProviderReputation) {
-    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(Icons.Outlined.StarOutline, null)
         Text(reputation.averageRating?.let { stringResource(R.string.reputation_average, formatReputationNumber(it)) }
             ?: stringResource(R.string.reputation_no_rating), style = MaterialTheme.typography.headlineLarge.copy(textDirection = TextDirection.ContentOrLtr))
         Text(stringResource(R.string.reputation_sample, reputation.reviewCount))
+    }
     }
 }
 

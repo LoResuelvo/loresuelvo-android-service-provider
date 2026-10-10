@@ -57,6 +57,7 @@ fun ProviderHomeRoute(
             navController.navigate(Route.Conversation.buildPath(id)) { launchSingleTop = true }
         },
         uiState = uiState,
+        onRefresh = { viewModel.refresh(); proposalsViewModel.load() },
         onRetryJobRequests = viewModel::retryJobRequests,
         onRetryScheduledWork = viewModel::retryScheduledWork,
         onJobRequestClick = onJobRequestClick,

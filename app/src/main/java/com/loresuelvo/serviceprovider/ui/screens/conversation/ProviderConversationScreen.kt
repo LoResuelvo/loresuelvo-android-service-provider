@@ -1,5 +1,10 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -161,7 +166,7 @@ fun ProviderConversationScreen(
     }
 
     Scaffold(
-        modifier = modifier.testTag(PROVIDER_CONVERSATION_READY_TAG),
+        modifier = modifier.imePadding().testTag(PROVIDER_CONVERSATION_READY_TAG),
         topBar = {
             Column {
             TopAppBar(
@@ -170,6 +175,7 @@ fun ProviderConversationScreen(
                         Text(
                             text = "${state.detail.counterpart.name} ${state.detail.counterpart.surname}",
                             modifier = Modifier.semantics { heading() },
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                     }
                 },
@@ -233,12 +239,15 @@ fun ProviderConversationScreen(
             } else if (state is ProviderConversationUiState.Ready && serviceProposal != null) {
                 Card(onClick = { detailVisible = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                     shape = RoundedCornerShape(16.dp)) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(stringResource(R.string.proposal_detail_chat_summary))
-                        Text(proposalAmount(serviceProposal.amountCents))
-                        Text(proposalVisit(serviceProposal.scheduledOnEpochMillis))
-                        Text(serviceProposal.description)
-                        Text(stringResource(serviceProposal.status.labelRes()))
+                    Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(stringResource(R.string.proposal_detail_chat_summary), style = MaterialTheme.typography.labelMedium)
+                            Text(proposalAmount(serviceProposal.amountCents), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(serviceProposal.status.labelRes()), style = MaterialTheme.typography.labelSmall)
+                        }
+                        Icon(Icons.Outlined.ChevronRight, null)
                     }
                 }
             }

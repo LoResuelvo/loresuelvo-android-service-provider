@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
@@ -36,6 +38,16 @@ class ProviderMessagesScreenTest {
 
     private val context: Context
         get() = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun empty_inbox_can_be_refreshed_with_a_pull_gesture() {
+        var refreshes = 0
+        composeTestRule.setContent { LoresuelvoTheme {
+            ProviderMessagesScreen(MessagesListUiState.Ready(emptyList()), onRetryClick = { refreshes++ })
+        } }
+        composeTestRule.onNodeWithTag("messages_refresh").performTouchInput { swipeDown() }
+        composeTestRule.runOnIdle { assertEquals(1, refreshes) }
+    }
 
     @Test
     fun renders_consumer_identity_and_latest_message_preview() {

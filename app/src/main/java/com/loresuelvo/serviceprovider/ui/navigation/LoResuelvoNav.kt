@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -15,13 +14,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -144,8 +139,6 @@ fun LoResuelvoNav(
                     navController.navigate(path) { launchSingleTop = true }
                 }
                 val bottomRoute = if (currentRoute == Route.Conversion.path) Route.Activity.path else currentRoute
-                var bottomBarHeight by remember { mutableIntStateOf(0) }
-                val bottomBarHeightDp = with(LocalDensity.current) { bottomBarHeight.toDp() }
 
                 LaunchedEffect(returnUrl, currentRoute) {
                     val hint = returnUrl?.let(paymentReturnLinkParser::parse) ?: return@LaunchedEffect
@@ -167,15 +160,32 @@ fun LoResuelvoNav(
                 Box(modifier = Modifier.fillMaxSize()) {
                     Scaffold(
                         contentWindowInsets = WindowInsets.navigationBars,
-                        bottomBar = {},
-                        containerColor = Color.Transparent,
+                        bottomBar = {
+                            if (BottomDestination.shouldShow(bottomRoute)) {
+                                LoresuelvoBottomBar(
+                                    currentRoute = bottomRoute,
+                                    onNavigate = { destination ->
+                                        if (currentRoute == Route.Conversion.path && destination.route == Route.Activity.path) {
+                                            navController.popBackStack(Route.Activity.path, inclusive = false)
+                                        } else {
+                                            navController.navigate(destination.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        }
+                                    },
+                                )
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.background,
                     ) { contentPadding ->
                         LoResuelvoNavHost(
                             navController = navController,
                             startDestination = startDestination,
-                            contentPadding = if (bottomRoute == Route.Activity.path) PaddingValues(
-                                top = contentPadding.calculateTopPadding(), bottom = bottomBarHeightDp,
-                            ) else contentPadding,
+                            contentPadding = contentPadding,
                             welcome = { WelcomeRoute(browserAuthenticationLauncher, entryViewModel) },
                             professionalProfile = { CompleteProviderProfileRoute(navController) },
                             optionalIdentityVerification = {
@@ -336,25 +346,7 @@ fun LoResuelvoNav(
                         )
                     }
 
-                    if (BottomDestination.shouldShow(bottomRoute)) {
-                        LoresuelvoBottomBar(
-                            currentRoute = bottomRoute,
-                            onNavigate = { destination ->
-                                if (currentRoute == Route.Conversion.path && destination.route == Route.Activity.path) {
-                                    navController.popBackStack(Route.Activity.path, inclusive = false)
-                                } else {
-                                    navController.navigate(destination.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            },
-                            modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { bottomBarHeight = it.height },
-                        )
-                    }
+
                 }
             }
         }

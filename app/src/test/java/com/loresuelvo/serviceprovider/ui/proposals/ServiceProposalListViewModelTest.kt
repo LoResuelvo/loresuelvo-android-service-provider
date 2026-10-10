@@ -63,6 +63,37 @@ class ServiceProposalListViewModelTest {
         }
     }
 
+    @Test fun `failed refresh keeps proposals but an expired session clears them`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        try {
+            var result: ServiceProposalListOutcome = ServiceProposalListOutcome.Success(listOf(proposal(12)))
+            val repository = object : ServiceProposalRepository {
+                override suspend fun create(proposal: ValidatedServiceProposal): CreateServiceProposalOutcome =
+                    error("Creation is outside this test")
+                override suspend fun list() = result
+            }
+            val session = ProposalTestSessionStore()
+            val viewModel = ServiceProposalListViewModel(GetServiceProposalsUseCase(repository), session)
+            store.put("list", viewModel)
+            advanceUntilIdle()
+            result = ServiceProposalListOutcome.Failure.Unavailable
+            viewModel.load()
+            advanceUntilIdle()
+            assertEquals(listOf(12), viewModel.uiState.value.proposals.map { it.id })
+            assertEquals(result, viewModel.uiState.value.failure)
+            assertEquals(false, viewModel.uiState.value.loading)
+            result = ServiceProposalListOutcome.Failure.SessionExpired
+            viewModel.load()
+            advanceUntilIdle()
+            assertEquals(emptyList<ServiceProposalSummary>(), viewModel.uiState.value.proposals)
+            assertEquals(null, session.getSession())
+        } finally {
+            store.clear()
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun proposal(id: Int) = ServiceProposalSummary(
         id, 93, 1500050, 1L, "Inspect sink", 45, ServiceProposalStatus.Pending, 1L,
         ServiceProposalCounterpart(7, "consumer", "Ana", "Pérez", null, null),

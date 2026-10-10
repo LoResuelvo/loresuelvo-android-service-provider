@@ -9,6 +9,7 @@ import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -152,6 +153,28 @@ class ProviderConversationAcceptanceTest {
     fun tearDown() {
         conversationRepository.pendingSend?.cancel()
         scenario.close()
+    }
+
+    @Test
+    fun keyboard_keeps_header_and_composer_visible_without_sending_a_message() {
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + 42).performClick()
+        composeTestRule.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).performClick().performTextInput("Draft")
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            var visible = false
+            scenario.onActivity { activity ->
+                visible = androidx.core.view.ViewCompat.getRootWindowInsets(activity.window.decorView)
+                    ?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime()) == true
+            }
+            visible
+        }
+        composeTestRule.onNodeWithText("Ana Pérez").assertIsDisplayed()
+        val input = composeTestRule.onNodeWithTag(PROVIDER_CHAT_INPUT_FIELD_TAG).assertIsDisplayed().fetchSemanticsNode()
+        val viewport = android.graphics.Rect()
+        scenario.onActivity { it.window.decorView.getWindowVisibleDisplayFrame(viewport) }
+        assertTrue(input.positionInWindow.y + input.size.height <= viewport.bottom)
+        assertTrue(conversationRepository.sentTexts.isEmpty())
     }
 
     @Test

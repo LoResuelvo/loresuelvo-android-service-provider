@@ -66,6 +66,31 @@ class ProviderActivityScreenTest {
     }
 
 
+    @Test fun `calendar edits the draft date without silently applying the query`() {
+        val fixture = activityFixture()
+        val query = com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(fixture.period.from, fixture.period.to)
+        val filters = mutableStateOf(ActivityFilters("invalid", "2026-10-03", query))
+        var applied = false
+        compose.setContent { LoresuelvoTheme {
+            ProviderActivityScreen(ProviderActivityUiState.Ready(fixture), {}, filters.value,
+                onEditDates = { from, through -> filters.value = filters.value.copy(fromDay = from, throughDay = through) },
+                onApplyDates = { applied = true })
+        } }
+        compose.onNodeWithText("Opciones del período").performClick()
+        compose.onNodeWithContentDescription("Elegir fecha: Desde (AAAA-MM-DD)").performScrollTo().performClick()
+        compose.runOnIdle {
+            val dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog() as android.app.DatePickerDialog
+            dialog.datePicker.updateDate(2026, 7, 15)
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+        }
+        compose.runOnIdle {
+            assertEquals("2026-08-15", filters.value.fromDay)
+            assertEquals("2026-10-03", filters.value.throughDay)
+            assertEquals(query, filters.value.query)
+            assertFalse(applied)
+        }
+    }
+
     @Test fun `period options expose date callbacks selected grouping and labelled comparison switch`() {
         val fixture = activityFixture()
         val query = com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(fixture.period.from, fixture.period.to)
@@ -101,7 +126,8 @@ class ProviderActivityScreenTest {
             ActivityDateError.FUTURE to "La fecha final no puede ser posterior a hoy.",
             ActivityDateError.FORMAT to "Ingresá ambas fechas válidas en formato AAAA-MM-DD.").forEach { (error, text) ->
             compose.runOnIdle { filters.value = filters.value.copy(dateError = error) }
-            compose.onNodeWithText(text).performScrollTo().assertExists()
+            compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(text))
+            compose.onNodeWithText(text).assertIsDisplayed()
             assertScrollableText("Período consultado")
         }
     }

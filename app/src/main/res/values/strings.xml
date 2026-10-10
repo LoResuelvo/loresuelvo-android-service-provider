@@ -146,7 +146,6 @@
     <!-- Provider Home -->
     <string name="provider_home_proposals_empty">No tenés propuestas esperando respuesta.</string>
     <string name="provider_home_title">Inicio</string>
-    <string name="provider_home_greeting">Hola, %1$s</string>
     <string name="provider_home_photo_description">Foto de perfil de %1$s</string>
     <string name="provider_home_requests_count_label">Solicitudes pendientes</string>
     <string name="provider_home_scheduled_count_label">Trabajos agendados</string>
@@ -481,4 +480,8 @@
     <string name="conversion_acceptance_note">Aceptar una solicitud abre la conversación; no confirma una contratación.</string>
     <string name="conversion_date_incomplete">Completá las dos fechas para consultar el período.</string>
     <string name="provider_conversation_error_forbidden">Ya no tenés acceso a esta conversación.</string>
+    <string name="ui_refresh">Actualizar</string>
+    <string name="provider_home_overview">Tu agenda y tus oportunidades, en un solo lugar.</string>
+    <string name="ui_period_summary">%1$s – %2$s</string>
+    <string name="ui_choose_date">Elegir fecha: %1$s</string>
 </resources>

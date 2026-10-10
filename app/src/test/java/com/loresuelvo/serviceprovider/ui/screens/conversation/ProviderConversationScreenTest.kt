@@ -231,7 +231,7 @@ class ProviderConversationScreenTest {
         composeTestRule.onNodeWithText("Ver conversación").assertExists()
     }
 
-    @Test fun chat_summary_shows_latest_proposal_terms_before_opening_detail() {
+    @Test fun compact_chat_summary_keeps_amount_and_status_with_full_terms_in_detail() {
         val previousZone = TimeZone.getDefault()
         TimeZone.setDefault(TimeZone.getTimeZone("America/Argentina/Buenos_Aires"))
         try {
@@ -251,11 +251,13 @@ class ProviderConversationScreenTest {
                 }
             }
             composeTestRule.onNodeWithText("ARS 22,00").assertIsDisplayed()
-            composeTestRule.onNodeWithText("Visit reason for proposal 22").assertIsDisplayed()
+            composeTestRule.onNodeWithText("Visit reason for proposal 22").assertDoesNotExist()
             composeTestRule.onNodeWithText("Pendiente").assertIsDisplayed()
-            composeTestRule.onNodeWithText("el 4 de octubre de 2026 a las 21:30").assertIsDisplayed()
+            composeTestRule.onNodeWithText("el 4 de octubre de 2026 a las 21:30").assertDoesNotExist()
             composeTestRule.onNodeWithText("Propuesta de servicio").performClick()
             composeTestRule.onNodeWithText("Propuesta #22").assertExists()
+            composeTestRule.onNodeWithText("Visit reason for proposal 22").assertIsDisplayed()
+            composeTestRule.onNodeWithText("el 4 de octubre de 2026 a las 21:30").assertExists()
         } finally {
             TimeZone.setDefault(previousZone)
         }

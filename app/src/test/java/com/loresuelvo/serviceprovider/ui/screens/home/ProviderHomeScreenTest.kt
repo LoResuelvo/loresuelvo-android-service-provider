@@ -10,6 +10,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListUiState
@@ -48,6 +51,22 @@ class ProviderHomeScreenTest {
 
     private val context: Context
         get() = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun pull_and_accessible_refresh_action_use_the_same_callback() {
+        var refreshes = 0
+        composeTestRule.setContent { LoresuelvoTheme {
+            ProviderHomeScreen(provider(), ProviderHomeUiState(
+                jobRequests = ActivitySectionState.Ready(emptyList()),
+                scheduledWork = ActivitySectionState.Ready(emptyList()),
+            ), {}, {}, {}, {}, proposalsState = ServiceProposalListUiState(loading = false),
+                onRefresh = { refreshes++ })
+        } }
+        composeTestRule.onNodeWithTag("home_refresh").performTouchInput { swipeDown() }
+        composeTestRule.runOnIdle { assertEquals(1, refreshes) }
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.ui_refresh)).performClick()
+        composeTestRule.runOnIdle { assertEquals(2, refreshes) }
+    }
 
     @Test
     fun opens_turns_and_proposals_from_their_section_headers() {

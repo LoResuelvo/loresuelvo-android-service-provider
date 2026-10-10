@@ -76,9 +76,9 @@ class ProviderCollectionsLayoutTest {
             compose.onNodeWithTag("provider_collections").performScrollToNode(evolution)
             compose.onNode(evolution).performClick()
             compose.runOnIdle {
-                assertEquals(if (dark) Color(0xFF171D24) else com.loresuelvo.serviceprovider.ui.theme.BrandNeutral,
+                assertEquals(if (dark) Color(0xFF101C2B) else com.loresuelvo.serviceprovider.ui.theme.BrandNeutral,
                     actualColors.background)
-                assertEquals(if (dark) Color(0xFF25303A) else com.loresuelvo.serviceprovider.ui.theme.SurfaceWhite,
+                assertEquals(if (dark) Color(0xFF1A2B48) else com.loresuelvo.serviceprovider.ui.theme.SurfaceWhite,
                     actualColors.surface)
                 listOf(actualColors.onSurface to actualColors.surfaceContainer,
                     actualColors.onSurfaceVariant to actualColors.surface,

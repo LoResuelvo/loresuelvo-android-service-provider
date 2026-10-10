@@ -200,7 +200,7 @@ private fun ProfileReadyState(
                 .widthIn(max = 600.dp)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp)
+                .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 24.dp)
                 .testTag(PROVIDER_PROFILE_DATA_TAG),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

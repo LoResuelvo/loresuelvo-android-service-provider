@@ -119,6 +119,61 @@ class ProviderHomeViewModelTest {
         assertEquals(1, jobRequests.calls)
     }
 
+    @Test
+    fun refresh_retains_content_ignores_duplicates_and_replaces_results() = runTest(scheduler) {
+        jobRequests.next = ActivityLoadOutcome.Success(listOf(jobRequest()))
+        workOrders.next = ActivityLoadOutcome.Success(listOf(workOrder()))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        jobRequests.next = ActivityLoadOutcome.Success(emptyList())
+
+        viewModel.refresh()
+        viewModel.refresh()
+        assertTrue(viewModel.uiState.value.refreshingRequests)
+        assertTrue(viewModel.uiState.value.refreshingWork)
+        assertEquals(listOf(jobRequest()), (viewModel.uiState.value.jobRequests as ActivitySectionState.Ready).items)
+        advanceUntilIdle()
+
+        assertEquals(2, jobRequests.calls)
+        assertEquals(2, workOrders.calls)
+        assertEquals(emptyList<JobRequest>(), (viewModel.uiState.value.jobRequests as ActivitySectionState.Ready).items)
+        assertEquals(false, viewModel.uiState.value.refreshingRequests)
+        assertEquals(false, viewModel.uiState.value.refreshingWork)
+    }
+
+    @Test
+    fun failed_refresh_preserves_content_with_retry_feedback_and_recovers() = runTest(scheduler) {
+        jobRequests.next = ActivityLoadOutcome.Success(listOf(jobRequest()))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        jobRequests.next = ActivityLoadOutcome.Failure.Network(IllegalStateException("offline"))
+        viewModel.refresh()
+        advanceUntilIdle()
+        val failed = viewModel.uiState.value.jobRequests as ActivitySectionState.Ready
+        assertEquals(listOf(jobRequest()), failed.items)
+        assertTrue(failed.refreshFailed)
+        assertEquals(false, viewModel.uiState.value.refreshingRequests)
+
+        jobRequests.next = ActivityLoadOutcome.Success(emptyList())
+        viewModel.retryJobRequests()
+        advanceUntilIdle()
+        assertEquals(ActivitySectionState.Ready(emptyList<JobRequest>()), viewModel.uiState.value.jobRequests)
+    }
+
+    @Test
+    fun expired_refresh_does_not_keep_private_cached_content() = runTest(scheduler) {
+        jobRequests.next = ActivityLoadOutcome.Success(listOf(jobRequest()))
+        workOrders.next = ActivityLoadOutcome.Success(listOf(workOrder()))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        jobRequests.next = ActivityLoadOutcome.Failure.Unauthorized
+        workOrders.next = ActivityLoadOutcome.Failure.Server(403)
+        viewModel.refresh()
+        advanceUntilIdle()
+        assertEquals(ActivitySectionState.Error, viewModel.uiState.value.jobRequests)
+        assertEquals(ActivitySectionState.Error, viewModel.uiState.value.scheduledWork)
+    }
+
     private fun createViewModel() = ProviderHomeViewModel(
         getPendingJobRequests = GetPendingJobRequestsUseCase(jobRequests),
         getScheduledWork = GetScheduledWorkUseCase(workOrders),

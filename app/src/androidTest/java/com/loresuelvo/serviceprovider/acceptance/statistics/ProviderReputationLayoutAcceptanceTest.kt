@@ -83,7 +83,7 @@ class ProviderReputationLayoutAcceptanceTest {
             compose.onNodeWithText(context.getString(R.string.reputation_section)).assertIsSelected()
             control(R.string.reputation_refresh).assertIsDisplayed()
             compose.runOnIdle {
-                assertEquals(if (dark) Color(0xFF25303A) else com.loresuelvo.serviceprovider.ui.theme.SurfaceWhite, colors.surface)
+                assertEquals(if (dark) Color(0xFF1A2B48) else com.loresuelvo.serviceprovider.ui.theme.SurfaceWhite, colors.surface)
                 listOf(colors.secondary to colors.surface, colors.secondary to colors.background,
                     colors.onSurface to colors.surface, colors.onPrimary to colors.primary).forEach { (foreground, background) ->
                     assertTrue("Actual reputation text/control contrast in dark=$dark", contrast(foreground, background) >= 4.5)

@@ -9,6 +9,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.WorkOutline
+import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,6 +52,7 @@ internal fun JobRequestsSection(
             title = stringResource(R.string.provider_home_requests_title),
             count = state.countOrPlaceholder(),
         )
+        if (state is ActivitySectionState.Ready && state.refreshFailed) SectionError(onRetry)
         when (state) {
             ActivitySectionState.Loading -> SectionLoading()
             ActivitySectionState.Error -> SectionError(onRetry)
@@ -71,6 +78,7 @@ internal fun ScheduledWorkSection(
             count = state.countOrPlaceholder(),
             onViewAll = onAllTurnsClick,
         )
+        if (state is ActivitySectionState.Ready && state.refreshFailed) SectionError(onRetry)
         when (state) {
             ActivitySectionState.Loading -> SectionLoading()
             ActivitySectionState.Error -> SectionError(onRetry)
@@ -104,14 +112,15 @@ internal fun ProposalsSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ActivitySectionHeader(
             title = stringResource(R.string.provider_home_proposals_title),
-            count = if (state.loading || state.failure != null) "—" else pendingProposals.size.toString(),
+            count = if (state.proposals.isEmpty() && (state.loading || state.failure != null)) "—" else pendingProposals.size.toString(),
             onViewAll = onViewAll,
             actionTag = "jobs_view_all_proposals",
             actionLabel = R.string.proposal_home_view_all,
         )
+        if (state.failure != null && state.proposals.isNotEmpty()) SectionError(onRetry)
         when {
-            state.loading -> SectionLoading()
-            state.failure != null -> SectionError(onRetry)
+            state.loading && state.proposals.isEmpty() -> SectionLoading()
+            state.failure != null && state.proposals.isEmpty() -> SectionError(onRetry)
             pendingProposals.isEmpty() -> SectionEmpty(stringResource(R.string.provider_home_proposals_empty))
             else -> BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val cardWidth = minOf(440.dp, if (pendingProposals.size == 1) maxWidth else maxWidth - 16.dp)
@@ -141,6 +150,9 @@ private fun ActivitySectionHeader(
         Row(Modifier.fillMaxWidth().semantics { heading() },
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (actionTag == "jobs_view_all_proposals") Icons.Outlined.WorkOutline
+                else if (onViewAll != null) Icons.Outlined.EventAvailable else Icons.Outlined.Inbox,
+                contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Text(text = title, style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f).then(
@@ -205,12 +217,14 @@ private fun SectionError(onRetry: () -> Unit) {
 
 @Composable
 private fun SectionEmpty(message: String) {
-    Text(
-        text = message,
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(vertical = 4.dp),
-    )
+    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
+        Row(Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Inbox, null, tint = MaterialTheme.colorScheme.primary)
+            Text(message, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 private fun <T> ActivitySectionState<T>.countOrPlaceholder(): String = when (this) {

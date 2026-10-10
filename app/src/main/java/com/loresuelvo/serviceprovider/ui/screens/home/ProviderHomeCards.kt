@@ -36,7 +36,7 @@ import com.loresuelvo.serviceprovider.ui.screens.turns.providerTurnStatusBadge
 internal fun HomeTurnCard(order: WorkOrder, modifier: Modifier, onDetails: () -> Unit) {
     Surface(modifier.testTag("provider_turn_${order.id}"), shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             HomeClientHeader(order.consumerGivenName, order.consumerSurname, order.consumerPhotoUrl,
                 stringResource(providerTurnStatusBadge(order.status)?.label ?: R.string.provider_turns_status_unknown))
             Text(order.description, style = MaterialTheme.typography.bodyLarge,
@@ -56,7 +56,7 @@ internal fun HomeTurnCard(order: WorkOrder, modifier: Modifier, onDetails: () ->
 internal fun HomeProposalCard(proposal: ServiceProposalSummary, modifier: Modifier, onDetails: () -> Unit) {
     Surface(modifier.testTag("home_proposal_${proposal.id}"), shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surface) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             HomeClientHeader(proposal.counterpart.name, proposal.counterpart.surname,
                 proposal.counterpart.profilePhotoUrl, stringResource(proposal.status.labelRes()))
             HomeCardFooter(proposalAmount(proposal.amountCents),
@@ -86,8 +86,8 @@ private fun HomeClientHeader(name: String, surname: String, photoUrl: String?, s
 
 @Composable
 private fun HomeStatusBadge(status: String) {
-    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary) {
+    Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer) {
         Text(status, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
     }

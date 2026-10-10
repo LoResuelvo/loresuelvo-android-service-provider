@@ -7,6 +7,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PersonOutline
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Subject
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -69,11 +82,13 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
                 }
             }
             if (onCompletion != null) {
-                Button(onClick = onCompletion, modifier = Modifier.testTag("provider_turn_completion")) {
+                Button(onClick = onCompletion, modifier = Modifier.fillMaxWidth().testTag("provider_turn_completion")) {
+                    Icon(Icons.Outlined.TaskAlt, null, Modifier.padding(end = 8.dp))
                     Text(stringResource(R.string.provider_completion_title))
                 }
             }
-            Button(onClick = onConversation, modifier = Modifier.testTag("provider_turn_conversation")) {
+            OutlinedButton(onClick = onConversation, modifier = Modifier.fillMaxWidth().testTag("provider_turn_conversation")) {
+                Icon(Icons.Outlined.ChatBubbleOutline, null, Modifier.padding(end = 8.dp))
                 Text(stringResource(R.string.provider_turns_view_conversation))
             }
             if (missingConversation) {
@@ -89,10 +104,20 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
 
 @Composable
 private fun DetailField(label: Int, value: String) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(stringResource(label), style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold)
-        Text(value, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
+    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(when (label) {
+                R.string.provider_turns_detail_consumer -> Icons.Outlined.PersonOutline
+                R.string.provider_turns_detail_amount -> Icons.Outlined.Payments
+                R.string.provider_turns_detail_date -> Icons.Outlined.EventAvailable
+                R.string.provider_turns_detail_status -> Icons.Outlined.Info
+                else -> Icons.Outlined.Subject
+            }, null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(label), style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                Text(value, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
     }
 }

@@ -20,7 +20,7 @@ import com.loresuelvo.serviceprovider.domain.statistics.ActivityBucket
 @Composable
 internal fun ActivityEvolution(buckets: List<ActivityBucket>, showValues: Boolean, onToggleValues: () -> Unit) {
     val colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onSurface,
-        MaterialTheme.colorScheme.secondary)
+        MaterialTheme.colorScheme.tertiary)
     val expansion = stringResource(if (showValues) R.string.activity_expanded else R.string.activity_collapsed)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.activity_evolution), style = MaterialTheme.typography.titleMedium,

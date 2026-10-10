@@ -85,8 +85,12 @@ fun ServiceProposalListScreen(
                     )
                 }
             }
+            if (state.failure != null && state.proposals.isNotEmpty()) {
+                Text(stringResource(R.string.proposal_list_error), modifier = Modifier.padding(16.dp))
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.provider_home_retry)) }
+            }
             when {
-                state.loading -> Row(
+                state.loading && state.proposals.isEmpty() -> Row(
                     modifier = Modifier.padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -95,7 +99,7 @@ fun ServiceProposalListScreen(
                         .semantics { contentDescription = loadingLabel })
                     Text(stringResource(R.string.proposal_list_loading))
                 }
-                state.failure != null -> {
+                state.failure != null && state.proposals.isEmpty() -> {
                     Text(stringResource(R.string.proposal_list_error), modifier = Modifier.padding(16.dp))
                     Button(onClick = onRetry, modifier = Modifier.padding(horizontal = 16.dp)) {
                         Text(stringResource(R.string.provider_home_retry))

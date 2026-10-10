@@ -27,16 +27,17 @@ class ProviderHomeViewModel @Inject constructor(
         loadScheduledWork()
     }
 
+    fun refresh() {
+        retryJobRequests()
+        retryScheduledWork()
+    }
+
     fun retryJobRequests() {
-        if (_uiState.value.jobRequests !is ActivitySectionState.Loading) {
-            loadJobRequests()
-        }
+        if (!_uiState.value.refreshingRequests) loadJobRequests()
     }
 
     fun retryScheduledWork() {
-        if (_uiState.value.scheduledWork !is ActivitySectionState.Loading) {
-            loadScheduledWork()
-        }
+        if (!_uiState.value.refreshingWork) loadScheduledWork()
     }
 
     fun removeJobRequest(id: Int) {
@@ -44,9 +45,7 @@ class ProviderHomeViewModel @Inject constructor(
             val requests = state.jobRequests
             if (requests is ActivitySectionState.Ready) {
                 state.copy(
-                    jobRequests = ActivitySectionState.Ready(
-                        requests.items.filterNot { it.id == id },
-                    ),
+                    jobRequests = requests.copy(items = requests.items.filterNot { it.id == id }),
                 )
             } else {
                 state
@@ -55,27 +54,35 @@ class ProviderHomeViewModel @Inject constructor(
     }
 
     private fun loadJobRequests() {
-        _uiState.update { it.copy(jobRequests = ActivitySectionState.Loading) }
+        _uiState.update { it.copy(refreshingRequests = true) }
         viewModelScope.launch {
+            val outcome = getPendingJobRequests()
             _uiState.update { state ->
-                state.copy(jobRequests = getSectionState(getPendingJobRequests()))
+                state.copy(jobRequests = getSectionState(outcome, state.jobRequests), refreshingRequests = false)
             }
         }
     }
 
     private fun loadScheduledWork() {
-        _uiState.update { it.copy(scheduledWork = ActivitySectionState.Loading) }
+        _uiState.update { it.copy(refreshingWork = true) }
         viewModelScope.launch {
+            val outcome = getScheduledWork()
             _uiState.update { state ->
-                state.copy(scheduledWork = getSectionState(getScheduledWork()))
+                state.copy(scheduledWork = getSectionState(outcome, state.scheduledWork), refreshingWork = false)
             }
         }
     }
 
     private fun <T> getSectionState(
         outcome: ActivityLoadOutcome<T>,
+        previous: ActivitySectionState<T>,
     ): ActivitySectionState<T> = when (outcome) {
         is ActivityLoadOutcome.Success -> ActivitySectionState.Ready(outcome.items)
-        is ActivityLoadOutcome.Failure -> ActivitySectionState.Error
+        is ActivityLoadOutcome.Failure -> {
+            val expired = outcome == ActivityLoadOutcome.Failure.Unauthorized ||
+                outcome is ActivityLoadOutcome.Failure.Server && outcome.code == 403
+            if (previous is ActivitySectionState.Ready && !expired) previous.copy(refreshFailed = true)
+            else ActivitySectionState.Error
+        }
     }
 }

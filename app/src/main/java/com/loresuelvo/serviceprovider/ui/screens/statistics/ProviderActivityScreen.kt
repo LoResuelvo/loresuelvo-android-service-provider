@@ -9,6 +9,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.TaskAlt
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.PeopleOutline
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -104,18 +110,6 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                     if (onPeriodExpansion != null) onPeriodExpansion(it) else periodExpanded = it
                 } }
         }
-        if (state != ProviderActivityUiState.SessionExpired) {
-            item {
-                OutlinedButton(onClick = onConversion, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
-                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.conversion_entry_note), style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-        }
         when (state) {
             ProviderActivityUiState.Loading -> item {
                 CircularProgressIndicator()
@@ -128,7 +122,6 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
             ProviderActivityUiState.SessionExpired -> item { Text(stringResource(R.string.activity_session_expired)) }
             is ProviderActivityUiState.Ready -> {
                 val activity = state.activity
-                item { Period(activity) }
                 item { Text(stringResource(R.string.activity_results), style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.semantics { heading() }) }
                 if (activity.results.confirmedBookings == 0L && activity.results.reportedCompletions == 0L &&
@@ -161,6 +154,7 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                         item(key = "activity_bucket_${bucket.from}") { ActivityEvolutionBucket(bucket) }
                     }
                 }
+                item { Period(activity) }
                 item {
                     HorizontalDivider()
                     Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
@@ -172,6 +166,20 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                 }
             }
         }
+        if (state != ProviderActivityUiState.SessionExpired) {
+            item {
+                OutlinedButton(onClick = onConversion, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
+                    Icon(Icons.Outlined.TrendingUp, null, Modifier.padding(end = 12.dp))
+                    Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                        Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.conversion_entry_note), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
+
     }
 }
 
@@ -197,9 +205,9 @@ private fun MetricPair(firstLabel: String, firstValue: Long, secondLabel: String
                 Metric(secondLabel, secondValue, Modifier.fillMaxWidth())
             }
         } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Metric(firstLabel, firstValue, Modifier.weight(1f))
-                Metric(secondLabel, secondValue, Modifier.weight(1f))
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Metric(firstLabel, firstValue, Modifier.weight(1f).fillMaxHeight())
+                Metric(secondLabel, secondValue, Modifier.weight(1f).fillMaxHeight())
             }
         }
     }
@@ -208,7 +216,14 @@ private fun MetricPair(firstLabel: String, firstValue: Long, secondLabel: String
 @Composable
 private fun Metric(label: String, value: Long, modifier: Modifier) {
     Surface(modifier, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.semantics(mergeDescendants = true) {}.padding(16.dp)) {
+        Column(Modifier.semantics(mergeDescendants = true) {}.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(when (label) {
+                stringResource(R.string.activity_bookings) -> Icons.Outlined.EventAvailable
+                stringResource(R.string.activity_completions) -> Icons.Outlined.TaskAlt
+                stringResource(R.string.activity_paid) -> Icons.Outlined.Payments
+                else -> Icons.Outlined.PeopleOutline
+            }, null, tint = MaterialTheme.colorScheme.primary)
             Text(value.toString(), style = MaterialTheme.typography.headlineMedium)
             Text(label, style = MaterialTheme.typography.bodyMedium)
         }

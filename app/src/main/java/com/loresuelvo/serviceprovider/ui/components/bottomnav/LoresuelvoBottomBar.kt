@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,30 +35,17 @@ fun LoresuelvoBottomBar(
 ) {
     if (!BottomDestination.shouldShow(currentRoute)) return
 
-    // "Floating dock" / capsule. A single rounded [Surface] hosts
-    // the icons with `SpaceEvenly` so the capsule hugs its content
-    // (capped at `widthIn(max = …)` so it never bleeds to the screen
-    // edges). `RoundedCornerShape(50)` gives the pill geometry on
-    // any aspect ratio without ever spilling past the row's height
-    // / 2. The bar's tonalElevation stays at zero to keep the M3
-    // surface-tint overlay off the background — only a soft
-    // `shadowElevation = 3.dp` projects the floating drop.
-    // `navigationBarsPadding()` keeps the dock above the Android
-    // gesture bar without painting a backdrop.
     Surface(
-        shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shadowElevation = 3.dp,
+        shape = androidx.compose.ui.graphics.RectangleShape,
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp,
         tonalElevation = 0.dp,
         modifier = modifier
-            .navigationBarsPadding()
-            .padding(bottom = 12.dp)
-            .padding(horizontal = 24.dp)
-            .widthIn(min = 240.dp, max = 400.dp)
+            .fillMaxWidth()
             .testTag(PROVIDER_BOTTOM_BAR_TAG),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -74,7 +61,7 @@ fun LoresuelvoBottomBar(
                         .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(Modifier.size(32.dp).background(
+                    Box(Modifier.size(width = 56.dp, height = 32.dp).background(
                         if (isSelected) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent,
                         RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
                         Icon(destination.icon, contentDescription = null,
@@ -90,7 +77,7 @@ fun LoresuelvoBottomBar(
 }
 
 /**
- * Compose testTags for the provider floating capsule bar.
+ * Compose testTags for the provider navigation bar.
  *
  * The bar exposes two tag surfaces:
  *  - [PROVIDER_BOTTOM_BAR_TAG] — the outer Surface so callers can

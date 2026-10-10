@@ -2,20 +2,19 @@ package com.loresuelvo.serviceprovider.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Brand palette — single source of truth mirrored from the web design
-// system (global.css `--color-brand-*`). Keep hex values in sync.
-val BrandPrimary = Color(0xFF1A2B48)
-val BrandSecondary = Color(0xFF147560)
-val BrandAccept = Color(0xFF1E293B)
-val BrandTertiary = Color(0xFFE9C46A)
-val BrandNeutral = Color(0xFFF4F1EE)
+// Shared provider brand palette; component colors come from MaterialTheme.
+val BrandPrimary = Color(0xFF031632)
+val BrandSecondary = Color(0xFF006A60)
+val BrandAccept = Color(0xFF031632)
+val BrandTertiary = Color(0xFFFFDF96)
+val BrandNeutral = Color(0xFFFCF9F6)
 val BrandDanger = Color(0xFFDC2626)
 
 // Neutrals & surfaces.
 val TextWhite = Color.White
-val SurfaceWhite = Color(0xFFFCFCFC)
-val DividerGray = Color(0xFFD9D9D9)
-val SubtitleGray = Color(0xFF7A7A7A)
+val SurfaceWhite = Color(0xFFFFFFFF)
+val DividerGray = Color(0xFFC5C6CE)
+val SubtitleGray = Color(0xFF44474D)
 
 // Google button branding (fixed by Google's guidelines).
 val GoogleBlue = Color(0xFF4285F4)

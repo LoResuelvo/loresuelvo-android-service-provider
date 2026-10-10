@@ -93,7 +93,6 @@ class ServiceProposalListViewModel @Inject constructor(
                         loading = false,
                     )
                     is ServiceProposalListOutcome.Failure -> state.copy(
-                        proposals = emptyList(),
                         loading = false,
                         failure = result,
                     )

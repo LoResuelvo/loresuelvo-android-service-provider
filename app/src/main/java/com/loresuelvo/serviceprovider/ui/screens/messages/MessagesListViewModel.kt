@@ -75,6 +75,7 @@ class MessagesListViewModel @Inject constructor(
                 if (!hasSession) continue
                 val generation = sessionGeneration
                 requestInFlight = true
+                _uiState.update { current -> if (current is MessagesListUiState.Ready) current.copy(refreshing = true) else current }
                 val outcome = try { getConversations() } finally {
                     if (generation == sessionGeneration) requestInFlight = false
                 }
@@ -83,7 +84,7 @@ class MessagesListViewModel @Inject constructor(
                 _uiState.update { current ->
                     when (outcome) {
                         is ConversationsOutcome.Success -> MessagesListUiState.Ready(outcome.conversations)
-                        is ConversationsOutcome.Failure -> if (current is MessagesListUiState.Ready && outcome != ConversationsOutcome.Failure.Unauthorized && !(outcome is ConversationsOutcome.Failure.Server && outcome.code == 403)) current.copy(refreshFailure = outcome) else MessagesListUiState.Error(outcome)
+                        is ConversationsOutcome.Failure -> if (current is MessagesListUiState.Ready && outcome != ConversationsOutcome.Failure.Unauthorized && !(outcome is ConversationsOutcome.Failure.Server && outcome.code == 403)) current.copy(refreshFailure = outcome, refreshing = false) else MessagesListUiState.Error(outcome)
                     }
                 }
             }
@@ -94,7 +95,7 @@ class MessagesListViewModel @Inject constructor(
     fun load() {
         if (requestInFlight || !hasSession) return
         requestInFlight = true
-        _uiState.update { current -> if (current is MessagesListUiState.Ready) current.copy(refreshFailure = null) else MessagesListUiState.Loading }
+        _uiState.update { current -> if (current is MessagesListUiState.Ready) current.copy(refreshFailure = null, refreshing = true) else MessagesListUiState.Loading }
         invalidations.trySend(Unit)
     }
 }

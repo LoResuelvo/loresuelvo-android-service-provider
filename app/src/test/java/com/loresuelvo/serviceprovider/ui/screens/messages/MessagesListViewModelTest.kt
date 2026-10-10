@@ -92,6 +92,28 @@ class MessagesListViewModelTest {
         assertTrue(viewModel.uiState.value is MessagesListUiState.Ready)
     }
 
+    @Test
+    fun refresh_indicator_retains_rows_and_stops_with_retry_feedback_on_failure() = runTest(scheduler) {
+        val failure = ConversationsOutcome.Failure.Network(IllegalStateException("offline"))
+        val repository = SequencedConversationRepository(listOf(
+            ConversationsOutcome.Success(listOf(conversation(3))), failure,
+            ConversationsOutcome.Success(listOf(conversation(4))),
+        ))
+        val viewModel = MessagesListViewModel(GetConversationsUseCase(repository))
+        advanceUntilIdle()
+        viewModel.load()
+        viewModel.load()
+        val refreshing = viewModel.uiState.value as MessagesListUiState.Ready
+        assertTrue(refreshing.refreshing)
+        assertEquals(listOf(3), refreshing.conversations.map { it.id })
+        advanceUntilIdle()
+        assertEquals(2, repository.calls)
+        assertEquals(MessagesListUiState.Ready(listOf(conversation(3)), failure), viewModel.uiState.value)
+        viewModel.load()
+        advanceUntilIdle()
+        assertEquals(MessagesListUiState.Ready(listOf(conversation(4))), viewModel.uiState.value)
+    }
+
     private fun conversation(id: Int) = Conversation(
         id = id,
         status = ConversationStatus.Active,

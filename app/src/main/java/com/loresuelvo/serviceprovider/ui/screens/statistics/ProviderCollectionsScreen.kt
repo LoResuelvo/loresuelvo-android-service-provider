@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -71,18 +73,7 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
             ProviderCollectionsUiState.SessionExpired -> item { Text(stringResource(R.string.collections_session_expired)) }
             is ProviderCollectionsUiState.Ready -> {
                 val collections = state.collections
-                item {
-                    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                            Text(stringResource(R.string.activity_effective_period), style = MaterialTheme.typography.titleSmall)
-                            Text(stringResource(R.string.activity_period, formatActivityInstant(collections.period.from),
-                                formatActivityInstant(collections.period.to)), style = MaterialTheme.typography.bodySmall)
-                            Text(stringResource(R.string.activity_calculated, formatActivityInstant(collections.calculatedAt)),
-                                style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-                item { CollectionMoney(stringResource(R.string.collections_verified_total), collections.results.totalCents) }
+                item { CollectionMoney(stringResource(R.string.collections_verified_total), collections.results.totalCents, highlighted = true) }
                 item { Text(stringResource(R.string.collections_money_note), style = MaterialTheme.typography.bodySmall) }
                 if (collections.results.totalCents == 0L) {
                     item { Text(stringResource(R.string.collections_empty)) }
@@ -106,6 +97,17 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
                 if (evolutionExpanded) collections.evolution.forEach { bucket ->
                     item(key = "collection_bucket_${bucket.from}") { CollectionEvolutionBucket(bucket) }
                 }
+                item {
+                    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                            Text(stringResource(R.string.activity_effective_period), style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(R.string.activity_period, formatActivityInstant(collections.period.from),
+                                formatActivityInstant(collections.period.to)), style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.activity_calculated, formatActivityInstant(collections.calculatedAt)),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
                 collectionTransactionsItems(transactions, onPurpose, onLoadMore, onTransactionsRetry)
             }
         }
@@ -113,9 +115,13 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
 }
 
 @Composable
-private fun CollectionMoney(label: String, cents: Long) {
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(16.dp)) {
+private fun CollectionMoney(label: String, cents: Long, highlighted: Boolean = false) {
+    Surface(shape = MaterialTheme.shapes.medium,
+        color = if (highlighted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface) {
+        Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (highlighted) Icon(Icons.Outlined.AccountBalanceWallet, null)
             Text(label, style = MaterialTheme.typography.titleMedium)
             Text(formatActivityMoney(cents), style = MaterialTheme.typography.headlineSmall)
         }

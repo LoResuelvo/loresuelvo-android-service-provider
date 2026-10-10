@@ -1,5 +1,16 @@
 package com.loresuelvo.serviceprovider.ui.screens.messages
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +56,7 @@ fun ProviderMessagesRoute(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProviderMessagesScreen(
     state: MessagesListUiState,
@@ -56,31 +68,44 @@ fun ProviderMessagesScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .testTag(PROVIDER_MESSAGES_SCREEN_TAG),
-            contentAlignment = Alignment.Center,
-        ) {
-            when (state) {
-                MessagesListUiState.Loading -> LoadingState()
-                is MessagesListUiState.Ready -> {
-                    Column {
+        Column(Modifier.fillMaxSize().statusBarsPadding().testTag(PROVIDER_MESSAGES_SCREEN_TAG)) {
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.provider_messages_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f).semantics { heading() })
+                IconButton(onClick = onRetryClick,
+                    enabled = state is MessagesListUiState.Ready && !state.refreshing || state is MessagesListUiState.Error) {
+                    Icon(Icons.Outlined.Refresh, stringResource(R.string.ui_refresh))
+                }
+            }
+            PullToRefreshBox(isRefreshing = state is MessagesListUiState.Ready && state.refreshing,
+                onRefresh = onRetryClick, modifier = Modifier.fillMaxSize().testTag("messages_refresh"), contentAlignment = Alignment.Center) {
+                when (state) {
+                    MessagesListUiState.Loading -> LoadingState()
+                    is MessagesListUiState.Ready -> Column {
                         if (state.refreshFailure != null) {
                             Text(stringResource(R.string.provider_messages_error),
-                                Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
-                            Button(onClick = onRetryClick, modifier = Modifier.testTag(PROVIDER_MESSAGES_RETRY_TAG)) {
+                                Modifier.padding(horizontal = 16.dp).semantics {
+                                    liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite
+                                })
+                            Button(onClick = onRetryClick, modifier = Modifier.padding(horizontal = 16.dp)
+                                .testTag(PROVIDER_MESSAGES_RETRY_TAG)) {
                                 Text(stringResource(R.string.provider_messages_retry))
                             }
                         }
-                        if (state.conversations.isEmpty()) EmptyState() else ConversationsList(
-                            conversations = state.conversations,
-                            onConversationClick = onConversationClick,
-                        )
+                        if (state.conversations.isEmpty()) {
+                            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally) { EmptyState() }
+                        } else ConversationsList(state.conversations, onConversationClick)
                     }
+                    is MessagesListUiState.Error -> Column(
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) { ErrorState(onRetryClick) }
                 }
-                is MessagesListUiState.Error -> ErrorState(onRetryClick)
             }
         }
     }
@@ -112,11 +137,7 @@ private fun EmptyState() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = stringResource(R.string.provider_messages_title),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.semantics { heading() },
-        )
+        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = MaterialTheme.colorScheme.primary)
         Text(
             text = stringResource(R.string.provider_messages_empty),
             textAlign = TextAlign.Center,
@@ -153,13 +174,14 @@ private fun ConversationsList(
         modifier = Modifier
             .fillMaxSize()
             .testTag(PROVIDER_MESSAGES_LIST_TAG),
-        contentPadding = PaddingValues(vertical = 8.dp),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(conversations, key = { it.id }) { conversation ->
-            ProviderConversationRow(
-                conversation = conversation,
-                onClick = { onConversationClick(conversation.id) },
-            )
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surface) {
+                ProviderConversationRow(conversation = conversation,
+                    onClick = { onConversationClick(conversation.id) })
+            }
         }
     }
 }
