@@ -65,6 +65,22 @@ class CompleteProviderProfileNavigationAcceptanceTest {
     }
 
     @Test
+    fun empty_submission_reveals_name_error_without_manual_scroll() {
+        authenticationLauncher.nextOutcome = AuthenticationOutcome.Success(
+            AuthSession(User("auth0|registration-validation", "validation@loresuelvo.test"), "device-access-token"),
+        )
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.welcome_register))
+            .performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_submit))
+            .performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_name_error))
+            .assertIsDisplayed()
+        assertEquals(0, providerRepository.registerCalls)
+    }
+
+    @Test
     fun submitting_profile_form_without_photo_displays_validation_error() {
         val session = AuthSession(
             user = User(
@@ -114,10 +130,9 @@ class CompleteProviderProfileNavigationAcceptanceTest {
             .performClick()
         composeTestRule.waitForIdle()
 
-        // 6. Observe photo required validation error banner
+        // The validation error must be visible without a second manual scroll.
         composeTestRule
             .onNodeWithText(composeTestRule.activity.getString(R.string.provider_profile_photo_required_error))
-            .performScrollTo()
             .assertIsDisplayed()
 
         // 7. Verify backend repository was not invoked without required photo
@@ -153,8 +168,8 @@ class CompleteProviderProfileNavigationAcceptanceTest {
         composeTestRule.activityRule.scenario.recreate()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText("Carlos").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Gómez").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Carlos").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Gómez").performScrollTo().assertIsDisplayed()
         composeTestRule
             .onNodeWithText(
                 composeTestRule.activity.getString(

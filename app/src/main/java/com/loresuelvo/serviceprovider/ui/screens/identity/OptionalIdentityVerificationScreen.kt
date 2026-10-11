@@ -20,6 +20,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Badge
+import com.loresuelvo.serviceprovider.ui.components.RegistrationHeader
+import com.loresuelvo.serviceprovider.ui.components.RegistrationSection
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
@@ -116,19 +118,16 @@ fun OptionalIdentityVerificationScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Text(
-                text = stringResource(R.string.identity_optional_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
+            RegistrationHeader(
+                stringResource(R.string.registration_identity_step),
+                stringResource(R.string.identity_optional_title),
+                stringResource(R.string.registration_identity_intro),
             )
-            Text(
-                text = stringResource(R.string.identity_optional_description),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            RegistrationSection(stringResource(R.string.registration_identity_section), Icons.Outlined.Badge) {
+                Text(stringResource(R.string.identity_optional_description), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (uiState.loading) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -168,40 +167,7 @@ fun OptionalIdentityVerificationScreen(
             ) {
                 Text(text = stringResource(R.string.identity_verify_later))
             }
-            IdentityCardIllustration(modifier = Modifier.padding(top = 32.dp))
-        }
-    }
-}
-
-@Composable
-private fun IdentityCardIllustration(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clearAndSetSemantics {},
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(modifier = Modifier.size(width = 164.dp, height = 108.dp), contentAlignment = Alignment.Center) {
-            Surface(
-                modifier = Modifier.size(width = 148.dp, height = 92.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Outlined.Badge,
-                        contentDescription = null,
-                        modifier = Modifier.size(52.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
             }
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.align(Alignment.BottomEnd).size(32.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
         }
     }
 }

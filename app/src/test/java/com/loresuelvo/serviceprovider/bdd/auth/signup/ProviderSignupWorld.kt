@@ -208,7 +208,7 @@ class ProviderSignupWorld : AutoCloseable {
         verifyOrder {
             builder.withScheme(SYNTHETIC_SCHEME)
             builder.withAudience(SYNTHETIC_AUDIENCE)
-            builder.withParameters(mapOf("screen_hint" to "signup"))
+            builder.withParameters(mapOf("screen_hint" to "signup", "prompt" to "login", "ui_locales" to "es"))
         }
     }
 

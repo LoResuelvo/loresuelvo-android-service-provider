@@ -128,7 +128,7 @@
     <string name="welcome_google">Continuar con Google</string>
     <string name="welcome_auth_loading">Autenticando…</string>
     <string name="welcome_legal">Al continuar aceptás nuestros Términos de Servicio y Política de Privacidad.</string>
-    <string name="welcome_categories_error">No pudimos cargar las categorías. Intentá de nuevo más tarde.</string>
+    <string name="welcome_categories_error">Choose your trade when completing your professional profile.</string>
     <string name="welcome_auth_error">No pudimos iniciar sesión. Intentá de nuevo.</string>
     <string name="welcome_auth_network_error">No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.</string>
     <string name="welcome_auth_server_error">El servicio no está disponible (código %1$d). Intentá más tarde.</string>
@@ -278,8 +278,8 @@
     <string name="provider_conversation_audio_preview_label">Audio · %1$s</string>
 
     <!-- Provider profile onboarding -->
-    <string name="provider_profile_title">Completá tu perfil profesional</string>
-    <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>
+    <string name="provider_profile_title">Create your professional profile</string>
+    <string name="provider_profile_description">Help clients get to know you. All fields are required.</string>
     <string name="provider_profile_name_label">Nombre</string>
     <string name="provider_profile_name_placeholder">Ej. Juan</string>
     <string name="provider_profile_name_error">El nombre es obligatorio</string>
@@ -292,9 +292,9 @@
     <string name="provider_profile_category_loading">Cargando rubros…</string>
     <string name="provider_profile_category_load_error">No se pudieron cargar los rubros.</string>
     <string name="provider_profile_retry">Reintentar</string>
-    <string name="provider_profile_submit">Continuar</string>
+    <string name="provider_profile_submit">Save and continue</string>
     <string name="provider_profile_submitting">Guardando…</string>
-    <string name="provider_profile_disclaimer">Podrás configurar tus zonas de atención en los próximos pasos.</string>
+    <string name="provider_profile_disclaimer">Choose at least one area where you offer your services. Select multiple areas from the list or map.</string>
     <string name="provider_profile_already_registered_error">Esta cuenta ya está registrada. Por favor, iniciá sesión.</string>
     <string name="provider_profile_generic_error">No pudimos guardar tu perfil. Revisá tu conexión e intentá de nuevo.</string>
 
@@ -302,7 +302,7 @@
     <string name="provider_profile_photo_section_title">Foto de perfil</string>
     <string name="provider_profile_photo_select">Seleccionar foto</string>
     <string name="provider_profile_photo_change">Cambiar foto</string>
-    <string name="provider_profile_photo_upload">Cargar foto</string>
+    <string name="provider_profile_photo_upload">Confirm photo</string>
     <string name="provider_profile_photo_preview_description">Vista previa de la foto de perfil</string>
     <string name="provider_profile_photo_ready">Foto lista para el registro</string>
     <string name="provider_profile_photo_uploading">Cargando foto…</string>
@@ -342,14 +342,14 @@
     <string name="mercadopago_placeholder_title">Vinculación con Mercado Pago (próximamente)</string>
 
     <!-- Mercado Pago Connection -->
-    <string name="mercadopago_connect_title">Conectar cuenta de Mercado Pago</string>
-    <string name="mercadopago_connect_description">Conectá tu cuenta de Mercado Pago para poder cobrar señas y saldos de tus servicios.</string>
+    <string name="mercadopago_connect_title">Set up your payments</string>
+    <string name="mercadopago_connect_description">Connect Mercado Pago to receive deposits and final payments for your work.</string>
     <string name="mercadopago_connect_button">Conectar con Mercado Pago</string>
     <string name="mercadopago_continue_without_connecting">Continuar sin conectar</string>
     <string name="mercadopago_connected_title">Cuenta conectada</string>
     <string name="mercadopago_connected_description">Tu cuenta de Mercado Pago está conectada y puede recibir pagos.</string>
-    <string name="mercadopago_pending_title">Cuenta pendiente de conexión</string>
-    <string name="mercadopago_pending_description">Tu cuenta está pendiente de vinculación con Mercado Pago.</string>
+    <string name="mercadopago_pending_title">You can do this later</string>
+    <string name="mercadopago_pending_description">You can explore the app without connecting. To receive payments, connect your account from Profile.</string>
     <string name="mercadopago_continue_home">Continuar a Inicio</string>
     <string name="mercadopago_checking_status">Verificando estado de la cuenta…</string>
     <string name="mercadopago_retry">Reintentar</string>

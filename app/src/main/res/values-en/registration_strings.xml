@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="registration_profile_step">STEP 1 OF 3 · YOUR PROFILE</string>
+    <string name="registration_identity_step">STEP 2 OF 3 · IDENTITY</string>
+    <string name="registration_payment_step">STEP 3 OF 3 · PAYMENTS</string>
+    <string name="registration_personal_section">Your professional details</string>
+    <string name="registration_photo_help">Required · JPEG, PNG or WebP, up to 5 MiB. Choose a photo and confirm its upload before continuing.</string>
+    <string name="registration_identity_intro">Your profile is ready. Now you can build trust in your account.</string>
+    <string name="registration_identity_section">Verify your identity</string>
+    <string name="registration_payments_section">Get paid for your services</string>
+    <string name="registration_payments_label">PAYMENT SETTINGS</string>
+    <string name="registration_connection_error">We could not check your account. Retry or complete this step later from Profile.</string>
+</resources>

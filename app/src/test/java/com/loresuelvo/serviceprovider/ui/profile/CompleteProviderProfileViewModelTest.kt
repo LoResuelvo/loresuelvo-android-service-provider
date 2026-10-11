@@ -109,6 +109,20 @@ class CompleteProviderProfileViewModelTest {
     }
 
     @Test
+    fun `confirming photo clears the missing photo validation message`() = runTest(scheduler) {
+        viewModel = newViewModel()
+        advanceUntilIdle()
+        viewModel!!.onNameChanged("Test")
+        viewModel!!.onSurnameChanged("Provider")
+        viewModel!!.onCategorySelected(defaultCategories[0])
+        viewModel!!.submit()
+        assertEquals(ProfileFormError.MissingPhoto, viewModel!!.uiState.value.error)
+        viewModel!!.onPhotoConfirmed("confirmed-file")
+        assertNull(viewModel!!.uiState.value.error)
+        assertEquals("confirmed-file", viewModel!!.uiState.value.confirmedPhotoFileId)
+    }
+
+    @Test
     fun `starts coverage zones loading without an implicit selection`() = runTest(scheduler) {
         viewModel = newViewModel()
 

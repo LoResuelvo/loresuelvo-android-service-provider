@@ -128,7 +128,7 @@
     <string name="welcome_google">Continuar con Google</string>
     <string name="welcome_auth_loading">Autenticando…</string>
     <string name="welcome_legal">Al continuar aceptás nuestros Términos de Servicio y Política de Privacidad.</string>
-    <string name="welcome_categories_error">No pudimos cargar las categorías. Intentá de nuevo más tarde.</string>
+    <string name="welcome_categories_error">Elegí tu rubro al completar el perfil profesional.</string>
     <string name="welcome_auth_error">No pudimos iniciar sesión. Intentá de nuevo.</string>
     <string name="welcome_auth_network_error">No pudimos conectarnos. Revisá tu conexión e intentá de nuevo.</string>
     <string name="welcome_auth_server_error">El servicio no está disponible (código %1$d). Intentá más tarde.</string>
@@ -278,8 +278,8 @@
     <string name="provider_conversation_audio_preview_label">Audio · %1$s</string>
 
     <!-- Provider profile onboarding -->
-    <string name="provider_profile_title">Completá tu perfil profesional</string>
-    <string name="provider_profile_description">Agregá la información que tus clientes necesitan para conocerte y encontrar tus servicios.</string>
+    <string name="provider_profile_title">Creá tu perfil profesional</string>
+    <string name="provider_profile_description">Completá estos datos para que los clientes te conozcan. Todos los campos son obligatorios.</string>
     <string name="provider_profile_name_label">Nombre</string>
     <string name="provider_profile_name_placeholder">Ej. Juan</string>
     <string name="provider_profile_name_error">El nombre es obligatorio</string>
@@ -292,15 +292,15 @@
     <string name="provider_profile_category_loading">Cargando rubros…</string>
     <string name="provider_profile_category_load_error">No se pudieron cargar los rubros.</string>
     <string name="provider_profile_retry">Reintentar</string>
-    <string name="provider_profile_submit">Continuar</string>
+    <string name="provider_profile_submit">Guardar y continuar</string>
     <string name="provider_profile_submitting">Guardando…</string>
-    <string name="provider_profile_disclaimer">Podrás configurar tus zonas de atención en los próximos pasos.</string>
+    <string name="provider_profile_disclaimer">Elegí al menos una comuna donde ofrecés tus servicios. Podés marcar varias en la lista o en el mapa.</string>
     <string name="provider_profile_already_registered_error">Esta cuenta ya está registrada. Por favor, iniciá sesión.</string>
     <string name="provider_profile_generic_error">No pudimos guardar tu perfil. Revisá tu conexión e intentá de nuevo.</string>
 
     <!-- Optional identity verification -->
     <string name="identity_optional_title" translatable="false">Tu cuenta ya está creada</string>
-    <string name="identity_optional_description" translatable="false">Verificar tu identidad es opcional. Podés hacerlo ahora o continuar y completarlo más tarde.</string>
+    <string name="identity_optional_description" translatable="false">Este paso es opcional. Podés verificarte ahora o hacerlo más tarde desde Perfil.</string>
     <string name="identity_verify_now" translatable="false">Verificar ahora</string>
     <string name="identity_verify_later" translatable="false">Más tarde</string>
     <string name="identity_starting_verification" translatable="false">Iniciando verificación…</string>
@@ -313,7 +313,7 @@
     <string name="provider_profile_photo_section_title">Foto de perfil</string>
     <string name="provider_profile_photo_select">Seleccionar foto</string>
     <string name="provider_profile_photo_change">Cambiar foto</string>
-    <string name="provider_profile_photo_upload">Cargar foto</string>
+    <string name="provider_profile_photo_upload">Confirmar foto</string>
     <string name="provider_profile_photo_preview_description">Vista previa de la foto de perfil</string>
     <string name="provider_profile_photo_ready">Foto lista para el registro</string>
     <string name="provider_profile_photo_uploading">Cargando foto…</string>
@@ -353,14 +353,14 @@
     <string name="mercadopago_placeholder_title">Vinculación con Mercado Pago (próximamente)</string>
 
     <!-- Mercado Pago Connection -->
-    <string name="mercadopago_connect_title">Conectar cuenta de Mercado Pago</string>
-    <string name="mercadopago_connect_description">Conectá tu cuenta de Mercado Pago para poder cobrar señas y saldos de tus servicios.</string>
+    <string name="mercadopago_connect_title">Prepará tus cobros</string>
+    <string name="mercadopago_connect_description">Conectá Mercado Pago para recibir señas y saldos de tus trabajos.</string>
     <string name="mercadopago_connect_button">Conectar con Mercado Pago</string>
     <string name="mercadopago_continue_without_connecting">Continuar sin conectar</string>
     <string name="mercadopago_connected_title">Cuenta conectada</string>
     <string name="mercadopago_connected_description">Tu cuenta de Mercado Pago está conectada y puede recibir pagos.</string>
-    <string name="mercadopago_pending_title">Cuenta pendiente de conexión</string>
-    <string name="mercadopago_pending_description">Tu cuenta está pendiente de vinculación con Mercado Pago.</string>
+    <string name="mercadopago_pending_title">Podés hacerlo más tarde</string>
+    <string name="mercadopago_pending_description">Si continuás sin conectar, podrás explorar la app. Para cobrar, vinculá tu cuenta desde Perfil.</string>
     <string name="mercadopago_continue_home">Continuar a Inicio</string>
     <string name="mercadopago_checking_status">Verificando estado de la cuenta…</string>
     <string name="mercadopago_retry">Reintentar</string>

@@ -202,6 +202,7 @@ class CompleteProviderProfileViewModel @Inject constructor(
             it.copy(
                 isPhotoConfirmed = true,
                 confirmedPhotoFileId = fileId,
+                error = if (it.error == ProfileFormError.MissingPhoto) null else it.error,
                 photoLoading = false,
                 photoError = null,
             )

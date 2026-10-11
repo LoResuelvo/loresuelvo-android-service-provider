@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="registration_profile_step">PASO 1 DE 3 · TU PERFIL</string>
+    <string name="registration_identity_step">PASO 2 DE 3 · IDENTIDAD</string>
+    <string name="registration_payment_step">PASO 3 DE 3 · COBROS</string>
+    <string name="registration_personal_section">Tus datos profesionales</string>
+    <string name="registration_photo_help">Obligatoria · JPEG, PNG o WebP, hasta 5 MiB. Elegí una foto y confirmá su carga antes de continuar.</string>
+    <string name="registration_identity_intro">Tu perfil está listo. Ahora podés sumar confianza a tu cuenta.</string>
+    <string name="registration_identity_section">Verificá tu identidad</string>
+    <string name="registration_payments_section">Cobrá por tus servicios</string>
+    <string name="registration_payments_label">CONFIGURACIÓN DE COBROS</string>
+    <string name="registration_connection_error">No pudimos consultar tu cuenta. Reintentá o completá este paso más tarde desde Perfil.</string>
+</resources>

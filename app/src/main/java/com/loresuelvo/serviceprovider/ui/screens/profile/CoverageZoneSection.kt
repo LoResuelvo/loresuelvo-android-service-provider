@@ -40,13 +40,14 @@ internal fun CoverageZoneSection(
     onCheckedChange: (Int, Boolean) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    showTitle: Boolean = true,
 ) {
     var mapUnavailable by remember(mapId) { mutableStateOf(!isCoverageMapConfigured(mapId)) }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
+        if (showTitle) Text(
             text = stringResource(R.string.provider_profile_coverage_title),
             style = MaterialTheme.typography.titleMedium,
         )
@@ -117,6 +118,7 @@ private fun CoverageZoneDropdown(
             readOnly = true,
             enabled = enabled,
             label = { Text(stringResource(R.string.provider_profile_coverage_dropdown_label)) },
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
             placeholder = { Text(stringResource(R.string.provider_profile_coverage_placeholder)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),

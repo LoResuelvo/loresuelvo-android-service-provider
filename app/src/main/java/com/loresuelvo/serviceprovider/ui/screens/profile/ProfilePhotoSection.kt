@@ -46,6 +46,7 @@ fun ProfilePhotoSection(
     onUploadPhoto: () -> Unit,
     modifier: Modifier = Modifier,
     formLoading: Boolean = false,
+    showTitle: Boolean = true,
 ) {
     val controlsEnabled = !photoLoading && !formLoading
 
@@ -53,7 +54,7 @@ fun ProfilePhotoSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
+        if (showTitle) Text(
             text = stringResource(R.string.provider_profile_photo_section_title),
             style = MaterialTheme.typography.titleMedium,
         )

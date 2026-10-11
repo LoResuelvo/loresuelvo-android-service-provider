@@ -13,6 +13,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import com.loresuelvo.serviceprovider.ui.components.RegistrationHeader
+import com.loresuelvo.serviceprovider.ui.components.RegistrationSection
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -49,20 +53,15 @@ fun MercadoPagoConnectScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Text(
-                text = stringResource(R.string.mercadopago_connect_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
+            RegistrationHeader(
+                stringResource(if (returnToProfile) R.string.registration_payments_label else R.string.registration_payment_step),
+                stringResource(R.string.mercadopago_connect_title),
+                stringResource(R.string.mercadopago_connect_description),
             )
-            Text(
-                text = stringResource(R.string.mercadopago_connect_description),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
+            RegistrationSection(stringResource(R.string.registration_payments_section), Icons.Outlined.AccountBalanceWallet) {
             if (uiState.loading) {
                 Row(
                     modifier = Modifier
@@ -106,7 +105,7 @@ fun MercadoPagoConnectScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            text = error.message,
+                            text = stringResource(R.string.registration_connection_error),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.padding(16.dp),
@@ -126,7 +125,7 @@ fun MercadoPagoConnectScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            text = error.message ?: stringResource(R.string.provider_profile_generic_error),
+                            text = stringResource(R.string.registration_connection_error),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.padding(16.dp),
@@ -265,7 +264,14 @@ fun MercadoPagoConnectScreen(
                         }
                     }
                 }
-                null -> Unit
+                null -> {
+                    if (!returnToProfile && !uiState.loading) {
+                        OutlinedButton(onClick = onContinueWithoutConnecting, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.mercadopago_continue_without_connecting))
+                        }
+                    }
+                }
+            }
             }
         }
     }

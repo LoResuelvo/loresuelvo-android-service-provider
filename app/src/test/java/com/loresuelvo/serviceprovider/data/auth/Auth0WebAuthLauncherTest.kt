@@ -18,7 +18,7 @@ class Auth0WebAuthLauncherTest {
 
         builder.configureLogin(config)
 
-        io.mockk.verify { builder.withParameters(mapOf("prompt" to "login")) }
+        io.mockk.verify { builder.withParameters(mapOf("prompt" to "login", "ui_locales" to "es")) }
     }
 
     @Test
@@ -30,7 +30,7 @@ class Auth0WebAuthLauncherTest {
         verifyOrder {
             builder.withScheme(SYNTHETIC_SCHEME)
             builder.withAudience(SYNTHETIC_AUDIENCE)
-            builder.withParameters(mapOf("screen_hint" to "signup"))
+            builder.withParameters(mapOf("screen_hint" to "signup", "prompt" to "login", "ui_locales" to "es"))
         }
         verify(exactly = 0) { builder.withConnection(any()) }
     }

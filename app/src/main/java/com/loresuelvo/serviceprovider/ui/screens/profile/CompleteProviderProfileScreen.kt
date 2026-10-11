@@ -13,6 +13,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.loresuelvo.serviceprovider.ui.components.RegistrationSection
+import com.loresuelvo.serviceprovider.ui.components.RegistrationHeader
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -123,7 +135,7 @@ fun CompleteProviderProfileRoute(
 /**
  * Stateless screen for entering provider name, surname, and primary category.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun CompleteProviderProfileScreen(
     modifier: Modifier = Modifier,
@@ -139,6 +151,36 @@ fun CompleteProviderProfileScreen(
     onSubmit: () -> Unit = {},
     coverageMapId: String = "",
 ) {
+    val scrollState = rememberScrollState()
+    var submitAttempt by remember { mutableStateOf(0) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val nameFocus = remember { FocusRequester() }
+    val surnameFocus = remember { FocusRequester() }
+    val nameView = remember { BringIntoViewRequester() }
+    val surnameView = remember { BringIntoViewRequester() }
+    val categoryView = remember { BringIntoViewRequester() }
+    val photoView = remember { BringIntoViewRequester() }
+    val coverageView = remember { BringIntoViewRequester() }
+    suspend fun revealError() {
+        if (uiState.error == null) return
+        keyboard?.hide()
+        when (uiState.error) {
+            ProfileFormError.MissingName -> { nameView.bringIntoView(); nameFocus.requestFocus() }
+            ProfileFormError.MissingSurname -> { surnameView.bringIntoView(); surnameFocus.requestFocus() }
+            ProfileFormError.MissingCategory -> categoryView.bringIntoView()
+            ProfileFormError.MissingPhoto -> photoView.bringIntoView(androidx.compose.ui.geometry.Rect(0f, 0f, 1f, 1f))
+            ProfileFormError.MissingCoverageZones, ProfileFormError.CoverageRejected -> coverageView.bringIntoView(androidx.compose.ui.geometry.Rect(0f, 0f, 1f, 1f))
+            null -> Unit
+            else -> scrollState.animateScrollTo(0)
+        }
+    }
+    LaunchedEffect(uiState.error, submitAttempt) {
+        androidx.compose.runtime.withFrameNanos { }
+        revealError()
+    }
+    LaunchedEffect(uiState.photoError) {
+        if (uiState.photoError != null) photoView.bringIntoView(androidx.compose.ui.geometry.Rect(0f, 0f, 1f, 1f))
+    }
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -147,24 +189,19 @@ fun CompleteProviderProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .imePadding()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            // Header
-            Text(
-                text = stringResource(R.string.provider_profile_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            Text(
-                text = stringResource(R.string.provider_profile_description),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            RegistrationHeader(
+                step = stringResource(R.string.registration_profile_step),
+                title = stringResource(R.string.provider_profile_title),
+                description = stringResource(R.string.provider_profile_description),
             )
 
             // Global / Server error banner
-            when (val error = uiState.error) {
+            when (uiState.error) {
                 is ProfileFormError.AlreadyRegistered -> {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
@@ -193,48 +230,6 @@ fun CompleteProviderProfileScreen(
                         )
                     }
                 }
-                is ProfileFormError.MissingPhoto -> {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.provider_profile_photo_required_error),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
-                is ProfileFormError.MissingCoverageZones -> {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.provider_profile_zones_required_error),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
-                is ProfileFormError.CoverageRejected -> {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.errorContainer,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.provider_profile_coverage_rejected_error),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
                 else -> Unit
             }
 
@@ -242,118 +237,130 @@ fun CompleteProviderProfileScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Name Field
-            PrimaryTextField(
-                value = uiState.name,
-                onValueChange = onNameChanged,
-                label = stringResource(R.string.provider_profile_name_label),
-                placeholder = stringResource(R.string.provider_profile_name_placeholder),
-                isError = uiState.error is ProfileFormError.MissingName,
-                errorMessage = stringResource(R.string.provider_profile_name_error),
-                enabled = !isBusy,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Next,
-                ),
-            )
+            RegistrationSection(stringResource(R.string.registration_personal_section), Icons.Outlined.Person) {
+                // Name Field
+                PrimaryTextField(
+                    value = uiState.name,
+                    modifier = Modifier.bringIntoViewRequester(nameView).focusRequester(nameFocus),
+                    onValueChange = onNameChanged,
+                    label = stringResource(R.string.provider_profile_name_label),
+                    placeholder = stringResource(R.string.provider_profile_name_placeholder),
+                    isError = uiState.error is ProfileFormError.MissingName,
+                    errorMessage = stringResource(R.string.provider_profile_name_error),
+                    enabled = !isBusy,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next,
+                    ),
+                )
 
-            // Surname Field
-            PrimaryTextField(
-                value = uiState.surname,
-                onValueChange = onSurnameChanged,
-                label = stringResource(R.string.provider_profile_surname_label),
-                placeholder = stringResource(R.string.provider_profile_surname_placeholder),
-                isError = uiState.error is ProfileFormError.MissingSurname,
-                errorMessage = stringResource(R.string.provider_profile_surname_error),
-                enabled = !isBusy,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Done,
-                ),
-            )
+                // Surname Field
+                PrimaryTextField(
+                    value = uiState.surname,
+                    modifier = Modifier.bringIntoViewRequester(surnameView).focusRequester(surnameFocus),
+                    onValueChange = onSurnameChanged,
+                    label = stringResource(R.string.provider_profile_surname_label),
+                    placeholder = stringResource(R.string.provider_profile_surname_placeholder),
+                    isError = uiState.error is ProfileFormError.MissingSurname,
+                    errorMessage = stringResource(R.string.provider_profile_surname_error),
+                    enabled = !isBusy,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Done,
+                    ),
+                )
 
-            // Category Selector
-            when (val categoriesState = uiState.categoriesState) {
-                is CategoriesLoadState.Loading -> {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.height(24.dp),
-                            strokeWidth = 2.dp,
-                        )
-                        Text(
-                            text = stringResource(R.string.provider_profile_category_loading),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                is CategoriesLoadState.Error -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.provider_profile_category_load_error),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        OutlinedButton(
-                            onClick = onRetryCategories,
-                            shape = RoundedCornerShape(10.dp),
-                        ) {
-                            Text(text = stringResource(R.string.provider_profile_retry))
+                Column(Modifier.bringIntoViewRequester(categoryView)) {
+                    // Category Selector
+                    when (val categoriesState = uiState.categoriesState) {
+                        is CategoriesLoadState.Loading -> {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.height(24.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Text(
+                                    text = stringResource(R.string.provider_profile_category_loading),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        is CategoriesLoadState.Error -> {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.provider_profile_category_load_error),
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                OutlinedButton(
+                                    onClick = onRetryCategories,
+                                    shape = RoundedCornerShape(10.dp),
+                                ) {
+                                    Text(text = stringResource(R.string.provider_profile_retry))
+                                }
+                            }
+                        }
+                        is CategoriesLoadState.Ready -> {
+                            CategoryDropdown(
+                                categories = categoriesState.categories,
+                                selectedCategory = uiState.selectedCategory,
+                                onCategorySelected = onCategorySelected,
+                                isError = uiState.error is ProfileFormError.MissingCategory,
+                                errorMessage = stringResource(R.string.provider_profile_category_error),
+                                enabled = !isBusy,
+                            )
                         }
                     }
-                }
-                is CategoriesLoadState.Ready -> {
-                    CategoryDropdown(
-                        categories = categoriesState.categories,
-                        selectedCategory = uiState.selectedCategory,
-                        onCategorySelected = onCategorySelected,
-                        isError = uiState.error is ProfileFormError.MissingCategory,
-                        errorMessage = stringResource(R.string.provider_profile_category_error),
-                        enabled = !isBusy,
-                    )
+
                 }
             }
+            RegistrationSection(stringResource(R.string.provider_profile_photo_section_title), Icons.Outlined.PhotoCamera, Modifier.bringIntoViewRequester(photoView)) {
+                Text(stringResource(R.string.registration_photo_help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (uiState.error is ProfileFormError.MissingPhoto) {
+                    Text(stringResource(R.string.provider_profile_photo_required_error), color = MaterialTheme.colorScheme.error)
+                }
+                // Profile photo section
+                ProfilePhotoSection(
+                    selectedPhoto = uiState.selectedPhoto,
+                    isPhotoConfirmed = uiState.isPhotoConfirmed,
+                    photoLoading = uiState.photoLoading,
+                    photoError = uiState.photoError,
+                    onSelectPhoto = onSelectPhoto,
+                    onUploadPhoto = onUploadPhoto,
+                    formLoading = uiState.loading,
+                    showTitle = false,
+                )
 
-            // Profile photo section
-            ProfilePhotoSection(
-                selectedPhoto = uiState.selectedPhoto,
-                isPhotoConfirmed = uiState.isPhotoConfirmed,
-                photoLoading = uiState.photoLoading,
-                photoError = uiState.photoError,
-                onSelectPhoto = onSelectPhoto,
-                onUploadPhoto = onUploadPhoto,
-                formLoading = uiState.loading,
-            )
+            }
+            RegistrationSection(stringResource(R.string.provider_profile_coverage_title), Icons.Outlined.Place, Modifier.bringIntoViewRequester(coverageView)) {
+                Text(stringResource(R.string.provider_profile_disclaimer), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (uiState.error is ProfileFormError.MissingCoverageZones || uiState.error is ProfileFormError.CoverageRejected) {
+                    Text(stringResource(if (uiState.error is ProfileFormError.CoverageRejected) R.string.provider_profile_coverage_rejected_error else R.string.provider_profile_zones_required_error), color = MaterialTheme.colorScheme.error)
+                }
+                CoverageZoneSection(
+                    state = uiState.coverageZonesState,
+                    selectedZoneIds = uiState.selectedCoverageZoneIds,
+                    selectionAdjusted = uiState.coverageSelectionAdjusted,
+                    mapId = coverageMapId,
+                    enabled = !isBusy,
+                    onCheckedChange = onCoverageZoneChecked,
+                    onRetry = onRetryCoverageZones,
+                    showTitle = false,
+                )
 
-            CoverageZoneSection(
-                state = uiState.coverageZonesState,
-                selectedZoneIds = uiState.selectedCoverageZoneIds,
-                selectionAdjusted = uiState.coverageSelectionAdjusted,
-                mapId = coverageMapId,
-                enabled = !isBusy,
-                onCheckedChange = onCoverageZoneChecked,
-                onRetry = onRetryCoverageZones,
-            )
-
-            // Disclaimer / Information
-            Text(
-                text = stringResource(R.string.provider_profile_disclaimer),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Spacer(modifier = Modifier.weight(1f, fill = false))
+            }
 
             // Submit Button
             PrimaryButton(
@@ -362,7 +369,11 @@ fun CompleteProviderProfileScreen(
                 } else {
                     stringResource(R.string.provider_profile_submit)
                 },
-                onClick = onSubmit,
+                onClick = {
+                    keyboard?.hide()
+                    onSubmit()
+                    submitAttempt++
+                },
                 enabled = !isBusy && uiState.coverageZonesState is CoverageZonesLoadState.Ready,
             )
         }

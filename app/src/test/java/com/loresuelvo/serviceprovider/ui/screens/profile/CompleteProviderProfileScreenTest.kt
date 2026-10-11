@@ -43,6 +43,41 @@ class CompleteProviderProfileScreenTest {
         get() = ApplicationProvider.getApplicationContext()
 
     @Test
+    fun submitting_from_bottom_reveals_photo_error_without_manual_scroll() {
+        val state = androidx.compose.runtime.mutableStateOf(CompleteProviderProfileUiState(
+            coverageZonesState = CoverageZonesLoadState.Ready(listOf(CoverageZone(1, "Area 1", "place-1"))),
+        ))
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(uiState = state.value,
+                    onSubmit = { state.value = state.value.copy(error = ProfileFormError.MissingPhoto) })
+            }
+        }
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_submit))
+            .performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_photo_required_error)).assertIsDisplayed()
+    }
+
+    @Test
+    fun submitting_from_bottom_reveals_the_invalid_name_field() {
+        val state = androidx.compose.runtime.mutableStateOf(CompleteProviderProfileUiState(
+            categoriesState = CategoriesLoadState.Ready(listOf(Category(1, "Electricity"))),
+            coverageZonesState = CoverageZonesLoadState.Ready(listOf(CoverageZone(1, "Area 1", "place-1"))),
+        ))
+        composeTestRule.setContent {
+            LoresuelvoTheme {
+                CompleteProviderProfileScreen(uiState = state.value,
+                    onSubmit = { state.value = state.value.copy(error = ProfileFormError.MissingName) })
+            }
+        }
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_submit))
+            .performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_profile_name_error)).assertIsDisplayed()
+    }
+
+    @Test
     fun renders_a_localized_profile_heading_and_description() {
         composeTestRule.setContent {
             LoresuelvoTheme {
@@ -150,6 +185,7 @@ class CompleteProviderProfileScreenTest {
 
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_profile_photo_required_error))
+            .performScrollTo()
             .assertIsDisplayed()
     }
 
@@ -167,6 +203,7 @@ class CompleteProviderProfileScreenTest {
 
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_profile_zones_required_error))
+            .performScrollTo()
             .assertIsDisplayed()
     }
 
@@ -184,6 +221,7 @@ class CompleteProviderProfileScreenTest {
 
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_profile_coverage_rejected_error))
+            .performScrollTo()
             .assertIsDisplayed()
     }
 

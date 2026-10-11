@@ -109,14 +109,14 @@ internal fun WebAuthProvider.Builder.configureLogin(
 ): WebAuthProvider.Builder =
     withScheme(config.scheme)
         .withAudience(config.audience)
-        .withParameters(mapOf("prompt" to "login"))
+        .withParameters(mapOf("prompt" to "login", "ui_locales" to "es"))
 
 internal fun WebAuthProvider.Builder.configureSignup(
     config: Auth0Config,
 ): WebAuthProvider.Builder =
     withScheme(config.scheme)
         .withAudience(config.audience)
-        .withScreenHint("signup")
+        .withParameters(mapOf("screen_hint" to "signup", "prompt" to "login", "ui_locales" to "es"))
 
 internal fun WebAuthProvider.Builder.configureGoogleLogin(
     config: Auth0Config,
@@ -127,9 +127,5 @@ internal fun WebAuthProvider.Builder.configureGoogleLogin(
 internal fun WebAuthProvider.LogoutBuilder.configureLogout(
     config: Auth0Config,
 ): WebAuthProvider.LogoutBuilder = withScheme(config.scheme)
-
-private fun WebAuthProvider.Builder.withScreenHint(
-    screenHint: String,
-): WebAuthProvider.Builder = withParameters(mapOf("screen_hint" to screenHint))
 
 private const val GOOGLE_CONNECTION = "google-oauth2"
