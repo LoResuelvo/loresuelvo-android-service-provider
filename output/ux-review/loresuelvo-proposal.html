@@ -1,0 +1,116 @@
+<div id="lr-proposal" aria-label="Propuesta visual LoResuelvo">
+  <style>
+    #lr-proposal { --lr-navy:#031632; --lr-teal:#006a60; --lr-mint:#8cf5e4; --lr-bg:light-dark(#fcf9f6,#101c2b); --lr-surface:light-dark(#fff,#1a2b48); --lr-text:light-dark(#031632,#f4f7fa); --lr-muted:light-dark(#44474d,#c5c6ce); --lr-line:light-dark(#e4e5e8,#42516a); --lr-soft:light-dark(#e4f5ef,#183f3e); --lr-action:light-dark(#006a60,#8cf5e4); --lr-radius:20px; font:16px/1.5 Roboto,system-ui,sans-serif; color:var(--lr-text); max-width:420px; margin:auto; }
+    #lr-proposal * { box-sizing:border-box; }
+    #lr-proposal .lr-phone { background:var(--lr-bg); border:1px solid var(--lr-line); border-radius:28px; overflow:hidden; box-shadow:0 12px 36px #03163212; }
+    #lr-proposal .lr-status { padding:14px 22px 0; display:flex; justify-content:space-between; font-size:12px; color:var(--lr-muted); }
+    #lr-proposal main { padding:24px 20px; }
+    #lr-proposal header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:24px; }
+    #lr-proposal h2 { font-size:28px; line-height:1.2; margin:4px 0; letter-spacing:-.7px; }
+    #lr-proposal h3 { font-size:18px; margin:0; }
+    #lr-proposal p { margin:4px 0; }
+    #lr-proposal .lr-muted { color:var(--lr-muted); font-size:14px; }
+    #lr-proposal button { font:inherit; cursor:pointer; border:0; min-height:48px; border-radius:12px; background:transparent; color:var(--lr-action); padding:10px 12px; }
+    #lr-proposal button:hover { filter:brightness(.9); }
+    #lr-proposal button:active { opacity:.7; }
+    #lr-proposal button:focus-visible { outline:3px solid var(--lr-action); outline-offset:3px; }
+    #lr-proposal .lr-avatar { width:48px; height:48px; display:grid; place-items:center; background:var(--lr-soft); border-radius:16px; color:var(--lr-action); font-weight:600; }
+    #lr-proposal .lr-hero { background:var(--lr-navy); color:#fff; padding:22px; border-radius:var(--lr-radius); margin-bottom:24px; }
+    #lr-proposal .lr-hero p { color:#d7e2ff; }
+    #lr-proposal .lr-hero h3 { font-size:24px; margin:12px 0 8px; line-height:1.3; }
+    #lr-proposal .lr-hero .lr-primary { background:var(--lr-mint); color:var(--lr-navy); width:100%; margin-top:18px; font-weight:600; }
+    #lr-proposal .lr-eyebrow { font-size:12px; font-weight:600; letter-spacing:1.3px; text-transform:uppercase; }
+    #lr-proposal .lr-hero .lr-eyebrow { color:var(--lr-mint); }
+    #lr-proposal .lr-section { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:20px 0 10px; }
+    #lr-proposal .lr-card { background:var(--lr-surface); border:1px solid var(--lr-line); border-radius:var(--lr-radius); padding:18px; margin-bottom:12px; }
+    #lr-proposal .lr-row { display:flex; gap:14px; align-items:center; }
+    #lr-proposal .lr-row > div { flex:1; min-width:0; }
+    #lr-proposal .lr-date { flex:0 0 52px !important; border-radius:12px; background:var(--lr-soft); color:var(--lr-action); padding:8px; text-align:center; font-size:12px; }
+    #lr-proposal .lr-date strong { display:block; font-size:22px; }
+    #lr-proposal .lr-badge { display:inline-flex; gap:6px; align-items:center; padding:4px 9px; border-radius:8px; background:var(--lr-soft); color:var(--lr-action); font-size:12px; margin-top:10px; }
+    #lr-proposal .lr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    #lr-proposal .lr-number { font-size:32px; line-height:1.25; font-weight:600; font-variant-numeric:tabular-nums; display:block; margin:8px 0; }
+    #lr-proposal .lr-tabs { display:flex; gap:4px; padding:4px; background:var(--lr-surface); border-radius:14px; margin-bottom:18px; border:1px solid var(--lr-line); }
+    #lr-proposal .lr-tabs button { flex:1; padding:8px 4px; font-size:13px; color:var(--lr-muted); }
+    #lr-proposal .lr-tabs button[aria-pressed=true] { color:var(--lr-action); background:var(--lr-soft); font-weight:600; }
+    #lr-proposal .lr-period { width:100%; display:flex; justify-content:space-between; align-items:center; color:var(--lr-text); border:1px solid var(--lr-line); background:var(--lr-surface); margin-bottom:18px; }
+    #lr-proposal nav { display:flex; padding:10px 6px 16px; border-top:1px solid var(--lr-line); background:var(--lr-surface); }
+    #lr-proposal nav button { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:5px; font-size:11px; padding:6px 2px; color:var(--lr-muted); }
+    #lr-proposal nav button[aria-pressed=true] { color:var(--lr-action); background:var(--lr-soft); }
+    #lr-proposal nav svg { width:22px; height:22px; }
+    #lr-proposal .lr-divider { height:1px; background:var(--lr-line); margin:16px 0; }
+    #lr-proposal .lr-link { width:100%; text-align:left; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    #lr-proposal .lr-message { border-left:3px solid var(--lr-action); }
+    #lr-proposal .lr-note { min-height:24px; font-size:13px; color:var(--lr-action); margin-top:12px; }
+    #lr-proposal [hidden] { display:none !important; }
+    @media(max-width:350px) { #lr-proposal main { padding:20px 14px; } #lr-proposal h2 { font-size:25px; } }
+  </style>
+  <div class="lr-phone">
+    <div class="lr-status"><span>LoResuelvo · Propuesta</span><span>Datos ilustrativos</span></div>
+    <main>
+      <section data-screen="home">
+        <header><div><p class="lr-muted">Sábado, 10 de octubre</p><h2>Buen día, Alex</h2><p class="lr-muted">Tu trabajo, bien organizado.</p></div><div class="lr-avatar" aria-label="Alex">AL</div></header>
+        <article class="lr-hero"><span class="lr-eyebrow">Tu próximo paso</span><h3>Tenés 3 propuestas<br>por revisar</h3><p>Encontrá los detalles y continuá la conversación con tus clientes.</p><button class="lr-primary" data-detail="proposals">Revisar propuestas</button></article>
+        <div class="lr-section"><h3>Próximo turno</h3><button data-detail="turns">Ver agenda</button></div>
+        <article class="lr-card"><div class="lr-row"><div class="lr-date">OCT<strong>12</strong></div><div><strong>Instalación eléctrica</strong><p class="lr-muted">Lunes · 09:30 h</p></div></div><div class="lr-divider"></div><div class="lr-row"><div><p>María G.</p><p class="lr-muted">Palermo, CABA</p></div><span class="lr-badge">Confirmado</span></div><button class="lr-link" data-detail="turn">Ver detalle del turno <i data-lucide="arrow-right" aria-hidden="true"></i></button></article>
+        <div class="lr-section"><h3>Solicitudes disponibles</h3><span class="lr-muted">2 nuevas</span></div>
+        <article class="lr-card"><strong>Revisión de tablero eléctrico</strong><p class="lr-muted">Belgrano · Electricidad</p><button class="lr-link" data-detail="request">Ver solicitud <i data-lucide="arrow-right" aria-hidden="true"></i></button></article>
+      </section>
+      <section data-screen="performance" hidden>
+        <header><div><p class="lr-muted">Una mirada a tu negocio</p><h2>Rendimiento</h2></div><button data-refresh aria-label="Actualizar rendimiento"><i data-lucide="refresh-cw" aria-hidden="true"></i></button></header>
+        <div class="lr-tabs" aria-label="Sección de rendimiento"><button data-section="activity" aria-pressed="true">Actividad</button><button data-section="collections" aria-pressed="false">Cobros</button><button data-section="reputation" aria-pressed="false">Reputación</button></div>
+        <button class="lr-period" data-detail="period" data-period><span>1–30 de septiembre de 2026</span><i data-lucide="calendar-days" aria-hidden="true"></i></button>
+        <div data-metrics="activity"><div class="lr-hero"><span class="lr-eyebrow">Trabajos finalizados reportados</span><strong class="lr-number">18</strong><p>Tu actividad del período, a simple vista.</p></div><div class="lr-grid"><article class="lr-card"><p class="lr-muted">Turnos confirmados</p><strong class="lr-number">24</strong></article><article class="lr-card"><p class="lr-muted">Clientes atendidos</p><strong class="lr-number">15</strong></article></div><article class="lr-card"><div class="lr-section" style="margin-top:0"><h3>Resultados</h3><span class="lr-muted">Septiembre</span></div><div class="lr-row"><div><p>Trabajos pagados</p><p class="lr-muted">Con pago completo</p></div><strong>16</strong></div><div class="lr-divider"></div><div class="lr-row"><div><p>Clientes nuevos / recurrentes</p></div><strong>9 / 6</strong></div></article><button class="lr-link" data-detail="conversion">Ver conversión de propuestas <i data-lucide="arrow-right" aria-hidden="true"></i></button></div>
+        <div data-metrics="collections" hidden><article class="lr-hero"><span class="lr-eyebrow">Cobros verificados · ARS</span><strong class="lr-number">$ 485.000</strong><p>Importes en ARS, sin comisiones. No representan un saldo bancario.</p></article><article class="lr-card"><h3>Últimos movimientos</h3><div class="lr-divider"></div><p>Pago de trabajo · $ 35.000</p><p class="lr-muted">29 sep · Acreditado</p><div class="lr-divider"></div><p>Seña · $ 12.000</p><p class="lr-muted">28 sep · Acreditada</p></article></div>
+        <div data-metrics="reputation" hidden><article class="lr-hero"><span class="lr-eyebrow">Toda tu trayectoria</span><strong class="lr-number">4,8 / 5</strong><p>Basada en 23 reseñas de trabajos pagados.</p></article><article class="lr-card"><strong>5 / 5 · María G.</strong><p>Muy puntual y prolijo. Explicó con claridad el trabajo realizado.</p><p class="lr-muted">28 de septiembre</p></article></div>
+        <p class="lr-note" data-refresh-status aria-live="polite"></p>
+      </section>
+      <section data-screen="messages" hidden><header><div><p class="lr-muted">Conversaciones con tus clientes</p><h2>Mensajes</h2></div></header><article class="lr-card lr-message"><div class="lr-row"><div><strong>María G.</strong><p>Perfecto, nos vemos el lunes.</p><p class="lr-muted">Instalación eléctrica · 10:24</p></div></div><button class="lr-link" data-detail="conversation">Abrir conversación <i data-lucide="arrow-right" aria-hidden="true"></i></button></article><article class="lr-card"><strong>Lucas P.</strong><p>Te envié las medidas del ambiente.</p><p class="lr-muted">Revisión de tablero · Ayer</p></article></section>
+      <section data-screen="profile" hidden><header><div><p class="lr-muted">Tu presencia profesional</p><h2>Mi perfil</h2></div><div class="lr-avatar">AL</div></header><article class="lr-card"><h3>Alex López</h3><p class="lr-muted">Electricista · CABA</p><span class="lr-badge">Identidad verificada</span></article><article class="lr-card"><button class="lr-link" data-detail="profile">Información profesional <i data-lucide="chevron-right" aria-hidden="true"></i></button><div class="lr-divider"></div><button class="lr-link" data-detail="payments">Cuenta de cobro <i data-lucide="chevron-right" aria-hidden="true"></i></button><div class="lr-divider"></div><button class="lr-link" data-detail="calendar">Calendario <i data-lucide="chevron-right" aria-hidden="true"></i></button></article></section>
+      <section data-screen="detail" hidden><button data-back>← Volver</button><h2 data-detail-title></h2><article class="lr-card" style="margin-top:20px"><p data-detail-body></p></article></section>
+    </main>
+    <nav aria-label="Navegación principal"><button data-nav="home" aria-pressed="true"><i data-lucide="house" aria-hidden="true"></i>Inicio</button><button data-nav="messages" aria-pressed="false"><i data-lucide="message-circle" aria-hidden="true"></i>Mensajes</button><button data-nav="performance" aria-pressed="false"><i data-lucide="chart-no-axes-column" aria-hidden="true"></i>Rendimiento</button><button data-nav="profile" aria-pressed="false"><i data-lucide="user-round" aria-hidden="true"></i>Perfil</button></nav>
+  </div>
+  <script>
+    (() => {
+      const root = document.getElementById('lr-proposal');
+      let screen = 'home';
+      const details = {
+        proposals:['Propuestas pendientes','3 propuestas por revisar. En la app, cada tarjeta presentaría el trabajo, el cliente, el estado y el acceso a la conversación.'],
+        turns:['Tus próximos turnos','Lunes 12 · 09:30 h — Instalación eléctrica. La agenda conservaría la posición al volver de un detalle.'],
+        turn:['Instalación eléctrica','Lunes 12 de octubre · 09:30 h. María G. · Palermo. Turno confirmado.'],
+        request:['Revisión de tablero','Solicitud de electricidad en Belgrano. Aquí se reunirían los detalles antes de iniciar una conversación.'],
+        period:['Elegir período','Propuesta: selector de fechas en un panel, con accesos a este mes, mes anterior y rango personalizado. Los filtros avanzados quedan fuera del resumen.'],
+        conversion:['Conversión','Propuesta: detalle independiente de propuestas emitidas a trabajos pagados, conservando el período seleccionado.'],
+        conversation:['María G.','Perfecto, nos vemos el lunes. — Vista ilustrativa; esta propuesta no envía mensajes.'],
+        profile:['Información profesional','Datos personales, categoría y zona de cobertura en grupos separados.'],
+        payments:['Cuenta de cobro','Estado de la conexión y una acción clara para administrar la cuenta.'],
+        calendar:['Calendario','Estado de sincronización y acceso a la configuración del calendario.']
+      };
+      function show(name) { root.querySelectorAll('[data-screen]').forEach(el => { el.hidden = el.dataset.screen !== name; }); }
+      root.querySelectorAll('[data-nav]').forEach(button => button.addEventListener('click', () => {
+        screen = button.dataset.nav; show(screen);
+        root.querySelectorAll('[data-nav]').forEach(el => el.setAttribute('aria-pressed', String(el === button)));
+      }));
+      root.querySelectorAll('[data-section]').forEach(button => button.addEventListener('click', () => {
+        root.querySelectorAll('[data-section]').forEach(el => el.setAttribute('aria-pressed', String(el === button)));
+        root.querySelectorAll('[data-metrics]').forEach(el => { el.hidden = el.dataset.metrics !== button.dataset.section; });
+        root.querySelector('[data-period]').hidden = button.dataset.section === 'reputation';
+      }));
+      root.querySelectorAll('[data-detail]').forEach(button => button.addEventListener('click', () => {
+        const [title,body] = details[button.dataset.detail];
+        root.querySelector('[data-detail-title]').textContent = title;
+        root.querySelector('[data-detail-body]').textContent = body;
+        show('detail');
+      }));
+      root.querySelector('[data-back]').addEventListener('click', () => show(screen));
+      root.querySelector('[data-refresh]').addEventListener('click', () => { root.querySelector('[data-refresh-status]').textContent = 'Vista de ejemplo actualizada · Datos ilustrativos'; });
+      const design = { radius:20, accent:'#006a60' };
+      if (globalThis.Tweak) {
+        const tweak = new Tweak({container:root,onChange:() => {root.style.setProperty('--lr-radius',design.radius+'px');root.style.setProperty('--lr-teal',design.accent);root.style.setProperty('--lr-action','light-dark('+design.accent+',#8cf5e4)');}});
+        tweak.addSlider(design,'radius',{label:'Radio de tarjetas',min:12,max:28,unit:'px'});
+        tweak.addSelect(design,'accent',{label:'Teal de marca',options:[{label:'Deep teal',value:'#006a60'},{label:'Teal',value:'#007166'}]});
+      }
+    })();
+  </script>
+</div>

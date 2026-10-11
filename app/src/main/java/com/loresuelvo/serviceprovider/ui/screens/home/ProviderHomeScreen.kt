@@ -13,11 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -73,11 +71,10 @@ fun ProviderHomeScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        PullToRefreshBox(
-            isRefreshing = uiState.refreshingRequests || uiState.refreshingWork || proposalsState.loading,
+        RefreshableContent(
+            refreshing = uiState.refreshingRequests || uiState.refreshingWork || proposalsState.loading,
             onRefresh = onRefresh,
             modifier = Modifier.fillMaxSize().testTag("home_refresh"),
-            contentAlignment = Alignment.TopCenter,
         ) {
             Column(
                 modifier = Modifier
@@ -92,10 +89,6 @@ fun ProviderHomeScreen(
                     Text(stringResource(R.string.provider_home_title),
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.weight(1f).semantics { heading() })
-                    IconButton(onClick = onRefresh,
-                        enabled = !uiState.refreshingRequests && !uiState.refreshingWork && !proposalsState.loading) {
-                        Icon(Icons.Outlined.Refresh, stringResource(R.string.ui_refresh))
-                    }
                 }
                 Surface(shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.primaryContainer,

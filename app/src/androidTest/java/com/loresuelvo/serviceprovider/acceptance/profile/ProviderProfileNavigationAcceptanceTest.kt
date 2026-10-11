@@ -12,6 +12,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import org.junit.Assert.assertEquals
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
@@ -241,12 +243,17 @@ class ProviderProfileNavigationAcceptanceTest {
     fun returning_to_profile_from_messages_keeps_data_without_authorization() {
         composeTestRule.waitForIdle()
         openProfileFrom(Route.Home)
+        val calls = currentAccountRepository.calls
         composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path)
             .performClick()
         composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Profile.path)
             .performClick()
 
         assertProfileRestoredWithoutAuthorization()
+        assertEquals(calls, currentAccountRepository.calls)
+        composeTestRule.onNodeWithTag(PROVIDER_PROFILE_DATA_TAG).performTouchInput { swipeDown() }
+        composeTestRule.waitForIdle()
+        assertEquals(calls + 1, currentAccountRepository.calls)
     }
 
     @Test

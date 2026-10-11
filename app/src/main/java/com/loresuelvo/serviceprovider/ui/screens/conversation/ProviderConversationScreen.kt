@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.text.style.TextOverflow
@@ -284,24 +285,26 @@ fun ProviderConversationScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { contentPadding ->
-        when (state) {
-            ProviderConversationUiState.Loading -> LoadingState(
-                modifier = Modifier.padding(contentPadding),
-            )
-            is ProviderConversationUiState.Error -> ErrorState(
-                state = state,
-                onRetryLoad = onRetryLoad,
-                modifier = Modifier.padding(contentPadding),
-            )
-            is ProviderConversationUiState.Ready -> ReadyState(
-                state = state,
-                onRetrySendFailedBubble = onRetrySendFailedBubble,
-                onPlayAudio = onPlayAudio,
-                onPauseAudio = onPauseAudio,
-                onSeekAudio = onSeekAudio,
-                listState = rememberLazyListState(),
-                contentPadding = contentPadding,
-            )
+        RefreshableContent((state as? ProviderConversationUiState.Ready)?.refreshing == true, onRetryLoad) {
+            when (state) {
+                ProviderConversationUiState.Loading -> LoadingState(
+                    modifier = Modifier.padding(contentPadding),
+                )
+                is ProviderConversationUiState.Error -> ErrorState(
+                    state = state,
+                    onRetryLoad = onRetryLoad,
+                    modifier = Modifier.padding(contentPadding),
+                )
+                is ProviderConversationUiState.Ready -> ReadyState(
+                    state = state,
+                    onRetrySendFailedBubble = onRetrySendFailedBubble,
+                    onPlayAudio = onPlayAudio,
+                    onPauseAudio = onPauseAudio,
+                    onSeekAudio = onSeekAudio,
+                    listState = rememberLazyListState(),
+                    contentPadding = contentPadding,
+                )
+            }
         }
     }
 

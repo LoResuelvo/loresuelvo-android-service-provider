@@ -93,9 +93,9 @@ class ProviderReputationNavigationAcceptanceTest {
         revealControl(R.string.activity_retry).performClick(); compose.waitForIdle()
         assertEquals(listOf(null, "opaque+/first=", "opaque+/first="), reputation.cursors)
         anchor(275); row(275).assertIsDisplayed()
-        revealControl(R.string.reputation_refresh)
+        list().performScrollToIndex(0)
         reputation.refreshed = true
-        text(R.string.reputation_refresh).performClick(); compose.waitForIdle()
+        list().performTouchInput { swipeDown() }; compose.waitForIdle()
         assertEquals(0 to 0, position()); assertNull(reputation.cursors.last())
         list().performScrollToNode(hasText(context.getString(R.string.reputation_work, 400)))
         row(400).assertIsDisplayed(); row(275).assertDoesNotExist(); row(300).assertDoesNotExist()

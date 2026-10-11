@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 sealed interface ProviderConversionUiState {
     data object Loading : ProviderConversionUiState
-    data class Ready(val conversion: ProviderConversion) : ProviderConversionUiState
+    data class Ready(val conversion: ProviderConversion, val refreshing: Boolean = false, val refreshFailed: Boolean = false) : ProviderConversionUiState
     data class Error(val failure: ConversionOutcome.Failure) : ProviderConversionUiState
     data object SessionExpired : ProviderConversionUiState
 }
@@ -85,6 +85,7 @@ class ProviderConversionViewModel @Inject constructor(
         val (next, error) = conversionDates(filters.value, clock.instant())
         mutableFilters.value = filters.value.copy(dateError = error)
         if (error != null || next == null || next == query) return
+        mutableState.value = ProviderConversionUiState.Loading
         query = next
         persistQuery()
         savedState["conversion.readingVersion"] = readingVersion + 1
@@ -121,7 +122,8 @@ class ProviderConversionViewModel @Inject constructor(
         val id = ++requestId
         loadJob?.cancel()
         val requested = query
-        mutableState.value = ProviderConversionUiState.Loading
+        val previous = mutableState.value as? ProviderConversionUiState.Ready
+        mutableState.value = previous?.copy(refreshing = true, refreshFailed = false) ?: ProviderConversionUiState.Loading
         loadJob = viewModelScope.launch {
             val outcome = getConversion(requested)
             if (id != requestId || sessionStore.getSession() != session) return@launch
@@ -132,7 +134,8 @@ class ProviderConversionViewModel @Inject constructor(
                     sessionStore.clearSession()
                     ProviderConversionUiState.SessionExpired
                 }
-                is ConversionOutcome.Failure -> ProviderConversionUiState.Error(outcome)
+                ConversionOutcome.Failure.Forbidden -> ProviderConversionUiState.Error(ConversionOutcome.Failure.Forbidden)
+                is ConversionOutcome.Failure -> previous?.copy(refreshing = false, refreshFailed = true) ?: ProviderConversionUiState.Error(outcome)
             }
         }
     }

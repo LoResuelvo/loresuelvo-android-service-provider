@@ -5,8 +5,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.loresuelvo.serviceprovider.domain.account.CurrentAccount
@@ -25,7 +23,6 @@ fun ProviderHomeRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val proposalsState by proposalsViewModel.uiState.collectAsStateWithLifecycle()
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { proposalsViewModel.onResume() }
 
     LaunchedEffect(navController, viewModel) {
         val homeEntry = navController.currentBackStackEntry ?: return@LaunchedEffect

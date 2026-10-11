@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.home
 
+import androidx.compose.ui.test.performSemanticsAction
 import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.runtime.CompositionLocalProvider
@@ -21,7 +22,6 @@ import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalCounterpart
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalBookingTerms
 import com.loresuelvo.serviceprovider.domain.proposal.ServiceProposalStatus
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.core.app.ApplicationProvider
 import com.loresuelvo.serviceprovider.R
@@ -64,7 +64,8 @@ class ProviderHomeScreenTest {
         } }
         composeTestRule.onNodeWithTag("home_refresh").performTouchInput { swipeDown() }
         composeTestRule.runOnIdle { assertEquals(1, refreshes) }
-        composeTestRule.onNodeWithContentDescription(context.getString(R.string.ui_refresh)).performClick()
+        composeTestRule.onNodeWithTag("home_refresh").fetchSemanticsNode()
+            .config[androidx.compose.ui.semantics.SemanticsActions.CustomActions].single().action()
         composeTestRule.runOnIdle { assertEquals(2, refreshes) }
     }
 

@@ -81,7 +81,8 @@ class ProviderReputationLayoutAcceptanceTest {
                 assertTrue("Tabs have a 48dp minimum touch target", tab.fetchSemanticsNode().boundsInRoot.height >= 48 * pixelDensity - 1)
             }
             compose.onNodeWithText(context.getString(R.string.reputation_section)).assertIsSelected()
-            control(R.string.reputation_refresh).assertIsDisplayed()
+            compose.onNodeWithText(context.getString(R.string.reputation_refresh)).assertDoesNotExist()
+            compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions)).assertExists()
             compose.runOnIdle {
                 assertEquals(if (dark) Color(0xFF1A2B48) else com.loresuelvo.serviceprovider.ui.theme.SurfaceWhite, colors.surface)
                 listOf(colors.secondary to colors.surface, colors.secondary to colors.background,

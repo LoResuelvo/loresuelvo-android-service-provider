@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,13 +72,9 @@ fun ProviderMessagesScreen(
                 Text(stringResource(R.string.provider_messages_title),
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f).semantics { heading() })
-                IconButton(onClick = onRetryClick,
-                    enabled = state is MessagesListUiState.Ready && !state.refreshing || state is MessagesListUiState.Error) {
-                    Icon(Icons.Outlined.Refresh, stringResource(R.string.ui_refresh))
-                }
             }
-            PullToRefreshBox(isRefreshing = state is MessagesListUiState.Ready && state.refreshing,
-                onRefresh = onRetryClick, modifier = Modifier.fillMaxSize().testTag("messages_refresh"), contentAlignment = Alignment.Center) {
+            RefreshableContent(refreshing = state is MessagesListUiState.Ready && state.refreshing,
+                onRefresh = onRetryClick, modifier = Modifier.fillMaxSize().testTag("messages_refresh")) {
                 when (state) {
                     MessagesListUiState.Loading -> LoadingState()
                     is MessagesListUiState.Ready -> Column {

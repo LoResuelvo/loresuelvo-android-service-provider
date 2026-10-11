@@ -79,7 +79,7 @@ class ProviderActivityViewModelTest {
         val query = vm.query
         repository.respondToQuery = false; repository.outcome = ActivityOutcome.Failure.Network
         vm.retry(); dispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.uiState.value is ProviderActivityUiState.Error)
+        assertTrue((vm.uiState.value as ProviderActivityUiState.Ready).refreshFailed)
         repository.respondToQuery = true; vm.retry(); dispatcher.scheduler.advanceUntilIdle()
         assertEquals(query, repository.queries.last())
         vm.comparePrevious(false); dispatcher.scheduler.advanceUntilIdle()
@@ -152,6 +152,21 @@ class ProviderActivityViewModelTest {
         sessions.clearSession(); dispatcher.scheduler.runCurrent()
         repository.gate!!.complete(Unit); dispatcher.scheduler.advanceUntilIdle()
         assertEquals(ProviderActivityUiState.SessionExpired, recreated.uiState.value)
+    }
+
+    @Test fun `manual refresh keeps data and duplicate requests are suppressed with recoverable errors`() {
+        val vm = create(); dispatcher.scheduler.advanceUntilIdle()
+        val previous = vm.uiState.value as ProviderActivityUiState.Ready
+        repository.gate = CompletableDeferred()
+        vm.retry(); dispatcher.scheduler.runCurrent(); vm.retry()
+        assertEquals(previous.copy(refreshing = true), vm.uiState.value)
+        assertEquals(2, repository.queries.size)
+        repository.outcome = ActivityOutcome.Failure.Network
+        repository.gate!!.complete(Unit); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(previous.copy(refreshFailed = true), vm.uiState.value)
+        repository.outcome = ActivityOutcome.Failure.Forbidden
+        vm.retry(); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(ProviderActivityUiState.Error(ActivityOutcome.Failure.Forbidden), vm.uiState.value)
     }
 
 }

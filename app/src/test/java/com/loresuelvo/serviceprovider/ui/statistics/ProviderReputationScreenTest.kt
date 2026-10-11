@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.statistics
 
+import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -103,7 +105,9 @@ class ProviderReputationScreenTest {
         compose.runOnIdle { state.value = state.value.copy(restartRequired = true) }
         reveal("Consultar desde el principio")
         compose.onNodeWithText("Consultar desde el principio").performClick(); assertEquals(2, retries)
-        reveal("Actualizar reputación"); compose.onNodeWithText("Actualizar reputación").performClick()
+        compose.onNodeWithText("Actualizar reputación").assertDoesNotExist()
+        compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.CustomActions))
+            .fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsActions.CustomActions].single().action()
         assertEquals(1, refreshes)
         compose.runOnIdle { state.value = ProviderReputationUiState.Ready(reputationFixture().copy(nextCursor = null)) }
         compose.onNodeWithText("Cargar más reseñas").assertDoesNotExist()

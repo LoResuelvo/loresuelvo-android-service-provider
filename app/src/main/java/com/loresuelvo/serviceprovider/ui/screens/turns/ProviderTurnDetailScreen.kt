@@ -49,7 +49,7 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
     resolvingConversation: Boolean = false,
     onRetryConversation: () -> Unit = {}, onCompletion: (() -> Unit)? = null,
     detail: WorkOrderDetail? = null, onPhotoClick: ((String) -> Unit)? = null,
-    onPhotoRetry: ((String) -> Unit)? = null) {
+    onPhotoRetry: ((String) -> Unit)? = null, refreshFailed: Boolean = false) {
     Scaffold(
         topBar = { TopAppBar(
             title = { Text(stringResource(R.string.provider_turns_detail_title)) },
@@ -59,6 +59,7 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (refreshFailed) Text(stringResource(R.string.ui_refresh_failed))
             ProviderAvatar(
                 name = order.consumerGivenName,
                 surname = order.consumerSurname,

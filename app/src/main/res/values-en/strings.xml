@@ -473,4 +473,5 @@
     <string name="provider_home_overview">Your schedule and opportunities, in one place.</string>
     <string name="ui_period_summary">%1$s – %2$s</string>
     <string name="ui_choose_date">Choose date: %1$s</string>
+    <string name="ui_refresh_failed">Could not refresh. Showing the last available data.</string>
 </resources>

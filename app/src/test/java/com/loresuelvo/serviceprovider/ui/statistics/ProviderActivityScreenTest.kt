@@ -139,7 +139,7 @@ class ProviderActivityScreenTest {
             com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(start, end))))
         compose.setContent { LoresuelvoTheme { ProviderActivityScreen(state.value, {}) } }
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Ver valores de la evolución"))
-        compose.onNodeWithText("Ver valores de la evolución").performClick()
+        compose.onNodeWithText("Ver valores de la evolución").performScrollTo().performClick()
         com.loresuelvo.serviceprovider.domain.statistics.ActivityGranularity.entries.forEach { grouping ->
             compose.runOnIdle { state.value = ProviderActivityUiState.Ready(activityForQuery(
                 com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(start, end, grouping))) }
@@ -187,7 +187,7 @@ class ProviderActivityScreenTest {
         compose.onNodeWithContentDescription("Un intervalo: contrataciones 8, finalizaciones informadas 5, pagos completos 3.")
             .performScrollTo().assertIsDisplayed()
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Ver valores de la evolución"))
-        compose.onNodeWithText("Ver valores de la evolución").performClick()
+        compose.onNodeWithText("Ver valores de la evolución").performScrollTo().performClick()
         assertScrollableText("Contrataciones: 8 · Finalizaciones informadas: 5 · Pagados por completo: 3")
     }
 

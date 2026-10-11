@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.statistics
 
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
@@ -73,85 +74,84 @@ fun ProviderReputationRoute(viewModel: ProviderReputationViewModel = hiltViewMod
 fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Unit,
     onSection: (PerformanceSection) -> Unit = {}, onLoadMore: () -> Unit = {},
     onRefresh: () -> Unit = {}, listState: LazyListState = rememberLazyListState()) {
-    ProvideTextStyle(TextStyle(textDirection = TextDirection.ContentOrLtr)) {
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_reputation")
-            .semantics { this[REPUTATION_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset },
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() }) }
-            stickyHeader { Surface(color = MaterialTheme.colorScheme.background) {
-                PerformanceTabs(PerformanceSection.REPUTATION, onSection)
-            } }
-            item { Text(stringResource(R.string.reputation_lifetime), color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.fillMaxWidth()) }
-            when (state) {
-                ProviderReputationUiState.Loading -> item {
-                    Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CircularProgressIndicator()
-                        Text(stringResource(R.string.reputation_loading))
-                    }
-                }
-                ProviderReputationUiState.SessionExpired -> item { Text(stringResource(R.string.reputation_session_expired)) }
-                is ProviderReputationUiState.Error -> item {
-                    Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.reputation_error))
-                        Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text(stringResource(R.string.activity_retry))
-                        }
-                    }
-                }
-                is ProviderReputationUiState.Ready -> {
-                    val reputation = state.reputation
-                    item { ReputationSummary(reputation) }
-                    item {
-                        Column {
-                            Text(stringResource(R.string.reputation_distribution), style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.semantics { heading() })
-                            reputation.ratingDistribution.asReversed().forEach { RatingBucket(it, reputation.reviewCount) }
-                        }
-                    }
-                    item { ReputationCoverage(reputation) }
-                    item { Text(stringResource(R.string.reputation_paid_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
-                    item { Text(stringResource(R.string.reputation_reviews), style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.semantics { heading() }) }
-                    if (reputation.reviews.isEmpty()) item { Text(stringResource(R.string.reputation_empty_reviews)) }
-                    items(reputation.reviews, key = { it.workOrderId }) { review ->
-                        Column(Modifier.fillMaxWidth().testTag("reputation_review_${review.workOrderId}").semantics(mergeDescendants = true) {},
+    RefreshableContent((state as? ProviderReputationUiState.Ready)?.loading == true, onRefresh) {
+        ProvideTextStyle(TextStyle(textDirection = TextDirection.ContentOrLtr)) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_reputation")
+                .semantics { this[REPUTATION_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset },
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.semantics { heading() }) }
+                stickyHeader { Surface(color = MaterialTheme.colorScheme.background) {
+                    PerformanceTabs(PerformanceSection.REPUTATION, onSection)
+                } }
+                item { Text(stringResource(R.string.reputation_lifetime), color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.fillMaxWidth()) }
+                when (state) {
+                    ProviderReputationUiState.Loading -> item {
+                        Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                             verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(stringResource(R.string.reputation_work, review.workOrderId),
-                                style = MaterialTheme.typography.titleSmall)
-                            Text(stringResource(R.string.reputation_review_rating, review.rating))
-                            if (review.description.isNotEmpty()) Text(review.description)
-                            HorizontalDivider()
+                            CircularProgressIndicator()
+                            Text(stringResource(R.string.reputation_loading))
                         }
                     }
-                    item {
-                        Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+                    ProviderReputationUiState.SessionExpired -> item { Text(stringResource(R.string.reputation_session_expired)) }
+                    is ProviderReputationUiState.Error -> item {
+                        Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                             verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (state.loading) {
-                                CircularProgressIndicator()
-                                Text(stringResource(R.string.reputation_loading))
-                            } else if (state.failure != null) {
-                                Text(stringResource(if (state.restartRequired) R.string.reputation_restart_error else R.string.reputation_more_error))
-                                Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
-                                    Text(stringResource(if (state.restartRequired) R.string.reputation_restart else R.string.activity_retry))
-                                }
-                            } else if (reputation.nextCursor != null) {
-                                Button(onClick = onLoadMore, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                                    Text(stringResource(R.string.reputation_load_more))
-                                }
-                            }
-                            OutlinedButton(onClick = onRefresh, modifier = Modifier.heightIn(min = 48.dp)) {
-                                Text(stringResource(R.string.reputation_refresh))
+                            Text(stringResource(R.string.reputation_error))
+                            Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                                Text(stringResource(R.string.activity_retry))
                             }
                         }
                     }
-                    item { Text(stringResource(R.string.reputation_order_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
-                    item { Text(stringResource(R.string.reputation_calculated, formatActivityInstant(reputation.calculatedAt)),
-                        style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
+                    is ProviderReputationUiState.Ready -> {
+                        val reputation = state.reputation
+                        item { ReputationSummary(reputation) }
+                        item {
+                            Column {
+                                Text(stringResource(R.string.reputation_distribution), style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.semantics { heading() })
+                                reputation.ratingDistribution.asReversed().forEach { RatingBucket(it, reputation.reviewCount) }
+                            }
+                        }
+                        item { ReputationCoverage(reputation) }
+                        item { Text(stringResource(R.string.reputation_paid_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
+                        item { Text(stringResource(R.string.reputation_reviews), style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.semantics { heading() }) }
+                        if (reputation.reviews.isEmpty()) item { Text(stringResource(R.string.reputation_empty_reviews)) }
+                        items(reputation.reviews, key = { it.workOrderId }) { review ->
+                            Column(Modifier.fillMaxWidth().testTag("reputation_review_${review.workOrderId}").semantics(mergeDescendants = true) {},
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource(R.string.reputation_work, review.workOrderId),
+                                    style = MaterialTheme.typography.titleSmall)
+                                Text(stringResource(R.string.reputation_review_rating, review.rating))
+                                if (review.description.isNotEmpty()) Text(review.description)
+                                HorizontalDivider()
+                            }
+                        }
+                        item {
+                            Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (state.loading) {
+                                    CircularProgressIndicator()
+                                    Text(stringResource(R.string.reputation_loading))
+                                } else if (state.failure != null) {
+                                    Text(stringResource(if (state.restartRequired) R.string.reputation_restart_error else R.string.reputation_more_error))
+                                    Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                                        Text(stringResource(if (state.restartRequired) R.string.reputation_restart else R.string.activity_retry))
+                                    }
+                                } else if (reputation.nextCursor != null) {
+                                    Button(onClick = onLoadMore, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                                        Text(stringResource(R.string.reputation_load_more))
+                                    }
+                                }
+                            }
+                        }
+                        item { Text(stringResource(R.string.reputation_order_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
+                        item { Text(stringResource(R.string.reputation_calculated, formatActivityInstant(reputation.calculatedAt)),
+                            style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
+                    }
                 }
             }
         }

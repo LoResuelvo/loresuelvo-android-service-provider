@@ -108,6 +108,23 @@ class ProviderCollectionsNavigationAcceptanceTest {
             context.getString(R.string.activity_expanded)))
     }
 
+    @Test fun transaction_filters_keep_the_screen_near_the_filter_and_pull_refresh_reloads_both_sections() {
+        openCollections()
+        listOf(R.string.collections_filter_balances, R.string.collections_filter_deposits,
+            R.string.collections_filter_all).forEach { label ->
+            revealControl(label).performClick(); compose.waitForIdle()
+            compose.onNode(hasText(context.getString(label)) and hasClickAction()).assertIsDisplayed().assertIsSelected()
+            assertTrue(readingPosition().first > 0)
+        }
+        val summaryCalls = collections.queries.size
+        val transactionCalls = transactions.queries.size
+        compose.onNodeWithTag("provider_collections").performScrollToIndex(0).performTouchInput { swipeDown() }
+        compose.waitForIdle()
+        assertEquals(summaryCalls + 1, collections.queries.size)
+        assertEquals(transactionCalls + 1, transactions.queries.size)
+        assertNull(transactions.queries.last().cursor)
+    }
+
     @Test fun detail_retry_preserves_summary_and_selected_filter() {
         openCollections()
         transactions.failNext = true

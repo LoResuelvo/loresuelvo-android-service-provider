@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 sealed interface ProviderTurnDetailUiState {
     data object Loading : ProviderTurnDetailUiState
-    data class Ready(val result: ProviderWorkOrderDetailResult, val conversationId: Int?) : ProviderTurnDetailUiState
+    data class Ready(val result: ProviderWorkOrderDetailResult, val conversationId: Int?, val refreshing: Boolean = false, val refreshFailed: Boolean = false) : ProviderTurnDetailUiState
     data class Error(val failure: WorkOrderDetailOutcome.Failure) : ProviderTurnDetailUiState
 }
 
@@ -60,7 +60,8 @@ class ProviderTurnDetailViewModel @Inject constructor(
             _uiState.value = ProviderTurnDetailUiState.Error(WorkOrderDetailOutcome.Failure.Unauthorized)
             return
         }
-        _uiState.value = ProviderTurnDetailUiState.Loading
+        val previous = _uiState.value as? ProviderTurnDetailUiState.Ready
+        _uiState.value = previous?.copy(refreshing = true, refreshFailed = false) ?: ProviderTurnDetailUiState.Loading
         loadJob = viewModelScope.launch {
             val result = getDetail(orderId)
             if (sessions.getSession() != requestSession) return@launch
@@ -78,7 +79,9 @@ class ProviderTurnDetailViewModel @Inject constructor(
                 }
                 is WorkOrderDetailOutcome.Failure -> {
                     if (detail == WorkOrderDetailOutcome.Failure.Unauthorized) sessions.clearSession()
-                    ProviderTurnDetailUiState.Error(detail)
+                    if (detail is WorkOrderDetailOutcome.Failure.Network || detail is WorkOrderDetailOutcome.Failure.Server)
+                        previous?.copy(refreshing = false, refreshFailed = true) ?: ProviderTurnDetailUiState.Error(detail)
+                    else ProviderTurnDetailUiState.Error(detail)
                 }
             }
         }

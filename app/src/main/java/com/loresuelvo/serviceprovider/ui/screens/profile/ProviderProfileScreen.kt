@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.profile
 
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,34 +86,36 @@ fun ProviderProfileScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { ProfileTopBar(onBack) },
     ) { contentPadding ->
-        when (state) {
-            ProviderProfileUiState.Loading -> ProfileLoadingState(contentPadding)
-            ProviderProfileUiState.Unavailable -> ProfileUnavailableState(
-                contentPadding,
-                R.string.provider_profile_view_unavailable,
-                onRetry,
-            )
-            ProviderProfileUiState.IncompleteProfile -> ProfileUnavailableState(
-                contentPadding,
-                R.string.provider_profile_incomplete,
-            )
-            ProviderProfileUiState.AccountMismatch -> ProfileUnavailableState(
-                contentPadding,
-                R.string.provider_profile_account_mismatch,
-            )
-            ProviderProfileUiState.SessionExpired,
-            ProviderProfileUiState.Unauthenticated,
-            -> ProfileUnavailableState(contentPadding, R.string.welcome_auth_unauthorized_error)
-            is ProviderProfileUiState.Ready -> ProfileReadyState(
-                contentPadding,
-                state,
-                onConnectMercadoPago,
-                onRetryPaymentStatus,
-                identityState,
-                onVerifyIdentity,
-                onRetry,
-                calendarState, onAuthorizeCalendar, onRetryCalendar, onRequestLogout, onNotificationSettings,
-            )
+        RefreshableContent((state as? ProviderProfileUiState.Ready)?.refreshing == true, onRetry) {
+            when (state) {
+                ProviderProfileUiState.Loading -> ProfileLoadingState(contentPadding)
+                ProviderProfileUiState.Unavailable -> ProfileUnavailableState(
+                    contentPadding,
+                    R.string.provider_profile_view_unavailable,
+                    onRetry,
+                )
+                ProviderProfileUiState.IncompleteProfile -> ProfileUnavailableState(
+                    contentPadding,
+                    R.string.provider_profile_incomplete,
+                )
+                ProviderProfileUiState.AccountMismatch -> ProfileUnavailableState(
+                    contentPadding,
+                    R.string.provider_profile_account_mismatch,
+                )
+                ProviderProfileUiState.SessionExpired,
+                ProviderProfileUiState.Unauthenticated,
+                -> ProfileUnavailableState(contentPadding, R.string.welcome_auth_unauthorized_error)
+                is ProviderProfileUiState.Ready -> ProfileReadyState(
+                    contentPadding,
+                    state,
+                    onConnectMercadoPago,
+                    onRetryPaymentStatus,
+                    identityState,
+                    onVerifyIdentity,
+                    onRetry,
+                    calendarState, onAuthorizeCalendar, onRetryCalendar, onRequestLogout, onNotificationSettings,
+                )
+            }
         }
     }
 }
@@ -146,6 +149,7 @@ private fun ProfileUnavailableState(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -204,10 +208,11 @@ private fun ProfileReadyState(
                 .testTag(PROVIDER_PROFILE_DATA_TAG),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (state.refreshFailed) Text(stringResource(R.string.ui_refresh_failed), color = MaterialTheme.colorScheme.error)
             ProfileSummaryCard(state.provider)
             ProfileAccountCard(state.provider)
             ProfileIdentityCard(state.provider, identityState, onVerifyIdentity, onReloadProfile,
-                actionEnabled = !calendarState.loading)
+                actionEnabled = !state.refreshing && !calendarState.loading)
             Text(
                 text = stringResource(R.string.provider_profile_connections_title),
                 style = MaterialTheme.typography.titleSmall,
@@ -216,7 +221,7 @@ private fun ProfileReadyState(
             )
             ProfilePaymentCard(state.payment, onConnectMercadoPago, onRetryPaymentStatus)
             ProfileCalendarCard(state.provider.calendarConnectionStatus, calendarState, onAuthorizeCalendar, onRetryCalendar, onReloadProfile,
-                actionEnabled = !identityState.loading)
+                actionEnabled = !state.refreshing && !identityState.loading)
             Button(
                 onClick = onNotificationSettings,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("provider-notification-settings"),

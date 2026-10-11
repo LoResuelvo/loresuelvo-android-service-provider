@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 data class CollectionTransactionsUiState(val purpose: CollectionPurpose? = null,
     val page: CollectionTransactions? = null, val loading: Boolean = false,
     val failure: CollectionsOutcome.Failure? = null, val restartRequired: Boolean = false,
-    val sessionExpired: Boolean = false)
+    val sessionExpired: Boolean = false, val refreshing: Boolean = false)
 
 @HiltViewModel
 class CollectionTransactionsViewModel @Inject constructor(
@@ -30,6 +30,7 @@ class CollectionTransactionsViewModel @Inject constructor(
     private var query: CollectionTransactionsQuery? = null
     private var job: Job? = null
     private var requestId = 0L
+    private var failedCursor: String? = null
     private var activeSession = sessionStore.getSession()
 
     init {
@@ -74,11 +75,16 @@ class CollectionTransactionsViewModel @Inject constructor(
         val current = query ?: return
         if (purpose == current.purpose) return
         savedState["collections.purpose"] = purpose?.name
-        rememberReadingPosition(0, 0)
         query = current.copy(purpose = purpose, cursor = null)
         invalidate()
         mutableState.value = CollectionTransactionsUiState(purpose = purpose)
         retry()
+    }
+
+    fun refresh() {
+        if (mutableState.value.loading || mutableState.value.sessionExpired) return
+        mutableState.value = mutableState.value.copy(refreshing = true)
+        request(null)
     }
 
     fun loadMore() {
@@ -91,7 +97,7 @@ class CollectionTransactionsViewModel @Inject constructor(
     fun retry() {
         val state = mutableState.value
         if (state.loading || state.sessionExpired) return
-        request(if (state.restartRequired) null else state.page?.nextCursor)
+        request(if (state.restartRequired) null else if (state.failure != null) failedCursor else state.page?.nextCursor)
     }
 
     private fun invalidate() { requestId++; job?.cancel(); job = null }
@@ -118,11 +124,14 @@ class CollectionTransactionsViewModel @Inject constructor(
                         outcome.page.copy(transactions = rows))
                 }
                 is CollectionTransactionsOutcome.Failure -> {
+                    failedCursor = cursor
                     if (outcome.reason == CollectionsOutcome.Failure.Unauthorized) {
                         sessionStore.clearSession()
                         mutableState.value = CollectionTransactionsUiState(sessionExpired = true)
+                    } else if (outcome.reason == CollectionsOutcome.Failure.Forbidden) {
+                        mutableState.value = CollectionTransactionsUiState(purpose = requested.purpose, failure = outcome.reason)
                     } else {
-                        mutableState.value = mutableState.value.copy(loading = false, failure = outcome.reason,
+                        mutableState.value = mutableState.value.copy(loading = false, refreshing = false, failure = outcome.reason,
                             restartRequired = cursor != null && outcome.reason == CollectionsOutcome.Failure.InvalidQuery)
                     }
                 }

@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 
 sealed interface ProviderCollectionsUiState {
     data object Loading : ProviderCollectionsUiState
-    data class Ready(val collections: ProviderCollections) : ProviderCollectionsUiState
+    data class Ready(val collections: ProviderCollections, val refreshing: Boolean = false, val refreshFailed: Boolean = false) : ProviderCollectionsUiState
     data class Error(val failure: CollectionsOutcome.Failure) : ProviderCollectionsUiState
     data object SessionExpired : ProviderCollectionsUiState
 }
@@ -53,6 +53,7 @@ class ProviderCollectionsViewModel @Inject constructor(
 
     fun selectQuery(selected: ActivityQuery) {
         if (query == selected) return
+        mutableState.value = ProviderCollectionsUiState.Loading
         query = selected
         requestId++
         loadJob?.cancel()
@@ -69,7 +70,8 @@ class ProviderCollectionsViewModel @Inject constructor(
             return
         }
         val id = ++requestId
-        mutableState.value = ProviderCollectionsUiState.Loading
+        val previous = mutableState.value as? ProviderCollectionsUiState.Ready
+        mutableState.value = previous?.copy(refreshing = true, refreshFailed = false) ?: ProviderCollectionsUiState.Loading
         loadJob = viewModelScope.launch {
             val outcome = getCollections(requested)
             if (id != requestId || sessionStore.getSession() != session) return@launch
@@ -79,7 +81,8 @@ class ProviderCollectionsViewModel @Inject constructor(
                     sessionStore.clearSession()
                     ProviderCollectionsUiState.SessionExpired
                 }
-                is CollectionsOutcome.Failure -> ProviderCollectionsUiState.Error(outcome)
+                CollectionsOutcome.Failure.Forbidden -> ProviderCollectionsUiState.Error(CollectionsOutcome.Failure.Forbidden)
+                is CollectionsOutcome.Failure -> previous?.copy(refreshing = false, refreshFailed = true) ?: ProviderCollectionsUiState.Error(outcome)
             }
         }
     }

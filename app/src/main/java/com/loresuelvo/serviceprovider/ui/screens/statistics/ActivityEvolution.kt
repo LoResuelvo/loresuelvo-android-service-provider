@@ -22,19 +22,30 @@ internal fun ActivityEvolution(buckets: List<ActivityBucket>, showValues: Boolea
     val colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onSurface,
         MaterialTheme.colorScheme.tertiary)
     val expansion = stringResource(if (showValues) R.string.activity_expanded else R.string.activity_collapsed)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val grid = MaterialTheme.colorScheme.outlineVariant
+    val maximum = buckets.maxOfOrNull { maxOf(it.confirmedBookings, it.reportedCompletions, it.fullyPaidWorkOrders) }?.coerceAtLeast(2)?.let { it + it % 2 } ?: 2L
+    val patterns = listOf(null, PathEffect.dashPathEffect(floatArrayOf(16f, 10f)),
+        PathEffect.dashPathEffect(floatArrayOf(3f, 8f)))
+    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
+    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.activity_evolution), style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics { heading() })
         Text(stringResource(R.string.activity_evolution_note), style = MaterialTheme.typography.bodySmall)
         val singleInterval = if (buckets.size == 1) stringResource(R.string.activity_evolution_single_interval,
             buckets.single().confirmedBookings, buckets.single().reportedCompletions, buckets.single().fullyPaidWorkOrders) else null
-        Canvas(Modifier.fillMaxWidth().height(160.dp).semantics {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.height(192.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text(maximum.toString(), style = MaterialTheme.typography.labelSmall)
+            Text((maximum / 2).toString(), style = MaterialTheme.typography.labelSmall)
+            Text("0", style = MaterialTheme.typography.labelSmall)
+        }
+        Canvas(Modifier.weight(1f).height(192.dp).semantics {
             if (singleInterval != null) contentDescription = singleInterval
         }) {
-            val maximum = buckets.maxOfOrNull { maxOf(it.confirmedBookings, it.reportedCompletions, it.fullyPaidWorkOrders) }
-                ?.coerceAtLeast(1)?.toDouble() ?: 1.0
-            val patterns = listOf(null, PathEffect.dashPathEffect(floatArrayOf(16f, 10f)),
-                PathEffect.dashPathEffect(floatArrayOf(3f, 8f)))
+            repeat(3) { step ->
+                val y = 4.dp.toPx() + step * (size.height - 8.dp.toPx()) / 2
+                drawLine(grid, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
+            }
             repeat(3) { series ->
                 val path = Path()
                 buckets.forEachIndexed { index, bucket ->
@@ -45,17 +56,31 @@ internal fun ActivityEvolution(buckets: List<ActivityBucket>, showValues: Boolea
                     }
                     val x = if (buckets.size == 1) size.width / 2 else index * size.width / (buckets.size - 1)
                     val y = size.height - 4.dp.toPx() - (value.toDouble() / maximum * (size.height - 8.dp.toPx())).toFloat()
-                    if (buckets.size == 1) drawCircle(colors[series], radius = 4.dp.toPx(), center = Offset(x, y))
+                    if (buckets.size <= 31) drawCircle(colors[series], radius = 3.dp.toPx(), center = Offset(x, y))
                     if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
                 }
                 drawPath(path, colors[series], style = androidx.compose.ui.graphics.drawscope.Stroke(
-                    width = 2.dp.toPx(), pathEffect = patterns[series]))
+                    width = 3.dp.toPx(), pathEffect = patterns[series]))
             }
         }
-        Text(stringResource(R.string.activity_evolution_legend), style = MaterialTheme.typography.bodySmall)
+        }
+        if (buckets.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(buckets.first().from.atZone(java.time.ZoneId.of("America/Argentina/Buenos_Aires")).toLocalDate().toString(), style = MaterialTheme.typography.labelSmall)
+            Text(buckets.last().to.atZone(java.time.ZoneId.of("America/Argentina/Buenos_Aires")).toLocalDate().toString(), style = MaterialTheme.typography.labelSmall)
+        }
+        listOf(R.string.activity_bookings, R.string.activity_completions, R.string.activity_paid).forEachIndexed { index, label ->
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Canvas(Modifier.width(28.dp).height(12.dp)) {
+                    drawLine(colors[index], Offset(0f, size.height / 2), Offset(size.width, size.height / 2),
+                        strokeWidth = 3.dp.toPx(), pathEffect = patterns[index])
+                }
+                Text(stringResource(label), style = MaterialTheme.typography.labelMedium)
+            }
+        }
         TextButton(onClick = onToggleValues, modifier = Modifier.semantics { stateDescription = expansion }) {
             Text(stringResource(R.string.activity_evolution_values))
         }
+    }
     }
 }
 

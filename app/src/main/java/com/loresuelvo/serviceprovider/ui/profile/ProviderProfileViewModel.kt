@@ -79,7 +79,7 @@ class ProviderProfileViewModel @Inject constructor(
 
     fun authorizeCalendar() {
         val ready = _uiState.value as? ProviderProfileUiState.Ready ?: return
-        if (_identityState.value.loading || _calendarState.value.loading || _calendarState.value.confirmationRetry ||
+        if (ready.refreshing || _identityState.value.loading || _calendarState.value.loading || _calendarState.value.confirmationRetry ||
             !ready.provider.calendarConnectionStatus.canAuthorize) return
         val session = sessionStore.getSession() ?: return
         if (session != profileSession) return
@@ -126,6 +126,7 @@ class ProviderProfileViewModel @Inject constructor(
     }
 
     fun abandonUnlaunchedCalendarConsent() {
+        revalidationPending = revalidationPending || _calendarState.value.loading
         if (calendarSession != null && !calendarResultConsumed) {
             invalidateCalendar()
             _calendarState.value = ProfileCalendarUiState(feedback = CalendarFeedback.Cancelled)
@@ -198,14 +199,32 @@ class ProviderProfileViewModel @Inject constructor(
         _calendarState.value = ProfileCalendarUiState()
     }
 
+    private var revalidationPending = false
+    private var lastPaymentReturnKey = 0
+
+    fun expectPaymentReturn() { revalidationPending = true }
+
+    fun onPaymentReturn(key: Int) {
+        if (key == lastPaymentReturnKey) return
+        lastPaymentReturnKey = key
+        if (key > 0) refresh()
+    }
+
     fun onProfileResumed() {
         resumed = true
-        if (identityRefreshPending) refreshAfterIdentity() else refresh()
+        if (identityRefreshPending) refreshAfterIdentity()
+        else if (_calendarState.value.confirmationRetry) retryCalendarConfirmation()
+        else if (_uiState.value !is ProviderProfileUiState.Ready ||
+            (_uiState.value as? ProviderProfileUiState.Ready)?.refreshing == true ||
+            revalidationPending ||
+            profileSession != sessionStore.getSession()) refresh()
     }
 
     fun onProfilePaused() { resumed = false }
 
     fun leaveProfile() {
+        revalidationPending = revalidationPending || _calendarState.value.loading || _calendarState.value.confirmationRetry ||
+            _identityState.value.loading || paymentRetryJob?.isActive == true
         refreshGeneration++
         refreshJob?.cancel()
         paymentRetryJob?.cancel()
@@ -222,7 +241,7 @@ class ProviderProfileViewModel @Inject constructor(
 
     fun verifyIdentity() {
         val ready = _uiState.value as? ProviderProfileUiState.Ready ?: return
-        if (_identityState.value.loading || _calendarState.value.loading || ready.provider.identityVerificationStatus.availableAction == null) return
+        if (ready.refreshing || _identityState.value.loading || _calendarState.value.loading || ready.provider.identityVerificationStatus.availableAction == null) return
         val session = sessionStore.getSession() ?: return
         if (session != profileSession) return
         val id = ++attemptId
@@ -288,7 +307,7 @@ class ProviderProfileViewModel @Inject constructor(
         identityRefreshPending = false
         refreshJob?.cancel()
         _identityState.value = _identityState.value.copy(loading = false)
-        reloadProfile()
+        reloadProfile(retainOnFailure = false)
     }
 
     fun refresh() {
@@ -300,10 +319,12 @@ class ProviderProfileViewModel @Inject constructor(
         reloadProfile()
     }
 
-    private fun reloadProfile() {
+    private fun reloadProfile(retainOnFailure: Boolean = true) {
         if (refreshJob?.isActive == true) return
         paymentRetryJob?.cancel()
-        _uiState.value = ProviderProfileUiState.Loading
+        val previous = _uiState.value as? ProviderProfileUiState.Ready
+        _uiState.value = previous?.copy(refreshing = true, refreshFailed = false) ?: ProviderProfileUiState.Loading
+        revalidationPending = false
         val generation = ++refreshGeneration
         val session = sessionStore.getSession()
         profileSession = session
@@ -311,10 +332,10 @@ class ProviderProfileViewModel @Inject constructor(
             val outcome = resolveProviderEntry()
             if (generation != refreshGeneration || sessionStore.getSession() != session) return@launch
             _uiState.value = when (outcome) {
-                is ProviderEntryOutcome.Provider -> ProviderProfileUiState.Ready(outcome.account)
+                is ProviderEntryOutcome.Provider -> ProviderProfileUiState.Ready(outcome.account, previous?.payment ?: ProfilePaymentState.Loading)
                 ProviderEntryOutcome.AccountMismatch -> ProviderProfileUiState.AccountMismatch
                 ProviderEntryOutcome.IncompleteProfile -> ProviderProfileUiState.IncompleteProfile
-                ProviderEntryOutcome.RetryableFailure -> ProviderProfileUiState.Unavailable
+                ProviderEntryOutcome.RetryableFailure -> previous?.takeIf { retainOnFailure }?.copy(refreshing = false, refreshFailed = true) ?: ProviderProfileUiState.Unavailable
                 ProviderEntryOutcome.SessionExpired -> ProviderProfileUiState.SessionExpired
                 ProviderEntryOutcome.Unauthenticated -> ProviderProfileUiState.Unauthenticated
             }

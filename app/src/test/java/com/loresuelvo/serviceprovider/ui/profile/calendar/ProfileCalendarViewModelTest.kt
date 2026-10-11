@@ -31,7 +31,7 @@ class ProfileCalendarViewModelTest {
 
     @Test
     fun rotation_during_consumed_post_does_not_cancel_or_replay() = ProfileCalendarFixture().use { f ->
-        f.open(); val launch = f.start()
+        f.viewModel.refresh(); f.open(); val launch = f.start()
         val post = CompletableDeferred<ConnectCalendarOutcome>()
         f.postResponse = { post.await() }
         f.result(CalendarConsentResult.Authorized("code"))
@@ -183,7 +183,7 @@ class ProfileCalendarViewModelTest {
 
     @Test
     fun pending_post_blocks_second_launch_and_duplicate_code_callback() = ProfileCalendarFixture().use { f ->
-        f.open(); val launch = f.start()
+        f.viewModel.refresh(); f.open(); val launch = f.start()
         val response = CompletableDeferred<ConnectCalendarOutcome>()
         f.postResponse = { response.await() }
         f.result(CalendarConsentResult.Authorized("code"))
@@ -199,7 +199,7 @@ class ProfileCalendarViewModelTest {
 
     @Test
     fun obsolete_callback_is_discarded_after_session_change() = ProfileCalendarFixture().use { f ->
-        f.open(); val launch = f.start()
+        f.viewModel.refresh(); f.open(); val launch = f.start()
         f.sessionStore.saveSession(AuthSession(User("other", "other@example.com"), "other-token"))
         f.viewModel.onCalendarResult(launch.attemptId, CalendarConsentResult.Authorized("obsolete"))
         f.drain()
@@ -209,7 +209,7 @@ class ProfileCalendarViewModelTest {
 
     @Test
     fun session_change_between_callback_and_coroutine_execution_cannot_post() = ProfileCalendarFixture().use { f ->
-        f.open(); val launch = f.start()
+        f.viewModel.refresh(); f.open(); val launch = f.start()
         f.viewModel.onCalendarResult(launch.attemptId, CalendarConsentResult.Authorized("obsolete"))
         f.sessionStore.saveSession(AuthSession(User("other", "other@example.com"), "other-token"))
         f.drain()
@@ -219,7 +219,7 @@ class ProfileCalendarViewModelTest {
 
     @Test
     fun leaving_profile_invalidates_consent_and_ignores_late_callbacks() = ProfileCalendarFixture().use { f ->
-        f.open(); val launch = f.start()
+        f.viewModel.refresh(); f.open(); val launch = f.start()
         f.viewModel.leaveProfile()
         f.viewModel.onCalendarResult(launch.attemptId, CalendarConsentResult.Authorized("obsolete"))
         f.drain()
@@ -235,7 +235,7 @@ class ProfileCalendarViewModelTest {
         f.open(); f.viewModel.authorizeCalendar(); f.drain()
         assertTrue(f.launches.isEmpty())
         f.provider = f.provider.copy(calendarConnectionStatus = CalendarConnectionStatus.Disconnected)
-        f.open(); val launch = f.start()
+        f.viewModel.refresh(); f.open(); val launch = f.start()
         assertFalse(f.viewModel.claimCalendarLaunch(launch.attemptId))
     }
 

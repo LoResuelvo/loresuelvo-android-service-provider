@@ -138,6 +138,37 @@ class ProviderProfileViewModelTest {
         assertEquals(2, repository.calls)
     }
 
+    @Test
+    fun returning_keeps_profile_without_fetch_and_manual_refresh_retains_data_on_failure() = runTest(scheduler) {
+        repository.outcome = CurrentAccountOutcome.Success(provider())
+        val vm = viewModel()
+        vm.onProfileResumed(); advanceUntilIdle()
+        val ready = vm.uiState.value as ProviderProfileUiState.Ready
+        vm.onProfilePaused(); vm.onProfileResumed(); advanceUntilIdle()
+        assertEquals(1, repository.calls)
+        repository.pending = CompletableDeferred()
+        vm.refresh(); vm.refresh(); scheduler.runCurrent()
+        assertEquals(ready.copy(refreshing = true), vm.uiState.value)
+        assertEquals(2, repository.calls)
+        repository.pending!!.complete(CurrentAccountOutcome.Failure.Network(IllegalStateException("offline")))
+        advanceUntilIdle()
+        assertEquals(ready.copy(refreshFailed = true), vm.uiState.value)
+    }
+
+    @Test
+    fun payment_return_is_consumed_once_and_accepts_new_events_after_host_recreation() = runTest(scheduler) {
+        repository.outcome = CurrentAccountOutcome.Success(provider())
+        val vm = viewModel()
+        vm.onProfileResumed(); advanceUntilIdle()
+        vm.onPaymentReturn(1); advanceUntilIdle()
+        vm.onPaymentReturn(1); advanceUntilIdle()
+        assertEquals(2, repository.calls)
+        vm.onPaymentReturn(0); advanceUntilIdle()
+        assertEquals(2, repository.calls)
+        vm.onPaymentReturn(1); advanceUntilIdle()
+        assertEquals(3, repository.calls)
+    }
+
     private fun viewModel() = ProviderProfileViewModel(
         ResolveProviderEntryUseCase(sessionStore, repository),
         GetPaymentAccountStatusUseCase(paymentRepository),

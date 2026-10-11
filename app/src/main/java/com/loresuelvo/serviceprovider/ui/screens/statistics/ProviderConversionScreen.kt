@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.statistics
 
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -69,98 +70,101 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
     listState: LazyListState = rememberLazyListState()) {
     val readyPrefix = conversionReadyPrefix(advancesExpanded)
     val layoutPrefix = if (state is ProviderConversionUiState.Ready) readyPrefix else "conversion.pending."
-    ProvideTextStyle(MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.ContentOrLtr)) {
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            val gutter = if (maxWidth > 600.dp) ((maxWidth - 568.dp) / 2) else 16.dp
-            LazyColumn(Modifier.fillMaxSize().statusBarsPadding().testTag("provider_conversion").semantics {
-                    this[CONVERSION_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
-                }, state = listState,
-                contentPadding = PaddingValues(start = gutter, end = gutter, top = 16.dp, bottom = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                item(key = layoutPrefix + "header") {
-                    TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp),
-                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
-                        Text(stringResource(R.string.conversion_back))
+    RefreshableContent((state as? ProviderConversionUiState.Ready)?.refreshing == true, onRetry) {
+        ProvideTextStyle(MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.ContentOrLtr)) {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val gutter = if (maxWidth > 600.dp) ((maxWidth - 568.dp) / 2) else 16.dp
+                LazyColumn(Modifier.fillMaxSize().statusBarsPadding().testTag("provider_conversion").semantics {
+                        this[CONVERSION_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                    }, state = listState,
+                    contentPadding = PaddingValues(start = gutter, end = gutter, top = 16.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    item(key = layoutPrefix + "header") {
+                        TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp),
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
+                            Text(stringResource(R.string.conversion_back))
+                        }
+                        Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.ContentOrLtr),
+                            modifier = Modifier.semantics { heading() })
                     }
-                    Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.ContentOrLtr),
-                        modifier = Modifier.semantics { heading() })
-                }
-                if (filters != null && state != ProviderConversionUiState.SessionExpired) item(key = layoutPrefix + "controls") {
-                    ConversionPeriodControls(filters, onEditDates, onApplyDates, periodExpanded, onPeriodExpansion)
-                }
-                when (state) {
-                    ProviderConversionUiState.Loading -> item {
-                        Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-                            CircularProgressIndicator()
-                            Text(stringResource(R.string.conversion_loading))
-                        }
+                    if (filters != null && state != ProviderConversionUiState.SessionExpired) item(key = layoutPrefix + "controls") {
+                        ConversionPeriodControls(filters, onEditDates, onApplyDates, periodExpanded, onPeriodExpansion)
                     }
-                    ProviderConversionUiState.SessionExpired -> item { Text(stringResource(R.string.activity_session_expired)) }
-                    is ProviderConversionUiState.Error -> item {
-                        Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-                            Text(stringResource(R.string.conversion_error))
-                            Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
-                                Text(stringResource(R.string.activity_retry))
+                    when (state) {
+                        ProviderConversionUiState.Loading -> item {
+                            Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                                CircularProgressIndicator()
+                                Text(stringResource(R.string.conversion_loading))
                             }
                         }
-                    }
-                    is ProviderConversionUiState.Ready -> {
-                        val result = state.conversion
-                        val proposals = result.proposals
-                        item(key = readyPrefix + "period") {
-                            ConversionCard {
-                                Text(stringResource(R.string.conversion_period_label), style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                Text(stringResource(R.string.activity_period, formatActivityInstant(result.period.from),
-                                    formatActivityInstant(result.period.to)), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                Text(stringResource(R.string.conversion_time_zone), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
+                        ProviderConversionUiState.SessionExpired -> item { Text(stringResource(R.string.activity_session_expired)) }
+                        is ProviderConversionUiState.Error -> item {
+                            Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                                Text(stringResource(R.string.conversion_error))
+                                Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+                                    Text(stringResource(R.string.activity_retry))
+                                }
                             }
                         }
-                        item(key = readyPrefix + "hero") {
-                            if (proposals.stages.issued == 0L) Text(stringResource(R.string.conversion_empty))
-                            else ConversionCard(hero = true) {
-                                Text(stringResource(R.string.conversion_hero))
-                                Text(conversionPercentage(proposals.rates.contracted.cohort.percentage),
-                                    style = MaterialTheme.typography.displaySmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                Text(stringResource(R.string.conversion_sample, proposals.stages.contracted, proposals.stages.issued))
+                        is ProviderConversionUiState.Ready -> {
+                    if (state.refreshFailed) item { Text(stringResource(R.string.ui_refresh_failed), color = MaterialTheme.colorScheme.error) }
+                            val result = state.conversion
+                            val proposals = result.proposals
+                            item(key = readyPrefix + "period") {
+                                ConversionCard {
+                                    Text(stringResource(R.string.conversion_period_label), style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
+                                    Text(stringResource(R.string.activity_period, formatActivityInstant(result.period.from),
+                                        formatActivityInstant(result.period.to)), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
+                                    Text(stringResource(R.string.conversion_time_zone), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
+                                }
                             }
-                        }
-                        item(key = readyPrefix + "stages") {
-                            Text(stringResource(R.string.conversion_stages), style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr),
-                                modifier = Modifier.semantics { heading() })
-                            Text(stringResource(R.string.conversion_cohort_note, proposals.stages.issued))
-                        }
-                        item(key = readyPrefix + "issued") { ConversionStage(stringResource(R.string.conversion_issued), proposals.stages.issued,
-                            ConversionRatio(proposals.stages.issued, proposals.stages.issued,
-                                if (proposals.stages.issued > 0) 100.0 else null)) }
-                        item(key = readyPrefix + "contracted") { ConversionStage(stringResource(R.string.conversion_contracted), proposals.stages.contracted,
-                            proposals.rates.contracted.cohort) }
-                        item(key = readyPrefix + "reported") { ConversionStage(stringResource(R.string.conversion_reported), proposals.stages.reported,
-                            proposals.rates.reported.cohort) }
-                        item(key = readyPrefix + "paid") { ConversionStage(stringResource(R.string.conversion_paid), proposals.stages.paid,
-                            proposals.rates.paid.cohort) }
-                        item(key = readyPrefix + "expansion") {
-                            val expansionLabel = stringResource(if (advancesExpanded) R.string.conversion_collapse else R.string.conversion_expand)
-                            OutlinedButton(onClick = { onExpansion(!advancesExpanded) },
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { stateDescription = expansionLabel },
-                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
-                                Text(expansionLabel)
+                            item(key = readyPrefix + "hero") {
+                                if (proposals.stages.issued == 0L) Text(stringResource(R.string.conversion_empty))
+                                else ConversionCard(hero = true) {
+                                    Text(stringResource(R.string.conversion_hero))
+                                    Text(conversionPercentage(proposals.rates.contracted.cohort.percentage),
+                                        style = MaterialTheme.typography.displaySmall.copy(textDirection = TextDirection.ContentOrLtr))
+                                    Text(stringResource(R.string.conversion_sample, proposals.stages.contracted, proposals.stages.issued))
+                                }
                             }
-                        }
-                        if (advancesExpanded) {
-                            item(key = readyPrefix + "first-advance") { ConversionRate(stringResource(R.string.conversion_first_advance), proposals.rates.contracted.previousStage) }
-                            item(key = readyPrefix + "second-advance") { ConversionRate(stringResource(R.string.conversion_second_advance), proposals.rates.reported.previousStage) }
-                            item(key = readyPrefix + "third-advance") { ConversionRate(stringResource(R.string.conversion_third_advance), proposals.rates.paid.previousStage) }
-                        }
-                        item(key = readyPrefix + "uncontracted") {
-                            ConversionCard {
-                                Text(stringResource(R.string.conversion_uncontracted, proposals.uncontracted), style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr))
-                                Text(stringResource(R.string.conversion_uncontracted_note))
+                            item(key = readyPrefix + "stages") {
+                                Text(stringResource(R.string.conversion_stages), style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr),
+                                    modifier = Modifier.semantics { heading() })
+                                Text(stringResource(R.string.conversion_cohort_note, proposals.stages.issued))
                             }
+                            item(key = readyPrefix + "issued") { ConversionStage(stringResource(R.string.conversion_issued), proposals.stages.issued,
+                                ConversionRatio(proposals.stages.issued, proposals.stages.issued,
+                                    if (proposals.stages.issued > 0) 100.0 else null)) }
+                            item(key = readyPrefix + "contracted") { ConversionStage(stringResource(R.string.conversion_contracted), proposals.stages.contracted,
+                                proposals.rates.contracted.cohort) }
+                            item(key = readyPrefix + "reported") { ConversionStage(stringResource(R.string.conversion_reported), proposals.stages.reported,
+                                proposals.rates.reported.cohort) }
+                            item(key = readyPrefix + "paid") { ConversionStage(stringResource(R.string.conversion_paid), proposals.stages.paid,
+                                proposals.rates.paid.cohort) }
+                            item(key = readyPrefix + "expansion") {
+                                val expansionLabel = stringResource(if (advancesExpanded) R.string.conversion_collapse else R.string.conversion_expand)
+                                OutlinedButton(onClick = { onExpansion(!advancesExpanded) },
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { stateDescription = expansionLabel },
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
+                                    Text(expansionLabel)
+                                }
+                            }
+                            if (advancesExpanded) {
+                                item(key = readyPrefix + "first-advance") { ConversionRate(stringResource(R.string.conversion_first_advance), proposals.rates.contracted.previousStage) }
+                                item(key = readyPrefix + "second-advance") { ConversionRate(stringResource(R.string.conversion_second_advance), proposals.rates.reported.previousStage) }
+                                item(key = readyPrefix + "third-advance") { ConversionRate(stringResource(R.string.conversion_third_advance), proposals.rates.paid.previousStage) }
+                            }
+                            item(key = readyPrefix + "uncontracted") {
+                                ConversionCard {
+                                    Text(stringResource(R.string.conversion_uncontracted, proposals.uncontracted), style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr))
+                                    Text(stringResource(R.string.conversion_uncontracted_note))
+                                }
+                            }
+                            item(key = readyPrefix + "observed") { Text(stringResource(R.string.conversion_observed, formatActivityInstant(result.observedAt)),
+                                style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
+                            item(key = readyPrefix + "requests") { ConversionRequests(result.requests) }
                         }
-                        item(key = readyPrefix + "observed") { Text(stringResource(R.string.conversion_observed, formatActivityInstant(result.observedAt)),
-                            style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
-                        item(key = readyPrefix + "requests") { ConversionRequests(result.requests) }
                     }
                 }
             }

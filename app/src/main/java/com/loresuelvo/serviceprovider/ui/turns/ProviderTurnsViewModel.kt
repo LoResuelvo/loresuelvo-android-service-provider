@@ -22,7 +22,7 @@ sealed interface ProviderTurnsUiState {
     data class Ready(val orders: List<WorkOrder>, val conversationIds: Map<Int, Int> = emptyMap(),
         val proposalFailure: ServiceProposalListOutcome.Failure? = null,
         val resolvingConversation: Boolean = false,
-        val conversationToOpen: Int? = null) : ProviderTurnsUiState
+        val conversationToOpen: Int? = null, val refreshing: Boolean = false, val refreshFailed: Boolean = false) : ProviderTurnsUiState
     data object Error : ProviderTurnsUiState
 }
 
@@ -61,7 +61,7 @@ class ProviderTurnsViewModel @Inject constructor(
         load(preserveContent = true)
     }
 
-    fun load(preserveContent: Boolean = false) {
+    fun load(preserveContent: Boolean = true) {
         if (loadJob?.isActive == true) return
         val requestSession = sessionStore.getSession()
         if (requestSession == null) {
@@ -69,9 +69,8 @@ class ProviderTurnsViewModel @Inject constructor(
             sessionStore.clearSession()
             return
         }
-        if (!preserveContent || _uiState.value !is ProviderTurnsUiState.Ready) {
-            _uiState.value = ProviderTurnsUiState.Loading
-        }
+        val previous = (_uiState.value as? ProviderTurnsUiState.Ready).takeIf { preserveContent }
+        _uiState.value = previous?.copy(refreshing = true, refreshFailed = false) ?: ProviderTurnsUiState.Loading
         loadJob = viewModelScope.launch {
             _uiState.value = when (val result = getProviderTurns()) {
                 is ActivityLoadOutcome.Success -> {
@@ -90,7 +89,8 @@ class ProviderTurnsViewModel @Inject constructor(
                 is ActivityLoadOutcome.Failure -> {
                     if (sessionStore.getSession() != requestSession) return@launch
                     if (result == ActivityLoadOutcome.Failure.Unauthorized) sessionStore.clearSession()
-                    ProviderTurnsUiState.Error
+                    if (result == ActivityLoadOutcome.Failure.Unauthorized || (result is ActivityLoadOutcome.Failure.Server && result.code == 403)) ProviderTurnsUiState.Error
+                    else previous?.takeIf { it.orders.isNotEmpty() }?.copy(refreshing = false, refreshFailed = true) ?: ProviderTurnsUiState.Error
                 }
             }
         }

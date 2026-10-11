@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -116,55 +117,58 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
                 },
             )
         }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding)) {
-                when (state) {
-                    ProviderTurnsUiState.Loading -> Column(
-                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        val loading = stringResource(R.string.provider_turns_loading)
-                        CircularProgressIndicator(Modifier.testTag("provider_turns_loading")
-                            .semantics { contentDescription = loading })
-                        Text(loading, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodyMedium)
-                    }
-                    ProviderTurnsUiState.Error -> Column(
-                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp).testTag("provider_turns_error"),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Text(stringResource(R.string.provider_turns_error),
-                            style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-                        Button(onClick = onRetry, modifier = Modifier.padding(top = 12.dp)) {
-                            Text(stringResource(R.string.provider_home_retry))
-                        }
-                    }
-                    is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
-                        Column(
-                            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp).testTag("provider_turns_empty"),
+            RefreshableContent((state as? ProviderTurnsUiState.Ready)?.refreshing == true, onRetry, Modifier.padding(padding)) {
+                Column(Modifier.fillMaxSize()) {
+                    when (state) {
+                        ProviderTurnsUiState.Loading -> Column(
+                            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            Text(stringResource(R.string.provider_turns_empty),
-                                style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-                            Text(stringResource(R.string.provider_turns_empty_body),
-                                Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center)
+                            val loading = stringResource(R.string.provider_turns_loading)
+                            CircularProgressIndicator(Modifier.testTag("provider_turns_loading")
+                                .semantics { contentDescription = loading })
+                            Text(loading, Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodyMedium)
                         }
-                    } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list"), state = listState,
-                        contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(state.orders, key = { it.id }) { order ->
-                            ProviderTurnCard(order, Modifier.padding(horizontal = 20.dp)) {
-                                if (onDetails == null) {
-                                    selectedId = order.id
-                                    missingConversation = false
-                                } else onDetails(it)
+                        ProviderTurnsUiState.Error -> Column(
+                            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp).testTag("provider_turns_error"),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(stringResource(R.string.provider_turns_error),
+                                style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+                            Button(onClick = onRetry, modifier = Modifier.padding(top = 12.dp)) {
+                                Text(stringResource(R.string.provider_home_retry))
+                            }
+                        }
+                        is ProviderTurnsUiState.Ready -> if (state.orders.isEmpty()) {
+                            Column(
+                                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp).testTag("provider_turns_empty"),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Text(stringResource(R.string.provider_turns_empty),
+                                    style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+                                Text(stringResource(R.string.provider_turns_empty_body),
+                                    Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Center)
+                            }
+                        } else LazyColumn(Modifier.fillMaxWidth().testTag("provider_turns_list"), state = listState,
+                            contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (state.refreshFailed) item { Text(stringResource(R.string.ui_refresh_failed)) }
+                            items(state.orders, key = { it.id }) { order ->
+                                ProviderTurnCard(order, Modifier.padding(horizontal = 20.dp)) {
+                                    if (onDetails == null) {
+                                        selectedId = order.id
+                                        missingConversation = false
+                                    } else onDetails(it)
+                                }
                             }
                         }
                     }
                 }
-            }
         }
+    }
     }
 }
 

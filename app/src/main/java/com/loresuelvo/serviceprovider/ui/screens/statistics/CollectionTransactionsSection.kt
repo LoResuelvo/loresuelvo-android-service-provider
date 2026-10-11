@@ -19,7 +19,7 @@ import com.loresuelvo.serviceprovider.ui.statistics.CollectionTransactionsUiStat
 @OptIn(ExperimentalLayoutApi::class)
 internal fun LazyListScope.collectionTransactionsItems(state: CollectionTransactionsUiState,
     onPurpose: (CollectionPurpose?) -> Unit, onLoadMore: () -> Unit, onRetry: () -> Unit) {
-    item {
+    item(key = "collection_transaction_filters") {
         HorizontalDivider()
         Text(stringResource(R.string.collections_transactions), style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics { heading() })

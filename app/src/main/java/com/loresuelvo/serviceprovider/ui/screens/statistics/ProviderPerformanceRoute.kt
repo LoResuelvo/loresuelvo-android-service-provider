@@ -40,9 +40,9 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
     }
     val collectionList = rememberLazyListState(transactions.readingIndex, transactions.readingOffset)
     var restored by remember { mutableStateOf(false) }
-    var readingFilter by remember { mutableStateOf(Triple(filters.query.from, filters.query.to, transactionState.purpose)) }
-    LaunchedEffect(filters.query.from, filters.query.to, transactionState.purpose) {
-        val selected = Triple(filters.query.from, filters.query.to, transactionState.purpose)
+    var readingFilter by remember { mutableStateOf(Pair(filters.query.from, filters.query.to)) }
+    LaunchedEffect(filters.query.from, filters.query.to) {
+        val selected = Pair(filters.query.from, filters.query.to)
         if (selected != readingFilter) {
             readingFilter = selected
             collectionList.scrollToItem(0)
@@ -69,7 +69,7 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
         ProviderReputationRoute(reputation) { selectedSection = it }
     } else if (showingCollections) {
         val visibleState = if (collections.query == filters.query) collectionState else ProviderCollectionsUiState.Loading
-        ProviderCollectionsScreen(visibleState, collections::retry, onActivity = { selectedSection = PerformanceSection.ACTIVITY },
+        ProviderCollectionsScreen(visibleState, { collections.retry(); transactions.refresh() }, onActivity = { selectedSection = PerformanceSection.ACTIVITY },
             onReputation = { selectedSection = PerformanceSection.REPUTATION },
             filters = filters, onEditDates = activity::editDates, onApplyDates = activity::applyDates,
             onGranularity = activity::selectGranularity, onComparison = activity::comparePrevious,

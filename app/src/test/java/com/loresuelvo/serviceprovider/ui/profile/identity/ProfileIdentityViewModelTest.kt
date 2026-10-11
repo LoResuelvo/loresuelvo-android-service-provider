@@ -71,7 +71,7 @@ class ProfileIdentityViewModelTest {
                 f.viewModel.onProfilePaused()
                 f.viewModel.onProfileResumed()
                 f.drain()
-                assertEquals(3, f.accountCalls)
+                assertEquals(2, f.accountCalls)
             }
         }
     }

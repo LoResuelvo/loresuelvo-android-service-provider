@@ -144,4 +144,35 @@ class CollectionTransactionsViewModelTest {
         assertEquals(1, subject.uiState.value.page!!.transactions.size)
     }
 
+    @Test fun `purpose selection preserves screen anchor and refresh replaces rather than appends rows`() {
+        open()
+        model.rememberReadingPosition(17, 32)
+        model.selectPurpose(CollectionPurpose.SERVICE_BALANCE); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(17, model.readingIndex); assertEquals(32, model.readingOffset)
+        val previous = page()
+        repository.gate = CompletableDeferred()
+        model.refresh(); dispatcher.scheduler.runCurrent()
+        assertEquals(previous, page())
+        assertTrue(model.uiState.value.loading)
+        assertNull(repository.queries.last().cursor)
+        repository.gate!!.complete(Unit); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(previous.transactions, page().transactions)
+        repository.outcomes.add(CollectionTransactionsOutcome.Failure(CollectionsOutcome.Failure.Forbidden))
+        model.refresh(); dispatcher.scheduler.advanceUntilIdle()
+        assertNull(model.uiState.value.page)
+        assertEquals(CollectionsOutcome.Failure.Forbidden, model.uiState.value.failure)
+    }
+
+    @Test fun `failed manual refresh retries the first page instead of following a cached cursor`() {
+        open()
+        val previous = page()
+        repository.outcomes.add(CollectionTransactionsOutcome.Failure(CollectionsOutcome.Failure.Network))
+        model.refresh(); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(previous, page())
+        assertFalse(model.uiState.value.refreshing)
+        model.retry(); dispatcher.scheduler.advanceUntilIdle()
+        assertNull(repository.queries.last().cursor)
+        assertEquals(previous.transactions, page().transactions)
+    }
+
 }

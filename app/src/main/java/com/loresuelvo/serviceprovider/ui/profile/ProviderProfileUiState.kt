@@ -9,6 +9,8 @@ sealed interface ProviderProfileUiState {
     data class Ready(
         val provider: CurrentAccount.Provider,
         val payment: ProfilePaymentState = ProfilePaymentState.Loading,
+        val refreshing: Boolean = false,
+        val refreshFailed: Boolean = false,
     ) : ProviderProfileUiState
     data object Unavailable : ProviderProfileUiState
     data object IncompleteProfile : ProviderProfileUiState

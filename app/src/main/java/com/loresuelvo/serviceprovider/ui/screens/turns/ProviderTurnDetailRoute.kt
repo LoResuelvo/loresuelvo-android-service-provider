@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
@@ -45,27 +46,30 @@ fun ProviderTurnDetailRoute(
     var missingConversation by rememberSaveable(viewModel.orderId) { mutableStateOf(false) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
     Box(Modifier.fillMaxSize()) {
-    when (val current = state) {
-        is ProviderTurnDetailUiState.Ready -> {
-            val detail = (current.result.detail as WorkOrderDetailOutcome.Success).order
-            val consumer = current.result.consumer
-            val fallback = stringResource(R.string.provider_order_consumer_unavailable)
-            val displayOrder = current.toDisplayOrder(fallback)
-            ProviderTurnDetailScreen(displayOrder, onBack = onBack,
-                detail = detail,
-                onPhotoClick = viewModel::selectFile,
-                onPhotoRetry = viewModel::retryPhoto,
-                onConversation = {
-                    val conversationId = current.conversationId
-                    if (conversationId == null) missingConversation = true else onConversation(conversationId)
-                },
-                missingConversation = missingConversation && current.conversationId == null,
-                onRetryConversation = viewModel::load,
-                onCompletion = if (consumer != null) ({ onCompletion(detail.id) }) else null)
+    RefreshableContent((state as? ProviderTurnDetailUiState.Ready)?.refreshing == true, viewModel::load) {
+        when (val current = state) {
+            is ProviderTurnDetailUiState.Ready -> {
+                val detail = (current.result.detail as WorkOrderDetailOutcome.Success).order
+                val consumer = current.result.consumer
+                val fallback = stringResource(R.string.provider_order_consumer_unavailable)
+                val displayOrder = current.toDisplayOrder(fallback)
+                ProviderTurnDetailScreen(displayOrder, onBack = onBack,
+                    detail = detail,
+                    refreshFailed = current.refreshFailed,
+                    onPhotoClick = viewModel::selectFile,
+                    onPhotoRetry = viewModel::retryPhoto,
+                    onConversation = {
+                        val conversationId = current.conversationId
+                        if (conversationId == null) missingConversation = true else onConversation(conversationId)
+                    },
+                    missingConversation = missingConversation && current.conversationId == null,
+                    onRetryConversation = viewModel::load,
+                    onCompletion = if (consumer != null) ({ onCompletion(detail.id) }) else null)
+            }
+            ProviderTurnDetailUiState.Loading -> DetailFallback(onBack, R.string.provider_turns_loading, loading = true)
+            is ProviderTurnDetailUiState.Error -> DetailFallback(onBack, failure = current.failure,
+                onRetry = viewModel::load)
         }
-        ProviderTurnDetailUiState.Loading -> DetailFallback(onBack, R.string.provider_turns_loading, loading = true)
-        is ProviderTurnDetailUiState.Error -> DetailFallback(onBack, failure = current.failure,
-            onRetry = viewModel::load)
     }
     val current = state as? ProviderTurnDetailUiState.Ready
     val image = (current?.result?.detail as? WorkOrderDetailOutcome.Success)?.order

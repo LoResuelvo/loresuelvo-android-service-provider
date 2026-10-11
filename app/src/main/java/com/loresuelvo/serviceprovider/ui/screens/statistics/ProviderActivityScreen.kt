@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.statistics
 
+import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -83,103 +84,115 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
     onPeriodExpansion: ((Boolean) -> Unit)? = null, onEvolutionExpansion: ((Boolean) -> Unit)? = null, onCollections: (() -> Unit)? = null, onReputation: () -> Unit = {}, onConversion: () -> Unit = {}) {
     var showValues by rememberSaveable { mutableStateOf(false) }
     var periodExpanded by rememberSaveable { mutableStateOf(false) }
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_activity").semantics {
-        this[ACTIVITY_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
-    },
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.semantics { heading() }) }
-        stickyHeader {
-            if (onCollections != null) PerformanceTabs(PerformanceSection.ACTIVITY) { section ->
-                when (section) {
-                    PerformanceSection.COLLECTIONS -> onCollections()
-                    PerformanceSection.REPUTATION -> onReputation()
-                    PerformanceSection.ACTIVITY -> Unit
-                }
-            }
-            else {
-                Text(stringResource(R.string.activity_section), color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.titleMedium)
-                HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 2.dp)
-            }
-        }
-        if (filters != null && state != ProviderActivityUiState.SessionExpired) {
-            item { ActivityPeriodControls(filters, onEditDates, onApplyDates, onGranularity, onComparison,
-                periodExpansion ?: periodExpanded) {
-                    if (onPeriodExpansion != null) onPeriodExpansion(it) else periodExpanded = it
-                } }
-        }
-        when (state) {
-            ProviderActivityUiState.Loading -> item {
-                CircularProgressIndicator()
-                Text(stringResource(R.string.activity_loading))
-            }
-            is ProviderActivityUiState.Error -> item {
-                Text(stringResource(R.string.activity_error))
-                Button(onClick = onRetry) { Text(stringResource(R.string.activity_retry)) }
-            }
-            ProviderActivityUiState.SessionExpired -> item { Text(stringResource(R.string.activity_session_expired)) }
-            is ProviderActivityUiState.Ready -> {
-                val activity = state.activity
-                item { Text(stringResource(R.string.activity_results), style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.semantics { heading() }) }
-                if (activity.results.confirmedBookings == 0L && activity.results.reportedCompletions == 0L &&
-                    activity.results.fullyPaidWorkOrders == 0L) {
-                    item { Text(stringResource(R.string.activity_empty)) }
-                }
-                val result = activity.results
-                item {
-                    MetricPair(stringResource(R.string.activity_bookings), result.confirmedBookings,
-                        stringResource(R.string.activity_completions), result.reportedCompletions)
-                }
-                item {
-                    MetricPair(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders,
-                        stringResource(R.string.activity_clients), result.clientsServed)
-                }
-                item { Text(stringResource(R.string.activity_client_breakdown, result.newClients, result.returningClients)) }
-                item { ValueRow(stringResource(R.string.activity_agreed_value), formatActivityMoney(result.agreedValueCents)) }
-                item { ValueRow(stringResource(R.string.activity_average), result.averageValueCents?.let(::formatActivityMoney)
-                    ?: stringResource(R.string.activity_unavailable)) }
-                item { Text(stringResource(R.string.activity_money_note), style = MaterialTheme.typography.bodySmall) }
-                activity.comparison?.let { comparison ->
-                    item { ActivityComparisonSection(activity.results, comparison) }
-                }
-                item { ActivityEvolution(activity.evolution, evolutionExpansion ?: showValues) {
-                    if (onEvolutionExpansion != null) onEvolutionExpansion(!(evolutionExpansion ?: showValues))
-                    else showValues = !showValues
-                } }
-                if (evolutionExpansion ?: showValues) {
-                    activity.evolution.forEach { bucket ->
-                        item(key = "activity_bucket_${bucket.from}") { ActivityEvolutionBucket(bucket) }
+    RefreshableContent((state as? ProviderActivityUiState.Ready)?.refreshing == true, onRetry) {
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_activity").semantics {
+            this[ACTIVITY_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        },
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.semantics { heading() }) }
+            stickyHeader {
+                if (onCollections != null) PerformanceTabs(PerformanceSection.ACTIVITY) { section ->
+                    when (section) {
+                        PerformanceSection.COLLECTIONS -> onCollections()
+                        PerformanceSection.REPUTATION -> onReputation()
+                        PerformanceSection.ACTIVITY -> Unit
                     }
                 }
-                item { Period(activity) }
-                item {
-                    HorizontalDivider()
-                    Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.semantics { heading() })
-                    Text(stringResource(R.string.activity_pending_note), style = MaterialTheme.typography.bodySmall)
-                    ValueRow(stringResource(R.string.activity_pending_requests), activity.currentPending.requests.toString())
-                    ValueRow(stringResource(R.string.activity_scheduled), activity.currentPending.scheduledOrders.toString())
-                    ValueRow(stringResource(R.string.activity_awaiting_payment), activity.currentPending.awaitingPaymentOrders.toString())
+                else {
+                    Text(stringResource(R.string.activity_section), color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleMedium)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 2.dp)
                 }
             }
-        }
-        if (state != ProviderActivityUiState.SessionExpired) {
-            item {
-                OutlinedButton(onClick = onConversion, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
-                    Icon(Icons.Outlined.TrendingUp, null, Modifier.padding(end = 12.dp))
-                    Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-                        Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.conversion_entry_note), style = MaterialTheme.typography.bodySmall)
+            if (filters != null && state != ProviderActivityUiState.SessionExpired) {
+                item { ActivityPeriodControls(filters, onEditDates, onApplyDates, onGranularity, onComparison,
+                    periodExpansion ?: periodExpanded) {
+                        if (onPeriodExpansion != null) onPeriodExpansion(it) else periodExpanded = it
+                    } }
+            }
+            when (state) {
+                ProviderActivityUiState.Loading -> item {
+                    CircularProgressIndicator()
+                    Text(stringResource(R.string.activity_loading))
+                }
+                is ProviderActivityUiState.Error -> item {
+                    Text(stringResource(R.string.activity_error))
+                    Button(onClick = onRetry) { Text(stringResource(R.string.activity_retry)) }
+                }
+                ProviderActivityUiState.SessionExpired -> item { Text(stringResource(R.string.activity_session_expired)) }
+                is ProviderActivityUiState.Ready -> {
+                    if (state.refreshFailed) item { Text(stringResource(R.string.ui_refresh_failed), color = MaterialTheme.colorScheme.error) }
+                    val activity = state.activity
+                    item { Text(stringResource(R.string.activity_results), style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.semantics { heading() }) }
+                    if (activity.results.confirmedBookings == 0L && activity.results.reportedCompletions == 0L &&
+                        activity.results.fullyPaidWorkOrders == 0L) {
+                        item { Text(stringResource(R.string.activity_empty)) }
+                    }
+                    val result = activity.results
+                    item {
+                        MetricPair(stringResource(R.string.activity_bookings), result.confirmedBookings,
+                            stringResource(R.string.activity_completions), result.reportedCompletions)
+                    }
+                    item {
+                        MetricPair(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders,
+                            stringResource(R.string.activity_clients), result.clientsServed)
+                    }
+                    item {
+                        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+                            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(stringResource(R.string.activity_agreed_value), style = MaterialTheme.typography.titleMedium)
+                                Text(formatActivityMoney(result.agreedValueCents), style = MaterialTheme.typography.headlineMedium)
+                                ValueRow(stringResource(R.string.activity_average), result.averageValueCents?.let(::formatActivityMoney)
+                                    ?: stringResource(R.string.activity_unavailable))
+                                Text(stringResource(R.string.activity_money_note), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    item { Text(stringResource(R.string.activity_client_breakdown, result.newClients, result.returningClients),
+                        style = MaterialTheme.typography.bodyMedium) }
+                    activity.comparison?.let { comparison ->
+                        item { ActivityComparisonSection(activity.results, comparison) }
+                    }
+                    item { ActivityEvolution(activity.evolution, evolutionExpansion ?: showValues) {
+                        if (onEvolutionExpansion != null) onEvolutionExpansion(!(evolutionExpansion ?: showValues))
+                        else showValues = !showValues
+                    } }
+                    if (evolutionExpansion ?: showValues) {
+                        activity.evolution.forEach { bucket ->
+                            item(key = "activity_bucket_${bucket.from}") { ActivityEvolutionBucket(bucket) }
+                        }
+                    }
+                    item { Period(activity) }
+                    item {
+                        HorizontalDivider()
+                        Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.semantics { heading() })
+                        Text(stringResource(R.string.activity_pending_note), style = MaterialTheme.typography.bodySmall)
+                        ValueRow(stringResource(R.string.activity_pending_requests), activity.currentPending.requests.toString())
+                        ValueRow(stringResource(R.string.activity_scheduled), activity.currentPending.scheduledOrders.toString())
+                        ValueRow(stringResource(R.string.activity_awaiting_payment), activity.currentPending.awaitingPaymentOrders.toString())
                     }
                 }
             }
-        }
+            if (state != ProviderActivityUiState.SessionExpired) {
+                item {
+                    OutlinedButton(onClick = onConversion, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
+                        Icon(Icons.Outlined.TrendingUp, null, Modifier.padding(end = 12.dp))
+                        Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                            Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.conversion_entry_note), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
 
+        }
     }
 }
 

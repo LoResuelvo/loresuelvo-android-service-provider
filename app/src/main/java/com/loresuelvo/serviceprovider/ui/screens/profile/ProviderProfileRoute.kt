@@ -134,7 +134,7 @@ fun ProviderProfileRoute(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { viewModel.onProfilePaused() }
     LaunchedEffect(returnRefreshKey) {
-        if (returnRefreshKey > 0) viewModel.refresh()
+        viewModel.onPaymentReturn(returnRefreshKey)
     }
     LaunchedEffect(state) {
         when (state) {
@@ -160,6 +160,6 @@ fun ProviderProfileRoute(
         onBack = onBack,
         onRetry = viewModel::refresh,
         onRetryPaymentStatus = viewModel::retryPaymentStatus,
-        onConnectMercadoPago = onConnectMercadoPago,
+        onConnectMercadoPago = { viewModel.expectPaymentReturn(); onConnectMercadoPago() },
     )
 }

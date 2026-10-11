@@ -97,4 +97,19 @@ class ProviderCollectionsViewModelTest {
         assertFalse(first.evolutionExpanded.value)
     }
 
+    @Test fun `manual refresh keeps data and duplicate requests are suppressed with recoverable errors`() {
+        val vm = create(); vm.selectQuery(query); dispatcher.scheduler.advanceUntilIdle()
+        val previous = vm.uiState.value as ProviderCollectionsUiState.Ready
+        repository.gate = CompletableDeferred()
+        vm.retry(); dispatcher.scheduler.runCurrent(); vm.retry()
+        assertEquals(previous.copy(refreshing = true), vm.uiState.value)
+        assertEquals(2, repository.queries.size)
+        repository.outcome = CollectionsOutcome.Failure.Network
+        repository.gate!!.complete(Unit); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(previous.copy(refreshFailed = true), vm.uiState.value)
+        repository.outcome = CollectionsOutcome.Failure.Forbidden
+        vm.retry(); dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(ProviderCollectionsUiState.Error(CollectionsOutcome.Failure.Forbidden), vm.uiState.value)
+    }
+
 }

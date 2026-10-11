@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 sealed interface ProviderActivityUiState {
     data object Loading : ProviderActivityUiState
-    data class Ready(val activity: ProviderActivity) : ProviderActivityUiState
+    data class Ready(val activity: ProviderActivity, val refreshing: Boolean = false, val refreshFailed: Boolean = false) : ProviderActivityUiState
     data class Error(val failure: ActivityOutcome.Failure) : ProviderActivityUiState
     data object SessionExpired : ProviderActivityUiState
 }
@@ -124,6 +124,7 @@ class ProviderActivityViewModel @Inject constructor(
     private fun changeQuery(next: ActivityQuery) {
         mutableFilters.value = mutableFilters.value.copy(query = next, dateError = null)
         if (next == query) return
+        mutableState.value = ProviderActivityUiState.Loading
         query = next
         savedState["activity.from"] = next.from.toString()
         savedState["activity.to"] = next.to.toString()
@@ -144,7 +145,8 @@ class ProviderActivityViewModel @Inject constructor(
         }
         val requestedQuery = query
         val id = ++requestId
-        mutableState.value = ProviderActivityUiState.Loading
+        val previous = mutableState.value as? ProviderActivityUiState.Ready
+        mutableState.value = previous?.copy(refreshing = true, refreshFailed = false) ?: ProviderActivityUiState.Loading
         loadJob = viewModelScope.launch {
             val outcome = getActivity(requestedQuery)
             if (id != requestId || sessionStore.getSession() != session) return@launch
@@ -154,7 +156,8 @@ class ProviderActivityViewModel @Inject constructor(
                     sessionStore.clearSession()
                     ProviderActivityUiState.SessionExpired
                 }
-                is ActivityOutcome.Failure -> ProviderActivityUiState.Error(outcome)
+                ActivityOutcome.Failure.Forbidden -> ProviderActivityUiState.Error(ActivityOutcome.Failure.Forbidden)
+                is ActivityOutcome.Failure -> previous?.copy(refreshing = false, refreshFailed = true) ?: ProviderActivityUiState.Error(outcome)
             }
         }
     }
