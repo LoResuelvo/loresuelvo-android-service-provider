@@ -71,7 +71,7 @@ fun ServiceProposalListScreen(
         if (!state.loading && selectedProposalId != null &&
             state.proposals.none { it.id == selectedProposalId }) selectedProposalId = null
     }
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 NavigationBackButton(

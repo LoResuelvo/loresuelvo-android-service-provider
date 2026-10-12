@@ -7,7 +7,7 @@ val BrandPrimary = Color(0xFF031632)
 val BrandSecondary = Color(0xFF006A60)
 val BrandAccept = Color(0xFF031632)
 val BrandTertiary = Color(0xFFFFDF96)
-val BrandNeutral = Color(0xFFFCF9F6)
+val BrandNeutral = Color(0xFFF8FAFC)
 val BrandDanger = Color(0xFFDC2626)
 
 // Neutrals & surfaces.

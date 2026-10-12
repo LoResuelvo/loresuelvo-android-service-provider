@@ -23,7 +23,7 @@ private val LightColors = lightColorScheme(
     surface = SurfaceWhite, onSurface = BrandPrimary,
     surfaceVariant = Color(0xFFEFF3F2), onSurfaceVariant = SubtitleGray,
     surfaceDim = Color(0xFFE5E3DF), surfaceBright = SurfaceWhite,
-    surfaceContainerLowest = SurfaceWhite, surfaceContainerLow = Color(0xFFF8FAFC),
+    surfaceContainerLowest = SurfaceWhite, surfaceContainerLow = BrandNeutral,
     surfaceContainer = SurfaceWhite, surfaceContainerHigh = Color(0xFFEFF3F2),
     surfaceContainerHighest = Color(0xFFE5ECE9), surfaceTint = BrandSecondary,
     outline = Color(0xFF737B83), outlineVariant = DividerGray,
