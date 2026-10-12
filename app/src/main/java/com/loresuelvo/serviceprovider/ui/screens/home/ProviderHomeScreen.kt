@@ -1,5 +1,8 @@
 package com.loresuelvo.serviceprovider.ui.screens.home
 
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,8 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
@@ -58,6 +59,7 @@ fun ProviderHomeScreen(
     onRetryProposals: () -> Unit = {},
     onProposalConversation: (Int) -> Unit = {},
     onRefresh: () -> Unit = {},
+    onAllRequestsClick: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     var selectedProposalId by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -69,7 +71,7 @@ fun ProviderHomeScreen(
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         RefreshableContent(
             refreshing = uiState.refreshingRequests || uiState.refreshingWork || proposalsState.loading,
@@ -77,44 +79,44 @@ fun ProviderHomeScreen(
             modifier = Modifier.fillMaxSize().testTag("home_refresh"),
         ) {
             Column(
-                modifier = Modifier
-                    .widthIn(max = 600.dp)
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .verticalScroll(scrollState)
-                    .padding(start = 16.dp, top = 24.dp, end = 16.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
+                modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.provider_home_title),
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.weight(1f).semantics { heading() })
-                }
-                Surface(shape = MaterialTheme.shapes.large,
+                Surface(
+                    modifier = Modifier.fillMaxWidth().testTag("home_header"),
+                    shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        ProviderIdentityHeader(provider)
-                        Text(stringResource(R.string.provider_home_overview), style = MaterialTheme.typography.bodyMedium)
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Column(Modifier.widthIn(max = 600.dp).fillMaxWidth().statusBarsPadding().padding(24.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            ProviderIdentityHeader(provider)
+                            Text(stringResource(R.string.provider_home_overview), style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
-                ScheduledWorkSection(
-                    state = uiState.scheduledWork,
-                    onRetry = onRetryScheduledWork,
-                    onAllTurnsClick = onAllTurnsClick,
-                    onTurnDetailsClick = onTurnDetailsClick,
-                )
-                ProposalsSection(proposalsState, onRetryProposals, onAllProposalsClick) {
-                    selectedProposalId = it.id
-                }
-                JobRequestsSection(
-                    state = uiState.jobRequests,
-                    onRetry = onRetryJobRequests,
-                    onRequestClick = onJobRequestClick,
-                )
-                OutlinedButton(onClick = onMercadoPagoClick, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Outlined.AccountBalanceWallet, null, Modifier.padding(end = 8.dp))
-                    Text(stringResource(R.string.provider_home_mercadopago_action))
+                Column(Modifier.widthIn(max = 600.dp).fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                    ScheduledWorkSection(
+                        state = uiState.scheduledWork,
+                        onRetry = onRetryScheduledWork,
+                        onAllTurnsClick = onAllTurnsClick,
+                        onTurnDetailsClick = onTurnDetailsClick,
+                    )
+                    ProposalsSection(proposalsState, onRetryProposals, onAllProposalsClick) {
+                        selectedProposalId = it.id
+                    }
+                    JobRequestsSection(
+                        state = uiState.jobRequests,
+                        onRetry = onRetryJobRequests,
+                        onRequestClick = onJobRequestClick,
+                        onViewAll = onAllRequestsClick,
+                    )
+                    OutlinedButton(onClick = onMercadoPagoClick, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Outlined.AccountBalanceWallet, null, Modifier.padding(end = 8.dp))
+                        Text(stringResource(R.string.provider_home_mercadopago_action))
+                    }
                 }
             }
         }
@@ -145,10 +147,10 @@ private fun ProviderIdentityHeader(provider: CurrentAccount.Provider) {
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "${provider.name} ${provider.surname}".trim(),
+                text = stringResource(R.string.home_greeting, provider.name),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier.padding(bottom = 8.dp).semantics { heading() },
             )
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,

@@ -1,5 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation.components
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -30,8 +34,8 @@ internal fun FullScreenImageViewer(url: String, name: String, onClose: () -> Uni
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).systemBarsPadding().testTag("provider-image-viewer")) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = onClose, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.provider_conversation_close))
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Outlined.Close, stringResource(R.string.provider_job_request_image_viewer_close))
                 }
                 TextButton(onClick = { scale = 1f; offsetX = 0f; offsetY = 0f }, modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.provider_image_reset))

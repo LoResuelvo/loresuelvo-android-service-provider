@@ -172,7 +172,7 @@ internal class NativeNotificationHarness(val compose: ComposeTestRule) : AutoClo
         val bar = compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_TAG).fetchSemanticsNode().boundsInRoot
         assertTrue("Profile action must be above the navigation overlay", action.bottom <= bar.top)
     }
-    fun assertHome() = compose.waitUntil(10_000) { compose.onAllNodesWithText(context.getString(R.string.provider_home_title)).fetchSemanticsNodes().isNotEmpty() }
+    fun assertHome() = compose.waitUntil(10_000) { compose.onAllNodesWithTag("home_header").fetchSemanticsNodes().isNotEmpty() }
     fun payload(type: String = MESSAGE, resourceId: Int = 42, event: String? = null, expires: Long = System.currentTimeMillis() + 120_000): Map<String, String> {
         val state = store.read(); val binding = checkNotNull(state.binding)
         val service = type != MESSAGE

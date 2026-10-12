@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.statistics
 
+import com.loresuelvo.serviceprovider.ui.components.NavigationBackButton
 import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -80,10 +81,8 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                     contentPadding = PaddingValues(start = gutter, end = gutter, top = 16.dp, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item(key = layoutPrefix + "header") {
-                        TextButton(onClick = onBack, modifier = Modifier.heightIn(min = 48.dp),
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
-                            Text(stringResource(R.string.conversion_back))
-                        }
+                        NavigationBackButton(
+                            onClick = onBack, contentDescription = stringResource(R.string.conversion_back))
                         Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.ContentOrLtr),
                             modifier = Modifier.semantics { heading() })
                     }

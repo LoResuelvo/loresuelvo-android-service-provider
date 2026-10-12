@@ -65,7 +65,7 @@ class ProviderConversionScreenTest {
         compose.setContent { LoresuelvoTheme { Surface { ProviderConversionScreen(state.value,
             onRetry = { retries++ }, onBack = { backs++ }) } } }
         reveal("Cargando la conversión…"); compose.onNodeWithText("Emitidas").assertDoesNotExist()
-        compose.onNodeWithText("Volver a Actividad").performClick(); assertEquals(1, backs)
+        compose.onNodeWithContentDescription("Volver a Actividad").performClick(); assertEquals(1, backs)
         compose.runOnIdle { state.value = ProviderConversionUiState.Error(ConversionOutcome.Failure.Network) }
         reveal("Reintentar"); compose.onNodeWithText("Reintentar").performClick(); assertEquals(1, retries)
         compose.onNodeWithText("0 %").assertDoesNotExist()

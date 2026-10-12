@@ -44,6 +44,8 @@ sealed class Route(val path: String) {
      */
     data object Home : Route("home")
 
+    data object JobRequests : Route("job_requests")
+
     data object ServiceProposals : Route("service_proposals")
 
     data object ProviderTurns : Route("provider_turns")

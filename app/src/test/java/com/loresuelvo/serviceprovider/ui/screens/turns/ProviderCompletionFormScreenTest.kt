@@ -52,7 +52,7 @@ class ProviderCompletionFormScreenTest {
         compose.onNodeWithText("Descripción de la entrega").assertExists()
         compose.onNodeWithText("Agregar fotos").assertExists()
         compose.onNodeWithTag("completion_submit").assertIsNotEnabled()
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.runOnIdle { assertEquals(1, backs) }
     }
 

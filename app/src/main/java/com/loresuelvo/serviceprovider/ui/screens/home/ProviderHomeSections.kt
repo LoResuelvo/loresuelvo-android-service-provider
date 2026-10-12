@@ -39,11 +39,15 @@ internal fun JobRequestsSection(
     state: ActivitySectionState<JobRequest>,
     onRetry: () -> Unit,
     onRequestClick: (JobRequest) -> Unit,
+    onViewAll: () -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ActivitySectionHeader(
             title = stringResource(R.string.provider_home_requests_title),
             count = state.countOrPlaceholder(),
+            onViewAll = onViewAll,
+            actionTag = "requests_view_all",
+            actionLabel = R.string.requests_view_all,
         )
         if (state is ActivitySectionState.Ready && state.refreshFailed) SectionError(onRetry)
         when (state) {
@@ -130,7 +134,7 @@ private fun ActivitySectionHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(if (actionTag == "jobs_view_all_proposals") Icons.Outlined.WorkOutline
-                else if (onViewAll != null) Icons.Outlined.EventAvailable else Icons.Outlined.Inbox,
+                else if (actionTag == "scheduled_view_all_turns") Icons.Outlined.EventAvailable else Icons.Outlined.Inbox,
                 contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Text(text = title, style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,

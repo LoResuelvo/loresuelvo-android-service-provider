@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.acceptance.proposals
 
+import androidx.compose.ui.test.onNodeWithContentDescription
 import com.loresuelvo.serviceprovider.domain.auth.AuthSessionStore
 import com.loresuelvo.serviceprovider.domain.auth.AuthSession
 import com.loresuelvo.serviceprovider.domain.auth.User
@@ -385,7 +386,7 @@ class ServiceProposalNavigationAcceptanceTest {
             )
             compose.onNodeWithText(activity.getString(R.string.proposal_list_item, it)).assertIsDisplayed()
         }
-        compose.onNodeWithText(activity.getString(R.string.proposal_list_back)).performClick()
+        compose.onNodeWithContentDescription(activity.getString(R.string.proposal_list_back)).performClick()
         compose.onNodeWithTag("jobs_view_all_proposals").assertIsDisplayed()
     }
 

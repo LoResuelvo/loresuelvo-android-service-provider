@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderDetailOutcome
@@ -27,7 +28,7 @@ class ProviderTurnDetailFallbackTest {
         compose.setContent { LoresuelvoTheme { DetailFallback({},
             failure = WorkOrderDetailOutcome.Failure.Forbidden, onRetry = {}) } }
         compose.onNodeWithText("No tenés permiso para ver esta orden.").assertExists()
-        compose.onNodeWithText("Volver").assertExists()
+        compose.onNodeWithContentDescription("Volver").assertExists()
         compose.onNodeWithText("Reintentar").assertDoesNotExist()
     }
 
@@ -35,7 +36,7 @@ class ProviderTurnDetailFallbackTest {
         compose.setContent { LoresuelvoTheme { DetailFallback({},
             failure = WorkOrderDetailOutcome.Failure.NotFound, onRetry = {}) } }
         compose.onNodeWithText("Esta orden ya no está disponible.").assertExists()
-        compose.onNodeWithText("Volver").assertExists()
+        compose.onNodeWithContentDescription("Volver").assertExists()
         compose.onNodeWithText("Reintentar").assertDoesNotExist()
     }
 }

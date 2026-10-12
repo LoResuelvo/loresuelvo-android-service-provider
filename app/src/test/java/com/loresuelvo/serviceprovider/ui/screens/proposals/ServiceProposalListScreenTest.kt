@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.proposals
 
+import androidx.compose.ui.test.onNodeWithContentDescription
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -56,6 +57,19 @@ import java.util.TimeZone
 @Config(sdk = [34])
 class ServiceProposalListScreenTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test fun `proposal sheet has a descriptive title and a close control`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        var dismissals = 0
+        compose.setContent { LoresuelvoTheme {
+            ProposalDetailSheet(proposal(12), onDismiss = { dismissals++ }, onConversation = {})
+        } }
+        compose.onNodeWithText(context.getString(R.string.proposal_detail_title)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.proposal_list_item, 12)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(context.getString(R.string.ui_close))
+            .assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick) { it() }
+        org.junit.Assert.assertEquals(1, dismissals)
+    }
 
     @Test fun `proposal failure shows retry instead of empty copy`() {
         val context = ApplicationProvider.getApplicationContext<Context>()

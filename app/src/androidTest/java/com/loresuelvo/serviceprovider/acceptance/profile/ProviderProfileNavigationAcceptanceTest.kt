@@ -173,7 +173,7 @@ class ProviderProfileNavigationAcceptanceTest {
     fun pending_connection_opens_the_existing_mercado_pago_flow() {
         composeTestRule.waitForIdle()
         openPaymentFlowFromProfile()
-        composeTestRule.onNodeWithText(
+        composeTestRule.onNodeWithContentDescription(
             composeTestRule.activity.getString(R.string.mercadopago_return_profile),
         ).assertExists()
     }

@@ -56,6 +56,20 @@ class ProviderHomeScreenTest {
         get() = ApplicationProvider.getApplicationContext()
 
     @Test
+    fun requests_view_all_opens_the_pending_list() {
+        var opens = 0
+        composeTestRule.setContent { LoresuelvoTheme {
+            ProviderHomeScreen(provider(), ProviderHomeUiState(
+                jobRequests = ActivitySectionState.Ready(emptyList()),
+                scheduledWork = ActivitySectionState.Ready(emptyList()),
+            ), {}, {}, {}, {}, proposalsState = ServiceProposalListUiState(loading = false),
+                onAllRequestsClick = { opens++ })
+        } }
+        composeTestRule.onNodeWithTag("requests_view_all").performScrollTo().performClick()
+        assertEquals(1, opens)
+    }
+
+    @Test
     fun pull_and_accessible_refresh_action_use_the_same_callback() {
         var refreshes = 0
         composeTestRule.setContent { LoresuelvoTheme {
@@ -193,9 +207,9 @@ class ProviderHomeScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText(context.getString(R.string.provider_home_title)).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("home_header").assertIsDisplayed()
         composeTestRule.onNodeWithText("CG").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Carlos Gómez").assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.home_greeting, "Carlos")).assertIsDisplayed()
         composeTestRule.onNodeWithText("Plomería").assertIsDisplayed()
         composeTestRule.onNodeWithTag("home_requests_row").performScrollTo()
         composeTestRule.onNodeWithText("Reparar pérdida").assertIsDisplayed()

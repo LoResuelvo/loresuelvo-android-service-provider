@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.acceptance.statistics
 
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.onNodeWithContentDescription
 import android.content.Context
 import androidx.compose.ui.test.*
 import androidx.compose.ui.semantics.getOrNull
@@ -141,7 +143,8 @@ class ProviderConversionNavigationAcceptanceTest {
             com.loresuelvo.serviceprovider.ui.screens.statistics.formatActivityInstant(applied.to!!.toInstant()))).assertExists()
         bottom(Route.Activity.path).performClick(); compose.waitForIdle(); openDetail()
         reveal("provider_conversion", R.string.conversion_collapse).assertIsDisplayed()
-        reveal("provider_conversion", R.string.conversion_back).performClick()
+        compose.onNodeWithTag("provider_conversion").performScrollToIndex(0)
+        compose.onNodeWithContentDescription(context.getString(R.string.conversion_back)).performClick()
         reveal("provider_activity", R.string.activity_period_options).assertIsDisplayed()
         compose.onNodeWithTag("activity_from_day").assertTextContains("2026-08-01")
         assertEquals(activityQuery, statistics.queries.last())

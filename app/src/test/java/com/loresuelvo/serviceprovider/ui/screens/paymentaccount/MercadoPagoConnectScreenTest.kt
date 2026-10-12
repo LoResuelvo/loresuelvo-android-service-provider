@@ -20,6 +20,28 @@ import org.robolectric.annotation.Config
 class MercadoPagoConnectScreenTest {
     @get:Rule val compose = createComposeRule()
 
+    @Test fun profile_return_uses_an_arrow_for_pending_and_connected_accounts() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val state = androidx.compose.runtime.mutableStateOf(MercadoPagoConnectUiState(
+            accountStatus = com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus(
+                com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus.PENDING)))
+        var pendingReturns = 0
+        var connectedReturns = 0
+        compose.setContent { LoresuelvoTheme {
+            MercadoPagoConnectScreen(state.value, returnToProfile = true,
+                onContinueWithoutConnecting = { pendingReturns++ }, onContinueHome = { connectedReturns++ })
+        } }
+        val label = context.getString(R.string.mercadopago_return_profile)
+        compose.onNodeWithContentDescription(label).assertIsDisplayed().performClick()
+        org.junit.Assert.assertEquals(1, pendingReturns)
+        compose.runOnIdle { state.value = state.value.copy(accountStatus =
+            com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus(
+                com.loresuelvo.serviceprovider.domain.paymentaccount.ConnectionStatus.CONNECTED)) }
+        compose.onNodeWithContentDescription(label).performClick()
+        org.junit.Assert.assertEquals(1, connectedReturns)
+        compose.onNodeWithText(label).assertDoesNotExist()
+    }
+
     @Test fun initial_network_failure_keeps_optional_exit_and_hides_technical_details() {
         var continued = false
         val context = ApplicationProvider.getApplicationContext<Context>()

@@ -255,7 +255,7 @@ class ProviderConversationScreenTest {
             composeTestRule.onNodeWithText("Pendiente").assertIsDisplayed()
             composeTestRule.onNodeWithText("el 4 de octubre de 2026 a las 21:30").assertDoesNotExist()
             composeTestRule.onNodeWithText("Propuesta de servicio").performClick()
-            composeTestRule.onNodeWithText("Propuesta #22").assertExists()
+            composeTestRule.onNodeWithText("Propuesta #22").assertDoesNotExist()
             composeTestRule.onNodeWithText("Visit reason for proposal 22").assertIsDisplayed()
             composeTestRule.onNodeWithText("el 4 de octubre de 2026 a las 21:30").assertExists()
         } finally {

@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.navigation
 
+import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestListRoute
 import kotlinx.coroutines.awaitCancellation
 import androidx.compose.ui.platform.LocalConfiguration
 import com.loresuelvo.serviceprovider.domain.notifications.NotificationDestination
@@ -210,6 +211,14 @@ fun LoResuelvoNav(
                                             launchSingleTop = true
                                         }
                                     },
+                                )
+                            },
+                            jobRequests = {
+                                val homeEntry = remember(navController, backStackEntry) {
+                                    navController.getBackStackEntry(Route.Home.path)
+                                }
+                                JobRequestListRoute(
+                                    navController = navController, viewModel = hiltViewModel(homeEntry),
                                 )
                             },
                             providerTurns = {

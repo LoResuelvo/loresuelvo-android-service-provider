@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import com.loresuelvo.serviceprovider.ui.components.NavigationBackButton
 import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -111,7 +112,7 @@ internal fun DetailFallback(onBack: () -> Unit, message: Int = R.string.provider
         failure is WorkOrderDetailOutcome.Failure.Server || failure == WorkOrderDetailOutcome.Failure.Invalid
     Scaffold(topBar = { TopAppBar(
         title = { Text(stringResource(R.string.provider_turns_detail_title)) },
-        navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) } },
+        navigationIcon = { NavigationBackButton(onClick = onBack, contentDescription = stringResource(R.string.provider_turns_back)) },
     ) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

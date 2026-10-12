@@ -111,7 +111,7 @@ class ProviderCompletionRouteTest {
         compose.onNodeWithText("Reparar la canilla").assertExists()
         compose.onNodeWithText("Descripción de la entrega").assertExists()
         compose.onNodeWithTag("completion_submit").assertExists()
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.runOnIdle { assertEquals(1, backs) }
     }
 
@@ -190,7 +190,7 @@ class ProviderCompletionRouteTest {
         compose.runOnIdle { onCompletionImagesPicked(viewModel, listOf(Uri.parse("photo://back.jpg"))) }
         compose.onNodeWithContentDescription("Vista previa de la foto 1").assertExists()
 
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.runOnIdle {
             assertEquals(1, backs)
             assertEquals(0, viewModel.evidence.value.size)

@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.acceptance.turns
 
+import androidx.compose.ui.test.onNodeWithContentDescription
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
@@ -178,7 +179,7 @@ class ProviderCompletionAcceptanceTest {
                 ?.let { it.id == 42 && it.status == WorkOrderStatus.AwaitingPayment } == true }
         assertEquals(listOf("file-one.jpg"), orders.postedFileIds)
         compose.onNodeWithText(activity.getString(R.string.provider_completion_report_success)).assertIsDisplayed()
-        compose.onNodeWithText(activity.getString(R.string.provider_turns_back)).performClick()
+        compose.onNodeWithContentDescription(activity.getString(R.string.provider_turns_back)).performClick()
         compose.onNodeWithTag("provider_turn_completion").assertIsDisplayed()
         assertEquals(WorkOrderStatus.AwaitingPayment, (turns.orders.single()).status)
         assertEquals(2, files.presigns)

@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import com.loresuelvo.serviceprovider.ui.components.NavigationBackButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
@@ -80,7 +81,7 @@ fun ProviderCompletionFormScreen(
         submission == CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData)
     Scaffold(topBar = { TopAppBar(
         title = { Text(stringResource(R.string.provider_completion_title)) },
-        navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) } },
+        navigationIcon = { NavigationBackButton(onClick = onBack, contentDescription = stringResource(R.string.provider_turns_back)) },
     ) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp),
@@ -136,9 +137,9 @@ fun ProviderCompletionFormScreen(
                         }
                     }
                     if (outcome == PostCompletionReportOutcome.Rejected.NotFound) {
-                        Button(onClick = onBack, modifier = Modifier.testTag("completion_return_turns")) {
-                            Text(stringResource(R.string.provider_turns_back))
-                        }
+                        NavigationBackButton(onClick = onBack,
+                            modifier = Modifier.testTag("completion_return_turns"),
+                            contentDescription = stringResource(R.string.provider_turns_back))
                     }
                 }
                 else -> when (availability) {

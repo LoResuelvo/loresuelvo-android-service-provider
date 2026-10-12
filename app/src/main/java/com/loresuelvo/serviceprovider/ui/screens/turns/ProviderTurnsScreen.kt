@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import com.loresuelvo.serviceprovider.ui.components.NavigationBackButton
 import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -113,7 +114,7 @@ fun ProviderTurnsScreen(state: ProviderTurnsUiState, onBack: () -> Unit, onRetry
             TopAppBar(
                 title = { Text(stringResource(R.string.provider_turns_title)) },
                 navigationIcon = {
-                    TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) }
+                    NavigationBackButton(onClick = onBack, contentDescription = stringResource(R.string.provider_turns_back))
                 },
             )
         }) { padding ->

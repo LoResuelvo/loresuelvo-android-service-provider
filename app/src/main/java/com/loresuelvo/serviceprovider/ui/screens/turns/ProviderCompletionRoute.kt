@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import com.loresuelvo.serviceprovider.ui.components.NavigationBackButton
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -127,7 +128,7 @@ private fun CompletionFallback(message: Int, onBack: () -> Unit, onRetry: (() ->
     loading: Boolean = false) {
     Scaffold(topBar = { TopAppBar(
         title = { Text(stringResource(R.string.provider_completion_title)) },
-        navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.provider_turns_back)) } },
+        navigationIcon = { NavigationBackButton(onClick = onBack, contentDescription = stringResource(R.string.provider_turns_back)) },
     ) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

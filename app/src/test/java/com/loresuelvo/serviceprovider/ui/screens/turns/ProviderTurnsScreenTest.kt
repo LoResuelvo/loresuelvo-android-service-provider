@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -285,7 +286,7 @@ class ProviderTurnsScreenTest {
         } }
         compose.onNodeWithTag("provider_turn_details_7").performClick()
         compose.onNodeWithText("Detalle del turno").assertExists()
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithTag("provider_turn_7").assertExists()
         org.junit.Assert.assertEquals(0, retries)
     }
@@ -298,7 +299,7 @@ class ProviderTurnsScreenTest {
                 initialSelectedId = order.id)
         } }
         compose.onNodeWithText("Detalle del turno").assertExists()
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.runOnIdle { org.junit.Assert.assertEquals(1, homeBackCalls) }
         compose.onNodeWithTag("provider_turns_list").assertDoesNotExist()
     }
@@ -376,7 +377,7 @@ class ProviderTurnsScreenTest {
             state = state.copy(orders = orders.map { if (it.id == 20) it.copy(status = WorkOrderStatus.AwaitingPayment) else it })
         }
         compose.onNodeWithText("Pendiente de pago").assertExists()
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithTag("provider_turn_20").assertExists()
         compose.onNodeWithTag("provider_turn_1").assertDoesNotExist()
     }
@@ -389,11 +390,11 @@ class ProviderTurnsScreenTest {
         } }
         compose.onNodeWithTag("provider_turns_list").performScrollToIndex(19)
         compose.onNodeWithTag("provider_turn_details_20").performClick()
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.onNodeWithTag("provider_turn_20").assertExists()
         compose.onNodeWithTag("provider_turn_1").assertDoesNotExist()
         compose.runOnIdle { org.junit.Assert.assertEquals(0, listBackCalls) }
-        compose.onNodeWithText("Volver").performClick()
+        compose.onNodeWithContentDescription("Volver").performClick()
         compose.runOnIdle { org.junit.Assert.assertEquals(1, listBackCalls) }
     }
 

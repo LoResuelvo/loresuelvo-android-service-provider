@@ -1,5 +1,7 @@
 package com.loresuelvo.serviceprovider.ui.screens.proposals
 
+import com.loresuelvo.serviceprovider.ui.components.NavigationBackButton
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,9 +73,11 @@ fun ServiceProposalListScreen(
     }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.proposal_list_title), style = MaterialTheme.typography.headlineSmall)
-                TextButton(onClick = onBack) { Text(stringResource(R.string.proposal_list_back)) }
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                NavigationBackButton(
+                    onClick = onBack, contentDescription = stringResource(R.string.proposal_list_back))
+                Text(stringResource(R.string.proposal_list_title), modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineSmall)
             }
             val tabs = ProposalTab.entries
             TabRow(selectedTabIndex = tabs.indexOf(state.selectedTab)) {

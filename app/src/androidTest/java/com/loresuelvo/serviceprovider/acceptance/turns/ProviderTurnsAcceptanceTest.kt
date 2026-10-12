@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.acceptance.turns
 
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.activity.ComponentActivity
 import android.content.res.Configuration
 import androidx.compose.runtime.CompositionLocalProvider
@@ -91,7 +92,7 @@ class ProviderTurnsAcceptanceTest {
         compose.onNodeWithTag("provider_turn_details_40").performClick()
         compose.onNodeWithText(compose.activity.getString(R.string.provider_turns_detail_title)).assertIsDisplayed()
         compose.onNodeWithText(order.description).assertIsDisplayed()
-        compose.onNodeWithText(compose.activity.getString(R.string.provider_turns_back)).performClick()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.provider_turns_back)).performClick()
         compose.onNodeWithTag("home_turns_row").assertIsDisplayed()
         compose.onNodeWithTag("scheduled_view_all_turns").performScrollTo().performClick()
         compose.onNodeWithTag("provider_turns_list").assertIsDisplayed()
@@ -135,7 +136,7 @@ class ProviderTurnsAcceptanceTest {
         compose.onNodeWithTag("provider_turn_conversation").performScrollTo().performClick()
         assertEquals(93, opened)
         compose.onNodeWithText(compose.activity.getString(R.string.provider_turns_status_awaiting_payment)).assertIsDisplayed()
-        compose.onNodeWithText(compose.activity.getString(R.string.provider_turns_back)).performClick()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.provider_turns_back)).performClick()
         compose.onNodeWithTag("provider_turn_20").assertIsDisplayed()
         compose.onNodeWithTag("provider_turn_1").assertDoesNotExist()
     }

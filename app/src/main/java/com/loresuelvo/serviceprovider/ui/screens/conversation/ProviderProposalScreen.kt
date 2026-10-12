@@ -32,7 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.RadioButton
 import com.loresuelvo.serviceprovider.domain.proposal.ProposalValidationError
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,7 +81,7 @@ fun ProviderProposalScreen(
                         title = { Text(stringResource(R.string.provider_proposal_title)) },
                         navigationIcon = {
                             IconButton(onClick = onClose, enabled = enabled) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.provider_proposal_close))
+                                Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.provider_proposal_close))
                             }
                         },
                     )

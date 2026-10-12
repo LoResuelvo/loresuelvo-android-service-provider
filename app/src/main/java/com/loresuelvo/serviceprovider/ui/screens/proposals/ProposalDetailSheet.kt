@@ -1,5 +1,9 @@
 package com.loresuelvo.serviceprovider.ui.screens.proposals
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,29 +44,38 @@ fun ProposalDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(stringResource(R.string.proposal_list_item, proposal.id), style = MaterialTheme.typography.titleLarge)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ProviderAvatar(
-                    proposal.counterpart.name, proposal.counterpart.surname,
-                    proposal.counterpart.profilePhotoUrl,
-                    stringResource(R.string.proposal_list_avatar, proposal.counterpart.name),
-                    size = 56.dp,
-                )
-                Text("${proposal.counterpart.name} ${proposal.counterpart.surname}".trim(),
-                    modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.proposal_detail_title), modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Outlined.Close,
+                        contentDescription = stringResource(R.string.ui_close))
+                }
             }
-            Text(proposal.description, modifier = Modifier.testTag("proposal_detail_reason"))
-            Text(proposalAmount(proposal.amountCents))
-            Text(proposalVisit(proposal.scheduledOnEpochMillis))
-            Text(stringResource(proposal.status.labelRes()))
-            Text(stringResource(R.string.proposal_detail_duration))
-            Text(durationText(proposal.estimatedDurationMinutes))
-            Button(onClick = onConversation) { Text(stringResource(R.string.proposal_detail_conversation)) }
+            Column(
+                modifier = Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ProviderAvatar(
+                        proposal.counterpart.name, proposal.counterpart.surname,
+                        proposal.counterpart.profilePhotoUrl,
+                        stringResource(R.string.proposal_list_avatar, proposal.counterpart.name),
+                        size = 56.dp,
+                    )
+                    Text("${proposal.counterpart.name} ${proposal.counterpart.surname}".trim(),
+                        modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                }
+                Text(proposal.description, modifier = Modifier.testTag("proposal_detail_reason"))
+                Text(proposalAmount(proposal.amountCents))
+                Text(proposalVisit(proposal.scheduledOnEpochMillis))
+                Text(stringResource(proposal.status.labelRes()))
+                Text(stringResource(R.string.proposal_detail_duration))
+                Text(durationText(proposal.estimatedDurationMinutes))
+                Button(onClick = onConversation) { Text(stringResource(R.string.proposal_detail_conversation)) }
+            }
         }
     }
 }

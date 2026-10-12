@@ -424,7 +424,7 @@ class ProviderConversationAttachmentAcceptanceTest {
         composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_button)).performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_title)).assertExists()
-        composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_return_profile)).performClick()
+        composeTestRule.onNodeWithContentDescription(context.getString(R.string.mercadopago_return_profile)).performClick()
         composeTestRule.onNodeWithContentDescription(context.getString(R.string.provider_profile_back)).performClick()
 
         composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()

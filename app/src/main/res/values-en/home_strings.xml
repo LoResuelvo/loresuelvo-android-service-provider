@@ -7,4 +7,10 @@
     <string name="home_carousel_next">Next card</string>
     <string name="home_carousel_position">%1$d of %2$d</string>
     <string name="job_request_chat_explanation">Accept the request to open a chat with the customer and discuss the service.</string>
+    <string name="ui_back">Back</string>
+    <string name="ui_close">Close</string>
+    <string name="requests_view_all">View all</string>
+    <string name="requests_list_title">Pending requests</string>
+    <string name="home_greeting">Hi, %1$s</string>
+    <string name="proposal_detail_title">Service proposal</string>
 </resources>

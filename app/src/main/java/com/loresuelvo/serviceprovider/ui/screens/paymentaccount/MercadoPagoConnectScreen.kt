@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.ui.screens.paymentaccount
 
+import com.loresuelvo.serviceprovider.ui.components.NavigationBackButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,6 +57,13 @@ fun MercadoPagoConnectScreen(
                 .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            if (returnToProfile) {
+                NavigationBackButton(
+                    onClick = if (uiState.accountStatus?.status == ConnectionStatus.CONNECTED) onContinueHome else onContinueWithoutConnecting,
+                    contentDescription = stringResource(R.string.mercadopago_return_profile),
+                    enabled = !uiState.loading,
+                )
+            }
             RegistrationHeader(
                 stringResource(if (returnToProfile) R.string.registration_payments_label else R.string.registration_payment_step),
                 stringResource(R.string.mercadopago_connect_title),
@@ -183,11 +191,8 @@ fun MercadoPagoConnectScreen(
                         }
                     }
                     Spacer(modifier = Modifier.weight(1f, fill = false))
-                    PrimaryButton(
-                        text = stringResource(
-                            if (returnToProfile) R.string.mercadopago_return_profile
-                            else R.string.mercadopago_continue_home,
-                        ),
+                    if (!returnToProfile) PrimaryButton(
+                        text = stringResource(R.string.mercadopago_continue_home),
                         onClick = onContinueHome,
                         enabled = !uiState.loading,
                     )
@@ -249,7 +254,7 @@ fun MercadoPagoConnectScreen(
                             onClick = onConnectClick,
                             enabled = !uiState.loading && !uiState.isConnecting,
                         )
-                        OutlinedButton(
+                        if (!returnToProfile) OutlinedButton(
                             onClick = onContinueWithoutConnecting,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -257,10 +262,7 @@ fun MercadoPagoConnectScreen(
                             shape = RoundedCornerShape(14.dp),
                             enabled = !uiState.loading,
                         ) {
-                            Text(text = stringResource(
-                                if (returnToProfile) R.string.mercadopago_return_profile
-                                else R.string.mercadopago_continue_without_connecting,
-                            ))
+                            Text(text = stringResource(R.string.mercadopago_continue_without_connecting))
                         }
                     }
                 }
