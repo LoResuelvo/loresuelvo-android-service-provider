@@ -49,9 +49,9 @@ class ProviderActivityViewModel @Inject constructor(
         savedState["activity.throughDay"] ?: query.to.atZone(zone).toLocalDate().toString(), query))
     val filters = mutableFilters.asStateFlow()
     val periodExpanded = savedState.getStateFlow("activity.periodExpanded", false)
-    val evolutionExpanded = savedState.getStateFlow("activity.evolutionExpanded", false)
+    val evolutionIndex = savedState.getStateFlow("activity.evolutionIndex", 0)
     fun expandPeriod(expanded: Boolean) { savedState["activity.periodExpanded"] = expanded }
-    fun expandEvolution(expanded: Boolean) { savedState["activity.evolutionExpanded"] = expanded }
+    fun selectEvolutionInterval(index: Int) { savedState["activity.evolutionIndex"] = index.coerceAtLeast(0) }
     private val mutableState = MutableStateFlow<ProviderActivityUiState>(ProviderActivityUiState.Loading)
     val uiState = mutableState.asStateFlow()
     private var requestId = 0L

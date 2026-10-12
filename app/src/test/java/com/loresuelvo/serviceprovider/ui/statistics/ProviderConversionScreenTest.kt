@@ -32,32 +32,32 @@ class ProviderConversionScreenTest {
     @Test fun `production cohort displays supplied stages expandable advances neutral status and distinct requests`() {
         val state = productionResult(); val expanded = mutableStateOf(false)
         compose.setContent { LoresuelvoTheme { Surface { ProviderConversionScreen(state, expanded.value, { expanded.value = it }) } } }
-        reveal("Se convirtieron en contrataciones"); reveal("12 de 20 propuestas")
-        reveal("Emitidas"); reveal("20 · 100 %"); reveal("Contrataciones confirmadas")
-        reveal("Finalizaciones informadas"); reveal("9 · 45 %"); reveal("Pagos completos"); reveal("8 · 40 %")
+        reveal("de tus propuestas se convirtieron en contrataciones"); reveal("12 de 20 propuestas")
+        reveal("20 propuestas enviadas"); reveal("100 % de las propuestas enviadas"); reveal("12 propuestas contratadas")
+        reveal("9 trabajos finalizados"); reveal("45 % de las propuestas enviadas"); reveal("8 trabajos pagados por completo"); reveal("40 % de las propuestas enviadas")
         reveal("Ver avance entre etapas"); compose.onNodeWithText("Ver avance entre etapas").performClick()
-        reveal("Contratadas → finalizadas"); reveal("75 %"); reveal("9 de 12 propuestas")
-        reveal("Finalizadas → pagadas"); reveal("88,89 %"); reveal("8 de 9 propuestas")
-        reveal("8 sin contratación observada")
-        reveal("No significa que hayan sido rechazadas. Las propuestas todavía pueden avanzar.")
-        reveal("Avance observado el ${formatActivityInstant(state.conversion.observedAt)} · Buenos Aires. Incluye avances posteriores a la emisión, aunque ocurran fuera del período elegido.")
-        reveal("Aceptación de solicitudes"); reveal("Recibidas: 5"); reveal("Aceptadas: 3"); reveal("Pendientes: 2")
+        reveal("De contratadas a finalizadas"); reveal("75 %"); reveal("9 de 12 propuestas")
+        reveal("De finalizadas a pagadas"); reveal("88,89 %"); reveal("8 de 9 propuestas")
+        reveal("8 propuestas todavía sin contratar")
+        reveal("Todavía pueden avanzar; no se consideran rechazadas.")
+        reveal("Incluye avances posteriores al período elegido.")
+        reveal("Aceptación de solicitudes"); reveal("5 solicitudes recibidas"); reveal("3 solicitudes aceptadas"); reveal("2 solicitudes por responder")
         reveal("3 de 5 solicitudes recibidas")
-        reveal("Aceptar una solicitud abre la conversación; no confirma una contratación.")
+        reveal("Aceptar una solicitud abre el chat. La contratación se confirma después.")
     }
     @Test fun `no proposals retains nonzero requests and exposes unavailable bases`() {
         compose.setContent { LoresuelvoTheme { Surface { ProviderConversionScreen(productionResult(0, true), true) } } }
         reveal("Sin propuestas en este período. Las solicitudes se muestran por separado.")
-        reveal("Emitidas"); reveal("No disponible"); reveal("0 de 0 propuestas")
-        reveal("Contratadas → finalizadas"); reveal("Finalizadas → pagadas")
-        reveal("Aceptación de solicitudes"); reveal("Recibidas: 5"); reveal("Aceptadas: 3"); reveal("3 de 5 solicitudes recibidas")
-        compose.onNodeWithText("Se convirtieron en contrataciones").assertDoesNotExist()
+        reveal("0 propuestas enviadas"); reveal("No disponible"); reveal("0 de 0 propuestas")
+        reveal("De contratadas a finalizadas"); reveal("De finalizadas a pagadas")
+        reveal("Aceptación de solicitudes"); reveal("5 solicitudes recibidas"); reveal("3 solicitudes aceptadas"); reveal("3 de 5 solicitudes recibidas")
+        compose.onNodeWithText("de tus propuestas se convirtieron en contrataciones").assertDoesNotExist()
     }
     @Test fun `issued proposals without milestones displays zero contraction and unavailable later advances`() {
         compose.setContent { LoresuelvoTheme { Surface { ProviderConversionScreen(productionResult(5, true), true) } } }
-        reveal("Se convirtieron en contrataciones"); reveal("0 %"); reveal("0 de 5 propuestas")
-        reveal("Contratadas → finalizadas"); reveal("No disponible")
-        reveal("5 sin contratación observada")
+        reveal("de tus propuestas se convirtieron en contrataciones"); reveal("0 %"); reveal("0 de 5 propuestas")
+        reveal("De contratadas a finalizadas"); reveal("No disponible")
+        reveal("5 propuestas todavía sin contratar")
     }
     @Test fun `loading error retry expired session and back expose no invented metrics`() {
         val state = mutableStateOf<ProviderConversionUiState>(ProviderConversionUiState.Loading)
@@ -70,7 +70,7 @@ class ProviderConversionScreenTest {
         reveal("Reintentar"); compose.onNodeWithText("Reintentar").performClick(); assertEquals(1, retries)
         compose.onNodeWithText("0 %").assertDoesNotExist()
         compose.runOnIdle { state.value = ProviderConversionUiState.SessionExpired }
-        compose.onNodeWithText("Reintentar").assertDoesNotExist(); compose.onNodeWithText("Recibidas: 5").assertDoesNotExist()
+        compose.onNodeWithText("Reintentar").assertDoesNotExist(); compose.onNodeWithText("5 solicitudes recibidas").assertDoesNotExist()
     }
 
     @Test fun `independent date controls retain draft show inline correction and apply without Activity options`() {
@@ -92,7 +92,7 @@ class ProviderConversionScreenTest {
         compose.onNodeWithTag("provider_conversion").performScrollToNode(hasTestTag("conversion_from_day"))
         compose.onNodeWithTag("conversion_from_day").performTextReplacement("2026-09-02")
         assertNull(filters.value.dateError)
-        reveal("Se convirtieron en contrataciones")
+        reveal("de tus propuestas se convirtieron en contrataciones")
     }
 
     @Test fun `route waits for measured ready layout while expansion changes during metadata restoration`() {

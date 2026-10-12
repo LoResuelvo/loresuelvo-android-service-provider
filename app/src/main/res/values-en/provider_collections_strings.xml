@@ -7,9 +7,9 @@
     <string name="collections_verified_total">Verified total</string>
     <string name="collections_deposits">Verified deposits</string>
     <string name="collections_balances">Verified balances</string>
-    <string name="collections_money_note">Amounts in ARS, excluding fees. Recorded collections do not represent a bank balance.</string>
+    <string name="collections_money_note">Amounts in ARS, excluding fees. This is not your bank balance.</string>
     <string name="collections_empty">No verified collections during this period.</string>
-    <string name="collections_pending_note">Current service balances, without a period filter. Excludes collected deposits and fees.</string>
+    <string name="collections_pending_note">Outstanding today. Excludes deposits already collected and fees.</string>
     <string name="collections_pending_orders">Jobs: %1$d</string>
     <string name="collections_transactions">Verified transactions</string>
     <string name="collections_filter_all">All</string>

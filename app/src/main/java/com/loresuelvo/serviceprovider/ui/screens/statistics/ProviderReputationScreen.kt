@@ -11,6 +11,10 @@ import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -122,11 +126,10 @@ fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Un
                             Surface(Modifier.fillMaxWidth().testTag("reputation_review_${review.workOrderId}"),
                                 shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
                                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    DetailLink(R.string.performance_view_work, { onWorkOrder(review.workOrderId) },
+                                        Modifier.align(Alignment.End))
                                     ReviewStars(review.rating)
                                     if (review.description.isNotEmpty()) Text(review.description)
-                                    TextButton(onClick = { onWorkOrder(review.workOrderId) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                                        Text(stringResource(R.string.performance_view_work))
-                                    }
                                 }
                             }
                         }
@@ -165,7 +168,7 @@ private fun ReputationSummary(reputation: ProviderReputation) {
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
     Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(Icons.Outlined.StarOutline, null)
+        RatingStars(reputation.averageRating ?: 0.0, MaterialTheme.colorScheme.tertiaryContainer)
         Text(reputation.averageRating?.let { stringResource(R.string.reputation_average, formatReputationNumber(it)) }
             ?: stringResource(R.string.reputation_no_rating), style = MaterialTheme.typography.headlineLarge.copy(textDirection = TextDirection.ContentOrLtr))
         Text(stringResource(R.string.reputation_sample, reputation.reviewCount))
@@ -202,12 +205,22 @@ internal fun formatReputationNumber(value: Double): String = NumberFormat.getNum
 @Composable
 internal fun ReviewStars(rating: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.semantics(mergeDescendants = true) {}) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            repeat(5) { index ->
-                Icon(if (index < rating) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                    contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(24.dp))
+        RatingStars(rating.toDouble())
+        Text(stringResource(R.string.reputation_review_rating, rating), style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+internal fun RatingStars(rating: Double, tint: Color = MaterialTheme.colorScheme.tertiary) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        repeat(5) { index ->
+            val fraction = (rating - index).coerceIn(0.0, 1.0).toFloat()
+            Box(Modifier.size(24.dp)) {
+                Icon(Icons.Outlined.StarOutline, null, tint = tint)
+                Icon(Icons.Filled.Star, null, tint = tint, modifier = Modifier.drawWithContent {
+                    clipRect(right = size.width * fraction) { this@drawWithContent.drawContent() }
+                })
             }
         }
-        Text(stringResource(R.string.reputation_review_rating, rating), style = MaterialTheme.typography.labelMedium)
     }
 }

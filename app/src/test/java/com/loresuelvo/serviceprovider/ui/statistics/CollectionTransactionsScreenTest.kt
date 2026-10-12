@@ -40,11 +40,13 @@ class CollectionTransactionsScreenTest {
         } }
         scroll(hasText("Movimientos del filtro: 3 · Total: ${formatActivityMoney(450000)}"))
         scroll(hasTestTag("collection_detail_3"))
-        compose.onNodeWithTag("collection_detail_3").performClick()
+        compose.onNodeWithTag("provider_collections").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { it(0f, -120f) }
+        compose.onNodeWithTag("collection_detail_3").assertIsDisplayed().performClick()
         assertEquals(8, openedProposal)
         assertNull(openedWork)
         scroll(hasTestTag("collection_detail_2"))
-        compose.onNodeWithTag("collection_detail_2").performClick()
+        compose.onNodeWithTag("provider_collections").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { it(0f, -120f) }
+        compose.onNodeWithTag("collection_detail_2").assertIsDisplayed().performClick()
         assertEquals(10, openedWork)
         compose.onNodeWithText("Propuesta #9").assertDoesNotExist()
         scroll(hasText("Cargar más")); compose.onNodeWithText("Cargar más").performClick(); assertEquals(1, loads)

@@ -56,12 +56,10 @@ class ProviderCollectionsNavigationAcceptanceTest {
 
     @Test fun tabs_filters_continuation_and_reading_survive_navigation_recreation_and_rotation() {
         openCollections()
-        revealControl(R.string.collections_evolution).assert(SemanticsMatcher.expectValue(
-            androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
-            context.getString(R.string.activity_collapsed))).performClick()
-        revealControl(R.string.collections_evolution).assert(SemanticsMatcher.expectValue(
-            androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
-            context.getString(R.string.activity_expanded)))
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasContentDescription(context.getString(R.string.performance_next_interval)))
+        compose.onNodeWithContentDescription(context.getString(R.string.performance_next_interval)).performScrollTo().performClick()
+        val selectedInterval = compose.onNodeWithTag("evolution_interval").fetchSemanticsNode().config[
+            androidx.compose.ui.semantics.SemanticsProperties.Text].single().text
         revealControl(R.string.collections_filter_deposits).performClick()
         revealControl(R.string.collections_load_more).performClick()
         compose.waitForIdle()
@@ -103,9 +101,8 @@ class ProviderCollectionsNavigationAcceptanceTest {
         compose.onNodeWithTag("collection_transaction_19").assertIsDisplayed()
         assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions.queries.last().purpose)
         assertEquals(collections.queries.last().from, transactions.queries.last().from)
-        revealControl(R.string.collections_evolution).assert(SemanticsMatcher.expectValue(
-            androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
-            context.getString(R.string.activity_expanded)))
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasTestTag("evolution_interval"))
+        compose.onNodeWithTag("evolution_interval").assertTextEquals(selectedInterval)
     }
 
     @Test fun transaction_filters_keep_the_screen_near_the_filter_and_pull_refresh_reloads_both_sections() {

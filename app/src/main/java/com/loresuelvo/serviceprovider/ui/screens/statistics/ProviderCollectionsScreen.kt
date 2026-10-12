@@ -40,11 +40,11 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
         CollectionTransactionsUiState(),
     onPurpose: (CollectionPurpose?) -> Unit = {},
     onLoadMore: () -> Unit = {}, onTransactionsRetry: () -> Unit = {},
-    listState: LazyListState = rememberLazyListState(), evolutionExpansion: Boolean? = null,
-    onEvolutionExpansion: ((Boolean) -> Unit)? = null,
+    listState: LazyListState = rememberLazyListState(), evolutionSelection: Int? = null,
+    onEvolutionSelection: ((Int) -> Unit)? = null,
     onWorkOrder: (Int) -> Unit = {}, onProposal: (Int) -> Unit = {}) {
-    var localExpansion by rememberSaveable { mutableStateOf(false) }
-    val evolutionExpanded = evolutionExpansion ?: localExpansion
+    var localSelection by rememberSaveable { mutableIntStateOf(0) }
+    val evolutionIndex = evolutionSelection ?: localSelection
     RefreshableContent((state as? ProviderCollectionsUiState.Ready)?.refreshing == true || transactions.refreshing, onRetry) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_collections").semantics {
             this[COLLECTIONS_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
@@ -93,33 +93,19 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
                             Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.semantics { heading() })
                             Text(stringResource(R.string.collections_pending_note), style = MaterialTheme.typography.bodySmall)
-                            PendingBalance(stringResource(R.string.activity_scheduled), collections.currentPending.scheduled)
                             HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
-                            PendingBalance(stringResource(R.string.activity_awaiting_payment), collections.currentPending.awaitingPayment)
+                            PendingBalance(R.plurals.performance_scheduled, collections.currentPending.scheduled)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
+                            PendingBalance(R.plurals.performance_awaiting, collections.currentPending.awaitingPayment)
                         }
                     }
-                    collectionTransactionsItems(transactions, onPurpose, onLoadMore, onTransactionsRetry, onWorkOrder, onProposal)
                     collections.comparison?.let { comparison ->
                         item { CollectionComparisonSection(collections.results, comparison) }
                     }
-                    item(key = "collection_evolution") { CollectionEvolutionHeading(evolutionExpanded) {
-                        if (onEvolutionExpansion != null) onEvolutionExpansion(it) else localExpansion = it
+                    item(key = "collection_evolution") { CollectionEvolution(collections.evolution, evolutionIndex) { index ->
+                        if (onEvolutionSelection != null) onEvolutionSelection(index) else localSelection = index
                     } }
-                    if (evolutionExpanded) collections.evolution.forEach { bucket ->
-                        item(key = "collection_bucket_${bucket.from}") { CollectionEvolutionBucket(bucket) }
-                    }
-                    item {
-                        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-                            Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                                Text(stringResource(R.string.activity_effective_period), style = MaterialTheme.typography.titleSmall)
-                                Text(stringResource(R.string.activity_period, formatActivityInstant(collections.period.from),
-                                    formatActivityInstant(collections.period.to)), style = MaterialTheme.typography.bodySmall)
-                                Text(stringResource(R.string.activity_calculated, formatActivityInstant(collections.calculatedAt)),
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-
+                    collectionTransactionsItems(transactions, onPurpose, onLoadMore, onTransactionsRetry, onWorkOrder, onProposal)
                 }
             }
         }
@@ -141,10 +127,9 @@ private fun CollectionMoney(label: String, cents: Long, highlighted: Boolean = f
 }
 
 @Composable
-private fun PendingBalance(label: String, pending: PendingCollectionBalance) {
+private fun PendingBalance(label: Int, pending: PendingCollectionBalance) {
     Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 8.dp)) {
-        Text(label, style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(R.string.collections_pending_orders, pending.orders))
+        PerformanceCount(pending.orders, label)
         Text(formatActivityMoney(pending.amountCents), style = MaterialTheme.typography.titleLarge)
     }
 }

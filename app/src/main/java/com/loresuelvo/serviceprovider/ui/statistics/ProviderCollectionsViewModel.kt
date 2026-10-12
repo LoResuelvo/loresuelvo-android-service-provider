@@ -30,8 +30,8 @@ class ProviderCollectionsViewModel @Inject constructor(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<ProviderCollectionsUiState>(ProviderCollectionsUiState.Loading)
     val uiState = mutableState.asStateFlow()
-    val evolutionExpanded = savedState.getStateFlow("collections.evolutionExpanded", false)
-    fun expandEvolution(expanded: Boolean) { savedState["collections.evolutionExpanded"] = expanded }
+    val evolutionIndex = savedState.getStateFlow("collections.evolutionIndex", 0)
+    fun selectEvolutionInterval(index: Int) { savedState["collections.evolutionIndex"] = index.coerceAtLeast(0) }
     var query: ActivityQuery? = null
         private set
     private var requestId = 0L

@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.ui.screens.statistics
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -35,5 +36,27 @@ internal fun PerformanceCard(attention: Boolean = false, content: @Composable Co
         color = if (attention) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surface,
         contentColor = if (attention) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurface) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    }
+}
+
+@Composable
+internal fun PerformanceCount(value: Long, label: Int, modifier: Modifier = Modifier) {
+    val description = androidx.compose.ui.res.pluralStringResource(label, value.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+    val number = java.text.NumberFormat.getIntegerInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).format(value)
+    Text(androidx.compose.ui.text.buildAnnotatedString {
+        pushStyle(MaterialTheme.typography.headlineSmall.toSpanStyle())
+        append(number)
+        pop()
+        append(" ")
+        append(description)
+    }, modifier = modifier, style = MaterialTheme.typography.bodyLarge)
+}
+
+@Composable
+internal fun DetailLink(label: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    TextButton(onClick = onClick, modifier = modifier.heightIn(min = 48.dp)) {
+        Text(stringResource(label))
+        Icon(androidx.compose.material.icons.Icons.AutoMirrored.Outlined.ArrowForward,
+            contentDescription = null, modifier = Modifier.padding(start = 6.dp).size(18.dp))
     }
 }

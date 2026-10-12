@@ -27,12 +27,12 @@ class ProviderCollectionsScreenTest {
         } as CollectionsOutcome.Success
         compose.setContent { LoresuelvoTheme { ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(result.collections), {}) } }
         assertScrollableText("Total verificado", formatActivityMoney(400000))
-        assertScrollableText("Importes en ARS, sin comisiones. Los cobros registrados no representan un saldo bancario.")
+        assertScrollableText("Importes en ARS, sin comisiones. No es tu saldo bancario.")
         assertScrollableText("Señas verificadas", formatActivityMoney(120000))
         assertScrollableText("Saldos verificados", formatActivityMoney(280000))
-        assertScrollableText("Saldos actuales del servicio, sin filtro de período. No incluyen señas ya cobradas ni comisiones.")
-        assertScrollableText("Trabajos programados", "Trabajos: 3")
-        assertScrollableText("Finalizados con saldo pendiente", "Trabajos: 2")
+        assertScrollableText("Lo que falta cobrar hoy. No incluye señas ya cobradas ni comisiones.")
+        assertScrollableText("3 trabajos programados")
+        assertScrollableText("2 trabajos finalizados por cobrar")
     }
     @Test fun `retry loading empty and session expiry never present an error as zero money`() {
         val state = mutableStateOf<ProviderCollectionsUiState>(ProviderCollectionsUiState.Error(CollectionsOutcome.Failure.Network))
@@ -46,7 +46,7 @@ class ProviderCollectionsScreenTest {
         compose.runOnIdle { state.value = ProviderCollectionsUiState.Ready(collectionsFixture(empty = true)) }
         assertScrollableText("Total verificado", formatActivityMoney(0))
         assertScrollableText("No hubo cobros verificados durante este período.")
-        assertScrollableText("Finalizados con saldo pendiente", "Trabajos: 2")
+        assertScrollableText("2 trabajos finalizados por cobrar")
         compose.runOnIdle { state.value = ProviderCollectionsUiState.SessionExpired }
         compose.onNodeWithText("Ingresá nuevamente para consultar tus cobros.").assertExists()
         compose.onNodeWithText("Total verificado").assertDoesNotExist()
@@ -112,13 +112,11 @@ class ProviderCollectionsScreenTest {
             comparePrevious = true))
         compose.setContent { LoresuelvoTheme { ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(result), {}) } }
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
-        val evolution = context.getString(com.loresuelvo.serviceprovider.R.string.collections_evolution)
-        compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(evolution) and hasClickAction())
-        compose.onNode(hasText(evolution) and hasClickAction()).performClick()
-        val zero = context.getString(com.loresuelvo.serviceprovider.R.string.collections_bucket_values,
-            formatActivityMoney(0), formatActivityMoney(0), formatActivityMoney(0))
-        compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(zero))
-        compose.onNodeWithText(zero).assertIsDisplayed()
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasContentDescription("Intervalo siguiente"))
+        compose.onNodeWithContentDescription("Intervalo siguiente").performScrollTo().performClick()
+        assertScrollableText("Señas verificadas", formatActivityMoney(0))
+        assertScrollableText("Saldos verificados", formatActivityMoney(0))
+        assertScrollableText("Total verificado", formatActivityMoney(0))
         val unavailable = context.getString(com.loresuelvo.serviceprovider.R.string.activity_unavailable)
         val change = context.getString(com.loresuelvo.serviceprovider.R.string.activity_comparison_change,
             formatActivityMoney(400000), unavailable)
@@ -126,39 +124,21 @@ class ProviderCollectionsScreenTest {
         compose.onNodeWithText(change).assertIsDisplayed()
     }
 
-    @Test fun `a year of buckets stays collapsed until requested and collapse makes movements reachable again`() {
-        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+    @Test fun `a year of buckets does not create a year of text rows`() {
         val from = java.time.Instant.parse("2025-10-03T12:00:00Z")
-        val base = collectionsFixture(com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(
-            from, from.plusSeconds(365 * 86400L)))
+        val base = collectionsFixture(com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(from, from.plusSeconds(365 * 86400L)))
         val buckets = (0L..364L).map { day ->
             com.loresuelvo.serviceprovider.domain.statistics.CollectionBucket(
-                base.period.from.plusSeconds(day * 86400), base.period.from.plusSeconds((day + 1) * 86400),
+                from.plusSeconds(day * 86400), from.plusSeconds((day + 1) * 86400),
                 com.loresuelvo.serviceprovider.domain.statistics.CollectionAmounts(day * 100, 0, day * 100))
         }
-        compose.setContent { LoresuelvoTheme {
-            ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(base.copy(evolution = buckets)), {})
-        } }
-        val evolution = hasText(context.getString(com.loresuelvo.serviceprovider.R.string.collections_evolution)) and hasClickAction()
-        val movements = hasText(context.getString(com.loresuelvo.serviceprovider.R.string.collections_transactions))
-        val last = context.getString(com.loresuelvo.serviceprovider.R.string.collections_bucket_values,
-            formatActivityMoney(36400), formatActivityMoney(0), formatActivityMoney(36400))
-        fun reveal(matcher: SemanticsMatcher) = compose.onNodeWithTag("provider_collections").performScrollToNode(matcher)
-        reveal(movements)
+        compose.setContent { LoresuelvoTheme { ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(base.copy(evolution = buckets)), {}) } }
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasText("Movimientos verificados"))
+        compose.onNodeWithText("Movimientos verificados").assertIsDisplayed()
         assertTrue(compose.onNodeWithTag("provider_collections").fetchSemanticsNode().config[
             com.loresuelvo.serviceprovider.ui.screens.statistics.COLLECTIONS_READING_POSITION].first < 25)
-        compose.onNodeWithText(last).assertDoesNotExist()
-        reveal(evolution); compose.onNode(evolution).assert(SemanticsMatcher.expectValue(
-            androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
-            context.getString(com.loresuelvo.serviceprovider.R.string.activity_collapsed))).performClick()
-        reveal(hasText(last)); compose.onNodeWithText(last).assertIsDisplayed()
-        assertTrue(compose.onNodeWithTag("provider_collections").fetchSemanticsNode().config[
-            com.loresuelvo.serviceprovider.ui.screens.statistics.COLLECTIONS_READING_POSITION].first > 300)
-        reveal(evolution); compose.onNode(evolution).performClick()
-        reveal(movements); compose.onNode(movements).assertIsDisplayed()
-        compose.onNodeWithText(last).assertDoesNotExist()
-        assertTrue(compose.onNodeWithTag("provider_collections").fetchSemanticsNode().config[
-            com.loresuelvo.serviceprovider.ui.screens.statistics.COLLECTIONS_READING_POSITION].first < 25)
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasTestTag("evolution_interval"))
+        compose.onAllNodesWithTag("evolution_interval").assertCountEquals(1)
+        compose.onNodeWithText("Período consultado").assertDoesNotExist()
     }
-
 }

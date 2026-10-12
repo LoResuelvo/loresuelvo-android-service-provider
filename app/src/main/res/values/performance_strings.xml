@@ -9,4 +9,54 @@
     <string name="performance_proposal_unavailable">Esta propuesta ya no está disponible.</string>
     <string name="performance_hide_comparison">Ocultar comparación</string>
     <string name="performance_stage_value">%1$d · %2$s</string>
+    <plurals name="performance_bookings">
+        <item quantity="one">contratación confirmada</item>
+        <item quantity="other">contrataciones confirmadas</item>
+    </plurals>
+    <plurals name="performance_completions">
+        <item quantity="one">trabajo finalizado</item>
+        <item quantity="other">trabajos finalizados</item>
+    </plurals>
+    <plurals name="performance_paid">
+        <item quantity="one">trabajo pagado por completo</item>
+        <item quantity="other">trabajos pagados por completo</item>
+    </plurals>
+    <plurals name="performance_clients">
+        <item quantity="one">cliente atendido</item>
+        <item quantity="other">clientes atendidos</item>
+    </plurals>
+    <plurals name="performance_requests">
+        <item quantity="one">solicitud por responder</item>
+        <item quantity="other">solicitudes por responder</item>
+    </plurals>
+    <plurals name="performance_scheduled">
+        <item quantity="one">trabajo programado</item>
+        <item quantity="other">trabajos programados</item>
+    </plurals>
+    <plurals name="performance_awaiting">
+        <item quantity="one">trabajo finalizado por cobrar</item>
+        <item quantity="other">trabajos finalizados por cobrar</item>
+    </plurals>
+    <plurals name="performance_proposals">
+        <item quantity="one">propuesta enviada</item>
+        <item quantity="other">propuestas enviadas</item>
+    </plurals>
+    <plurals name="performance_contracted_proposals">
+        <item quantity="one">propuesta contratada</item>
+        <item quantity="other">propuestas contratadas</item>
+    </plurals>
+    <plurals name="performance_received_requests">
+        <item quantity="one">solicitud recibida</item>
+        <item quantity="other">solicitudes recibidas</item>
+    </plurals>
+    <plurals name="performance_accepted_requests">
+        <item quantity="one">solicitud aceptada</item>
+        <item quantity="other">solicitudes aceptadas</item>
+    </plurals>
+    <string name="performance_cohort_percentage">%1$s de las propuestas enviadas</string>
+    <string name="performance_evolution_hint">Tocá un punto o usá las flechas para ver sus valores.</string>
+    <string name="performance_evolution_empty">No hay intervalos para mostrar.</string>
+    <string name="performance_previous_interval">Intervalo anterior</string>
+    <string name="performance_next_interval">Intervalo siguiente</string>
+    <string name="performance_request_rate">de tus solicitudes fueron aceptadas</string>
 </resources>

@@ -83,7 +83,8 @@ fun ProviderTurnDetailScreen(order: WorkOrder, onBack: () -> Unit, onConversatio
                     ProviderPaidHistorySection(it.paidOn, it.review)
                 }
             }
-            if (onCompletion != null) {
+            if (onCompletion != null && (detail?.status ?: order.status) == WorkOrderStatus.Scheduled &&
+                detail?.completionReportId == null) {
                 Button(onClick = onCompletion, modifier = Modifier.fillMaxWidth().testTag("provider_turn_completion")) {
                     Icon(Icons.Outlined.TaskAlt, null, Modifier.padding(end = 8.dp))
                     Text(stringResource(R.string.provider_completion_title))

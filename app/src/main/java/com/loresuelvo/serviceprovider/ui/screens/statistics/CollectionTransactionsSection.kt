@@ -64,13 +64,12 @@ private fun TransactionRow(row: CollectionTransaction, onWorkOrder: (Int) -> Uni
     Surface(modifier = Modifier.testTag("collection_transaction_${row.id}"),
         shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(16.dp)) {
+            DetailLink(if (row.workOrderId != null) R.string.performance_view_work else R.string.performance_view_proposal,
+                { row.workOrderId?.let(onWorkOrder) ?: onProposal(row.serviceProposalId) },
+                Modifier.align(androidx.compose.ui.Alignment.End).testTag("collection_detail_${row.id}"))
+            Text(formatActivityMoney(row.sellerAmountCents), style = MaterialTheme.typography.titleLarge)
             Text(stringResource(purposeLabel(row.purpose)), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.collections_verified_on, formatActivityInstant(row.verifiedOn)))
-            Text(formatActivityMoney(row.sellerAmountCents), style = MaterialTheme.typography.titleLarge)
-            TextButton(onClick = { row.workOrderId?.let(onWorkOrder) ?: onProposal(row.serviceProposalId) },
-                modifier = Modifier.testTag("collection_detail_${row.id}").heightIn(min = 48.dp)) {
-                Text(stringResource(if (row.workOrderId != null) R.string.performance_view_work else R.string.performance_view_proposal))
-            }
         }
     }
 }

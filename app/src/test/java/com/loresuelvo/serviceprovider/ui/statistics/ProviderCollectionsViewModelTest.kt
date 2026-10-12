@@ -85,16 +85,16 @@ class ProviderCollectionsViewModelTest {
         val saved = androidx.lifecycle.SavedStateHandle()
         val first = ProviderCollectionsViewModel(GetProviderCollectionsUseCase(repository), sessions, saved)
         store.put("first", first)
-        assertFalse(first.evolutionExpanded.value)
-        first.expandEvolution(true)
+        assertEquals(0, first.evolutionIndex.value)
+        first.selectEvolutionInterval(1)
         val restored = ProviderCollectionsViewModel(GetProviderCollectionsUseCase(repository), sessions, saved)
         store.put("restored", restored)
-        assertTrue(restored.evolutionExpanded.value)
+        assertEquals(1, restored.evolutionIndex.value)
         restored.selectQuery(query); dispatcher.scheduler.advanceUntilIdle()
         restored.selectQuery(query.copy(to = query.to.minusSeconds(60))); dispatcher.scheduler.advanceUntilIdle()
-        assertTrue(restored.evolutionExpanded.value)
-        restored.expandEvolution(false)
-        assertFalse(first.evolutionExpanded.value)
+        assertEquals(1, restored.evolutionIndex.value)
+        restored.selectEvolutionInterval(0)
+        assertEquals(0, first.evolutionIndex.value)
     }
 
     @Test fun `manual refresh keeps data and duplicate requests are suppressed with recoverable errors`() {

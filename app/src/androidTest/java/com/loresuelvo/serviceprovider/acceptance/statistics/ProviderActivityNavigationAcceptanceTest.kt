@@ -75,35 +75,33 @@ class ProviderActivityNavigationAcceptanceTest {
         val query = statistics.queries.last()
         assertEquals(Instant.parse("2026-08-01T03:00:00Z"), query.from)
         assertEquals(ActivityGranularity.DAY, query.granularity)
-        revealText(R.string.activity_evolution_values).performClick()
-        val bucketValues = context.getString(R.string.activity_bucket_values, 8L, 5L, 3L)
-        compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(bucketValues))
-        compose.onNodeWithText(bucketValues).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasTestTag("evolution_interval"))
+        compose.onNodeWithTag("evolution_interval").performScrollTo().assertIsDisplayed()
         val viewportTop = compose.onNodeWithTag("provider_activity").fetchSemanticsNode().boundsInRoot.top
-        val bucketTop = compose.onNodeWithText(bucketValues).fetchSemanticsNode().boundsInRoot.top
+        val bucketTop = compose.onNodeWithTag("evolution_interval").fetchSemanticsNode().boundsInRoot.top
         compose.onNodeWithTag("provider_activity").performSemanticsAction(
             androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { scroll -> scroll(0f, bucketTop - viewportTop) }
-        compose.onNodeWithText(bucketValues).assertIsDisplayed()
+        compose.onNodeWithTag("evolution_interval").assertIsDisplayed()
         assertEquals("The chosen bucket must anchor the first visible reading item", viewportTop,
-            compose.onNodeWithText(bucketValues).fetchSemanticsNode().boundsInRoot.top, 1f)
+            compose.onNodeWithTag("evolution_interval").fetchSemanticsNode().boundsInRoot.top, 1f)
         val before = readingPosition()
         assertTrue("Reading must start beyond the initial viewport", before.first > 0)
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
         openActivity()
-        compose.onNodeWithText(bucketValues).assertIsDisplayed()
+        compose.onNodeWithTag("evolution_interval").assertIsDisplayed()
         assertEquals("Returning must preserve the first visible item and its pixel offset", before, readingPosition())
         assertEquals(query, statistics.queries.last())
         scenario.recreate()
         compose.waitForIdle()
-        compose.onNodeWithText(bucketValues).assertIsDisplayed()
+        compose.onNodeWithTag("evolution_interval").assertIsDisplayed()
         assertEquals("Recreation must preserve the first visible item and its pixel offset", before, readingPosition())
         assertEquals(query, statistics.queries.last())
         scenario.onActivity { it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
         compose.waitUntil(5_000) {
             context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE &&
-                compose.onAllNodesWithText(bucketValues).fetchSemanticsNodes().isNotEmpty()
+                compose.onAllNodesWithTag("evolution_interval").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText(bucketValues).assertIsDisplayed()
+        compose.onNodeWithTag("evolution_interval").assertIsDisplayed()
         assertEquals(query, statistics.queries.last())
         revealText(R.string.activity_period_options).assert(
             SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription,
@@ -135,9 +133,9 @@ class ProviderActivityNavigationAcceptanceTest {
                 compose.onAllNodesWithText(context.getString(R.string.activity_loading)).fetchSemanticsNodes().isEmpty()
         }
     }
-    private fun text(id: Int) = compose.onNodeWithText(context.getString(id))
+    private fun text(id: Int) = compose.onNodeWithText(context.getString(id), substring = true, ignoreCase = true)
     private fun revealText(id: Int): SemanticsNodeInteraction {
-        compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(context.getString(id)))
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(context.getString(id), substring = true, ignoreCase = true))
         return text(id).performScrollTo()
     }
     private fun readingPosition(): Pair<Int, Int> = compose.onNodeWithTag("provider_activity")
@@ -232,9 +230,9 @@ class ProviderActivityCompactLayoutTest {
             }
         }
         listOf(R.string.activity_bookings, R.string.activity_completions, R.string.activity_paid,
-            R.string.activity_clients, R.string.activity_evolution_values, R.string.activity_awaiting_payment).forEach { id ->
-            val node = compose.onNodeWithText(context.getString(id))
-            compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(context.getString(id)))
+            R.string.activity_clients, R.string.activity_evolution, R.string.activity_awaiting_payment).forEach { id ->
+            val node = compose.onNodeWithText(context.getString(id), substring = true, ignoreCase = true)
+            compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(context.getString(id), substring = true, ignoreCase = true))
             node.performScrollTo().assertIsDisplayed()
             val bounds = node.fetchSemanticsNode().boundsInRoot
             val viewport = compose.onNodeWithTag("provider_activity").fetchSemanticsNode().boundsInRoot

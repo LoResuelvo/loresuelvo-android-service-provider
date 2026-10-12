@@ -39,7 +39,7 @@ fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val filters by viewModel.filters.collectAsStateWithLifecycle()
     val periodExpanded by viewModel.periodExpanded.collectAsStateWithLifecycle()
-    val evolutionExpanded by viewModel.evolutionExpanded.collectAsStateWithLifecycle()
+    val evolutionIndex by viewModel.evolutionIndex.collectAsStateWithLifecycle()
     val listState = rememberLazyListState(viewModel.readingIndex, viewModel.readingOffset)
     var restored by remember { mutableStateOf(false) }
     LaunchedEffect(state) {
@@ -64,7 +64,7 @@ fun ProviderActivityRoute(viewModel: ProviderActivityViewModel = hiltViewModel()
     }
     ProviderActivityScreen(state, viewModel::retry, filters, viewModel::editDates, viewModel::applyDates,
         viewModel::selectGranularity, viewModel::comparePrevious, listState,
-        periodExpanded, evolutionExpanded, viewModel::expandPeriod, viewModel::expandEvolution, onCollections, onReputation, onConversion)
+        periodExpanded, evolutionIndex, viewModel::expandPeriod, viewModel::selectEvolutionInterval, onCollections, onReputation, onConversion)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -73,9 +73,9 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
     filters: ActivityFilters? = null, onEditDates: (String, String) -> Unit = { _, _ -> },
     onApplyDates: () -> Unit = {}, onGranularity: (ActivityGranularity) -> Unit = {},
     onComparison: (Boolean) -> Unit = {}, listState: LazyListState = rememberLazyListState(),
-    periodExpansion: Boolean? = null, evolutionExpansion: Boolean? = null,
-    onPeriodExpansion: ((Boolean) -> Unit)? = null, onEvolutionExpansion: ((Boolean) -> Unit)? = null, onCollections: (() -> Unit)? = null, onReputation: () -> Unit = {}, onConversion: () -> Unit = {}) {
-    var showValues by rememberSaveable { mutableStateOf(false) }
+    periodExpansion: Boolean? = null, evolutionSelection: Int? = null,
+    onPeriodExpansion: ((Boolean) -> Unit)? = null, onEvolutionSelection: ((Int) -> Unit)? = null, onCollections: (() -> Unit)? = null, onReputation: () -> Unit = {}, onConversion: () -> Unit = {}) {
+    var selectedInterval by rememberSaveable { mutableIntStateOf(0) }
     var periodExpanded by rememberSaveable { mutableStateOf(false) }
     RefreshableContent((state as? ProviderActivityUiState.Ready)?.refreshing == true, onRetry) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_activity").semantics {
@@ -129,34 +129,27 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
                             Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Column(Modifier.semantics(mergeDescendants = true) {}) {
-                                    Text(result.confirmedBookings.toString(), style = MaterialTheme.typography.displaySmall)
-                                    Text(stringResource(R.string.activity_bookings), style = MaterialTheme.typography.titleMedium)
-                                }
+                                PerformanceCount(result.confirmedBookings, R.plurals.performance_bookings)
                                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.25f))
-                                ValueRow(stringResource(R.string.activity_completions), result.reportedCompletions.toString())
-                                ValueRow(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders.toString())
+                                PerformanceCount(result.reportedCompletions, R.plurals.performance_completions)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.25f))
+                                PerformanceCount(result.fullyPaidWorkOrders, R.plurals.performance_paid)
+
                             }
                         }
                     }
                     item {
                         PerformanceCard {
-                            ValueRow(stringResource(R.string.activity_clients), result.clientsServed.toString())
+                            PerformanceCount(result.clientsServed, R.plurals.performance_clients)
                             Text(stringResource(R.string.activity_client_breakdown, result.newClients, result.returningClients))
                         }
                     }
                     activity.comparison?.let { comparison ->
                         item { ActivityComparisonSection(activity.results, comparison) }
                     }
-                    item { ActivityEvolution(activity.evolution, evolutionExpansion ?: showValues) {
-                        if (onEvolutionExpansion != null) onEvolutionExpansion(!(evolutionExpansion ?: showValues))
-                        else showValues = !showValues
+                    item { ActivityEvolution(activity.evolution, evolutionSelection ?: selectedInterval) { index ->
+                        if (onEvolutionSelection != null) onEvolutionSelection(index) else selectedInterval = index
                     } }
-                    if (evolutionExpansion ?: showValues) {
-                        activity.evolution.forEach { bucket ->
-                            item(key = "activity_bucket_${bucket.from}") { ActivityEvolutionBucket(bucket) }
-                        }
-                    }
                     item {
                         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface,
                             contentColor = MaterialTheme.colorScheme.onSurface) {
@@ -169,15 +162,17 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                             }
                         }
                     }
-                    item { Period(activity) }
                     item {
                         PerformanceCard(attention = activity.currentPending.requests > 0 || activity.currentPending.scheduledOrders > 0 || activity.currentPending.awaitingPaymentOrders > 0) {
                         Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.semantics { heading() })
                         Text(stringResource(R.string.activity_pending_note), style = MaterialTheme.typography.bodySmall)
-                        ValueRow(stringResource(R.string.activity_pending_requests), activity.currentPending.requests.toString())
-                        ValueRow(stringResource(R.string.activity_scheduled), activity.currentPending.scheduledOrders.toString())
-                        ValueRow(stringResource(R.string.activity_awaiting_payment), activity.currentPending.awaitingPaymentOrders.toString())
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
+                        PerformanceCount(activity.currentPending.requests, R.plurals.performance_requests)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
+                        PerformanceCount(activity.currentPending.scheduledOrders, R.plurals.performance_scheduled)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
+                        PerformanceCount(activity.currentPending.awaitingPaymentOrders, R.plurals.performance_awaiting)
                         }
                     }
                 }
@@ -189,23 +184,10 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
 }
 
 @Composable
-private fun Period(activity: ProviderActivity) {
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(stringResource(R.string.activity_effective_period), style = MaterialTheme.typography.titleSmall)
-            Text(stringResource(R.string.activity_period, formatActivityInstant(activity.period.from),
-                formatActivityInstant(activity.period.to)), style = MaterialTheme.typography.bodySmall)
-            Text(stringResource(R.string.activity_calculated, formatActivityInstant(activity.calculatedAt)),
-                style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-@Composable
 private fun ValueRow(label: String, value: String) {
     Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 8.dp)) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
         Text(value, style = MaterialTheme.typography.titleLarge)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

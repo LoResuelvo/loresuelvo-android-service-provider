@@ -9,4 +9,54 @@
     <string name="performance_proposal_unavailable">This proposal is no longer available.</string>
     <string name="performance_hide_comparison">Hide comparison</string>
     <string name="performance_stage_value">%1$d · %2$s</string>
+    <plurals name="performance_bookings">
+        <item quantity="one">confirmed booking</item>
+        <item quantity="other">confirmed bookings</item>
+    </plurals>
+    <plurals name="performance_completions">
+        <item quantity="one">job marked as completed</item>
+        <item quantity="other">jobs marked as completed</item>
+    </plurals>
+    <plurals name="performance_paid">
+        <item quantity="one">fully paid job</item>
+        <item quantity="other">fully paid jobs</item>
+    </plurals>
+    <plurals name="performance_clients">
+        <item quantity="one">client served</item>
+        <item quantity="other">clients served</item>
+    </plurals>
+    <plurals name="performance_requests">
+        <item quantity="one">request awaiting a reply</item>
+        <item quantity="other">requests awaiting a reply</item>
+    </plurals>
+    <plurals name="performance_scheduled">
+        <item quantity="one">scheduled job</item>
+        <item quantity="other">scheduled jobs</item>
+    </plurals>
+    <plurals name="performance_awaiting">
+        <item quantity="one">completed job awaiting payment</item>
+        <item quantity="other">completed jobs awaiting payment</item>
+    </plurals>
+    <plurals name="performance_proposals">
+        <item quantity="one">proposal sent</item>
+        <item quantity="other">proposals sent</item>
+    </plurals>
+    <plurals name="performance_contracted_proposals">
+        <item quantity="one">proposal converted to a booking</item>
+        <item quantity="other">proposals converted to bookings</item>
+    </plurals>
+    <plurals name="performance_received_requests">
+        <item quantity="one">request received</item>
+        <item quantity="other">requests received</item>
+    </plurals>
+    <plurals name="performance_accepted_requests">
+        <item quantity="one">request accepted</item>
+        <item quantity="other">requests accepted</item>
+    </plurals>
+    <string name="performance_cohort_percentage">%1$s of proposals sent</string>
+    <string name="performance_evolution_hint">Tap a point or use the arrows to see its values.</string>
+    <string name="performance_evolution_empty">No intervals to display.</string>
+    <string name="performance_previous_interval">Previous interval</string>
+    <string name="performance_next_interval">Next interval</string>
+    <string name="performance_request_rate">of your requests were accepted</string>
 </resources>

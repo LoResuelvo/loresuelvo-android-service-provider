@@ -35,6 +35,9 @@ class PerformanceDesignTest {
         compose.onNodeWithText("Conversión").assertIsDisplayed().performClick()
         assertEquals(true, opened)
         save("summary")
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasTestTag("evolution_plot"))
+        compose.onNodeWithTag("evolution_plot").performScrollTo()
+        save("activity-evolution")
     }
 
     @Test fun `embedded conversion exposes section navigation and summary`() {
@@ -54,6 +57,9 @@ class PerformanceDesignTest {
         render { ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(collectionsFixture()), {}, filters = activityFilters()) }
         compose.onNodeWithText("Total verificado").assertIsDisplayed()
         save("collections")
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasTestTag("evolution_plot"))
+        compose.onNodeWithTag("evolution_plot").performScrollTo()
+        save("collections-evolution")
     }
 
     @Test fun `reputation keeps rating and sample together`() {

@@ -58,11 +58,10 @@ class ProviderCollectionsLayoutTest {
         }
         listOf(false, true).forEach { dark ->
             compose.runOnIdle { night.value = dark }
-            val evolution = hasText(context.getString(R.string.collections_evolution)) and hasClickAction()
+            val evolution = hasText(context.getString(R.string.collections_evolution))
             compose.onNodeWithTag("provider_collections").performScrollToNode(evolution)
-            compose.onNode(evolution).performClick()
             listOf(R.string.collections_verified_total, R.string.collections_deposits, R.string.collections_balances,
-                R.string.collections_money_note, R.string.collections_evolution_note,
+                R.string.collections_money_note, R.string.performance_evolution_hint,
                 R.string.collections_filter_balances).forEach { id ->
                 val label = context.getString(id)
                 val matcher = if (id == R.string.collections_filter_balances) hasText(label) and hasClickAction()
@@ -74,7 +73,6 @@ class ProviderCollectionsLayoutTest {
                 assertTrue("Text must fit at 200% font scale", bounds.left >= viewport.left && bounds.right <= viewport.right)
             }
             compose.onNodeWithTag("provider_collections").performScrollToNode(evolution)
-            compose.onNode(evolution).performClick()
             compose.runOnIdle {
                 assertEquals(if (dark) Color(0xFF101C2B) else com.loresuelvo.serviceprovider.ui.theme.BrandNeutral,
                     actualColors.background)

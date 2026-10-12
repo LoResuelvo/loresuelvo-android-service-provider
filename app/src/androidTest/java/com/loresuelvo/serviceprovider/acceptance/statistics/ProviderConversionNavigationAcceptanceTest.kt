@@ -64,9 +64,9 @@ class ProviderConversionNavigationAcceptanceTest {
     }
     @After fun close() { scenario.close() }
     private fun bottom(route: String) = compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + route)
-    private fun text(id: Int) = compose.onNodeWithText(context.getString(id))
+    private fun text(id: Int) = compose.onNodeWithText(context.getString(id), substring = true, ignoreCase = true)
     private fun reveal(tag: String, id: Int): SemanticsNodeInteraction {
-        compose.onNodeWithTag(tag).performScrollToNode(hasText(context.getString(id)))
+        compose.onNodeWithTag(tag).performScrollToNode(hasText(context.getString(id), substring = true, ignoreCase = true))
         return text(id).performScrollTo()
     }
     private fun openActivity() {
@@ -130,17 +130,15 @@ class ProviderConversionNavigationAcceptanceTest {
         compose.waitUntil(5_000) {
             var landscape = false
             scenario.onActivity { landscape = it.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE }
-            landscape && compose.onAllNodesWithText(context.getString(R.string.conversion_reported)).fetchSemanticsNodes().isNotEmpty() &&
+            landscape && compose.onAllNodesWithText(context.getString(R.string.conversion_reported), substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty() &&
                 compose.onAllNodesWithTag("provider_conversion").fetchSemanticsNodes().firstOrNull()?.config?.getOrNull(CONVERSION_READING_POSITION) == position
         }
         text(R.string.conversion_reported).assertIsDisplayed()
         assertEquals("A mid-content anchor survives the changed viewport", position, conversionPosition())
         assertEquals(applied, conversion.queries.last())
         reveal("provider_conversion", R.string.conversion_collapse).assertIsDisplayed()
-        reveal("provider_conversion", R.string.conversion_period_label).assertIsDisplayed()
-        compose.onNodeWithText(context.getString(R.string.activity_period,
-            com.loresuelvo.serviceprovider.ui.screens.statistics.formatActivityInstant(applied.from!!.toInstant()),
-            com.loresuelvo.serviceprovider.ui.screens.statistics.formatActivityInstant(applied.to!!.toInstant()))).assertExists()
+        reveal("provider_conversion", R.string.activity_period_options).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.activity_effective_period)).assertDoesNotExist()
         bottom(Route.Activity.path).performClick(); compose.waitForIdle()
         reveal("provider_conversion", R.string.conversion_collapse).assertIsDisplayed()
         compose.onNodeWithTag("provider_conversion").performScrollToIndex(0)

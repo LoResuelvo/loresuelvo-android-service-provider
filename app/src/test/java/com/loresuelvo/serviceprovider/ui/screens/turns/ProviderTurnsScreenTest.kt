@@ -181,6 +181,25 @@ class ProviderTurnsScreenTest {
         compose.onNodeWithText("Ana Pérez").assertExists()
     }
 
+    @Test fun completion_action_is_only_available_for_unreported_scheduled_work() {
+        val status = androidx.compose.runtime.mutableStateOf<com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus>(WorkOrderStatus.Scheduled)
+        val report = androidx.compose.runtime.mutableStateOf<Int?>(null)
+        var completions = 0
+        compose.setContent { LoresuelvoTheme {
+            val order = WorkOrder(42, "Ana Pérez", "Repair", 1, status.value)
+            val detail = WorkOrderDetail(42, 10, 3, 7, 123456, 1, "Repair", status.value, report.value)
+            ProviderTurnDetailScreen(order, {}, {}, detail = detail, onCompletion = { completions++ })
+        } }
+        compose.onNodeWithTag("provider_turn_completion").performScrollTo().performClick()
+        org.junit.Assert.assertEquals(1, completions)
+        listOf(WorkOrderStatus.AwaitingPayment, WorkOrderStatus.Paid, WorkOrderStatus.Unsupported("cancelled")).forEach {
+            compose.runOnIdle { status.value = it }
+            compose.onNodeWithTag("provider_turn_completion").assertDoesNotExist()
+        }
+        compose.runOnIdle { status.value = WorkOrderStatus.Scheduled; report.value = 9 }
+        compose.onNodeWithTag("provider_turn_completion").assertDoesNotExist()
+    }
+
     @Test fun current_scheduled_detail_shows_exact_amount_and_no_consumer_actions() {
         val order = WorkOrder(42, "Ana Pérez", "Repair the kitchen tap and preserve the fittings",
             Instant.parse("2026-10-05T00:30:00Z").toEpochMilli(), WorkOrderStatus.Scheduled,

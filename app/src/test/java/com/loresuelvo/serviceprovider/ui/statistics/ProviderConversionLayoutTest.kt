@@ -45,9 +45,9 @@ class ProviderConversionLayoutTest {
             } }
         }
         saveRender("conversion-light")
-        textFits("Se convirtieron en contrataciones")
+        textFits("de tus propuestas se convirtieron en contrataciones")
         textFits("12 de 20 propuestas")
-        textFits("Finalizaciones informadas")
+        textFits("9 trabajos finalizados")
         textFits("88,89 %")
         saveRender("conversion-light-advances")
         textFits("3 de 5 solicitudes recibidas")
@@ -67,18 +67,18 @@ class ProviderConversionLayoutTest {
             }
         }
         textFits("Conversión de propuestas")
-        textFits("Desde 4 sep. 2026, 09:00 (incluido) hasta 4 oct. 2026, 09:00 (excluido)", contentLtr = true)
+        compose.onNodeWithText("Período consultado").assertDoesNotExist()
         textFits("12 de 20 propuestas", contentLtr = true)
         saveRender("conversion-dark-large-type-rtl")
-        textFits("Finalizaciones informadas")
+        textFits("9 trabajos finalizados")
         textFits("88,89 %", contentLtr = true)
         textFits("8 de 9 propuestas", contentLtr = true)
         saveRender("conversion-dark-large-type-rtl-advances")
-        textFits("8 sin contratación observada", contentLtr = true)
-        textFits("No significa que hayan sido rechazadas. Las propuestas todavía pueden avanzar.")
-        textFits("Avance observado el ${com.loresuelvo.serviceprovider.ui.screens.statistics.formatActivityInstant(conversionFixture().observedAt)} · Buenos Aires. Incluye avances posteriores a la emisión, aunque ocurran fuera del período elegido.", contentLtr = true)
+        textFits("8 propuestas todavía sin contratar", contentLtr = true)
+        textFits("Todavía pueden avanzar; no se consideran rechazadas.")
+        textFits("Incluye avances posteriores al período elegido.", contentLtr = true)
         textFits("3 de 5 solicitudes recibidas", contentLtr = true)
-        textFits("Aceptar una solicitud abre la conversación; no confirma una contratación.", contentLtr = true)
+        textFits("Aceptar una solicitud abre el chat. La contratación se confirma después.", contentLtr = true)
         saveRender("conversion-dark-large-type-rtl-requests")
     }
     @Test
@@ -104,7 +104,7 @@ class ProviderConversionLayoutTest {
     private fun textFits(text: String, contentLtr: Boolean = false) {
         compose.onNodeWithTag("provider_conversion").performScrollToNode(hasText(text))
         val results = mutableListOf<TextLayoutResult>()
-        compose.onAllNodesWithText(text, useUnmergedTree = true).onFirst().assertIsDisplayed()
+        compose.onAllNodesWithText(text, useUnmergedTree = true).onFirst().performScrollTo().assertIsDisplayed()
             .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
         assertTrue("Missing text layout: $text", results.isNotEmpty())
         results.forEach { layout ->

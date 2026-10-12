@@ -46,8 +46,8 @@ class ProviderActivityScreenTest {
         compose.runOnIdle { state.value = ProviderActivityUiState.Ready(activityFixture(empty = true)) }
         compose.onNodeWithText("No hubo actividad durante este período.").performScrollTo().assertExists()
         assertScrollableText("No disponible")
-        assertScrollableText("Al momento de la consulta, sin filtro de período.")
-        assertScrollableText("Finalizados con saldo pendiente")
+        assertScrollableText("Tu situación actual, sin importar el período elegido.")
+        assertScrollableText("4 trabajos finalizados por cobrar")
     }
     @Test fun `70_1 and 70_3 outcomes explain agreed value and current pending meaning`() {
         val repository = ActivityTestRepository()
@@ -59,10 +59,10 @@ class ProviderActivityScreenTest {
         compose.setContent {
             LoresuelvoTheme { ProviderActivityScreen(ProviderActivityUiState.Ready(outcome.activity), {}) }
         }
-        assertScrollableText("Valor pactado de trabajos finalizados")
+        assertScrollableText("Valor acordado por los trabajos finalizados")
         assertScrollableText("Importes en ARS, sin comisiones. El valor pactado no indica cuánto cobraste.")
         assertScrollableText("Pendientes actuales")
-        assertScrollableText("Al momento de la consulta, sin filtro de período.")
+        assertScrollableText("Tu situación actual, sin importar el período elegido.")
     }
 
 
@@ -128,25 +128,15 @@ class ProviderActivityScreenTest {
             compose.runOnIdle { filters.value = filters.value.copy(dateError = error) }
             compose.onNodeWithTag("provider_activity").performScrollToNode(hasText(text))
             compose.onNodeWithText(text).assertIsDisplayed()
-            assertScrollableText("Período consultado")
+            compose.onNodeWithText("Período consultado").assertDoesNotExist()
         }
     }
 
-    @Test fun `evolution values expose three named series and zero intervals for every grouping`() {
-        val start = java.time.Instant.parse("2026-07-01T03:00:00Z")
-        val end = java.time.Instant.parse("2026-10-01T03:00:00Z")
-        val state = mutableStateOf<ProviderActivityUiState>(ProviderActivityUiState.Ready(activityForQuery(
-            com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(start, end))))
-        compose.setContent { LoresuelvoTheme { ProviderActivityScreen(state.value, {}) } }
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Ver valores de la evolución"))
-        compose.onNodeWithText("Ver valores de la evolución").performScrollTo().performClick()
-        com.loresuelvo.serviceprovider.domain.statistics.ActivityGranularity.entries.forEach { grouping ->
-            compose.runOnIdle { state.value = ProviderActivityUiState.Ready(activityForQuery(
-                com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(start, end, grouping))) }
-            val zeroText = "Contrataciones: 0 · Finalizaciones informadas: 0 · Pagados por completo: 0"
-            compose.onNode(hasScrollAction()).performScrollToNode(hasText(zeroText))
-            compose.onAllNodesWithText(zeroText, substring = true).onFirst().assertExists()
-        }
+    @Test fun `evolution always exposes a selected interval without a verbose expansion`() {
+        compose.setContent { LoresuelvoTheme { ProviderActivityScreen(ProviderActivityUiState.Ready(activityFixture()), {}) } }
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasTestTag("evolution_interval"))
+        compose.onNodeWithTag("evolution_interval").assertExists()
+        compose.onNodeWithText("Ver valores de la evolución").assertDoesNotExist()
     }
 
     @Test fun `comparison displays differences and unavailable percentages without comparing pending`() {
@@ -158,54 +148,53 @@ class ProviderActivityScreenTest {
         compose.onNodeWithTag("activity_comparison_toggle").performClick()
         assertScrollableText("Actual: 8 · Anterior: 4")
         assertScrollableText("Diferencia: 4 · Variación: 100%")
-        assertScrollableText("Diferencia: 3 · Variación: No disponible", "Pagados por completo")
+        assertScrollableText("Diferencia: 3 · Variación: No disponible", "Trabajos pagados")
         assertScrollableText("Diferencia: No disponible · Variación: No disponible")
         assertScrollableText("Períodos de igual duración. Los pendientes actuales no se comparan.")
-        assertScrollableText("Al momento de la consulta, sin filtro de período.")
+        assertScrollableText("Tu situación actual, sin importar el período elegido.")
     }
 
 
     @Test fun `different valid period renders the new backend totals`() {
         val state = mutableStateOf<ProviderActivityUiState>(ProviderActivityUiState.Ready(activityFixture()))
         compose.setContent { LoresuelvoTheme { ProviderActivityScreen(state.value, {}) } }
-        assertScrollableText("8", "Contrataciones confirmadas")
+        assertScrollableText("8 contrataciones confirmadas")
         val august = com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(
             java.time.Instant.parse("2026-08-01T03:00:00Z"), java.time.Instant.parse("2026-09-01T03:00:00Z"))
         compose.runOnIdle { state.value = ProviderActivityUiState.Ready(activityForQuery(august)) }
-        assertScrollableText("3", "Contrataciones confirmadas")
-        assertScrollableText("2", "Finalizaciones informadas")
-        assertScrollableText("1", "Pagados por completo")
-        assertScrollableText("3", "Contrataciones confirmadas")
-        compose.onNode(hasText("Contrataciones confirmadas") and hasText("8")).assertDoesNotExist()
+        assertScrollableText("3 contrataciones confirmadas")
+        assertScrollableText("2 trabajos finalizados")
+        assertScrollableText("1 trabajo pagado por completo")
+        assertScrollableText("3 contrataciones confirmadas")
+        compose.onNodeWithText("8 contrataciones confirmadas").assertDoesNotExist()
     }
 
-    @Test fun `one short interval has visible chart points and accessible exact values`() {
+    @Test fun `single interval retains exact accessible values without navigation beyond its bounds`() {
         val query = com.loresuelvo.serviceprovider.domain.statistics.ActivityQuery(
             java.time.Instant.parse("2026-10-03T10:00:00Z"), java.time.Instant.parse("2026-10-03T12:00:00Z"))
         compose.setContent { LoresuelvoTheme { ProviderActivityScreen(ProviderActivityUiState.Ready(activityForQuery(query)), {}) } }
-        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription(
-            "Un intervalo: contrataciones 8, finalizaciones informadas 5, pagos completos 3."))
-        compose.onNodeWithContentDescription("Un intervalo: contrataciones 8, finalizaciones informadas 5, pagos completos 3.")
-            .performScrollTo().assertIsDisplayed()
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Ver valores de la evolución"))
-        compose.onNodeWithText("Ver valores de la evolución").performScrollTo().performClick()
-        assertScrollableText("Contrataciones: 8 · Finalizaciones informadas: 5 · Pagados por completo: 3")
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasTestTag("evolution_interval"))
+        compose.onNodeWithContentDescription("Intervalo anterior").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Intervalo siguiente").assertIsNotEnabled()
+        assertScrollableText("8", "Contrataciones confirmadas")
+        assertScrollableText("5", "Trabajos finalizados")
+        assertScrollableText("3", "Trabajos pagados")
     }
 
     @Test fun `Spanish comparison formats decimals while zero bases remain unavailable`() {
-        comparisonLocale("Diferencia: 1 · Variación: 14,29%", "Diferencia: 3 · Variación: No disponible", "Pagados por completo")
+        comparisonLocale("Diferencia: 1 · Variación: 14,29%", "Diferencia: 3 · Variación: No disponible", "Trabajos pagados")
     }
 
     @Test
     @Config(qualifiers = "en-rUS", sdk = [34])
     fun `English comparison formats decimals while zero bases remain unavailable`() {
-        comparisonLocale("Difference: 1 · Change: 14.29%", "Difference: 3 · Change: Not available", "Fully paid jobs")
+        comparisonLocale("Difference: 1 · Change: 14.29%", "Difference: 3 · Change: Not available", "Paid jobs")
     }
 
     @Test fun `session expiry removes all private values and prompts login`() {
         val state = mutableStateOf<ProviderActivityUiState>(ProviderActivityUiState.Ready(activityFixture()))
         compose.setContent { LoresuelvoTheme { ProviderActivityScreen(state.value, {}) } }
-        compose.onNode(hasText("Contrataciones confirmadas") and hasText("8")).performScrollTo().assertExists()
+        compose.onNodeWithText("8 contrataciones confirmadas").performScrollTo().assertExists()
         compose.runOnIdle { state.value = ProviderActivityUiState.SessionExpired }
         compose.onNodeWithText("Ingresá nuevamente para consultar tu actividad.").assertExists()
         compose.onNodeWithText("Contrataciones confirmadas").assertDoesNotExist()

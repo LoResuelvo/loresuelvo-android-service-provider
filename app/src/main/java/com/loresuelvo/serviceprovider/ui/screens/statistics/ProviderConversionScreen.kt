@@ -117,9 +117,9 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                             item(key = readyPrefix + "hero") {
                                 if (proposals.stages.issued == 0L) Text(stringResource(R.string.conversion_empty))
                                 else ConversionCard(hero = true) {
-                                    Text(stringResource(R.string.conversion_hero))
                                     Text(conversionPercentage(proposals.rates.contracted.cohort.percentage),
                                         style = MaterialTheme.typography.displaySmall.copy(textDirection = TextDirection.ContentOrLtr))
+                                    Text(stringResource(R.string.conversion_hero))
                                     Text(stringResource(R.string.conversion_sample, proposals.stages.contracted, proposals.stages.issued))
                                 }
                             }
@@ -128,11 +128,11 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                                     modifier = Modifier.semantics { heading() })
                                 Text(stringResource(R.string.conversion_cohort_note, proposals.stages.issued), style = MaterialTheme.typography.bodySmall)
                             }
-                            item(key = readyPrefix + "issued") { ConversionStage(stringResource(R.string.conversion_issued), proposals.stages.issued,
+                            item(key = readyPrefix + "issued") { ConversionStage(R.plurals.performance_proposals, proposals.stages.issued,
                                 ConversionRatio(proposals.stages.issued, proposals.stages.issued, if (proposals.stages.issued > 0) 100.0 else null)) }
-                            item(key = readyPrefix + "contracted") { ConversionStage(stringResource(R.string.conversion_contracted), proposals.stages.contracted, proposals.rates.contracted.cohort) }
-                            item(key = readyPrefix + "reported") { ConversionStage(stringResource(R.string.conversion_reported), proposals.stages.reported, proposals.rates.reported.cohort) }
-                            item(key = readyPrefix + "paid") { ConversionStage(stringResource(R.string.conversion_paid), proposals.stages.paid, proposals.rates.paid.cohort) }
+                            item(key = readyPrefix + "contracted") { ConversionStage(R.plurals.performance_contracted_proposals, proposals.stages.contracted, proposals.rates.contracted.cohort) }
+                            item(key = readyPrefix + "reported") { ConversionStage(R.plurals.performance_completions, proposals.stages.reported, proposals.rates.reported.cohort) }
+                            item(key = readyPrefix + "paid") { ConversionStage(R.plurals.performance_paid, proposals.stages.paid, proposals.rates.paid.cohort) }
                             item(key = readyPrefix + "expansion") {
                                 val expansionLabel = stringResource(if (advancesExpanded) R.string.conversion_collapse else R.string.conversion_expand)
                                 OutlinedButton(onClick = { onExpansion(!advancesExpanded) },
@@ -153,15 +153,7 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                                     Text(stringResource(R.string.conversion_uncontracted_note))
                                 }
                             }
-                            item(key = readyPrefix + "period") {
-                                ConversionCard {
-                                    Text(stringResource(R.string.conversion_period_label), style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                    Text(stringResource(R.string.activity_period, formatActivityInstant(result.period.from),
-                                        formatActivityInstant(result.period.to)), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                    Text(stringResource(R.string.conversion_time_zone), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                }
-                            }
-                            item(key = readyPrefix + "observed") { Text(stringResource(R.string.conversion_observed, formatActivityInstant(result.observedAt)),
+                            item(key = readyPrefix + "observed") { Text(stringResource(R.string.conversion_observed),
                                 style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
                             item(key = readyPrefix + "requests") { ConversionRequests(result.requests) }
                         }
@@ -181,10 +173,11 @@ private fun ConversionCard(hero: Boolean = false, content: @Composable ColumnSco
     }
 }
 @Composable
-private fun ConversionStage(label: String, count: Long, ratio: ConversionRatio) {
+private fun ConversionStage(label: Int, count: Long, ratio: ConversionRatio) {
     PerformanceCard {
-        Text(label, style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
-        Text(stringResource(R.string.performance_stage_value, count, conversionPercentage(ratio.percentage)), style = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.ContentOrLtr))
+        PerformanceCount(count, label)
+        Text(stringResource(R.string.performance_cohort_percentage, conversionPercentage(ratio.percentage)),
+            style = MaterialTheme.typography.labelMedium)
         ratio.percentage?.let {
             LinearProgressIndicator(progress = { (it / 100).toFloat() }, modifier = Modifier.fillMaxWidth().clearAndSetSemantics {},
                 color = MaterialTheme.colorScheme.secondary)
@@ -205,11 +198,13 @@ private fun ConversionRequests(requests: RequestAcceptance) {
         Text(stringResource(R.string.conversion_requests), style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr),
             modifier = Modifier.semantics { heading() })
         Text(stringResource(R.string.conversion_requests_note))
-        Text(stringResource(R.string.conversion_received, requests.received))
-        Text(stringResource(R.string.conversion_accepted, requests.accepted))
-        Text(stringResource(R.string.conversion_pending, requests.pending))
         Text(conversionPercentage(requests.acceptanceRate.percentage), style = MaterialTheme.typography.headlineSmall.copy(textDirection = TextDirection.ContentOrLtr))
+        Text(stringResource(R.string.performance_request_rate))
         Text(stringResource(R.string.conversion_request_sample, requests.acceptanceRate.numerator, requests.acceptanceRate.denominator))
+        HorizontalDivider()
+        PerformanceCount(requests.received, R.plurals.performance_received_requests)
+        PerformanceCount(requests.accepted, R.plurals.performance_accepted_requests)
+        PerformanceCount(requests.pending, R.plurals.performance_requests)
         Text(stringResource(R.string.conversion_acceptance_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
     }
 }

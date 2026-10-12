@@ -13,26 +13,11 @@ import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.statistics.*
 
 @Composable
-internal fun CollectionEvolutionHeading(expanded: Boolean, onExpansion: (Boolean) -> Unit) {
-    val expansion = stringResource(if (expanded) R.string.activity_expanded else R.string.activity_collapsed)
-    TextButton(onClick = { onExpansion(!expanded) }, modifier = Modifier.heightIn(min = 48.dp).semantics {
-        heading()
-        stateDescription = expansion
-    }) {
-        Text(stringResource(R.string.collections_evolution), style = MaterialTheme.typography.titleMedium)
-    }
-    if (expanded) Text(stringResource(R.string.collections_evolution_note), style = MaterialTheme.typography.bodySmall)
-}
-
-@Composable
-internal fun CollectionEvolutionBucket(bucket: CollectionBucket) {
-    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 8.dp)) {
-        Text(stringResource(R.string.activity_period, formatActivityInstant(bucket.from), formatActivityInstant(bucket.to)),
-            style = MaterialTheme.typography.labelLarge)
-        Text(stringResource(R.string.collections_bucket_values,
-            formatActivityMoney(bucket.amounts.bookingDepositCents), formatActivityMoney(bucket.amounts.serviceBalanceCents),
-            formatActivityMoney(bucket.amounts.totalCents)))
-    }
+internal fun CollectionEvolution(buckets: List<CollectionBucket>, selectedIndex: Int, onSelect: (Int) -> Unit) {
+    EvolutionChart(R.string.collections_evolution,
+        buckets.map { EvolutionPoint(it.from, it.to, listOf(it.amounts.bookingDepositCents, it.amounts.serviceBalanceCents, it.amounts.totalCents)) },
+        listOf(R.string.collections_deposits, R.string.collections_balances, R.string.collections_verified_total),
+        money = true, selectedIndex = selectedIndex, onSelect = onSelect)
 }
 
 @Composable

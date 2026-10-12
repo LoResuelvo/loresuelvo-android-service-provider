@@ -223,7 +223,7 @@ class ProviderActivitySteps {
         requireNotNull(viewModel).comparePrevious(true)
         scheduler.advanceUntilIdle()
         requireNotNull(viewModel).expandPeriod(true)
-        requireNotNull(viewModel).expandEvolution(true)
+        requireNotNull(viewModel).selectEvolutionInterval(1)
         requireNotNull(viewModel).rememberReadingPosition(7, 42)
         retainedQuery = requireNotNull(viewModel).query
         retainedFilters = requireNotNull(viewModel).filters.value
@@ -247,7 +247,7 @@ class ProviderActivitySteps {
         assertEquals(retainedQuery, requireNotNull(viewModel).query)
         assertEquals(retainedFilters, requireNotNull(viewModel).filters.value)
         assertTrue(requireNotNull(viewModel).periodExpanded.value)
-        assertTrue(requireNotNull(viewModel).evolutionExpanded.value)
+        assertEquals(1, requireNotNull(viewModel).evolutionIndex.value)
         period()
     }
     @Entonces("conservo mi posición de lectura")
