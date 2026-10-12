@@ -8,14 +8,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.EventAvailable
-import androidx.compose.material.icons.outlined.TaskAlt
-import androidx.compose.material.icons.outlined.Payments
-import androidx.compose.material.icons.outlined.PeopleOutline
-import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -90,8 +83,7 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
         },
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() }) }
+            item { PerformanceHeader(stringResource(R.string.performance_activity_hint)) }
             stickyHeader {
                 if (onCollections != null) PerformanceTabs(PerformanceSection.ACTIVITY) { section ->
                     when (section) {
@@ -106,6 +98,7 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                     HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 2.dp)
                 }
             }
+            item { ActivityViewTabs(false, {}, onConversion) }
             if (filters != null && state != ProviderActivityUiState.SessionExpired) {
                 item { ActivityPeriodControls(filters, onEditDates, onApplyDates, onGranularity, onComparison,
                     periodExpansion ?: periodExpanded) {
@@ -133,27 +126,25 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                     }
                     val result = activity.results
                     item {
-                        MetricPair(stringResource(R.string.activity_bookings), result.confirmedBookings,
-                            stringResource(R.string.activity_completions), result.reportedCompletions)
-                    }
-                    item {
-                        MetricPair(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders,
-                            stringResource(R.string.activity_clients), result.clientsServed)
-                    }
-                    item {
                         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
-                            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text(stringResource(R.string.activity_agreed_value), style = MaterialTheme.typography.titleMedium)
-                                Text(formatActivityMoney(result.agreedValueCents), style = MaterialTheme.typography.headlineMedium)
-                                ValueRow(stringResource(R.string.activity_average), result.averageValueCents?.let(::formatActivityMoney)
-                                    ?: stringResource(R.string.activity_unavailable))
-                                Text(stringResource(R.string.activity_money_note), style = MaterialTheme.typography.bodySmall)
+                            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(Modifier.semantics(mergeDescendants = true) {}) {
+                                    Text(result.confirmedBookings.toString(), style = MaterialTheme.typography.displaySmall)
+                                    Text(stringResource(R.string.activity_bookings), style = MaterialTheme.typography.titleMedium)
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.25f))
+                                ValueRow(stringResource(R.string.activity_completions), result.reportedCompletions.toString())
+                                ValueRow(stringResource(R.string.activity_paid), result.fullyPaidWorkOrders.toString())
                             }
                         }
                     }
-                    item { Text(stringResource(R.string.activity_client_breakdown, result.newClients, result.returningClients),
-                        style = MaterialTheme.typography.bodyMedium) }
+                    item {
+                        PerformanceCard {
+                            ValueRow(stringResource(R.string.activity_clients), result.clientsServed.toString())
+                            Text(stringResource(R.string.activity_client_breakdown, result.newClients, result.returningClients))
+                        }
+                    }
                     activity.comparison?.let { comparison ->
                         item { ActivityComparisonSection(activity.results, comparison) }
                     }
@@ -166,31 +157,32 @@ fun ProviderActivityScreen(state: ProviderActivityUiState, onRetry: () -> Unit,
                             item(key = "activity_bucket_${bucket.from}") { ActivityEvolutionBucket(bucket) }
                         }
                     }
+                    item {
+                        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface) {
+                            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(stringResource(R.string.activity_agreed_value), style = MaterialTheme.typography.titleMedium)
+                                Text(formatActivityMoney(result.agreedValueCents), style = MaterialTheme.typography.headlineMedium)
+                                ValueRow(stringResource(R.string.activity_average), result.averageValueCents?.let(::formatActivityMoney)
+                                    ?: stringResource(R.string.activity_unavailable))
+                                Text(stringResource(R.string.activity_money_note), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
                     item { Period(activity) }
                     item {
-                        HorizontalDivider()
+                        PerformanceCard(attention = activity.currentPending.requests > 0 || activity.currentPending.scheduledOrders > 0 || activity.currentPending.awaitingPaymentOrders > 0) {
                         Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.semantics { heading() })
                         Text(stringResource(R.string.activity_pending_note), style = MaterialTheme.typography.bodySmall)
                         ValueRow(stringResource(R.string.activity_pending_requests), activity.currentPending.requests.toString())
                         ValueRow(stringResource(R.string.activity_scheduled), activity.currentPending.scheduledOrders.toString())
                         ValueRow(stringResource(R.string.activity_awaiting_payment), activity.currentPending.awaitingPaymentOrders.toString())
-                    }
-                }
-            }
-            if (state != ProviderActivityUiState.SessionExpired) {
-                item {
-                    OutlinedButton(onClick = onConversion, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)) {
-                        Icon(Icons.Outlined.TrendingUp, null, Modifier.padding(end = 12.dp))
-                        Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-                            Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.conversion_entry_note), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
             }
+
 
         }
     }
@@ -210,42 +202,8 @@ private fun Period(activity: ProviderActivity) {
 }
 
 @Composable
-private fun MetricPair(firstLabel: String, firstValue: Long, secondLabel: String, secondValue: Long) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        if (maxWidth < 328.dp || LocalDensity.current.fontScale > 1.3f) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Metric(firstLabel, firstValue, Modifier.fillMaxWidth())
-                Metric(secondLabel, secondValue, Modifier.fillMaxWidth())
-            }
-        } else {
-            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Metric(firstLabel, firstValue, Modifier.weight(1f).fillMaxHeight())
-                Metric(secondLabel, secondValue, Modifier.weight(1f).fillMaxHeight())
-            }
-        }
-    }
-}
-
-@Composable
-private fun Metric(label: String, value: Long, modifier: Modifier) {
-    Surface(modifier, shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.semantics(mergeDescendants = true) {}.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(when (label) {
-                stringResource(R.string.activity_bookings) -> Icons.Outlined.EventAvailable
-                stringResource(R.string.activity_completions) -> Icons.Outlined.TaskAlt
-                stringResource(R.string.activity_paid) -> Icons.Outlined.Payments
-                else -> Icons.Outlined.PeopleOutline
-            }, null, tint = MaterialTheme.colorScheme.primary)
-            Text(value.toString(), style = MaterialTheme.typography.headlineMedium)
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
 private fun ValueRow(label: String, value: String) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 8.dp)) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Text(value, style = MaterialTheme.typography.titleLarge)
     }

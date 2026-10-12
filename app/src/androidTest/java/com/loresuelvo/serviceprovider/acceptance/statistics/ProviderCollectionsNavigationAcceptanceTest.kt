@@ -67,14 +67,14 @@ class ProviderCollectionsNavigationAcceptanceTest {
         compose.waitForIdle()
         assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions.queries.last().purpose)
         assertEquals("next", transactions.queries.last().cursor)
-        val reference = context.getString(R.string.collections_proposal_reference, 19)
-        compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(reference))
-        compose.onNodeWithText(reference).assertIsDisplayed()
+        val reference = "collection_transaction_19"
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasTestTag(reference))
+        compose.onNodeWithTag(reference).assertIsDisplayed()
         val rowTop = compose.onNodeWithTag("collection_transaction_19").fetchSemanticsNode().boundsInRoot.top
         val tabsBottom = text(R.string.collections_section).fetchSemanticsNode().boundsInRoot.bottom
         compose.onNodeWithTag("provider_collections").performSemanticsAction(
             androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { scroll -> scroll(0f, rowTop - tabsBottom) }
-        compose.onNodeWithText(reference).assertIsDisplayed()
+        compose.onNodeWithTag(reference).assertIsDisplayed()
         val before = readingPosition()
         val viewport = compose.onNodeWithTag("provider_collections").fetchSemanticsNode().boundsInRoot
         val bar = compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Activity.path).fetchSemanticsNode().boundsInRoot
@@ -89,7 +89,7 @@ class ProviderCollectionsNavigationAcceptanceTest {
         compose.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Activity.path).performClick()
         compose.waitForIdle()
         assertEquals(anchored, readingPosition())
-        compose.onNodeWithText(reference).assertIsDisplayed()
+        compose.onNodeWithTag(reference).assertIsDisplayed()
         scenario.recreate(); compose.waitForIdle()
         assertEquals(anchored, readingPosition())
         scenario.onActivity { it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
@@ -99,7 +99,7 @@ class ProviderCollectionsNavigationAcceptanceTest {
         }
         compose.waitForIdle()
         assertEquals("Rotation must preserve the first visible item and its pixel offset", anchored, readingPosition())
-        compose.onNodeWithText(reference).assertIsDisplayed()
+        compose.onNodeWithTag(reference).assertIsDisplayed()
         compose.onNodeWithTag("collection_transaction_19").assertIsDisplayed()
         assertEquals(CollectionPurpose.BOOKING_DEPOSIT, transactions.queries.last().purpose)
         assertEquals(collections.queries.last().from, transactions.queries.last().from)

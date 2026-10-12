@@ -33,8 +33,8 @@ class ProviderConversionScreenTest {
         val state = productionResult(); val expanded = mutableStateOf(false)
         compose.setContent { LoresuelvoTheme { Surface { ProviderConversionScreen(state, expanded.value, { expanded.value = it }) } } }
         reveal("Se convirtieron en contrataciones"); reveal("12 de 20 propuestas")
-        reveal("Emitidas"); reveal("100 %"); reveal("Contrataciones confirmadas")
-        reveal("Finalizaciones informadas"); reveal("45 %"); reveal("Pagos completos"); reveal("40 %")
+        reveal("Emitidas"); reveal("20 · 100 %"); reveal("Contrataciones confirmadas")
+        reveal("Finalizaciones informadas"); reveal("9 · 45 %"); reveal("Pagos completos"); reveal("8 · 40 %")
         reveal("Ver avance entre etapas"); compose.onNodeWithText("Ver avance entre etapas").performClick()
         reveal("Contratadas → finalizadas"); reveal("75 %"); reveal("9 de 12 propuestas")
         reveal("Finalizadas → pagadas"); reveal("88,89 %"); reveal("8 de 9 propuestas")

@@ -88,7 +88,7 @@ class ProviderReputationNavigationAcceptanceTest {
     @Test fun continuation_retry_retains_rows_and_refresh_replaces_all_pages_and_resets_reading() {
         openReputation(); reputation.failNext = true
         revealControl(R.string.reputation_load_more).performClick()
-        list().performScrollToNode(hasText(context.getString(R.string.reputation_work, 300)))
+        list().performScrollToNode(hasTestTag("reputation_review_300"))
         row(300).assertIsDisplayed()
         revealControl(R.string.activity_retry).performClick(); compose.waitForIdle()
         assertEquals(listOf(null, "opaque+/first=", "opaque+/first="), reputation.cursors)
@@ -97,7 +97,7 @@ class ProviderReputationNavigationAcceptanceTest {
         reputation.refreshed = true
         list().performTouchInput { swipeDown() }; compose.waitForIdle()
         assertEquals(0 to 0, position()); assertNull(reputation.cursors.last())
-        list().performScrollToNode(hasText(context.getString(R.string.reputation_work, 400)))
+        list().performScrollToNode(hasTestTag("reputation_review_400"))
         row(400).assertIsDisplayed(); row(275).assertDoesNotExist(); row(300).assertDoesNotExist()
         compose.onNodeWithText(context.getString(R.string.reputation_load_more)).assertDoesNotExist()
     }
@@ -110,7 +110,7 @@ class ProviderReputationNavigationAcceptanceTest {
         compose.onNodeWithText(context.getString(R.string.reputation_sample, 0L)).assertDoesNotExist()
         text(R.string.activity_retry).assertHasClickAction().performClick(); compose.waitForIdle()
         assertEquals(listOf(null, null), reputation.cursors)
-        list().performScrollToNode(hasText(context.getString(R.string.reputation_work, 300)))
+        list().performScrollToNode(hasTestTag("reputation_review_300"))
         row(300).assertIsDisplayed()
     }
 
@@ -118,8 +118,8 @@ class ProviderReputationNavigationAcceptanceTest {
         openPerformance(); text(R.string.collections_section).performClick()
         collectionsControl(R.string.collections_filter_deposits).performClick()
         collectionsControl(R.string.collections_load_more).performClick(); compose.waitForIdle()
-        val reference = context.getString(R.string.collections_proposal_reference, 19)
-        compose.onNodeWithTag("provider_collections").performScrollToNode(hasText(reference))
+        val reference = "collection_transaction_19"
+        compose.onNodeWithTag("provider_collections").performScrollToNode(hasTestTag(reference))
         val collectionsPosition = compose.onNodeWithTag("provider_collections").fetchSemanticsNode().config[
             com.loresuelvo.serviceprovider.ui.screens.statistics.COLLECTIONS_READING_POSITION]
         text(R.string.reputation_section).performClick(); compose.waitForIdle(); loadMore(); anchor(275)
@@ -150,7 +150,7 @@ class ProviderReputationNavigationAcceptanceTest {
 
     @Test fun private_reviews_are_erased_on_logout_and_profile_has_no_sample_rating_or_extra_destination() {
         openReputation()
-        list().performScrollToNode(hasText(context.getString(R.string.reputation_work, 300)))
+        list().performScrollToNode(hasTestTag("reputation_review_300"))
         row(300).assertIsDisplayed()
         listOf(Route.Home, Route.Messages, Route.Activity, Route.Profile).forEach { bottom(it).assertExists() }
         compose.onAllNodes(hasTestTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Home.path) or
@@ -193,7 +193,7 @@ class ProviderReputationNavigationAcceptanceTest {
     }
     private fun loadMore() { revealControl(R.string.reputation_load_more).performClick(); compose.waitForIdle() }
     private fun anchor(id: Int) {
-        list().performScrollToNode(hasText(context.getString(R.string.reputation_work, id)))
+        list().performScrollToNode(hasTestTag("reputation_review_${id}"))
         val top = row(id).fetchSemanticsNode().boundsInRoot.top
         val tabsBottom = text(R.string.reputation_section).fetchSemanticsNode().boundsInRoot.bottom
         list().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { it(0f, top - tabsBottom) }

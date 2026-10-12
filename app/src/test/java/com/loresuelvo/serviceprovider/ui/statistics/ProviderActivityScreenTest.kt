@@ -28,8 +28,8 @@ class ProviderActivityScreenTest {
                 }
             }
         }
-        compose.onNodeWithTag("provider_activity").performScrollToNode(hasText("Conversión de propuestas"))
-        compose.onNodeWithText("Conversión de propuestas").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasText("Conversión"))
+        compose.onNodeWithText("Conversión").assertIsDisplayed().performClick()
         assertEquals(1, opened)
     }
 
@@ -155,6 +155,7 @@ class ProviderActivityScreenTest {
             comparePrevious = true)
         compose.setContent { LoresuelvoTheme { ProviderActivityScreen(ProviderActivityUiState.Ready(activityForQuery(query)), {}) } }
         assertScrollableText("Comparación con el período anterior")
+        compose.onNodeWithTag("activity_comparison_toggle").performClick()
         assertScrollableText("Actual: 8 · Anterior: 4")
         assertScrollableText("Diferencia: 4 · Variación: 100%")
         assertScrollableText("Diferencia: 3 · Variación: No disponible", "Pagados por completo")
@@ -221,6 +222,8 @@ class ProviderActivityScreenTest {
             changes = previous.changes.copy(confirmedBookings =
                 com.loresuelvo.serviceprovider.domain.statistics.ActivityChange(1, 14.29))))
         compose.setContent { LoresuelvoTheme { ProviderActivityScreen(ProviderActivityUiState.Ready(result), {}) } }
+        compose.onNodeWithTag("provider_activity").performScrollToNode(hasTestTag("activity_comparison_toggle"))
+        compose.onNodeWithTag("activity_comparison_toggle").performClick()
         assertScrollableText(defined)
         assertScrollableText(undefined, paidLabel)
     }

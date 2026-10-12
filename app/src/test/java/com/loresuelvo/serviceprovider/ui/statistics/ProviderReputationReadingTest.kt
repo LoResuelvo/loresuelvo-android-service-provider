@@ -51,11 +51,11 @@ class ProviderReputationReadingTest {
         compose.setContent { LoresuelvoTheme { ProviderReputationRoute(vm) } }
         compose.waitForIdle()
         compose.runOnIdle { vm.loadMore() }; compose.waitForIdle()
-        compose.onNodeWithTag("provider_reputation").performScrollToNode(hasText("Trabajo #275"))
+        compose.onNodeWithTag("provider_reputation").performScrollToNode(hasTestTag("reputation_review_275"))
         compose.waitForIdle(); assertTrue(vm.readingIndex > 20)
         compose.runOnIdle { refreshed = true; vm.refresh() }; compose.waitForIdle()
         assertEquals(0 to 0, position()); assertEquals(0, vm.readingIndex); assertEquals(0, vm.readingOffset)
-        compose.onNodeWithTag("provider_reputation").performScrollToNode(hasText("Trabajo #400"))
+        compose.onNodeWithTag("provider_reputation").performScrollToNode(hasTestTag("reputation_review_400"))
         compose.runOnIdle { sessions.clearSession() }; compose.waitForIdle()
         assertEquals(ProviderReputationUiState.SessionExpired, vm.uiState.value)
         assertEquals(0, vm.readingIndex); assertEquals(0, vm.readingOffset)

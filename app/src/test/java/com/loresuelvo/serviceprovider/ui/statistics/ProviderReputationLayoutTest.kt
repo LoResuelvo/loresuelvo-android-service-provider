@@ -78,7 +78,7 @@ class ProviderReputationLayoutTest {
         textFits("24 de 30 trabajos pagados recibieron una reseña.", contentLtr = true)
         textFits("Solo cuentan trabajos pagados. Un trabajo sin reseña no baja tu calificación.", contentLtr = true)
         saveRender("reputation-dark-large-type-rtl-coverage")
-        textFits("Trabajo #184", contentLtr = true)
+        textFits("5 de 5 estrellas", contentLtr = true)
         textFits("5 de 5 estrellas", contentLtr = true)
         textFits(comment)
         textFits("Cargar más reseñas", contentLtr = true)

@@ -139,7 +139,7 @@ fun LoResuelvoNav(
                     }
                     navController.navigate(path) { launchSingleTop = true }
                 }
-                val bottomRoute = if (currentRoute == Route.Conversion.path) Route.Activity.path else currentRoute
+                val bottomRoute = currentRoute
 
                 LaunchedEffect(returnUrl, currentRoute) {
                     val hint = returnUrl?.let(paymentReturnLinkParser::parse) ?: return@LaunchedEffect
@@ -166,16 +166,10 @@ fun LoResuelvoNav(
                                 LoresuelvoBottomBar(
                                     currentRoute = bottomRoute,
                                     onNavigate = { destination ->
-                                        if (currentRoute == Route.Conversion.path && destination.route == Route.Activity.path) {
-                                            navController.popBackStack(Route.Activity.path, inclusive = false)
-                                        } else {
-                                            navController.navigate(destination.route) {
-                                                popUpTo(navController.graph.findStartDestination().id) {
-                                                    saveState = true
-                                                }
-                                                launchSingleTop = true
-                                                restoreState = true
-                                            }
+                                        navController.navigate(destination.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
                                     },
                                 )
@@ -274,15 +268,9 @@ fun LoResuelvoNav(
                                 )
                             },
                             activity = {
-                                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute(onConversion = {
-                                    navController.navigate(Route.Conversion.path) { launchSingleTop = true }
-                                })
-                            },
-                            conversion = {
-                                val activityEntry = remember(navController, backStackEntry) { navController.getBackStackEntry(Route.Activity.path) }
-                                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderConversionRoute(
-                                    viewModel = hiltViewModel(activityEntry),
-                                    onBack = { navController.popBackStack() })
+                                com.loresuelvo.serviceprovider.ui.screens.statistics.ProviderPerformanceRoute(
+                                    onWorkOrder = { id -> navController.navigate(Route.ProviderTurnDetail.buildPath(id)) { launchSingleTop = true } },
+                                    onConversation = { id -> navController.navigate(Route.Conversation.buildPath(id)) { launchSingleTop = true } })
                             },
                             profile = {
                                 ProviderProfileRoute(

@@ -28,7 +28,7 @@ private fun conversionReadyPrefix(expanded: Boolean) = "conversion.ready.$expand
 val CONVERSION_READING_POSITION = SemanticsPropertyKey<Pair<Int, Int>>("ConversionReadingPosition")
 
 @Composable
-fun ProviderConversionRoute(viewModel: ProviderConversionViewModel = hiltViewModel(), onBack: () -> Unit) {
+fun ProviderConversionRoute(viewModel: ProviderConversionViewModel = hiltViewModel(), onSection: ((PerformanceSection) -> Unit)? = null, onBack: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val expanded by viewModel.advancesExpanded.collectAsStateWithLifecycle()
     val periodExpanded by viewModel.periodExpanded.collectAsStateWithLifecycle()
@@ -60,15 +60,16 @@ fun ProviderConversionRoute(viewModel: ProviderConversionViewModel = hiltViewMod
         }
     }
     ProviderConversionScreen(state, expanded, viewModel::expandAdvances, viewModel::retry, onBack,
-        filters, viewModel::editDates, viewModel::applyDates, periodExpanded, viewModel::expandPeriod, list)
+        filters, viewModel::editDates, viewModel::applyDates, periodExpanded, viewModel::expandPeriod, list, onSection)
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded: Boolean = false,
     onExpansion: (Boolean) -> Unit = {}, onRetry: () -> Unit = {}, onBack: () -> Unit = {},
     filters: ConversionFilters? = null, onEditDates: (String, String) -> Unit = { _, _ -> },
     onApplyDates: () -> Unit = {}, periodExpanded: Boolean = false, onPeriodExpansion: (Boolean) -> Unit = {},
-    listState: LazyListState = rememberLazyListState()) {
+    listState: LazyListState = rememberLazyListState(), onSection: ((PerformanceSection) -> Unit)? = null) {
     val readyPrefix = conversionReadyPrefix(advancesExpanded)
     val layoutPrefix = if (state is ProviderConversionUiState.Ready) readyPrefix else "conversion.pending."
     RefreshableContent((state as? ProviderConversionUiState.Ready)?.refreshing == true, onRetry) {
@@ -78,16 +79,20 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                 LazyColumn(Modifier.fillMaxSize().statusBarsPadding().testTag("provider_conversion").semantics {
                         this[CONVERSION_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
                     }, state = listState,
-                    contentPadding = PaddingValues(start = gutter, end = gutter, top = 16.dp, bottom = 32.dp),
+                    contentPadding = PaddingValues(start = gutter, end = gutter, top = 24.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item(key = layoutPrefix + "header") {
-                        NavigationBackButton(
+                        if (onSection == null) NavigationBackButton(
                             onClick = onBack, contentDescription = stringResource(R.string.conversion_back))
-                        Text(stringResource(R.string.conversion_title), style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.ContentOrLtr),
-                            modifier = Modifier.semantics { heading() })
+                        PerformanceHeader(stringResource(R.string.conversion_title))
                     }
+                    if (onSection != null) stickyHeader {
+                        PerformanceTabs(PerformanceSection.ACTIVITY, onSection)
+                    }
+                    item(key = layoutPrefix + "activity_views") { ActivityViewTabs(true, onBack, {}) }
                     if (filters != null && state != ProviderConversionUiState.SessionExpired) item(key = layoutPrefix + "controls") {
-                        ConversionPeriodControls(filters, onEditDates, onApplyDates, periodExpanded, onPeriodExpansion)
+                        ConversionPeriodControls(filters, onEditDates, onApplyDates, periodExpanded, onPeriodExpansion,
+                            (state as? ProviderConversionUiState.Ready)?.conversion?.period)
                     }
                     when (state) {
                         ProviderConversionUiState.Loading -> item {
@@ -109,14 +114,6 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                     if (state.refreshFailed) item { Text(stringResource(R.string.ui_refresh_failed), color = MaterialTheme.colorScheme.error) }
                             val result = state.conversion
                             val proposals = result.proposals
-                            item(key = readyPrefix + "period") {
-                                ConversionCard {
-                                    Text(stringResource(R.string.conversion_period_label), style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                    Text(stringResource(R.string.activity_period, formatActivityInstant(result.period.from),
-                                        formatActivityInstant(result.period.to)), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                    Text(stringResource(R.string.conversion_time_zone), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
-                                }
-                            }
                             item(key = readyPrefix + "hero") {
                                 if (proposals.stages.issued == 0L) Text(stringResource(R.string.conversion_empty))
                                 else ConversionCard(hero = true) {
@@ -127,19 +124,15 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                                 }
                             }
                             item(key = readyPrefix + "stages") {
-                                Text(stringResource(R.string.conversion_stages), style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr),
+                                Text(stringResource(R.string.conversion_stages), style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.semantics { heading() })
-                                Text(stringResource(R.string.conversion_cohort_note, proposals.stages.issued))
+                                Text(stringResource(R.string.conversion_cohort_note, proposals.stages.issued), style = MaterialTheme.typography.bodySmall)
                             }
                             item(key = readyPrefix + "issued") { ConversionStage(stringResource(R.string.conversion_issued), proposals.stages.issued,
-                                ConversionRatio(proposals.stages.issued, proposals.stages.issued,
-                                    if (proposals.stages.issued > 0) 100.0 else null)) }
-                            item(key = readyPrefix + "contracted") { ConversionStage(stringResource(R.string.conversion_contracted), proposals.stages.contracted,
-                                proposals.rates.contracted.cohort) }
-                            item(key = readyPrefix + "reported") { ConversionStage(stringResource(R.string.conversion_reported), proposals.stages.reported,
-                                proposals.rates.reported.cohort) }
-                            item(key = readyPrefix + "paid") { ConversionStage(stringResource(R.string.conversion_paid), proposals.stages.paid,
-                                proposals.rates.paid.cohort) }
+                                ConversionRatio(proposals.stages.issued, proposals.stages.issued, if (proposals.stages.issued > 0) 100.0 else null)) }
+                            item(key = readyPrefix + "contracted") { ConversionStage(stringResource(R.string.conversion_contracted), proposals.stages.contracted, proposals.rates.contracted.cohort) }
+                            item(key = readyPrefix + "reported") { ConversionStage(stringResource(R.string.conversion_reported), proposals.stages.reported, proposals.rates.reported.cohort) }
+                            item(key = readyPrefix + "paid") { ConversionStage(stringResource(R.string.conversion_paid), proposals.stages.paid, proposals.rates.paid.cohort) }
                             item(key = readyPrefix + "expansion") {
                                 val expansionLabel = stringResource(if (advancesExpanded) R.string.conversion_collapse else R.string.conversion_expand)
                                 OutlinedButton(onClick = { onExpansion(!advancesExpanded) },
@@ -158,6 +151,14 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                                 ConversionCard {
                                     Text(stringResource(R.string.conversion_uncontracted, proposals.uncontracted), style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr))
                                     Text(stringResource(R.string.conversion_uncontracted_note))
+                                }
+                            }
+                            item(key = readyPrefix + "period") {
+                                ConversionCard {
+                                    Text(stringResource(R.string.conversion_period_label), style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
+                                    Text(stringResource(R.string.activity_period, formatActivityInstant(result.period.from),
+                                        formatActivityInstant(result.period.to)), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
+                                    Text(stringResource(R.string.conversion_time_zone), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
                                 }
                             }
                             item(key = readyPrefix + "observed") { Text(stringResource(R.string.conversion_observed, formatActivityInstant(result.observedAt)),
@@ -181,15 +182,13 @@ private fun ConversionCard(hero: Boolean = false, content: @Composable ColumnSco
 }
 @Composable
 private fun ConversionStage(label: String, count: Long, ratio: ConversionRatio) {
-    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(label, style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr))
-        Text(count.toString(), style = MaterialTheme.typography.headlineSmall.copy(textDirection = TextDirection.ContentOrLtr))
+    PerformanceCard {
+        Text(label, style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
+        Text(stringResource(R.string.performance_stage_value, count, conversionPercentage(ratio.percentage)), style = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.ContentOrLtr))
         ratio.percentage?.let {
             LinearProgressIndicator(progress = { (it / 100).toFloat() }, modifier = Modifier.fillMaxWidth().clearAndSetSemantics {},
                 color = MaterialTheme.colorScheme.secondary)
         }
-        Text(conversionPercentage(ratio.percentage))
-        Text(stringResource(R.string.conversion_sample, ratio.numerator, ratio.denominator), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
     }
 }
 @Composable

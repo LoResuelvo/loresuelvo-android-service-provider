@@ -41,7 +41,8 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
     onPurpose: (CollectionPurpose?) -> Unit = {},
     onLoadMore: () -> Unit = {}, onTransactionsRetry: () -> Unit = {},
     listState: LazyListState = rememberLazyListState(), evolutionExpansion: Boolean? = null,
-    onEvolutionExpansion: ((Boolean) -> Unit)? = null) {
+    onEvolutionExpansion: ((Boolean) -> Unit)? = null,
+    onWorkOrder: (Int) -> Unit = {}, onProposal: (Int) -> Unit = {}) {
     var localExpansion by rememberSaveable { mutableStateOf(false) }
     val evolutionExpanded = evolutionExpansion ?: localExpansion
     RefreshableContent((state as? ProviderCollectionsUiState.Ready)?.refreshing == true || transactions.refreshing, onRetry) {
@@ -50,8 +51,7 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
         },
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() }) }
+            item { PerformanceHeader(stringResource(R.string.performance_collections_hint)) }
             stickyHeader { PerformanceTabs(PerformanceSection.COLLECTIONS) { section ->
                 when (section) {
                     PerformanceSection.ACTIVITY -> onActivity()
@@ -81,16 +81,24 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
                     if (collections.results.totalCents == 0L) {
                         item { Text(stringResource(R.string.collections_empty)) }
                     }
-                    item { CollectionMoney(stringResource(R.string.collections_deposits), collections.results.bookingDepositCents) }
-                    item { CollectionMoney(stringResource(R.string.collections_balances), collections.results.serviceBalanceCents) }
                     item {
-                        HorizontalDivider()
-                        Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.semantics { heading() })
-                        Text(stringResource(R.string.collections_pending_note), style = MaterialTheme.typography.bodySmall)
+                        PerformanceCard {
+                            CollectionAmount(stringResource(R.string.collections_deposits), collections.results.bookingDepositCents)
+                            HorizontalDivider()
+                            CollectionAmount(stringResource(R.string.collections_balances), collections.results.serviceBalanceCents)
+                        }
                     }
-                    item { PendingBalance(stringResource(R.string.activity_scheduled), collections.currentPending.scheduled) }
-                    item { PendingBalance(stringResource(R.string.activity_awaiting_payment), collections.currentPending.awaitingPayment) }
+                    item {
+                        PerformanceCard(attention = collections.currentPending.scheduled.orders > 0 || collections.currentPending.awaitingPayment.orders > 0) {
+                            Text(stringResource(R.string.activity_pending), style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.semantics { heading() })
+                            Text(stringResource(R.string.collections_pending_note), style = MaterialTheme.typography.bodySmall)
+                            PendingBalance(stringResource(R.string.activity_scheduled), collections.currentPending.scheduled)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
+                            PendingBalance(stringResource(R.string.activity_awaiting_payment), collections.currentPending.awaitingPayment)
+                        }
+                    }
+                    collectionTransactionsItems(transactions, onPurpose, onLoadMore, onTransactionsRetry, onWorkOrder, onProposal)
                     collections.comparison?.let { comparison ->
                         item { CollectionComparisonSection(collections.results, comparison) }
                     }
@@ -111,7 +119,7 @@ fun ProviderCollectionsScreen(state: ProviderCollectionsUiState, onRetry: () -> 
                             }
                         }
                     }
-                    collectionTransactionsItems(transactions, onPurpose, onLoadMore, onTransactionsRetry)
+
                 }
             }
         }
@@ -138,5 +146,13 @@ private fun PendingBalance(label: String, pending: PendingCollectionBalance) {
         Text(label, style = MaterialTheme.typography.titleMedium)
         Text(stringResource(R.string.collections_pending_orders, pending.orders))
         Text(formatActivityMoney(pending.amountCents), style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+@Composable
+private fun CollectionAmount(label: String, cents: Long) {
+    Column(Modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(formatActivityMoney(cents), style = MaterialTheme.typography.titleLarge)
     }
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="performance_summary">Resumen</string>
+    <string name="performance_conversion">Conversión</string>
+    <string name="performance_activity_hint">Tus resultados y oportunidades de mejora</string>
+    <string name="performance_collections_hint">Lo que cobraste y lo que falta cobrar</string>
+    <string name="performance_view_work">Ver trabajo</string>
+    <string name="performance_view_proposal">Ver propuesta</string>
+    <string name="performance_proposal_unavailable">Esta propuesta ya no está disponible.</string>
+    <string name="performance_hide_comparison">Ocultar comparación</string>
+    <string name="performance_stage_value">%1$d · %2$s</string>
+</resources>

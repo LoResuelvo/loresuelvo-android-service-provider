@@ -2,8 +2,11 @@ package com.loresuelvo.serviceprovider.ui.screens.statistics
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.heading
@@ -15,7 +18,11 @@ import java.text.NumberFormat
 
 @Composable
 internal fun ActivityComparisonSection(current: ActivityResults, previous: ActivityComparison) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    PerformanceCard {
+        val expansion = stringResource(if (expanded) R.string.activity_expanded else R.string.activity_collapsed)
+        TextButton(onClick = { expanded = !expanded }, modifier = Modifier.testTag("activity_comparison_toggle").semantics { stateDescription = expansion }) { Text(stringResource(if (expanded) R.string.performance_hide_comparison else R.string.activity_comparison)) }
+        if (expanded) {
         Text(stringResource(R.string.activity_comparison), style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics { heading() })
         Text(stringResource(R.string.activity_period, formatActivityInstant(previous.period.from),
@@ -31,6 +38,7 @@ internal fun ActivityComparisonSection(current: ActivityResults, previous: Activ
         ComparisonValue(R.string.activity_returning_clients, current.returningClients, results.returningClients, changes.returningClients)
         ComparisonValue(R.string.activity_agreed_value, current.agreedValueCents, results.agreedValueCents, changes.agreedValueCents, true)
         ComparisonValue(R.string.activity_average, current.averageValueCents, results.averageValueCents, changes.averageValueCents, true)
+        }
     }
 }
 

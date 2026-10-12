@@ -2,6 +2,14 @@ package com.loresuelvo.serviceprovider.ui.screens.statistics
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.ui.Alignment
+import com.loresuelvo.serviceprovider.domain.statistics.ConversionPeriod
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -14,13 +22,23 @@ import com.loresuelvo.serviceprovider.ui.statistics.*
 
 @Composable
 internal fun ConversionPeriodControls(filters: ConversionFilters, onEdit: (String, String) -> Unit,
-    onApply: () -> Unit, expanded: Boolean, onExpansion: (Boolean) -> Unit) {
+    onApply: () -> Unit, expanded: Boolean, onExpansion: (Boolean) -> Unit, period: ConversionPeriod? = null) {
     val expansion = stringResource(if (expanded) R.string.activity_expanded else R.string.activity_collapsed)
     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { onExpansion(!expanded) }, modifier = Modifier.heightIn(min = 48.dp)
+        Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { onExpansion(!expanded) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                 .testTag("conversion_period_options").semantics { stateDescription = expansion }) {
-                Text(stringResource(R.string.activity_period_options))
+                Icon(Icons.Outlined.DateRange, null, Modifier.padding(end = 12.dp))
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                    Text(stringResource(R.string.activity_period_options), style = MaterialTheme.typography.labelLarge)
+                    period?.let {
+                        val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+                        val format = DateTimeFormatter.ofPattern("d MMM yyyy", locale).withZone(ZoneId.of("America/Argentina/Buenos_Aires"))
+                        Text(stringResource(R.string.ui_period_summary, format.format(it.from), format.format(it.to.minusNanos(1))),
+                            style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
             }
             if (expanded) {
                 Text(stringResource(R.string.activity_dates_hint), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))

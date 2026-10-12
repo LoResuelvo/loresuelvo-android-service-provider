@@ -30,15 +30,23 @@ class CollectionTransactionsScreenTest {
             serviceProposalId = 9, workOrderId = 10)
         var selected: CollectionPurpose? = null
         var loads = 0
+        var openedWork: Int? = null
+        var openedProposal: Int? = null
         compose.setContent { LoresuelvoTheme {
             ProviderCollectionsScreen(ProviderCollectionsUiState.Ready(summary), {},
                 transactions = CollectionTransactionsUiState(page = first.copy(transactions = first.transactions + withOrder)),
-                onPurpose = { selected = it }, onLoadMore = { loads++ })
+                onPurpose = { selected = it }, onLoadMore = { loads++ },
+                onWorkOrder = { openedWork = it }, onProposal = { openedProposal = it })
         } }
         scroll(hasText("Movimientos del filtro: 3 · Total: ${formatActivityMoney(450000)}"))
-        scroll(hasText("Propuesta #8") and hasText("Señas") and hasText(formatActivityMoney(120000)))
-        compose.onNode(hasText("Propuesta #8")).assertTextContains("Verificado:", substring = true)
-        scroll(hasText("Propuesta #9") and hasText("Orden #10") and hasText("Saldos"))
+        scroll(hasTestTag("collection_detail_3"))
+        compose.onNodeWithTag("collection_detail_3").performClick()
+        assertEquals(8, openedProposal)
+        assertNull(openedWork)
+        scroll(hasTestTag("collection_detail_2"))
+        compose.onNodeWithTag("collection_detail_2").performClick()
+        assertEquals(10, openedWork)
+        compose.onNodeWithText("Propuesta #9").assertDoesNotExist()
         scroll(hasText("Cargar más")); compose.onNodeWithText("Cargar más").performClick(); assertEquals(1, loads)
         scroll(hasText("Movimientos verificados"))
         compose.onNodeWithText("Todos").assertIsSelected()

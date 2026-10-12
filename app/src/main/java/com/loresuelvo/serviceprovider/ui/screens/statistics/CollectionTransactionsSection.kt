@@ -18,7 +18,8 @@ import com.loresuelvo.serviceprovider.ui.statistics.CollectionTransactionsUiStat
 
 @OptIn(ExperimentalLayoutApi::class)
 internal fun LazyListScope.collectionTransactionsItems(state: CollectionTransactionsUiState,
-    onPurpose: (CollectionPurpose?) -> Unit, onLoadMore: () -> Unit, onRetry: () -> Unit) {
+    onPurpose: (CollectionPurpose?) -> Unit, onLoadMore: () -> Unit, onRetry: () -> Unit,
+    onWorkOrder: (Int) -> Unit = {}, onProposal: (Int) -> Unit = {}) {
     item(key = "collection_transaction_filters") {
         HorizontalDivider()
         Text(stringResource(R.string.collections_transactions), style = MaterialTheme.typography.titleMedium,
@@ -44,7 +45,7 @@ internal fun LazyListScope.collectionTransactionsItems(state: CollectionTransact
                 style = MaterialTheme.typography.bodySmall)
         }
         if (page.transactions.isEmpty()) item { Text(stringResource(R.string.collections_transactions_empty)) }
-        items(page.transactions, key = { "collection_transaction_${it.id}" }) { row -> TransactionRow(row) }
+        items(page.transactions, key = { "collection_transaction_${it.id}" }) { row -> TransactionRow(row, onWorkOrder, onProposal) }
     }
     if (state.loading) item {
         CircularProgressIndicator()
@@ -59,15 +60,17 @@ internal fun LazyListScope.collectionTransactionsItems(state: CollectionTransact
 }
 
 @Composable
-private fun TransactionRow(row: CollectionTransaction) {
+private fun TransactionRow(row: CollectionTransaction, onWorkOrder: (Int) -> Unit, onProposal: (Int) -> Unit) {
     Surface(modifier = Modifier.testTag("collection_transaction_${row.id}"),
         shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(16.dp)) {
             Text(stringResource(purposeLabel(row.purpose)), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.collections_verified_on, formatActivityInstant(row.verifiedOn)))
             Text(formatActivityMoney(row.sellerAmountCents), style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.collections_proposal_reference, row.serviceProposalId))
-            row.workOrderId?.let { Text(stringResource(R.string.collections_order_reference, it)) }
+            TextButton(onClick = { row.workOrderId?.let(onWorkOrder) ?: onProposal(row.serviceProposalId) },
+                modifier = Modifier.testTag("collection_detail_${row.id}").heightIn(min = 48.dp)) {
+                Text(stringResource(if (row.workOrderId != null) R.string.performance_view_work else R.string.performance_view_proposal))
+            }
         }
     }
 }

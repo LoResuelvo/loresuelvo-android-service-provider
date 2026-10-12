@@ -70,7 +70,6 @@ class ProviderReputationLayoutAcceptanceTest {
             }
             readable(context.getString(R.string.reputation_percentage, "80"), true)
             readable(context.getString(R.string.reputation_coverage_counts, 60L, 75L), true)
-            readable(context.getString(R.string.reputation_work, 300), true)
             readable(context.getString(R.string.reputation_review_rating, 5), true, reviewId = 300)
             readable("Actual client comment for work 300", true)
             val more = control(R.string.reputation_load_more)

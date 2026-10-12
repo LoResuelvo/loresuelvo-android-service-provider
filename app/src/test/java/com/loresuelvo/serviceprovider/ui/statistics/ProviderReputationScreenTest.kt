@@ -41,12 +41,23 @@ class ProviderReputationScreenTest {
         }
         reveal("80 %"); reveal("24 de 30 trabajos pagados recibieron una reseña.")
         reveal("Solo cuentan trabajos pagados. Un trabajo sin reseña no baja tu calificación.")
-        reveal("Trabajo #184"); reveal("5 de 5 estrellas"); reveal("Stored client comment")
-        reveal("Trabajo #179"); reveal("4 de 5 estrellas")
+        reveal("5 de 5 estrellas"); reveal("Stored client comment")
+        reveal("4 de 5 estrellas")
         compose.onNodeWithText("Sin comentario escrito").assertDoesNotExist()
         compose.onNodeWithText("Más recientes").assertDoesNotExist()
         reveal("Reseñas ordenadas por número de trabajo, no por fecha.")
         reveal("Consultado el ${formatActivityInstant(state.reputation.calculatedAt)} · Buenos Aires")
+    }
+    @Test fun `review opens its associated job and does not expose internal identifier`() {
+        var opened: Int? = null
+        compose.setContent { LoresuelvoTheme {
+            ProviderReputationScreen(productionResult(), {}, onWorkOrder = { opened = it })
+        } }
+        compose.onNodeWithTag("provider_reputation").performScrollToNode(hasTestTag("reputation_review_184"))
+        compose.onNode(hasText("Ver trabajo") and hasAnyAncestor(hasTestTag("reputation_review_184")))
+            .performScrollTo().performClick()
+        assertEquals(184, opened)
+        compose.onNodeWithText("Trabajo #184").assertDoesNotExist()
     }
     @Test fun `no reviews displays honest null rating and unavailable coverage before paid work`() {
         val state = productionResult(true, 0)
@@ -98,10 +109,10 @@ class ProviderReputationScreenTest {
         compose.runOnIdle { state.value = state.value.copy(loading = true) }
         reveal("Cargando tu reputación…")
         compose.onNodeWithText("Cargar más reseñas").assertDoesNotExist()
-        reveal("Trabajo #184")
+        compose.onNodeWithTag("provider_reputation").performScrollToNode(hasTestTag("reputation_review_184"))
         compose.runOnIdle { state.value = state.value.copy(loading = false, failure = ReputationOutcome.Failure.Network) }
         reveal("Reintentar"); compose.onNodeWithText("Reintentar").performClick(); assertEquals(1, retries)
-        reveal("Trabajo #179")
+        compose.onNodeWithTag("provider_reputation").performScrollToNode(hasTestTag("reputation_review_179"))
         compose.runOnIdle { state.value = state.value.copy(restartRequired = true) }
         reveal("Consultar desde el principio")
         compose.onNodeWithText("Consultar desde el principio").performClick(); assertEquals(2, retries)

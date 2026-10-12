@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="performance_summary">Summary</string>
+    <string name="performance_conversion">Conversion</string>
+    <string name="performance_activity_hint">Your results and opportunities to improve</string>
+    <string name="performance_collections_hint">What you collected and what is outstanding</string>
+    <string name="performance_view_work">View job</string>
+    <string name="performance_view_proposal">View proposal</string>
+    <string name="performance_proposal_unavailable">This proposal is no longer available.</string>
+    <string name="performance_hide_comparison">Hide comparison</string>
+    <string name="performance_stage_value">%1$d · %2$s</string>
+</resources>

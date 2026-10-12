@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -37,7 +38,7 @@ val REPUTATION_READING_POSITION = SemanticsPropertyKey<Pair<Int, Int>>("Reputati
 
 @Composable
 fun ProviderReputationRoute(viewModel: ProviderReputationViewModel = hiltViewModel(),
-    onSection: (PerformanceSection) -> Unit = {}) {
+    onSection: (PerformanceSection) -> Unit = {}, onWorkOrder: (Int) -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) { viewModel.open() }
     val list = rememberLazyListState(viewModel.readingIndex, viewModel.readingOffset)
@@ -66,27 +67,25 @@ fun ProviderReputationRoute(viewModel: ProviderReputationViewModel = hiltViewMod
                 viewModel.rememberReadingPosition(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset)
         }
     }
-    ProviderReputationScreen(state, viewModel::retry, onSection, viewModel::loadMore, viewModel::refresh, list)
+    ProviderReputationScreen(state, viewModel::retry, onSection, viewModel::loadMore, viewModel::refresh, list, onWorkOrder)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Unit,
     onSection: (PerformanceSection) -> Unit = {}, onLoadMore: () -> Unit = {},
-    onRefresh: () -> Unit = {}, listState: LazyListState = rememberLazyListState()) {
+    onRefresh: () -> Unit = {}, listState: LazyListState = rememberLazyListState(),
+    onWorkOrder: (Int) -> Unit = {}) {
     RefreshableContent((state as? ProviderReputationUiState.Ready)?.loading == true, onRefresh) {
         ProvideTextStyle(TextStyle(textDirection = TextDirection.ContentOrLtr)) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("provider_reputation")
                 .semantics { this[REPUTATION_READING_POSITION] = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset },
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                item { Text(stringResource(R.string.activity_title), style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.semantics { heading() }) }
+                item { PerformanceHeader(stringResource(R.string.reputation_lifetime)) }
                 stickyHeader { Surface(color = MaterialTheme.colorScheme.background) {
                     PerformanceTabs(PerformanceSection.REPUTATION, onSection)
                 } }
-                item { Text(stringResource(R.string.reputation_lifetime), color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.fillMaxWidth()) }
                 when (state) {
                     ProviderReputationUiState.Loading -> item {
                         Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite },
@@ -115,19 +114,20 @@ fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Un
                                 reputation.ratingDistribution.asReversed().forEach { RatingBucket(it, reputation.reviewCount) }
                             }
                         }
-                        item { ReputationCoverage(reputation) }
                         item { Text(stringResource(R.string.reputation_paid_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
                         item { Text(stringResource(R.string.reputation_reviews), style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.semantics { heading() }) }
                         if (reputation.reviews.isEmpty()) item { Text(stringResource(R.string.reputation_empty_reviews)) }
                         items(reputation.reviews, key = { it.workOrderId }) { review ->
-                            Column(Modifier.fillMaxWidth().testTag("reputation_review_${review.workOrderId}").semantics(mergeDescendants = true) {},
-                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stringResource(R.string.reputation_work, review.workOrderId),
-                                    style = MaterialTheme.typography.titleSmall)
-                                Text(stringResource(R.string.reputation_review_rating, review.rating))
-                                if (review.description.isNotEmpty()) Text(review.description)
-                                HorizontalDivider()
+                            Surface(Modifier.fillMaxWidth().testTag("reputation_review_${review.workOrderId}"),
+                                shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
+                                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    ReviewStars(review.rating)
+                                    if (review.description.isNotEmpty()) Text(review.description)
+                                    TextButton(onClick = { onWorkOrder(review.workOrderId) }, modifier = Modifier.heightIn(min = 48.dp)) {
+                                        Text(stringResource(R.string.performance_view_work))
+                                    }
+                                }
                             }
                         }
                         item {
@@ -148,6 +148,7 @@ fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Un
                                 }
                             }
                         }
+                        item { ReputationCoverage(reputation) }
                         item { Text(stringResource(R.string.reputation_order_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
                         item { Text(stringResource(R.string.reputation_calculated, formatActivityInstant(reputation.calculatedAt)),
                             style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
@@ -197,3 +198,16 @@ private fun ReputationCoverage(reputation: ProviderReputation) {
 
 internal fun formatReputationNumber(value: Double): String = NumberFormat.getNumberInstance(Locale.forLanguageTag("es-AR"))
     .apply { maximumFractionDigits = 2; roundingMode = java.math.RoundingMode.HALF_UP }.format(value)
+
+@Composable
+internal fun ReviewStars(rating: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.semantics(mergeDescendants = true) {}) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            repeat(5) { index ->
+                Icon(if (index < rating) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                    contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(24.dp))
+            }
+        }
+        Text(stringResource(R.string.reputation_review_rating, rating), style = MaterialTheme.typography.labelMedium)
+    }
+}

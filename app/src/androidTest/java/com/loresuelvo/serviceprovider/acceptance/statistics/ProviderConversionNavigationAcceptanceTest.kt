@@ -74,7 +74,7 @@ class ProviderConversionNavigationAcceptanceTest {
         bottom(Route.Activity.path).performClick(); compose.waitForIdle()
     }
     private fun openDetail() {
-        reveal("provider_activity", R.string.conversion_title).performClick()
+        reveal("provider_activity", R.string.performance_conversion).performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("provider_conversion").fetchSemanticsNodes().isNotEmpty() &&
             compose.onAllNodesWithText(context.getString(R.string.conversion_loading)).fetchSemanticsNodes().isEmpty() }
         bottom(Route.Activity.path).assertIsSelected()
@@ -100,7 +100,7 @@ class ProviderConversionNavigationAcceptanceTest {
         reveal("provider_activity", R.string.activity_week).performClick()
         compose.onNodeWithContentDescription(context.getString(R.string.activity_compare_previous)).performClick()
         val activityQuery = statistics.queries.last()
-        reveal("provider_activity", R.string.conversion_title)
+        reveal("provider_activity", R.string.performance_conversion)
         val activityPosition = compose.onNodeWithTag("provider_activity").fetchSemanticsNode().config[ACTIVITY_READING_POSITION]
         openDetail()
         compose.onNodeWithTag("conversion_period_options").performClick()
@@ -141,10 +141,10 @@ class ProviderConversionNavigationAcceptanceTest {
         compose.onNodeWithText(context.getString(R.string.activity_period,
             com.loresuelvo.serviceprovider.ui.screens.statistics.formatActivityInstant(applied.from!!.toInstant()),
             com.loresuelvo.serviceprovider.ui.screens.statistics.formatActivityInstant(applied.to!!.toInstant()))).assertExists()
-        bottom(Route.Activity.path).performClick(); compose.waitForIdle(); openDetail()
+        bottom(Route.Activity.path).performClick(); compose.waitForIdle()
         reveal("provider_conversion", R.string.conversion_collapse).assertIsDisplayed()
         compose.onNodeWithTag("provider_conversion").performScrollToIndex(0)
-        compose.onNodeWithContentDescription(context.getString(R.string.conversion_back)).performClick()
+        compose.onNodeWithText(context.getString(R.string.performance_summary)).performClick()
         reveal("provider_activity", R.string.activity_period_options).assertIsDisplayed()
         compose.onNodeWithTag("activity_from_day").assertTextContains("2026-08-01")
         assertEquals(activityQuery, statistics.queries.last())

@@ -18,8 +18,14 @@ import com.loresuelvo.serviceprovider.ui.statistics.ProviderReputationViewModel
 fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel(),
     collections: ProviderCollectionsViewModel = hiltViewModel(),
     transactions: CollectionTransactionsViewModel = hiltViewModel(),
-    reputation: ProviderReputationViewModel = hiltViewModel(), onConversion: () -> Unit = {}) {
+    reputation: ProviderReputationViewModel = hiltViewModel(),
+    onWorkOrder: (Int) -> Unit = {}, onConversation: (Int) -> Unit = {}) {
     var selectedSection by rememberSaveable { mutableStateOf(PerformanceSection.ACTIVITY) }
+    var showingConversion by rememberSaveable { mutableStateOf(false) }
+    var selectedProposal by rememberSaveable { mutableStateOf<Int?>(null) }
+    androidx.activity.compose.BackHandler(selectedSection == PerformanceSection.ACTIVITY && showingConversion) {
+        showingConversion = false
+    }
     val showingCollections = selectedSection == PerformanceSection.COLLECTIONS
     val filters by activity.filters.collectAsStateWithLifecycle()
     val transactionState by transactions.uiState.collectAsStateWithLifecycle()
@@ -66,7 +72,7 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
         }
     }
     if (selectedSection == PerformanceSection.REPUTATION) {
-        ProviderReputationRoute(reputation) { selectedSection = it }
+        ProviderReputationRoute(reputation, onSection = { selectedSection = it }, onWorkOrder = onWorkOrder)
     } else if (showingCollections) {
         val visibleState = if (collections.query == filters.query) collectionState else ProviderCollectionsUiState.Loading
         ProviderCollectionsScreen(visibleState, { collections.retry(); transactions.refresh() }, onActivity = { selectedSection = PerformanceSection.ACTIVITY },
@@ -81,9 +87,19 @@ fun ProviderPerformanceRoute(activity: ProviderActivityViewModel = hiltViewModel
                 else state
             }, onPurpose = transactions::selectPurpose,
             onLoadMore = transactions::loadMore, onTransactionsRetry = transactions::retry, listState = collectionList,
-            evolutionExpansion = evolutionExpanded, onEvolutionExpansion = collections::expandEvolution)
+            evolutionExpansion = evolutionExpanded, onEvolutionExpansion = collections::expandEvolution,
+            onWorkOrder = onWorkOrder, onProposal = { selectedProposal = it })
+    } else if (showingConversion) {
+        ProviderConversionRoute(onBack = { showingConversion = false }, onSection = { selectedSection = it })
     } else {
         ProviderActivityRoute(activity, onCollections = { selectedSection = PerformanceSection.COLLECTIONS },
-            onReputation = { selectedSection = PerformanceSection.REPUTATION }, onConversion = onConversion)
+            onReputation = { selectedSection = PerformanceSection.REPUTATION }, onConversion = { showingConversion = true })
+    }
+    selectedProposal?.let { id ->
+        com.loresuelvo.serviceprovider.ui.screens.proposals.CollectionProposalSheet(id,
+            onDismiss = { selectedProposal = null }, onConversation = { conversationId ->
+                selectedProposal = null
+                onConversation(conversationId)
+            })
     }
 }
