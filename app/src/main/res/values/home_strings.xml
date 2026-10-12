@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_request_pending">Pendiente de respuesta</string>
+    <string name="home_request_chat_hint">Revisá la solicitud para iniciar el chat.</string>
+    <string name="home_carousel_hint">Deslizá para ver más</string>
+    <string name="home_carousel_previous">Tarjeta anterior</string>
+    <string name="home_carousel_next">Tarjeta siguiente</string>
+    <string name="home_carousel_position">%1$d de %2$d</string>
+    <string name="job_request_chat_explanation">Al aceptar la solicitud se abrirá el chat con el cliente para conversar sobre el servicio.</string>
+</resources>

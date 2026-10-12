@@ -104,9 +104,9 @@
     <string name="proposal_list_visit_pattern">MMMM d, yyyy \'at\' HH:mm</string>
     <string name="proposal_list_amount">ARS %1$s</string>
     <string name="proposal_detail_duration">Estimated duration</string>
-    <string name="proposal_detail_minutes">%1$d minutes</string>
-    <string name="proposal_detail_hours">%1$d hour</string>
-    <string name="proposal_detail_hours_minutes">%1$d hour %2$d minutes</string>
+    <string name="proposal_detail_minutes">%1$d min</string>
+    <string name="proposal_detail_hours">%1$d h</string>
+    <string name="proposal_detail_hours_minutes">%1$d h %2$d min</string>
     <string name="proposal_detail_conversation">View conversation</string>
     <string name="proposal_detail_open">View details</string>
     <string name="proposal_detail_chat_summary">Service proposal</string>
@@ -193,16 +193,16 @@
     <string name="provider_profile_avatar_description">Avatar of %1$s</string>
 
     <!-- Provider job request detail -->
-    <string name="provider_job_request_detail_title">Detalle de solicitud</string>
-    <string name="provider_job_request_detail_close">Cerrar detalle</string>
-    <string name="provider_job_request_detail_unavailable">Esta solicitud ya no está disponible.</string>
-    <string name="provider_job_request_detail_error">No pudimos cargar la solicitud.</string>
-    <string name="provider_job_request_detail_retry">Reintentar</string>
-    <string name="provider_job_request_images_title">Imágenes de contexto</string>
-    <string name="provider_job_request_image_description">Imagen de contexto: %1$s</string>
-    <string name="provider_job_request_image_viewer_close">Cerrar imagen</string>
-    <string name="provider_job_request_accept_error">No pudimos aceptar la solicitud.</string>
-    <string name="provider_job_request_continue_conversation">Continuar conversación</string>
+    <string name="provider_job_request_detail_title">Service request</string>
+    <string name="provider_job_request_detail_close">Close details</string>
+    <string name="provider_job_request_detail_unavailable">This request is no longer available.</string>
+    <string name="provider_job_request_detail_error">We could not load the request.</string>
+    <string name="provider_job_request_detail_retry">Try again</string>
+    <string name="provider_job_request_images_title">Attached photos</string>
+    <string name="provider_job_request_image_description">Attached photo: %1$s</string>
+    <string name="provider_job_request_image_viewer_close">Close photo</string>
+    <string name="provider_job_request_accept_error">We could not accept the request.</string>
+    <string name="provider_job_request_continue_conversation">Accept and open chat</string>
 
     <!-- Temporary provider conversation handoff -->
     <string name="provider_conversation_title">Conversation</string>

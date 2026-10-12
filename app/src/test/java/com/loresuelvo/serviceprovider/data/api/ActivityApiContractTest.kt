@@ -106,22 +106,20 @@ class ActivityApiContractTest {
                   "title": "Reparar pérdida",
                   "description": "Debajo de la pileta",
                   "status": "accepted",
-                  "requester": {"name": "Ana", "surname": "Pérez"},
                   "images": []
                 }
                 """.trimIndent(),
             ),
         )
 
-        val response = api().acceptJobRequest(7)
+        val response = ApiJobRequestRepository(api()).acceptJobRequest(7)
         val request = server.takeRequest()
 
         assertEquals("/job-requests/7/accept", request.path)
         assertEquals("POST", request.method)
         assertEquals("Bearer synthetic-token", request.getHeader("Authorization"))
         assertEquals(0, request.body.size)
-        assertEquals(11, response.conversationId)
-        assertEquals("accepted", response.status)
+        assertEquals(com.loresuelvo.serviceprovider.domain.activity.AcceptJobRequestOutcome.Success(7, 11), response)
     }
 
     private fun api(): BackendApi = Retrofit.Builder()

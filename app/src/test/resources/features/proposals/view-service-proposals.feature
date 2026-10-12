@@ -57,9 +57,9 @@ Característica: Visualizar propuestas de servicio como prestador
     Y no puedo aceptar, rechazar, pagar ni calificar la propuesta
     Ejemplos:
       | vista            | minutos | duración          |
-      | Trabajos         | 45      | 45 minutos        |
-      | Trabajos         | 60      | 1 hora            |
-      | resumen del chat | 90      | 1 hora 30 minutos |
+      | Trabajos         | 45      | 45 min        |
+      | Trabajos         | 60      | 1 h            |
+      | resumen del chat | 90      | 1 h 30 min |
 
   Escenario: 05-PVP Volver al mismo lugar del historial
     Dado que abrí un detalle desde la pestaña "Aceptadas" después de desplazarme hasta la propuesta 42

@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.conversation.Conversation
 import com.loresuelvo.serviceprovider.ui.screens.messages.components.ProviderConversationRow
@@ -47,6 +48,10 @@ fun ProviderMessagesRoute(
     onConversationClick: (Int) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LifecycleResumeEffect(viewModel) {
+        viewModel.load()
+        onPauseOrDispose { }
+    }
     ProviderMessagesScreen(
         state = state,
         onRetryClick = viewModel::load,

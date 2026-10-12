@@ -104,9 +104,9 @@
     <string name="proposal_list_visit_pattern">\'el\' d \'de\' MMMM \'de\' yyyy \'a las\' HH:mm</string>
     <string name="proposal_list_amount">ARS %1$s</string>
     <string name="proposal_detail_duration">Duración estimada</string>
-    <string name="proposal_detail_minutes">%1$d minutos</string>
-    <string name="proposal_detail_hours">%1$d hora</string>
-    <string name="proposal_detail_hours_minutes">%1$d hora %2$d minutos</string>
+    <string name="proposal_detail_minutes">%1$d min</string>
+    <string name="proposal_detail_hours">%1$d h</string>
+    <string name="proposal_detail_hours_minutes">%1$d h %2$d min</string>
     <string name="proposal_detail_conversation">Ver conversación</string>
     <string name="proposal_detail_open">Ver detalle</string>
     <string name="proposal_detail_chat_summary">Propuesta de servicio</string>
@@ -193,16 +193,16 @@
     <string name="provider_profile_avatar_description">Avatar de %1$s</string>
 
     <!-- Provider job request detail -->
-    <string name="provider_job_request_detail_title">Detalle de solicitud</string>
+    <string name="provider_job_request_detail_title">Solicitud de servicio</string>
     <string name="provider_job_request_detail_close">Cerrar detalle</string>
     <string name="provider_job_request_detail_unavailable">Esta solicitud ya no está disponible.</string>
     <string name="provider_job_request_detail_error">No pudimos cargar la solicitud.</string>
     <string name="provider_job_request_detail_retry">Reintentar</string>
-    <string name="provider_job_request_images_title">Imágenes de contexto</string>
+    <string name="provider_job_request_images_title">Fotos adjuntas</string>
     <string name="provider_job_request_image_description">Imagen de contexto: %1$s</string>
     <string name="provider_job_request_image_viewer_close">Cerrar imagen</string>
     <string name="provider_job_request_accept_error">No pudimos aceptar la solicitud.</string>
-    <string name="provider_job_request_continue_conversation">Continuar conversación</string>
+    <string name="provider_job_request_continue_conversation">Aceptar y abrir chat</string>
 
     <!-- Temporary provider conversation handoff -->
     <string name="provider_conversation_title">Conversación</string>

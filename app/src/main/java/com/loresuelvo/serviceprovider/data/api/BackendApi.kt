@@ -74,7 +74,7 @@ interface BackendApi {
     @POST("job-requests/{jobRequestID}/accept")
     suspend fun acceptJobRequest(
         @Path("jobRequestID") jobRequestId: Int,
-    ): JobRequestSummaryDto
+    ): com.loresuelvo.serviceprovider.data.api.dto.AcceptedJobRequestDto
 
     @GET("work-orders")
     suspend fun getWorkOrders(): List<WorkOrderSummaryDto>

@@ -1,5 +1,6 @@
 package com.loresuelvo.serviceprovider.data.api
 
+import com.loresuelvo.serviceprovider.data.api.dto.AcceptedJobRequestDto
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestRequesterDto
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestImageDto
 import com.loresuelvo.serviceprovider.data.api.dto.JobRequestSummaryDto
@@ -93,6 +94,16 @@ class ApiActivityRepositoryTest {
     }
 
     @Test
+    fun rejects_mismatched_requests_invalid_conversations_and_unconfirmed_status() = runTest {
+        listOf(acceptedRequest().copy(id = 8), acceptedRequest().copy(conversationId = 0),
+            acceptedRequest().copy(status = "pending")).forEach { response ->
+            coEvery { backendApi.acceptJobRequest(7) } returns response
+            assertEquals(AcceptJobRequestOutcome.Failure.Invalid,
+                ApiJobRequestRepository(backendApi).acceptJobRequest(7))
+        }
+    }
+
+    @Test
     fun maps_an_accept_conflict_without_exposing_http_details_to_the_domain() = runTest {
         coEvery { backendApi.acceptJobRequest(7) } throws HttpException(
             Response.error<JobRequestSummaryDto>(
@@ -137,12 +148,11 @@ class ApiActivityRepositoryTest {
         ),
     )
 
-    private fun acceptedRequest() = JobRequestSummaryDto(
+    private fun acceptedRequest() = AcceptedJobRequestDto(
         id = 7,
         conversationId = 11,
         title = "Reparar pérdida",
         description = "Debajo de la pileta",
         status = "accepted",
-        requester = JobRequestRequesterDto("Ana", "Pérez"),
     )
 }

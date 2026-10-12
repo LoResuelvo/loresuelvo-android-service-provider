@@ -215,13 +215,13 @@ class ServiceProposalListScreenTest {
 
     @Test
     @Config(qualifiers = "es-rAR", sdk = [34])
-    fun `duration uses natural Spanish for 45 60 and 90 minutes`() {
+    fun `duration uses compact units for minutes and one or more hours`() {
         compose.setContent {
             Column {
-                listOf(45, 60, 90).forEach { Text(durationText(it)) }
+                listOf(45, 60, 90, 120).forEach { Text(durationText(it)) }
             }
         }
-        listOf("45 minutos", "1 hora", "1 hora 30 minutos").forEach {
+        listOf("45 min", "1 h", "1 h 30 min", "2 h").forEach {
             compose.onNodeWithText(it).assertExists()
         }
     }

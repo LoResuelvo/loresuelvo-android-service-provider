@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_request_pending">Awaiting response</string>
+    <string name="home_request_chat_hint">Review the request to start chatting.</string>
+    <string name="home_carousel_hint">Swipe to see more</string>
+    <string name="home_carousel_previous">Previous card</string>
+    <string name="home_carousel_next">Next card</string>
+    <string name="home_carousel_position">%1$d of %2$d</string>
+    <string name="job_request_chat_explanation">Accept the request to open a chat with the customer and discuss the service.</string>
+</resources>

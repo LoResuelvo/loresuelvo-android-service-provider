@@ -11,11 +11,12 @@ import com.loresuelvo.serviceprovider.ui.navigation.Route
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 @HiltViewModel
 class JobRequestDetailViewModel @Inject constructor(
@@ -24,13 +25,22 @@ class JobRequestDetailViewModel @Inject constructor(
     private val acceptJobRequest: AcceptJobRequestUseCase,
 ) : ViewModel() {
 
-    private val requestId: Int = savedStateHandle[Route.JobRequestDetail.argument] ?: -1
+    private var requestId: Int = savedStateHandle[Route.JobRequestDetail.argument] ?: -1
     private val _uiState = MutableStateFlow<JobRequestDetailUiState>(JobRequestDetailUiState.Loading)
     val uiState: StateFlow<JobRequestDetailUiState> = _uiState.asStateFlow()
-    private val _effects = MutableSharedFlow<JobRequestDetailEffect>(extraBufferCapacity = 1)
-    val effects: SharedFlow<JobRequestDetailEffect> = _effects
+    private val _effects = Channel<JobRequestDetailEffect>(Channel.BUFFERED)
+    val effects = _effects.receiveAsFlow()
+
+    private var loadJob: Job? = null
+    private var acceptanceJob: Job? = null
 
     init {
+        if (savedStateHandle.contains(Route.JobRequestDetail.argument)) load()
+    }
+
+    fun open(id: Int) {
+        if (acceptanceJob?.isActive == true) return
+        requestId = id
         load()
     }
 
@@ -49,10 +59,10 @@ class JobRequestDetailViewModel @Inject constructor(
             else -> return
         }
         _uiState.value = JobRequestDetailUiState.Accepting(request)
-        viewModelScope.launch {
+        acceptanceJob = viewModelScope.launch {
             when (val outcome = acceptJobRequest(request.id)) {
                 is AcceptJobRequestOutcome.Success -> {
-                    _effects.emit(
+                    _effects.send(
                         JobRequestDetailEffect.Accepted(
                             requestId = outcome.requestId,
                             conversationId = outcome.conversationId,
@@ -74,8 +84,9 @@ class JobRequestDetailViewModel @Inject constructor(
     }
 
     private fun load() {
+        loadJob?.cancel()
         _uiState.value = JobRequestDetailUiState.Loading
-        viewModelScope.launch {
+        loadJob = viewModelScope.launch {
             _uiState.value = when (val outcome = getPendingJobRequest(requestId)) {
                 is JobRequestDetailOutcome.Success -> JobRequestDetailUiState.Ready(outcome.request)
                 JobRequestDetailOutcome.NotFound -> JobRequestDetailUiState.NotFound

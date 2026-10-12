@@ -199,11 +199,6 @@ fun LoResuelvoNav(
                                     ProviderHomeRoute(
                                         navController = navController,
                                         provider = it,
-                                        onJobRequestClick = { request ->
-                                            navController.navigate(
-                                                Route.JobRequestDetail.buildPath(request.id),
-                                            )
-                                        },
                                     )
                                 }
                             },

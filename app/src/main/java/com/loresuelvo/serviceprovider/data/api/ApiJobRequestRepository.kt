@@ -30,7 +30,7 @@ class ApiJobRequestRepository @Inject constructor(
 
     override suspend fun acceptJobRequest(id: Int): AcceptJobRequestOutcome = try {
         val response = backendApi.acceptJobRequest(id)
-        if (response.status != ACCEPTED_STATUS || response.conversationId <= 0) {
+        if (response.id != id || response.status != ACCEPTED_STATUS || response.conversationId <= 0) {
             AcceptJobRequestOutcome.Failure.Invalid
         } else {
             AcceptJobRequestOutcome.Success(

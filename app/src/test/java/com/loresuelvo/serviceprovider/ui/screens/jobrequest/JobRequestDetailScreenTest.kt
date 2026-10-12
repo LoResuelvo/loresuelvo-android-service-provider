@@ -7,7 +7,10 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.onParent
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +37,20 @@ class JobRequestDetailScreenTest {
 
     private val context: Context
         get() = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun chat_action_stays_visible_for_a_long_request() {
+        var accepted = false
+        composeTestRule.setContent { LoresuelvoTheme {
+            JobRequestDetailScreen(
+                uiState = JobRequestDetailUiState.Ready(JobRequest(7, "Ana", "Request", "Description ".repeat(500))),
+                onClose = {}, onRetry = {}, onAccept = { accepted = true },
+            )
+        } }
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_job_request_continue_conversation))
+            .assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick)
+        assertTrue(accepted)
+    }
 
     @Test
     fun renders_the_available_request_data_and_accept_action_affordances() {
@@ -82,7 +99,7 @@ class JobRequestDetailScreenTest {
             .assertIsDisplayed()
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_job_request_detail_retry))
-            .performClick()
+            .performSemanticsAction(SemanticsActions.OnClick)
 
         assertTrue(retried)
     }
@@ -127,7 +144,7 @@ class JobRequestDetailScreenTest {
             .assertIsDisplayed()
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_job_request_detail_close))
-            .performClick()
+            .performSemanticsAction(SemanticsActions.OnClick)
 
         assertTrue(closed)
     }
@@ -161,10 +178,11 @@ class JobRequestDetailScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithContentDescription(imageDescription).onParent().performScrollTo()
         composeTestRule
             .onNodeWithContentDescription(imageDescription)
             .assertIsDisplayed()
-            .performClick()
+            .performSemanticsAction(SemanticsActions.OnClick)
         composeTestRule
             .onNodeWithContentDescription(context.getString(R.string.provider_job_request_image_viewer_close))
             .assertIsDisplayed()

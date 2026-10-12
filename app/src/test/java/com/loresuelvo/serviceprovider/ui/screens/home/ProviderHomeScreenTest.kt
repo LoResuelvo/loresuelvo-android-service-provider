@@ -1,5 +1,8 @@
 package com.loresuelvo.serviceprovider.ui.screens.home
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.performSemanticsAction
 import android.content.Context
 import android.content.res.Configuration
@@ -103,7 +106,7 @@ class ProviderHomeScreenTest {
         composeTestRule.onAllNodesWithText("2").assertCountEquals(1)
         composeTestRule.onNodeWithTag("home_proposal_details_2").performClick()
         composeTestRule.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Proposal 2").assertIsDisplayed()
+        composeTestRule.onAllNodesWithText("Proposal 2").assertCountEquals(2)
         assertEquals(0, proposalOpens)
         composeTestRule.onNodeWithText(context.getString(R.string.proposal_detail_conversation))
             .performScrollTo().assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick)
@@ -194,7 +197,8 @@ class ProviderHomeScreenTest {
         composeTestRule.onNodeWithText("CG").assertIsDisplayed()
         composeTestRule.onNodeWithText("Carlos Gómez").assertIsDisplayed()
         composeTestRule.onNodeWithText("Plomería").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Reparar pérdida").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("home_requests_row").performScrollTo()
+        composeTestRule.onNodeWithText("Reparar pérdida").assertIsDisplayed()
         composeTestRule.onAllNodesWithText("Ana Pérez").assertCountEquals(2)
         composeTestRule.onAllNodesWithText("Pérdida debajo de la pileta").assertCountEquals(2)
         composeTestRule.onAllNodesWithText("1").assertCountEquals(2)
@@ -283,12 +287,56 @@ class ProviderHomeScreenTest {
             }
         }
 
+        composeTestRule.onNodeWithTag("home_requests_row").performScrollTo()
         composeTestRule
             .onNodeWithText(context.getString(R.string.provider_home_view_request))
             .performScrollTo()
             .performClick()
 
         assertEquals(request, selected)
+    }
+
+    @Test
+    fun request_carousel_keeps_card_size_and_opens_the_selected_request() {
+        val first = jobRequest()
+        val second = first.copy(id = 11, consumerName = "Very long customer name ".repeat(8),
+            title = "Long title ".repeat(30), description = "Long description ".repeat(100))
+        var selected: JobRequest? = null
+        composeTestRule.setContent { LoresuelvoTheme {
+            Column(androidx.compose.ui.Modifier.verticalScroll(rememberScrollState())) {
+                JobRequestsSection(ActivitySectionState.Ready(listOf(first, second)), {}, { selected = it })
+            }
+        } }
+        val firstBounds = composeTestRule.onNodeWithTag("home_request_10").fetchSemanticsNode().size
+        composeTestRule.onNodeWithTag("home_requests_row_next").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+        val secondBounds = composeTestRule.onNodeWithTag("home_request_11").fetchSemanticsNode().size
+        assertEquals(firstBounds.height, secondBounds.height)
+        assertEquals(firstBounds.width, secondBounds.width)
+        composeTestRule.onNodeWithTag("home_request_details_11").performClick()
+        assertEquals(second, selected)
+        composeTestRule.onNodeWithTag("home_requests_row_previous").performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("home_request_details_10").assertIsDisplayed()
+    }
+
+    @Test
+    fun all_home_card_types_have_the_same_height_with_large_text() {
+        composeTestRule.setContent {
+            val configuration = Configuration(LocalConfiguration.current).apply { fontScale = 1.5f }
+            CompositionLocalProvider(LocalConfiguration provides configuration) { LoresuelvoTheme {
+                androidx.compose.foundation.layout.Box {
+                    HomeTurnCard(workOrder(), androidx.compose.ui.Modifier, {})
+                    HomeProposalCard(proposal(1), androidx.compose.ui.Modifier, {})
+                    HomeRequestCard(jobRequest(), androidx.compose.ui.Modifier, {})
+                }
+            } }
+        }
+        val turn = composeTestRule.onNodeWithTag("provider_turn_20").fetchSemanticsNode().boundsInRoot
+        val proposal = composeTestRule.onNodeWithTag("home_proposal_1").fetchSemanticsNode().boundsInRoot
+        val request = composeTestRule.onNodeWithTag("home_request_10").fetchSemanticsNode().boundsInRoot
+        assertEquals(turn.height, proposal.height, 1f)
+        assertEquals(turn.height, request.height, 1f)
     }
 
     private fun proposal(id: Int) = ServiceProposalSummary(

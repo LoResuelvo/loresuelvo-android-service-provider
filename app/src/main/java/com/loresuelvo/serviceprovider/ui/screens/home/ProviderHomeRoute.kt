@@ -3,6 +3,10 @@ package com.loresuelvo.serviceprovider.ui.screens.home
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.loresuelvo.serviceprovider.ui.screens.jobrequest.JobRequestDetailSheetRoute
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -16,11 +20,11 @@ import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
 fun ProviderHomeRoute(
     navController: NavHostController,
     provider: CurrentAccount.Provider,
-    onJobRequestClick: (com.loresuelvo.serviceprovider.domain.activity.JobRequest) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProviderHomeViewModel = hiltViewModel(),
     proposalsViewModel: ServiceProposalListViewModel = hiltViewModel(),
 ) {
+    var selectedRequestId by rememberSaveable { mutableStateOf<Int?>(null) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val proposalsState by proposalsViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -57,7 +61,7 @@ fun ProviderHomeRoute(
         onRefresh = { viewModel.refresh(); proposalsViewModel.load() },
         onRetryJobRequests = viewModel::retryJobRequests,
         onRetryScheduledWork = viewModel::retryScheduledWork,
-        onJobRequestClick = onJobRequestClick,
+        onJobRequestClick = { selectedRequestId = it.id },
         onAllProposalsClick = { navController.navigate(Route.ServiceProposals.path) { launchSingleTop = true } },
         onAllTurnsClick = { navController.navigate(Route.ProviderTurns.path) { launchSingleTop = true } },
         onTurnDetailsClick = { order ->
@@ -70,4 +74,20 @@ fun ProviderHomeRoute(
         },
         modifier = modifier,
     )
+    selectedRequestId?.let { id ->
+        JobRequestDetailSheetRoute(
+            requestId = id,
+            onClose = { selectedRequestId = null },
+            onUnavailable = {
+                viewModel.removeJobRequest(id)
+                selectedRequestId = null
+            },
+            onAccepted = { requestId, conversationId ->
+                viewModel.removeJobRequest(requestId)
+                selectedRequestId = null
+                navController.navigate(Route.Conversation.buildPath(conversationId)) { launchSingleTop = true }
+            },
+        )
+    }
+
 }

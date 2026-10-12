@@ -1,14 +1,10 @@
 package com.loresuelvo.serviceprovider.ui.screens.home
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.WorkOutline
@@ -16,11 +12,8 @@ import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -59,7 +52,9 @@ internal fun JobRequestsSection(
             is ActivitySectionState.Ready -> if (state.items.isEmpty()) {
                 SectionEmpty(stringResource(R.string.provider_home_requests_empty))
             } else {
-                state.items.forEach { JobRequestCard(it, onRequestClick) }
+                HomeActivityCarousel(state.items, { it.id }, "home_requests_row") { request, modifier ->
+                    HomeRequestCard(request, modifier) { onRequestClick(request) }
+                }
             }
         }
     }
@@ -85,16 +80,8 @@ internal fun ScheduledWorkSection(
             is ActivitySectionState.Ready -> if (state.items.isEmpty()) {
                 SectionEmpty(stringResource(R.string.provider_home_scheduled_empty))
             } else {
-                BoxWithConstraints(Modifier.fillMaxWidth()) {
-                    val cardWidth = minOf(440.dp, if (state.items.size == 1) maxWidth else maxWidth - 16.dp)
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth().testTag("home_turns_row"),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        items(state.items, key = { it.id }) { order ->
-                            HomeTurnCard(order, Modifier.width(cardWidth)) { onTurnDetailsClick(order) }
-                        }
-                    }
+                HomeActivityCarousel(state.items, { it.id }, "home_turns_row") { order, modifier ->
+                    HomeTurnCard(order, modifier) { onTurnDetailsClick(order) }
                 }
             }
         }
@@ -122,16 +109,8 @@ internal fun ProposalsSection(
             state.loading && state.proposals.isEmpty() -> SectionLoading()
             state.failure != null && state.proposals.isEmpty() -> SectionError(onRetry)
             pendingProposals.isEmpty() -> SectionEmpty(stringResource(R.string.provider_home_proposals_empty))
-            else -> BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val cardWidth = minOf(440.dp, if (pendingProposals.size == 1) maxWidth else maxWidth - 16.dp)
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth().testTag("home_proposals_row"),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(pendingProposals, key = { it.id }) { proposal ->
-                        HomeProposalCard(proposal, Modifier.width(cardWidth)) { onDetails(proposal) }
-                    }
-                }
+            else -> HomeActivityCarousel(pendingProposals, { it.id }, "home_proposals_row") { proposal, modifier ->
+                HomeProposalCard(proposal, modifier) { onDetails(proposal) }
             }
         }
     }
@@ -167,35 +146,6 @@ private fun ActivitySectionHeader(
         if (stackLink) TextButton(onClick = onViewAll!!,
             modifier = Modifier.testTag(actionTag)) {
             Text(stringResource(actionLabel))
-        }
-    }
-}
-
-@Composable
-private fun JobRequestCard(
-    request: JobRequest,
-    onRequestClick: (JobRequest) -> Unit,
-) {
-    Card(modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.extraLarge) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(text = request.consumerName, style = MaterialTheme.typography.titleMedium)
-            Text(text = request.title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = request.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedButton(
-                onClick = { onRequestClick(request) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.provider_home_view_request))
-            }
         }
     }
 }

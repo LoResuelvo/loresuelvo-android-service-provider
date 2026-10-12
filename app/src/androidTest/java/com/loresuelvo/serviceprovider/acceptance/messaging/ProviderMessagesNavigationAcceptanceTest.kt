@@ -99,6 +99,23 @@ class ProviderMessagesNavigationAcceptanceTest {
     }
 
     @Test
+    fun returning_to_messages_fetches_the_current_conversation_status() {
+        val original = (conversationRepository.outcome as ConversationsOutcome.Success).conversations.single()
+        conversationRepository.outcome = ConversationsOutcome.Success(listOf(original.copy(status = ConversationStatus.Pending)))
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("provider-messages-pending").assertIsDisplayed()
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Home.path).performClick()
+        composeTestRule.runOnIdle {
+            conversationRepository.outcome = ConversationsOutcome.Success(listOf(original.copy(status = ConversationStatus.Active)))
+        }
+        composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onAllNodesWithTag("provider-messages-pending").assertCountEquals(0)
+        composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + original.id).assertIsDisplayed()
+    }
+
+    @Test
     fun opens_conversation_and_returns_to_the_retained_messages_inbox() {
         composeTestRule.waitForIdle()
         composeTestRule

@@ -1,6 +1,10 @@
 package com.loresuelvo.serviceprovider.ui.screens.jobrequest
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -20,29 +24,46 @@ fun JobRequestDetailRoute(
     onAccepted: (requestId: Int, conversationId: Int) -> Unit,
     viewModel: JobRequestDetailViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var selectedImageIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    JobRequestDetailSheetRoute(
+        onClose = { navController.popBackStack() },
+        onUnavailable = { id ->
+            navController.previousBackStackEntry?.savedStateHandle
+                ?.set(Route.JobRequestDetail.resolvedRequestId, id)
+            navController.popBackStack()
+        },
+        onAccepted = onAccepted,
+        viewModel = viewModel,
+    )
+}
 
-    LaunchedEffect(viewModel, onAccepted) {
-        viewModel.effects.collect { effect ->
-            when (effect) {
-                is JobRequestDetailEffect.Accepted -> onAccepted(
-                    effect.requestId,
-                    effect.conversationId,
-                )
+@Composable
+fun JobRequestDetailSheetRoute(
+    onClose: () -> Unit,
+    onUnavailable: (Int?) -> Unit,
+    onAccepted: (Int, Int) -> Unit,
+    requestId: Int? = null,
+    viewModel: JobRequestDetailViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedImageIndex by rememberSaveable(requestId) { mutableStateOf<Int?>(null) }
+    val accepted by rememberUpdatedState(onAccepted)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(viewModel, requestId) {
+        requestId?.let(viewModel::open)
+    }
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.effects.collect { effect ->
+                when (effect) {
+                    is JobRequestDetailEffect.Accepted -> accepted(effect.requestId, effect.conversationId)
+                }
             }
         }
     }
-
     JobRequestDetailScreen(
         uiState = uiState,
-        onClose = { navController.popBackStack() },
-        onUnavailable = {
-            navController.previousBackStackEntry
-                ?.savedStateHandle
-                ?.set(Route.JobRequestDetail.resolvedRequestId, uiState.requestId())
-            navController.popBackStack()
-        },
+        onClose = onClose,
+        onUnavailable = { onUnavailable(uiState.requestId()) },
         onRetry = viewModel::retry,
         onAccept = viewModel::accept,
         onRetryAccept = viewModel::retryAccept,

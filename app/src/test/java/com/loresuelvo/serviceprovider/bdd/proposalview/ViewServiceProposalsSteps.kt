@@ -363,7 +363,7 @@ class ViewServiceProposalsSteps {
     @And("veo la duración {string}")
     fun detailShowsDuration(expected: String) {
         val minutes = requireNotNull(detailProposal).estimatedDurationMinutes
-        assertEquals(mapOf(45 to "45 minutos", 60 to "1 hora", 90 to "1 hora 30 minutos")[minutes], expected)
+        assertEquals(mapOf(45 to "45 min", 60 to "1 h", 90 to "1 h 30 min")[minutes], expected)
     }
 
     @And("puedo elegir {string}")

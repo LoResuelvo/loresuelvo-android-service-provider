@@ -128,6 +128,23 @@ class JobRequestDetailViewModelTest {
         assertEquals(1, repository.acceptCalls)
     }
 
+    @Test
+    fun retains_success_until_the_sheet_can_collect_and_can_open_another_request() = runTest(scheduler) {
+        val first = JobRequest(7, "Ana", "Repair", "Kitchen")
+        val second = first.copy(id = 8)
+        val repository = FakeRepository(ActivityLoadOutcome.Success(listOf(first, second)))
+        repository.acceptOutcomes += AcceptJobRequestOutcome.Success(7, 11)
+        val viewModel = createViewModel(repository)
+        advanceUntilIdle()
+        viewModel.accept()
+        advanceUntilIdle()
+
+        assertEquals(JobRequestDetailEffect.Accepted(7, 11), viewModel.effects.first())
+        viewModel.open(8)
+        advanceUntilIdle()
+        assertEquals(JobRequestDetailUiState.Ready(second), viewModel.uiState.value)
+    }
+
     private fun createViewModel(
         outcome: ActivityLoadOutcome<JobRequest>,
     ): JobRequestDetailViewModel = createViewModel(FakeRepository(outcome))

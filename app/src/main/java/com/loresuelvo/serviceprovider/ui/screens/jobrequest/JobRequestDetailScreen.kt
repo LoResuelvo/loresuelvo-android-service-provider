@@ -8,12 +8,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,17 +21,19 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalConfiguration
+import com.loresuelvo.serviceprovider.ui.components.ProviderAvatar
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -57,76 +59,49 @@ fun JobRequestDetailScreen(
     onImageViewerClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.provider_job_request_detail_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.provider_job_request_detail_close),
-                        )
-                    }
-                },
-            )
-        },
-    ) { contentPadding ->
-        when (uiState) {
-            JobRequestDetailUiState.Loading -> LoadingContent(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(contentPadding),
-            )
-            JobRequestDetailUiState.NotFound -> MessageContent(
-                message = stringResource(R.string.provider_job_request_detail_unavailable),
-                actionLabel = stringResource(R.string.provider_job_request_detail_close),
-                onAction = onClose,
-                modifier = Modifier.padding(contentPadding),
-            )
-            JobRequestDetailUiState.Error -> MessageContent(
-                message = stringResource(R.string.provider_job_request_detail_error),
-                actionLabel = stringResource(R.string.provider_job_request_detail_retry),
-                onAction = onRetry,
-                modifier = Modifier.padding(contentPadding),
-            )
-            is JobRequestDetailUiState.Ready -> DetailContent(
-                request = uiState.request,
-                onAccept = onAccept,
-                onImageSelected = onImageSelected,
-                modifier = Modifier.padding(contentPadding),
-            )
-            is JobRequestDetailUiState.Accepting -> DetailContent(
-                request = uiState.request,
-                accepting = true,
-                onImageSelected = onImageSelected,
-                modifier = Modifier.padding(contentPadding),
-            )
-            is JobRequestDetailUiState.AcceptError -> DetailContent(
-                request = uiState.request,
-                acceptError = true,
-                onRetryAccept = onRetryAccept,
-                onImageSelected = onImageSelected,
-                modifier = Modifier.padding(contentPadding),
-            )
-            is JobRequestDetailUiState.AcceptUnavailable -> MessageContent(
-                message = stringResource(R.string.provider_job_request_detail_unavailable),
-                actionLabel = stringResource(R.string.provider_job_request_detail_close),
-                onAction = onUnavailable,
-                modifier = Modifier.padding(contentPadding),
-            )
+    val accepting = uiState is JobRequestDetailUiState.Accepting
+    val request = when (uiState) {
+        is JobRequestDetailUiState.Ready -> uiState.request
+        is JobRequestDetailUiState.Accepting -> uiState.request
+        is JobRequestDetailUiState.AcceptError -> uiState.request
+        else -> null
+    }
+    val dismiss = { if (!accepting) onClose() }
+    ModalBottomSheet(
+        onDismissRequest = dismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
+            confirmValueChange = { !accepting || it != SheetValue.Hidden }),
+    ) {
+        Column(modifier.fillMaxWidth().heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.85f).dp)) {
+            Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.provider_job_request_detail_title),
+                    Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleLarge)
+                IconButton(onClick = dismiss, enabled = !accepting) {
+                    Icon(Icons.Default.Close, stringResource(R.string.provider_job_request_detail_close))
+                }
+            }
+            when (uiState) {
+                JobRequestDetailUiState.Loading -> LoadingContent()
+                JobRequestDetailUiState.NotFound -> MessageContent(
+                    stringResource(R.string.provider_job_request_detail_unavailable),
+                    stringResource(R.string.provider_job_request_detail_close), onUnavailable)
+                JobRequestDetailUiState.Error -> MessageContent(
+                    stringResource(R.string.provider_job_request_detail_error),
+                    stringResource(R.string.provider_job_request_detail_retry), onRetry)
+                is JobRequestDetailUiState.AcceptUnavailable -> MessageContent(
+                    stringResource(R.string.provider_job_request_detail_unavailable),
+                    stringResource(R.string.provider_job_request_detail_close), onUnavailable)
+                else -> if (request != null) {
+                    DetailContent(request, onImageSelected,
+                        Modifier.weight(1f, fill = false))
+                    RequestChatAction(accepting, uiState is JobRequestDetailUiState.AcceptError,
+                        onAccept, onRetryAccept)
+                }
+            }
         }
-
-        val selectedImage = (uiState as? JobRequestDetailUiState.Ready)
-            ?.request
-            ?.images
-            ?.getOrNull(selectedImageIndex ?: -1)
-        if (selectedImage != null) {
-            JobRequestImageViewer(
-                image = selectedImage,
-                onClose = onImageViewerClose,
-            )
+        request?.images?.getOrNull(selectedImageIndex ?: -1)?.let {
+            JobRequestImageViewer(it, onImageViewerClose)
         }
     }
 }
@@ -150,7 +125,7 @@ private fun MessageContent(
 ) {
     Column(
         modifier = modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -162,25 +137,21 @@ private fun MessageContent(
 @Composable
 private fun DetailContent(
     request: JobRequest,
-    onAccept: () -> Unit = {},
-    onRetryAccept: () -> Unit = {},
-    accepting: Boolean = false,
-    acceptError: Boolean = false,
     onImageSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(
-            text = request.consumerName,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.semantics { heading() },
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ProviderAvatar(request.consumerName, "", null,
+                stringResource(R.string.proposal_list_avatar, request.consumerName), size = 48.dp)
+            Text(request.consumerName, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+        }
         Text(text = request.title, style = MaterialTheme.typography.titleLarge)
         Text(
             text = request.description,
@@ -211,30 +182,45 @@ private fun DetailContent(
                 }
             }
         }
-        if (acceptError) {
-            Text(
-                text = stringResource(R.string.provider_job_request_accept_error),
-                color = MaterialTheme.colorScheme.error,
-            )
-            Button(
-                onClick = onRetryAccept,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.provider_job_request_detail_retry))
-            }
-        } else {
-            OutlinedButton(
-                onClick = onAccept,
-                enabled = !accepting,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (accepting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                    )
+    }
+}
+
+@Composable
+private fun RequestChatAction(
+    accepting: Boolean,
+    acceptError: Boolean,
+    onAccept: () -> Unit,
+    onRetryAccept: () -> Unit,
+) {
+    Surface(shadowElevation = 4.dp) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.job_request_chat_explanation),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (acceptError) {
+                Text(
+                    text = stringResource(R.string.provider_job_request_accept_error),
+                    color = MaterialTheme.colorScheme.error,
+                )
+                Button(
+                    onClick = onRetryAccept,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.provider_job_request_detail_retry))
                 }
-                Text(stringResource(R.string.provider_job_request_continue_conversation))
+            } else {
+                Button(
+                    onClick = onAccept,
+                    enabled = !accepting,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (accepting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                    Text(stringResource(R.string.provider_job_request_continue_conversation))
+                }
             }
         }
     }

@@ -227,7 +227,7 @@ class ProviderConversationScreenTest {
         }
         composeTestRule.onNodeWithText("Propuesta de servicio").performClick()
         composeTestRule.onNodeWithTag("proposal_detail_reason").assertIsDisplayed()
-        composeTestRule.onNodeWithText("1 hora 30 minutos").assertExists()
+        composeTestRule.onNodeWithText("1 h 30 min").assertExists()
         composeTestRule.onNodeWithText("Ver conversación").assertExists()
     }
 
