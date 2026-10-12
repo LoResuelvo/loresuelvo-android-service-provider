@@ -69,7 +69,6 @@ class ProviderTurnsAcceptanceTest {
                         uiState = ProviderHomeUiState(ActivitySectionState.Ready(emptyList()),
                             ActivitySectionState.Ready(listOf(order, order.copy(id = 41)))),
                         onRetryJobRequests = {}, onRetryScheduledWork = {}, onJobRequestClick = {},
-                        onMercadoPagoClick = {},
                         onAllTurnsClick = { nav.navigate(Route.ProviderTurns.path) },
                         onTurnDetailsClick = { nav.navigate(Route.ProviderTurnDetail.buildPath(it.id)) },
                     )

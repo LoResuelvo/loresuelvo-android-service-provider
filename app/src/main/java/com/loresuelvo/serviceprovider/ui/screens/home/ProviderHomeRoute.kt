@@ -68,11 +68,6 @@ fun ProviderHomeRoute(
         onTurnDetailsClick = { order ->
             navController.navigate(Route.ProviderTurnDetail.buildPath(order.id)) { launchSingleTop = true }
         },
-        onMercadoPagoClick = {
-            navController.navigate(Route.MercadoPagoConnect.path) {
-                launchSingleTop = true
-            }
-        },
         modifier = modifier,
     )
     selectedRequestId?.let { id ->

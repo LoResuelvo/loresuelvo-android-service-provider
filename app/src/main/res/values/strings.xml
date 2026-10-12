@@ -152,7 +152,6 @@
     <string name="provider_home_actions_title">Acciones</string>
     <string name="provider_home_requests_action">Solicitudes</string>
     <string name="provider_home_scheduled_action">Trabajos agendados</string>
-    <string name="provider_home_mercadopago_action">Mercado Pago</string>
     <string name="provider_home_view_request">Ver solicitud</string>
     <string name="provider_home_requests_title">Solicitudes nuevas</string>
     <string name="provider_home_requests_empty">No tenés solicitudes pendientes.</string>

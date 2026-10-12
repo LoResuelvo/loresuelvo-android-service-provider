@@ -41,7 +41,7 @@ class JobRequestListNavigationTest {
                     ProviderHomeScreen(CurrentAccount.Provider(1, "Carlos", "Gómez", "provider@example.com",
                         Category(1, "Plomería"), null),
                         ProviderHomeUiState(ActivitySectionState.Ready(requests), ActivitySectionState.Ready(emptyList())),
-                        {}, {}, {}, {}, proposalsState = ServiceProposalListUiState(loading = false),
+                        {}, {}, {}, proposalsState = ServiceProposalListUiState(loading = false),
                         onAllRequestsClick = { nav.navigate(Route.JobRequests.path) })
                 },
                 jobRequests = {

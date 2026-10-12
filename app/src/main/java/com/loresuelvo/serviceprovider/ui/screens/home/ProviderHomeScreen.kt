@@ -14,13 +14,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.loresuelvo.serviceprovider.ui.components.RefreshableContent
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +46,6 @@ fun ProviderHomeScreen(
     onRetryJobRequests: () -> Unit,
     onRetryScheduledWork: () -> Unit,
     onJobRequestClick: (com.loresuelvo.serviceprovider.domain.activity.JobRequest) -> Unit,
-    onMercadoPagoClick: () -> Unit,
     onAllProposalsClick: () -> Unit = {},
     onAllTurnsClick: () -> Unit = {},
     onTurnDetailsClick: (com.loresuelvo.serviceprovider.domain.activity.WorkOrder) -> Unit = {},
@@ -113,10 +108,6 @@ fun ProviderHomeScreen(
                         onRequestClick = onJobRequestClick,
                         onViewAll = onAllRequestsClick,
                     )
-                    OutlinedButton(onClick = onMercadoPagoClick, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Outlined.AccountBalanceWallet, null, Modifier.padding(end = 8.dp))
-                        Text(stringResource(R.string.provider_home_mercadopago_action))
-                    }
                 }
             }
         }

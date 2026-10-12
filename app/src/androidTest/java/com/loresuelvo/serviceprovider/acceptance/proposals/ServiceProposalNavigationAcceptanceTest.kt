@@ -358,7 +358,7 @@ class ServiceProposalNavigationAcceptanceTest {
                             scheduledWork = ActivitySectionState.Ready(emptyList()),
                         ),
                         onRetryJobRequests = {}, onRetryScheduledWork = {},
-                        onJobRequestClick = {}, onMercadoPagoClick = {},
+                        onJobRequestClick = {},
                         onAllProposalsClick = { nav.navigate(Route.ServiceProposals.path) },
                     )
                 },

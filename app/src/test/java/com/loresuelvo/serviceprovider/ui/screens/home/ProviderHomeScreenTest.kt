@@ -62,7 +62,7 @@ class ProviderHomeScreenTest {
             ProviderHomeScreen(provider(), ProviderHomeUiState(
                 jobRequests = ActivitySectionState.Ready(emptyList()),
                 scheduledWork = ActivitySectionState.Ready(emptyList()),
-            ), {}, {}, {}, {}, proposalsState = ServiceProposalListUiState(loading = false),
+            ), {}, {}, {}, proposalsState = ServiceProposalListUiState(loading = false),
                 onAllRequestsClick = { opens++ })
         } }
         composeTestRule.onNodeWithTag("requests_view_all").performScrollTo().performClick()
@@ -76,7 +76,7 @@ class ProviderHomeScreenTest {
             ProviderHomeScreen(provider(), ProviderHomeUiState(
                 jobRequests = ActivitySectionState.Ready(emptyList()),
                 scheduledWork = ActivitySectionState.Ready(emptyList()),
-            ), {}, {}, {}, {}, proposalsState = ServiceProposalListUiState(loading = false),
+            ), {}, {}, {}, proposalsState = ServiceProposalListUiState(loading = false),
                 onRefresh = { refreshes++ })
         } }
         composeTestRule.onNodeWithTag("home_refresh").performTouchInput { swipeDown() }
@@ -102,7 +102,6 @@ class ProviderHomeScreenTest {
                     onRetryJobRequests = {},
                     onRetryScheduledWork = {},
                     onJobRequestClick = {},
-                    onMercadoPagoClick = {},
                     onAllTurnsClick = { turnsOpens++ },
                     onAllProposalsClick = { proposalOpens++ },
                     onProposalConversation = { conversationId = it },
@@ -140,7 +139,7 @@ class ProviderHomeScreenTest {
             ProviderHomeScreen(provider(), ProviderHomeUiState(
                 jobRequests = ActivitySectionState.Ready(emptyList()),
                 scheduledWork = ActivitySectionState.Ready(listOf(workOrder())),
-            ), {}, {}, {}, {})
+            ), {}, {}, {})
         } }
         composeTestRule.onNodeWithTag("scheduled_view_all_turns").performScrollTo().assertIsDisplayed()
         composeTestRule.onAllNodesWithText("My jobs").assertCountEquals(1)
@@ -157,7 +156,7 @@ class ProviderHomeScreenTest {
                 LoresuelvoTheme { ProviderHomeScreen(provider(), ProviderHomeUiState(
                     jobRequests = ActivitySectionState.Ready(emptyList()),
                     scheduledWork = ActivitySectionState.Ready(listOf(workOrder())),
-                ), {}, {}, {}, {}) }
+                ), {}, {}, {}) }
             }
         }
         composeTestRule.onNodeWithTag("scheduled_view_all_turns").performScrollTo()
@@ -177,7 +176,7 @@ class ProviderHomeScreenTest {
                 ProviderHomeScreen(provider(), ProviderHomeUiState(
                     jobRequests = ActivitySectionState.Ready(emptyList()),
                     scheduledWork = ActivitySectionState.Ready(listOf(workOrder())),
-                ), {}, {}, {}, {}, onAllTurnsClick = { listOpens++ },
+                ), {}, {}, {}, onAllTurnsClick = { listOpens++ },
                     onTurnDetailsClick = { selected = it })
             }
         }
@@ -202,7 +201,6 @@ class ProviderHomeScreenTest {
                     onRetryJobRequests = {},
                     onRetryScheduledWork = {},
                     onJobRequestClick = {},
-                    onMercadoPagoClick = {},
                 )
             }
         }
@@ -231,7 +229,6 @@ class ProviderHomeScreenTest {
                     onRetryJobRequests = {},
                     onRetryScheduledWork = {},
                     onJobRequestClick = {},
-                    onMercadoPagoClick = {},
                 )
             }
         }
@@ -262,7 +259,6 @@ class ProviderHomeScreenTest {
                     onRetryJobRequests = { retried = true },
                     onRetryScheduledWork = {},
                     onJobRequestClick = {},
-                    onMercadoPagoClick = {},
                 )
             }
         }
@@ -296,7 +292,6 @@ class ProviderHomeScreenTest {
                     onRetryJobRequests = {},
                     onRetryScheduledWork = {},
                     onJobRequestClick = { selected = it },
-                    onMercadoPagoClick = {},
                 )
             }
         }
