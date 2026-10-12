@@ -58,5 +58,5 @@
     <string name="performance_evolution_empty">No intervals to display.</string>
     <string name="performance_previous_interval">Previous interval</string>
     <string name="performance_next_interval">Next interval</string>
-    <string name="performance_request_rate">of your requests were accepted</string>
+    <string name="performance_request_rate">accepted by you</string>
 </resources>

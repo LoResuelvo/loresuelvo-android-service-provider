@@ -74,7 +74,7 @@ fun ProviderReputationRoute(viewModel: ProviderReputationViewModel = hiltViewMod
     ProviderReputationScreen(state, viewModel::retry, onSection, viewModel::loadMore, viewModel::refresh, list, onWorkOrder)
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Unit,
     onSection: (PerformanceSection) -> Unit = {}, onLoadMore: () -> Unit = {},
@@ -119,6 +119,7 @@ fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Un
                             }
                         }
                         item { Text(stringResource(R.string.reputation_paid_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
+                        item { ReputationCoverage(reputation) }
                         item { Text(stringResource(R.string.reputation_reviews), style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.semantics { heading() }) }
                         if (reputation.reviews.isEmpty()) item { Text(stringResource(R.string.reputation_empty_reviews)) }
@@ -126,9 +127,14 @@ fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Un
                             Surface(Modifier.fillMaxWidth().testTag("reputation_review_${review.workOrderId}"),
                                 shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
                                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    DetailLink(R.string.performance_view_work, { onWorkOrder(review.workOrderId) },
-                                        Modifier.align(Alignment.End))
-                                    ReviewStars(review.rating)
+                                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Box(Modifier.heightIn(min = 48.dp).align(Alignment.CenterVertically), contentAlignment = Alignment.CenterStart) {
+                                            RatingStars(review.rating.toDouble())
+                                        }
+                                        DetailLink(R.string.performance_view_work, { onWorkOrder(review.workOrderId) })
+                                    }
+                                    Text(stringResource(R.string.reputation_review_rating, review.rating), style = MaterialTheme.typography.labelMedium)
                                     if (review.description.isNotEmpty()) Text(review.description)
                                 }
                             }
@@ -151,8 +157,6 @@ fun ProviderReputationScreen(state: ProviderReputationUiState, onRetry: () -> Un
                                 }
                             }
                         }
-                        item { ReputationCoverage(reputation) }
-                        item { Text(stringResource(R.string.reputation_order_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
                         item { Text(stringResource(R.string.reputation_calculated, formatActivityInstant(reputation.calculatedAt)),
                             style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr)) }
                     }
@@ -201,14 +205,6 @@ private fun ReputationCoverage(reputation: ProviderReputation) {
 
 internal fun formatReputationNumber(value: Double): String = NumberFormat.getNumberInstance(Locale.forLanguageTag("es-AR"))
     .apply { maximumFractionDigits = 2; roundingMode = java.math.RoundingMode.HALF_UP }.format(value)
-
-@Composable
-internal fun ReviewStars(rating: Int) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.semantics(mergeDescendants = true) {}) {
-        RatingStars(rating.toDouble())
-        Text(stringResource(R.string.reputation_review_rating, rating), style = MaterialTheme.typography.labelMedium)
-    }
-}
 
 @Composable
 internal fun RatingStars(rating: Double, tint: Color = MaterialTheme.colorScheme.tertiary) {

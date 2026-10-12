@@ -459,8 +459,8 @@
     <string name="conversion_uncontracted">%1$d proposals not yet booked</string>
     <string name="conversion_uncontracted_note">They can still progress; they are not counted as rejected.</string>
     <string name="conversion_observed">Includes progress after the selected period.</string>
-    <string name="conversion_requests">Request acceptance</string>
-    <string name="conversion_requests_note">Requests received in the period, counted separately.</string>
+    <string name="conversion_requests">Job requests you accepted</string>
+    <string name="conversion_requests_note">Of the job requests you received during the selected period:</string>
     <string name="conversion_received">Received: %1$d</string>
     <string name="conversion_accepted">Accepted: %1$d</string>
     <string name="conversion_pending">Pending: %1$d</string>

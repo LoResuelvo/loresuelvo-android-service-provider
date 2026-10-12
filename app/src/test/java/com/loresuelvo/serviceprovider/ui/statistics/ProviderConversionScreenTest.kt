@@ -33,7 +33,7 @@ class ProviderConversionScreenTest {
         val state = productionResult(); val expanded = mutableStateOf(false)
         compose.setContent { LoresuelvoTheme { Surface { ProviderConversionScreen(state, expanded.value, { expanded.value = it }) } } }
         reveal("de tus propuestas se convirtieron en contrataciones"); reveal("12 de 20 propuestas")
-        reveal("20 propuestas enviadas"); reveal("100 % de las propuestas enviadas"); reveal("12 propuestas contratadas")
+        reveal("Seguimiento de las 20 propuestas enviadas en el período."); compose.onNodeWithText("100 % de las propuestas enviadas").assertDoesNotExist(); reveal("12 propuestas contratadas")
         reveal("9 trabajos finalizados"); reveal("45 % de las propuestas enviadas"); reveal("8 trabajos pagados por completo"); reveal("40 % de las propuestas enviadas")
         reveal("Ver avance entre etapas"); compose.onNodeWithText("Ver avance entre etapas").performClick()
         reveal("De contratadas a finalizadas"); reveal("75 %"); reveal("9 de 12 propuestas")
@@ -41,16 +41,16 @@ class ProviderConversionScreenTest {
         reveal("8 propuestas todavía sin contratar")
         reveal("Todavía pueden avanzar; no se consideran rechazadas.")
         reveal("Incluye avances posteriores al período elegido.")
-        reveal("Aceptación de solicitudes"); reveal("5 solicitudes recibidas"); reveal("3 solicitudes aceptadas"); reveal("2 solicitudes por responder")
+        reveal("Solicitudes de trabajo que aceptaste"); reveal("5 solicitudes recibidas"); reveal("3 solicitudes aceptadas"); reveal("2 solicitudes por responder")
         reveal("3 de 5 solicitudes recibidas")
-        reveal("Aceptar una solicitud abre el chat. La contratación se confirma después.")
+        reveal("De las solicitudes de trabajo que recibiste en el período elegido:")
     }
     @Test fun `no proposals retains nonzero requests and exposes unavailable bases`() {
         compose.setContent { LoresuelvoTheme { Surface { ProviderConversionScreen(productionResult(0, true), true) } } }
         reveal("Sin propuestas en este período. Las solicitudes se muestran por separado.")
-        reveal("0 propuestas enviadas"); reveal("No disponible"); reveal("0 de 0 propuestas")
+        reveal("Seguimiento de las 0 propuestas enviadas en el período."); reveal("No disponible"); reveal("0 de 0 propuestas")
         reveal("De contratadas a finalizadas"); reveal("De finalizadas a pagadas")
-        reveal("Aceptación de solicitudes"); reveal("5 solicitudes recibidas"); reveal("3 solicitudes aceptadas"); reveal("3 de 5 solicitudes recibidas")
+        reveal("Solicitudes de trabajo que aceptaste"); reveal("5 solicitudes recibidas"); reveal("3 solicitudes aceptadas"); reveal("3 de 5 solicitudes recibidas")
         compose.onNodeWithText("de tus propuestas se convirtieron en contrataciones").assertDoesNotExist()
     }
     @Test fun `issued proposals without milestones displays zero contraction and unavailable later advances`() {

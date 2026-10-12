@@ -78,7 +78,7 @@ class ProviderConversionLayoutTest {
         textFits("Todavía pueden avanzar; no se consideran rechazadas.")
         textFits("Incluye avances posteriores al período elegido.", contentLtr = true)
         textFits("3 de 5 solicitudes recibidas", contentLtr = true)
-        textFits("Aceptar una solicitud abre el chat. La contratación se confirma después.", contentLtr = true)
+        textFits("De las solicitudes de trabajo que recibiste en el período elegido:", contentLtr = true)
         saveRender("conversion-dark-large-type-rtl-requests")
     }
     @Test

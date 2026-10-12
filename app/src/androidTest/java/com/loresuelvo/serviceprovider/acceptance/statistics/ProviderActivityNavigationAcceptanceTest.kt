@@ -70,14 +70,14 @@ class ProviderActivityNavigationAcceptanceTest {
         compose.waitForIdle()
         text(R.string.activity_apply_period).performScrollTo().performClick()
         text(R.string.activity_week).performScrollTo().performClick()
-        text(R.string.activity_day).performScrollTo().performClick()
+        compose.onNodeWithText(context.getString(R.string.activity_day)).performScrollTo().performClick()
         compose.waitForIdle()
         val query = statistics.queries.last()
         assertEquals(Instant.parse("2026-08-01T03:00:00Z"), query.from)
         assertEquals(ActivityGranularity.DAY, query.granularity)
         compose.onNodeWithTag("provider_activity").performScrollToNode(hasTestTag("evolution_interval"))
         compose.onNodeWithTag("evolution_interval").performScrollTo().assertIsDisplayed()
-        val viewportTop = compose.onNodeWithTag("provider_activity").fetchSemanticsNode().boundsInRoot.top
+        val viewportTop = compose.onNodeWithText(context.getString(R.string.activity_section)).fetchSemanticsNode().boundsInRoot.bottom + 24f
         val bucketTop = compose.onNodeWithTag("evolution_interval").fetchSemanticsNode().boundsInRoot.top
         compose.onNodeWithTag("provider_activity").performSemanticsAction(
             androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { scroll -> scroll(0f, bucketTop - viewportTop) }

@@ -180,7 +180,7 @@ class ProviderCompletionAcceptanceTest {
         assertEquals(listOf("file-one.jpg"), orders.postedFileIds)
         compose.onNodeWithText(activity.getString(R.string.provider_completion_report_success)).assertIsDisplayed()
         compose.onNodeWithContentDescription(activity.getString(R.string.provider_turns_back)).performClick()
-        compose.onNodeWithTag("provider_turn_completion").assertIsDisplayed()
+        compose.onNodeWithTag("provider_turn_completion").assertDoesNotExist()
         assertEquals(WorkOrderStatus.AwaitingPayment, (turns.orders.single()).status)
         assertEquals(2, files.presigns)
     }

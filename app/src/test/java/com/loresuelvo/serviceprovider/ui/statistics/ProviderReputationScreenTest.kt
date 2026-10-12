@@ -45,7 +45,7 @@ class ProviderReputationScreenTest {
         reveal("4 de 5 estrellas")
         compose.onNodeWithText("Sin comentario escrito").assertDoesNotExist()
         compose.onNodeWithText("Más recientes").assertDoesNotExist()
-        reveal("Reseñas ordenadas por número de trabajo, no por fecha.")
+        compose.onNodeWithText("Reseñas ordenadas por número de trabajo, no por fecha.").assertDoesNotExist()
         reveal("Consultado el ${formatActivityInstant(state.reputation.calculatedAt)} · Buenos Aires")
     }
     @Test fun `review opens its associated job and does not expose internal identifier`() {

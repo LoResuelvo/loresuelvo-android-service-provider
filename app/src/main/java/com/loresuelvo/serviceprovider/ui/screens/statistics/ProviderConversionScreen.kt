@@ -128,8 +128,6 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                                     modifier = Modifier.semantics { heading() })
                                 Text(stringResource(R.string.conversion_cohort_note, proposals.stages.issued), style = MaterialTheme.typography.bodySmall)
                             }
-                            item(key = readyPrefix + "issued") { ConversionStage(R.plurals.performance_proposals, proposals.stages.issued,
-                                ConversionRatio(proposals.stages.issued, proposals.stages.issued, if (proposals.stages.issued > 0) 100.0 else null)) }
                             item(key = readyPrefix + "contracted") { ConversionStage(R.plurals.performance_contracted_proposals, proposals.stages.contracted, proposals.rates.contracted.cohort) }
                             item(key = readyPrefix + "reported") { ConversionStage(R.plurals.performance_completions, proposals.stages.reported, proposals.rates.reported.cohort) }
                             item(key = readyPrefix + "paid") { ConversionStage(R.plurals.performance_paid, proposals.stages.paid, proposals.rates.paid.cohort) }
@@ -148,7 +146,7 @@ fun ProviderConversionScreen(state: ProviderConversionUiState, advancesExpanded:
                                 item(key = readyPrefix + "third-advance") { ConversionRate(stringResource(R.string.conversion_third_advance), proposals.rates.paid.previousStage) }
                             }
                             item(key = readyPrefix + "uncontracted") {
-                                ConversionCard {
+                                PerformanceCard(attention = true) {
                                     Text(stringResource(R.string.conversion_uncontracted, proposals.uncontracted), style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.ContentOrLtr))
                                     Text(stringResource(R.string.conversion_uncontracted_note))
                                 }
@@ -205,7 +203,6 @@ private fun ConversionRequests(requests: RequestAcceptance) {
         PerformanceCount(requests.received, R.plurals.performance_received_requests)
         PerformanceCount(requests.accepted, R.plurals.performance_accepted_requests)
         PerformanceCount(requests.pending, R.plurals.performance_requests)
-        Text(stringResource(R.string.conversion_acceptance_note), style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.ContentOrLtr))
     }
 }
 @Composable

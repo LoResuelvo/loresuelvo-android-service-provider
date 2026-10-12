@@ -104,14 +104,14 @@ class ProviderMessagesNavigationAcceptanceTest {
         conversationRepository.outcome = ConversationsOutcome.Success(listOf(original.copy(status = ConversationStatus.Pending)))
         composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag("provider-messages-pending").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("provider-messages-pending", useUnmergedTree = true).assertIsDisplayed()
         composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Home.path).performClick()
         composeTestRule.runOnIdle {
             conversationRepository.outcome = ConversationsOutcome.Success(listOf(original.copy(status = ConversationStatus.Active)))
         }
         composeTestRule.onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Messages.path).performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onAllNodesWithTag("provider-messages-pending").assertCountEquals(0)
+        composeTestRule.onAllNodesWithTag("provider-messages-pending", useUnmergedTree = true).assertCountEquals(0)
         composeTestRule.onNodeWithTag(PROVIDER_MESSAGES_ROW_TAG_PREFIX + original.id).assertIsDisplayed()
     }
 

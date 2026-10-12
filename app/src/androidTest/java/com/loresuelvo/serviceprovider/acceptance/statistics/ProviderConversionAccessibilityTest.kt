@@ -81,7 +81,7 @@ class ProviderConversionAccessibilityTest {
             assertTrue("Control $tag has a 48dp touch target", node.boundsInRoot.height >= 48 * pixelsPerDp - 1)
         }
         listOf(R.string.activity_date_order_error,
-            R.string.conversion_hero, R.string.conversion_reported, R.string.conversion_acceptance_note).forEach { id ->
+            R.string.conversion_hero, R.string.conversion_reported, R.string.conversion_requests_note).forEach { id ->
             val label = context.getString(id)
             compose.onNodeWithTag("provider_conversion").performScrollToNode(hasText(label, substring = true, ignoreCase = true))
             val bounds = compose.onNodeWithText(label, substring = true, ignoreCase = true).performScrollTo().assertIsDisplayed().fetchSemanticsNode().boundsInRoot

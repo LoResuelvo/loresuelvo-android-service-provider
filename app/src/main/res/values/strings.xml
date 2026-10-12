@@ -470,8 +470,8 @@
     <string name="conversion_uncontracted">%1$d propuestas todavía sin contratar</string>
     <string name="conversion_uncontracted_note">Todavía pueden avanzar; no se consideran rechazadas.</string>
     <string name="conversion_observed">Incluye avances posteriores al período elegido.</string>
-    <string name="conversion_requests">Aceptación de solicitudes</string>
-    <string name="conversion_requests_note">Solicitudes recibidas en el período, contadas por separado.</string>
+    <string name="conversion_requests">Solicitudes de trabajo que aceptaste</string>
+    <string name="conversion_requests_note">De las solicitudes de trabajo que recibiste en el período elegido:</string>
     <string name="conversion_received">Recibidas: %1$d</string>
     <string name="conversion_accepted">Aceptadas: %1$d</string>
     <string name="conversion_pending">Pendientes: %1$d</string>

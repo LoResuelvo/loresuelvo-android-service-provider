@@ -59,15 +59,20 @@ internal fun LazyListScope.collectionTransactionsItems(state: CollectionTransact
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TransactionRow(row: CollectionTransaction, onWorkOrder: (Int) -> Unit, onProposal: (Int) -> Unit) {
     Surface(modifier = Modifier.testTag("collection_transaction_${row.id}"),
         shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(16.dp)) {
-            DetailLink(if (row.workOrderId != null) R.string.performance_view_work else R.string.performance_view_proposal,
-                { row.workOrderId?.let(onWorkOrder) ?: onProposal(row.serviceProposalId) },
-                Modifier.align(androidx.compose.ui.Alignment.End).testTag("collection_detail_${row.id}"))
-            Text(formatActivityMoney(row.sellerAmountCents), style = MaterialTheme.typography.titleLarge)
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(formatActivityMoney(row.sellerAmountCents), style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.CenterVertically))
+                DetailLink(if (row.workOrderId != null) R.string.performance_view_work else R.string.performance_view_proposal,
+                    { row.workOrderId?.let(onWorkOrder) ?: onProposal(row.serviceProposalId) },
+                    Modifier.testTag("collection_detail_${row.id}"))
+            }
             Text(stringResource(purposeLabel(row.purpose)), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.collections_verified_on, formatActivityInstant(row.verifiedOn)))
         }

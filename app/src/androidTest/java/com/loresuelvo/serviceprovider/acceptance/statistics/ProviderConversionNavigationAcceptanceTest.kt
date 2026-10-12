@@ -67,7 +67,12 @@ class ProviderConversionNavigationAcceptanceTest {
     private fun text(id: Int) = compose.onNodeWithText(context.getString(id), substring = true, ignoreCase = true)
     private fun reveal(tag: String, id: Int): SemanticsNodeInteraction {
         compose.onNodeWithTag(tag).performScrollToNode(hasText(context.getString(id), substring = true, ignoreCase = true))
-        return text(id).performScrollTo()
+        val target = text(id).performScrollTo()
+        val tabsBottom = compose.onNodeWithText(context.getString(R.string.activity_section)).fetchSemanticsNode().boundsInRoot.bottom
+        val targetTop = target.fetchSemanticsNode().boundsInRoot.top
+        if (targetTop < tabsBottom) compose.onNodeWithTag(tag).performSemanticsAction(
+            androidx.compose.ui.semantics.SemanticsActions.ScrollBy) { it(0f, targetTop - tabsBottom - 24f) }
+        return target
     }
     private fun openActivity() {
         compose.waitUntil(5_000) { compose.onAllNodesWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Activity.path).fetchSemanticsNodes().isNotEmpty() }
