@@ -484,4 +484,19 @@
     <string name="ui_period_summary">%1$s – %2$s</string>
     <string name="ui_choose_date">Elegir fecha: %1$s</string>
     <string name="ui_refresh_failed">No pudimos actualizar. Seguís viendo los últimos datos disponibles.</string>
+    <string name="provider_proposal_form_hint">Definí el servicio y coordiná la visita con tu cliente.</string>
+    <string name="provider_proposal_details_heading">Detalles del servicio</string>
+    <string name="provider_proposal_schedule_heading">Organizá la visita</string>
+    <string name="provider_proposal_currency">ARS</string>
+    <string name="provider_proposal_choose_date">Elegir fecha</string>
+    <string name="provider_proposal_choose_time">Elegir hora</string>
+    <string name="provider_proposal_type_time">Escribir hora</string>
+    <string name="provider_proposal_use_clock">Usar reloj</string>
+    <string name="provider_form_apply">Aplicar</string>
+    <string name="provider_proposal_duration_hours">%1$d h</string>
+    <string name="provider_proposal_duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="provider_completion_details_heading">Contá qué realizaste</string>
+    <string name="provider_completion_description_hint">Describí el trabajo terminado y cualquier detalle que el cliente deba conocer.</string>
+    <string name="provider_completion_photos_hint">Agregá fotos claras del resultado para acompañar la entrega.</string>
+    <string name="provider_completion_photos_count">%1$d de 3 fotos seleccionadas</string>
 </resources>

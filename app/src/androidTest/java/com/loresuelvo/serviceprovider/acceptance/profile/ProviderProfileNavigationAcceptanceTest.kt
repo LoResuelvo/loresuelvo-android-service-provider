@@ -120,11 +120,9 @@ class ProviderProfileNavigationAcceptanceTest {
         openProfileFrom(Route.Messages)
         assertProfileData()
 
-        composeTestRule
-            .onNodeWithContentDescription(
-                composeTestRule.activity.getString(R.string.provider_profile_back),
-            )
-            .performClick()
+        composeTestRule.onNodeWithContentDescription(
+            composeTestRule.activity.getString(R.string.provider_profile_back)).assertDoesNotExist()
+        Espresso.pressBack()
         composeTestRule.waitForIdle()
         composeTestRule
             .onNodeWithTag(PROVIDER_BOTTOM_BAR_ITEM_PREFIX + Route.Home.path)

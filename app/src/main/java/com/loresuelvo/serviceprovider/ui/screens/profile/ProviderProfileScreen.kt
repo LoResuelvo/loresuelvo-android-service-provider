@@ -16,18 +16,14 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,8 +79,9 @@ fun ProviderProfileScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag(PROVIDER_PROFILE_SCREEN_TAG),
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = { ProfileTopBar(onBack) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = { if (state !is ProviderProfileUiState.Ready) ProfileTopBar() },
     ) { contentPadding ->
         RefreshableContent((state as? ProviderProfileUiState.Ready)?.refreshing == true, onRetry) {
             when (state) {
@@ -120,23 +117,11 @@ fun ProviderProfileScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProfileTopBar(onBack: () -> Unit) {
-    TopAppBar(
-        title = { Text(stringResource(R.string.provider_profile_my_profile)) },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-        ),
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = stringResource(R.string.provider_profile_back),
-                )
-            }
-        },
-    )
+private fun ProfileTopBar() {
+    Text(stringResource(R.string.provider_profile_my_profile),
+        style = MaterialTheme.typography.headlineMedium,
+        modifier = Modifier.statusBarsPadding().padding(24.dp).semantics { heading() })
 }
 
 @Composable
@@ -201,39 +186,39 @@ private fun ProfileReadyState(
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 600.dp)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 24.dp)
                 .testTag(PROVIDER_PROFILE_DATA_TAG),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (state.refreshFailed) Text(stringResource(R.string.ui_refresh_failed), color = MaterialTheme.colorScheme.error)
             ProfileSummaryCard(state.provider)
-            ProfileAccountCard(state.provider)
-            ProfileIdentityCard(state.provider, identityState, onVerifyIdentity, onReloadProfile,
-                actionEnabled = !state.refreshing && !calendarState.loading)
-            Text(
-                text = stringResource(R.string.provider_profile_connections_title),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.semantics { heading() },
-            )
-            ProfilePaymentCard(state.payment, onConnectMercadoPago, onRetryPaymentStatus)
-            ProfileCalendarCard(state.provider.calendarConnectionStatus, calendarState, onAuthorizeCalendar, onRetryCalendar, onReloadProfile,
-                actionEnabled = !state.refreshing && !identityState.loading)
-            Button(
-                onClick = onNotificationSettings,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("provider-notification-settings"),
-            ) { Text(stringResource(R.string.provider_notification_settings)) }
-            Button(
-                onClick = onRequestLogout,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(PROVIDER_LOGOUT_ACTION_TAG),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError,
-                ),
-            ) { Text(stringResource(R.string.provider_logout_action)) }
+            Column(Modifier.widthIn(max = 600.dp).fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                if (state.refreshFailed) Text(stringResource(R.string.ui_refresh_failed), color = MaterialTheme.colorScheme.error)
+                ProfileAccountCard(state.provider)
+                ProfileIdentityCard(state.provider, identityState, onVerifyIdentity, onReloadProfile,
+                    actionEnabled = !state.refreshing && !calendarState.loading)
+                Text(
+                    text = stringResource(R.string.provider_profile_connections_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { heading() },
+                )
+                ProfilePaymentCard(state.payment, onConnectMercadoPago, onRetryPaymentStatus)
+                ProfileCalendarCard(state.provider.calendarConnectionStatus, calendarState, onAuthorizeCalendar, onRetryCalendar, onReloadProfile,
+                    actionEnabled = !state.refreshing && !identityState.loading)
+                OutlinedButton(
+                    onClick = onNotificationSettings,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("provider-notification-settings"),
+                ) { Text(stringResource(R.string.provider_notification_settings)) }
+                TextButton(
+                    onClick = onRequestLogout,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(PROVIDER_LOGOUT_ACTION_TAG),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text(stringResource(R.string.provider_logout_action)) }
+            }
         }
     }
 }

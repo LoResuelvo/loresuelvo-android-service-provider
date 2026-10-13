@@ -1,11 +1,11 @@
 package com.loresuelvo.serviceprovider.ui.screens.conversation
 
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -13,6 +13,12 @@ import androidx.navigation.NavHostController
 import com.loresuelvo.serviceprovider.domain.conversation.CameraOutput
 import dagger.hilt.android.EntryPointAccessors
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -43,6 +49,7 @@ import com.loresuelvo.serviceprovider.ui.proposals.ServiceProposalListViewModel
  * the mic did nothing. The VM itself does NOT request the
  * permission (UI layer concern).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProviderConversationRoute(
     navController: NavHostController,
@@ -136,9 +143,12 @@ fun ProviderConversationRoute(
     val reviewing = (proposalState as? ProposalUiState.Reviewing) ?: sending?.reviewing
     val form = (proposalState as? ProposalUiState.Form) ?: reviewing?.form
     if (form != null) {
-        Dialog(
-            onDismissRequest = proposalViewModel::close,
-            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ModalBottomSheet(
+            dragHandle = { BottomSheetDefaults.DragHandle(modifier = Modifier.statusBarsPadding()) },
+            onDismissRequest = { if (sending == null && reviewing == null) proposalViewModel.close() },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
+                confirmValueChange = { it != SheetValue.Hidden || (sending == null && reviewing == null) }),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             ProviderProposalScreen(
                 form = form,

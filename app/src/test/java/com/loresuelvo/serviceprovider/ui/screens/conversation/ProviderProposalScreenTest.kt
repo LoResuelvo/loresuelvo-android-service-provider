@@ -65,7 +65,7 @@ class ProviderProposalScreenTest {
         }
         compose.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
         compose.onNodeWithText("Consumidor: Ana Pérez").assertIsDisplayed()
-        listOf("Monto", "Fecha: ", "Hora: ", "Motivo de la visita", "Duración estimada")
+        listOf("Monto", "Elegir fecha", "Elegir hora", "Motivo de la visita", "Duración estimada")
             .forEach { compose.onNodeWithText(it).assertExists() }
         compose.onNodeWithTag(PROPOSAL_DURATION_TAG).assertExists()
     }
@@ -124,19 +124,22 @@ class ProviderProposalScreenTest {
     }
 
     @Test
-    fun dateAndTimeOpenNativePickers() {
+    fun materialPickersApplyExistingDateAndTimeWithoutChangingTheirWireFormat() {
+        var date = ""
+        var time = ""
         compose.setContent {
             LoresuelvoTheme {
-                ProviderProposalScreen(ProposalUiState.Form(42, 7, "Ana Pérez"),
-                    {}, {}, {}, {}, {}, {}, {})
+                ProviderProposalScreen(ProposalUiState.Form(42, 7, "Ana Pérez",
+                    date = "2026-10-20", time = "14:30"),
+                    {}, { date = it }, { time = it }, {}, {}, {}, {})
             }
         }
-        compose.onNodeWithTag(PROPOSAL_DATE_TAG).performClick()
-        assertTrue(ShadowDialog.getLatestDialog() is android.app.DatePickerDialog)
-        ShadowDialog.getLatestDialog().dismiss()
-        compose.onNodeWithTag(PROPOSAL_TIME_TAG).performClick()
-        assertTrue(ShadowDialog.getLatestDialog() is android.app.TimePickerDialog)
-        ShadowDialog.getLatestDialog().dismiss()
+        compose.onNodeWithTag(PROPOSAL_DATE_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("Aplicar").performClick()
+        assertEquals("2026-10-20", date)
+        compose.onNodeWithTag(PROPOSAL_TIME_TAG).performScrollTo().performClick()
+        compose.onNodeWithText("Aplicar").performClick()
+        assertEquals("14:30", time)
     }
 
     @Test fun invalidAmountShowsLocalizedCorrectionAndContinueAction() {

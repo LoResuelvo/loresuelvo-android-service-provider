@@ -2,11 +2,12 @@ package com.loresuelvo.serviceprovider.ui.screens.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -68,12 +69,12 @@ internal fun ProfileCalendarCard(
                 color = MaterialTheme.colorScheme.error)
         }
         if (state.confirmationRetry || status == CalendarConnectionStatus.Unavailable || status.canAuthorize) {
-            Button(onClick = when {
+            OutlinedButton(onClick = when {
                 state.confirmationRetry -> onRetryConfirmation
                 status == CalendarConnectionStatus.Unavailable -> onReloadProfile
                 else -> onAuthorize
             }, enabled = actionEnabled && !state.loading,
-                modifier = Modifier.fillMaxWidth().testTag(PROFILE_CALENDAR_ACTION_TAG),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(PROFILE_CALENDAR_ACTION_TAG),
                 shape = MaterialTheme.shapes.medium) {
                 Text(stringResource(when {
                     state.confirmationRetry || status == CalendarConnectionStatus.Unavailable -> R.string.provider_profile_calendar_retry_query

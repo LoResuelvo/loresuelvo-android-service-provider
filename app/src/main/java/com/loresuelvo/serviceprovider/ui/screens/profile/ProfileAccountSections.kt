@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -14,7 +15,7 @@ import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -140,14 +141,14 @@ private fun ProfileIdentityActions(
         }), color = MaterialTheme.colorScheme.error,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
     }
-    Button(onClick = onVerify, enabled = actionEnabled && !identity.loading && status.availableAction != null,
-        modifier = Modifier.fillMaxWidth().testTag(PROFILE_IDENTITY_ACTION_TAG),
+    OutlinedButton(onClick = onVerify, enabled = actionEnabled && !identity.loading && status.availableAction != null,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(PROFILE_IDENTITY_ACTION_TAG),
         shape = MaterialTheme.shapes.medium) {
         Text(stringResource(if (status.availableAction == IdentityVerificationAction.Retry)
             R.string.provider_profile_view_retry else R.string.provider_profile_identity_verify))
     }
     if (status == IdentityVerificationStatus.Unavailable) {
-        Button(onClick = onReload, enabled = actionEnabled && !identity.loading, modifier = Modifier.fillMaxWidth(),
+        OutlinedButton(onClick = onReload, enabled = actionEnabled && !identity.loading, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             shape = MaterialTheme.shapes.medium) {
             Text(stringResource(R.string.provider_profile_identity_reload))
         }
@@ -178,11 +179,11 @@ internal fun ProfilePaymentCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (payment == ProfilePaymentState.Pending) {
-            Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
+            OutlinedButton(onClick = onConnect, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = MaterialTheme.shapes.medium) {
                 Text(stringResource(R.string.mercadopago_connect_button))
             }
         } else if (payment == ProfilePaymentState.Unavailable) {
-            Button(onClick = onRetry, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium) {
+            OutlinedButton(onClick = onRetry, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = MaterialTheme.shapes.medium) {
                 Text(stringResource(R.string.provider_profile_connection_retry))
             }
         }

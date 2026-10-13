@@ -19,20 +19,12 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.test.espresso.Espresso.onView
 import android.view.KeyEvent
-import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
-import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
-import androidx.test.espresso.matcher.ViewMatchers.withId
-import androidx.test.espresso.matcher.RootMatchers.withDecorView
-import androidx.test.espresso.matcher.ViewMatchers.hasDescendant
-import androidx.test.espresso.ViewAction
-import androidx.test.espresso.UiController
-import android.view.View
-import android.widget.DatePicker
-import android.widget.TimePicker
-import java.util.Calendar
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.performTextReplacement
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -114,8 +106,6 @@ import com.loresuelvo.serviceprovider.domain.paymentaccount.PaymentAccountStatus
 @RunWith(AndroidJUnit4::class)
 class ProviderConversationAttachmentAcceptanceTest {
 
-    private val datePickerRoot = withDecorView(hasDescendant(isAssignableFrom(DatePicker::class.java)))
-    private val timePickerRoot = withDecorView(hasDescendant(isAssignableFrom(TimePicker::class.java)))
 
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
@@ -427,7 +417,7 @@ class ProviderConversationAttachmentAcceptanceTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText(context.getString(R.string.mercadopago_connect_title)).assertExists()
         composeTestRule.onNodeWithContentDescription(context.getString(R.string.mercadopago_return_profile)).performClick()
-        composeTestRule.onNodeWithContentDescription(context.getString(R.string.provider_profile_back)).performClick()
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
 
         composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_amount))
@@ -450,41 +440,29 @@ class ProviderConversationAttachmentAcceptanceTest {
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag(PROPOSAL_FORM_TAG).assertIsDisplayed()
 
-        val visit = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, 3); set(Calendar.HOUR_OF_DAY, 11); set(Calendar.MINUTE, 0) }
-        composeTestRule.onNodeWithTag(PROPOSAL_DATE_TAG).performClick()
-        onView(isAssignableFrom(DatePicker::class.java)).inRoot(datePickerRoot).perform(pickerAction("select visit date") { view ->
-            (view as DatePicker).updateDate(visit.get(Calendar.YEAR), visit.get(Calendar.MONTH), visit.get(Calendar.DAY_OF_MONTH))
-        })
-        onView(withId(android.R.id.button1)).inRoot(datePickerRoot).perform(click())
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-        onView(isAssignableFrom(DatePicker::class.java)).check(doesNotExist())
-        composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag(PROPOSAL_TIME_TAG).performClick()
-        onView(isAssignableFrom(TimePicker::class.java)).inRoot(timePickerRoot).perform(pickerAction("select visit time") { view ->
-            (view as TimePicker).apply { hour = 11; minute = 0 }
-        })
-        // Physical Samsung touch injection leaves this dialog open; invoke its native positive callback.
-        onView(withId(android.R.id.button1)).inRoot(timePickerRoot)
-            .perform(pickerAction("confirm visit time") { it.performClick() })
-        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-        composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_time) + ": 11:00").assertExists()
-        composeTestRule.waitForIdle()
+        val visit = LocalDate.now().plusDays(3)
+        composeTestRule.onNodeWithTag(PROPOSAL_DATE_TAG).performScrollTo().performClick()
+        composeTestRule.onNodeWithContentDescription(context.getString(
+            androidx.compose.material3.R.string.m3c_date_picker_switch_to_input_mode)).performClick()
+        val locale = context.resources.configuration.locales[0]
+        val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "yyyyMMdd")
+            .replace(Regex("[^dMy]"), "")
+        composeTestRule.onNode(hasSetTextAction().and(
+            hasAnyAncestor(hasTestTag("proposal-date-picker")))).performTextReplacement(
+            visit.format(DateTimeFormatter.ofPattern(pattern, Locale.ROOT)))
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_form_apply)).performClick()
+        composeTestRule.onNodeWithTag(PROPOSAL_TIME_TAG).performScrollTo().performClick()
+        // The chosen day is in the future; keep the visible valid time and exercise confirmation.
+        composeTestRule.onNodeWithText(context.getString(R.string.provider_form_apply)).performClick()
 
-        composeTestRule.onNodeWithTag(PROPOSAL_DURATION_TAG).performSemanticsAction(SemanticsActions.OnClick)
+        composeTestRule.onNodeWithTag(PROPOSAL_DURATION_TAG).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         composeTestRule.onNodeWithText(context.getString(R.string.provider_proposal_duration_minutes, 45))
             .performSemanticsAction(SemanticsActions.OnClick)
         composeTestRule.onNodeWithTag(PROPOSAL_CONTINUE_TAG).performScrollTo().performClick()
         composeTestRule.onNodeWithTag(PROPOSAL_CONFIRMATION_TAG).assertIsDisplayed()
     }
 
-    private fun pickerAction(description: String, change: (View) -> Unit): ViewAction = object : ViewAction {
-        override fun getConstraints() = org.hamcrest.Matchers.any(View::class.java)
-        override fun getDescription() = description
-        override fun perform(uiController: UiController, view: View) {
-            change(view)
-            uiController.loopMainThreadUntilIdle()
-        }
-    }
+
 }
 
 @EntryPoint

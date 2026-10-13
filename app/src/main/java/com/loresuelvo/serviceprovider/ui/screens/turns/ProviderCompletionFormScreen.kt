@@ -1,6 +1,12 @@
 package com.loresuelvo.serviceprovider.ui.screens.turns
 
 import com.loresuelvo.serviceprovider.ui.components.NavigationBackButton
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TopAppBarDefaults
+import com.loresuelvo.serviceprovider.ui.components.FormSection
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
@@ -8,11 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -28,25 +30,29 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.loresuelvo.serviceprovider.R
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrder
 import com.loresuelvo.serviceprovider.domain.activity.WorkOrderStatus
-import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.domain.activity.PostCompletionReportOutcome
 import com.loresuelvo.serviceprovider.ui.turns.CompletionEvidenceSelection
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionIssue
+import com.loresuelvo.serviceprovider.ui.turns.CompletionSubmissionState
+import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
+
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.semantics
+import com.loresuelvo.serviceprovider.domain.activity.EvidenceImagePreparation
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceSelectionStatus
 import com.loresuelvo.serviceprovider.ui.turns.EvidenceUploadStatus
-import com.loresuelvo.serviceprovider.ui.turns.CompletionSubmissionState
 import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionUploadStage
-import com.loresuelvo.serviceprovider.domain.usecase.activity.CompletionDraftValidation
 import coil3.compose.AsyncImage
 import java.io.File
 
@@ -79,136 +85,161 @@ fun ProviderCompletionFormScreen(
 ) {
     val editable = submission == CompletionSubmissionState.Idle ||
         submission == CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData)
-    Scaffold(topBar = { TopAppBar(
-        title = { Text(stringResource(R.string.provider_completion_title)) },
+    Scaffold(containerColor = MaterialTheme.colorScheme.surfaceContainerLow, topBar = { TopAppBar(
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        title = { Text(stringResource(R.string.provider_completion_title), style = MaterialTheme.typography.titleLarge) },
         navigationIcon = { NavigationBackButton(onClick = onBack, contentDescription = stringResource(R.string.provider_turns_back)) },
     ) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(order.consumerName, style = MaterialTheme.typography.titleLarge)
-            Text(order.description, style = MaterialTheme.typography.bodyLarge)
-            when {
-                submission is CompletionSubmissionState.Confirmed -> {
-                    Text(stringResource(R.string.provider_completion_report_success))
-                    val statusLabel = if (submission.serverConfirmed)
-                        refreshedOrderStatus?.let { providerTurnStatusBadge(it)?.label } else null
-                    if (statusLabel != null) {
-                        Text(stringResource(statusLabel))
-                    } else {
-                        Text(stringResource(R.string.provider_completion_report_refresh_pending))
+        Box(Modifier.fillMaxSize().padding(padding).imePadding(), contentAlignment = Alignment.TopCenter) {
+            Column(Modifier.widthIn(max = 600.dp).fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(order.consumerName, style = MaterialTheme.typography.titleLarge)
+                        Text(order.description, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                when {
+                    submission is CompletionSubmissionState.Confirmed -> {
+                        Text(stringResource(R.string.provider_completion_report_success))
+                        val statusLabel = if (submission.serverConfirmed)
+                            refreshedOrderStatus?.let { providerTurnStatusBadge(it)?.label } else null
+                        if (statusLabel != null) {
+                            Text(stringResource(statusLabel))
+                        } else {
+                            Text(stringResource(R.string.provider_completion_report_refresh_pending))
+                            Button(onClick = onRetryReconciliation,
+                                modifier = Modifier.testTag("completion_retry_query")) {
+                                Text(stringResource(R.string.provider_completion_report_retry_query))
+                            }
+                        }
+                    }
+                    submission == CompletionSubmissionState.QueryFailed -> {
+                        Text(stringResource(R.string.provider_completion_report_query_failed))
                         Button(onClick = onRetryReconciliation,
                             modifier = Modifier.testTag("completion_retry_query")) {
                             Text(stringResource(R.string.provider_completion_report_retry_query))
                         }
                     }
-                }
-                submission == CompletionSubmissionState.QueryFailed -> {
-                    Text(stringResource(R.string.provider_completion_report_query_failed))
-                    Button(onClick = onRetryReconciliation,
-                        modifier = Modifier.testTag("completion_retry_query")) {
-                        Text(stringResource(R.string.provider_completion_report_retry_query))
+                    submission == CompletionSubmissionState.Reconciling -> {
+                        CircularProgressIndicator()
+                        Text(stringResource(R.string.provider_completion_report_reconciling))
                     }
-                }
-                submission == CompletionSubmissionState.Reconciling -> {
-                    CircularProgressIndicator()
-                    Text(stringResource(R.string.provider_completion_report_reconciling))
-                }
-                submission is CompletionSubmissionState.Rejected &&
-                    submission.outcome != PostCompletionReportOutcome.Rejected.InvalidData -> {
-                    val outcome = submission.outcome
-                    Text(stringResource(when (outcome) {
-                        PostCompletionReportOutcome.Rejected.Forbidden -> R.string.provider_completion_forbidden
-                        PostCompletionReportOutcome.Rejected.NotFound -> R.string.provider_completion_missing
-                        PostCompletionReportOutcome.Rejected.Conflict -> when (availability) {
-                            CompletionFormAvailability.TooEarly -> R.string.provider_completion_too_early
-                            CompletionFormAvailability.AlreadyReported -> R.string.provider_completion_already_reported
-                            CompletionFormAvailability.Unavailable -> R.string.provider_completion_unavailable
-                            CompletionFormAvailability.Error -> R.string.provider_completion_report_query_failed
-                            else -> R.string.provider_completion_changed
-                        }
-                        else -> R.string.provider_completion_error
-                    }))
-                    if (outcome == PostCompletionReportOutcome.Rejected.Conflict &&
-                        availability == CompletionFormAvailability.Error) {
-                        Button(onClick = onRetryConflictQuery,
-                            modifier = Modifier.testTag("completion_retry_conflict_query")) {
-                            Text(stringResource(R.string.provider_completion_report_retry_query))
-                        }
-                    }
-                    if (outcome == PostCompletionReportOutcome.Rejected.NotFound) {
-                        NavigationBackButton(onClick = onBack,
-                            modifier = Modifier.testTag("completion_return_turns"),
-                            contentDescription = stringResource(R.string.provider_turns_back))
-                    }
-                }
-                else -> when (availability) {
-                CompletionFormAvailability.Checking -> {
-                    CircularProgressIndicator(Modifier.testTag("completion_checking"))
-                    Text(stringResource(R.string.provider_completion_checking))
-                }
-                CompletionFormAvailability.TooEarly -> Text(stringResource(R.string.provider_completion_too_early))
-                CompletionFormAvailability.AlreadyReported -> Text(stringResource(R.string.provider_completion_already_reported))
-                CompletionFormAvailability.Forbidden -> Text(stringResource(R.string.provider_completion_forbidden))
-                CompletionFormAvailability.ChangedOrder,
-                CompletionFormAvailability.Unavailable,
-                CompletionFormAvailability.NotFound,
-                CompletionFormAvailability.Error -> {
-                    Text(stringResource(when (availability) {
-                        CompletionFormAvailability.ChangedOrder -> R.string.provider_completion_changed
-                        CompletionFormAvailability.Unavailable -> R.string.provider_completion_unavailable
-                        CompletionFormAvailability.NotFound -> R.string.provider_completion_missing
-                        else -> R.string.provider_completion_error
-                    }))
-                    Button(onClick = onRetry) { Text(stringResource(R.string.provider_home_retry)) }
-                }
-                CompletionFormAvailability.Eligible -> {
-                    if (submission == CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData)) {
-                        Text(stringResource(R.string.provider_completion_report_invalid_data),
-                            color = MaterialTheme.colorScheme.error)
-                    }
-                    when (submission) {
-                        CompletionSubmissionState.Checking -> Text(stringResource(R.string.provider_completion_report_checking))
-                        CompletionSubmissionState.Sending -> Text(stringResource(R.string.provider_completion_report_sending))
-                        else -> Unit
-                    }
-                    OutlinedTextField(value = description, onValueChange = onDescriptionChange,
-                        label = { Text(stringResource(R.string.provider_completion_description)) },
-                        modifier = Modifier.fillMaxWidth().testTag("completion_description"), minLines = 3,
-                        enabled = editable)
-                    Text(stringResource(R.string.provider_completion_photos), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.provider_completion_photo_limit),
-                        style = MaterialTheme.typography.bodySmall)
-                    if (evidence.isNotEmpty()) {
-                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            evidence.forEachIndexed { index, selection ->
-                                CompletionEvidenceItem(index, selection, onRemoveEvidence, onRetryEvidence, editable)
+                    submission is CompletionSubmissionState.Rejected &&
+                        submission.outcome != PostCompletionReportOutcome.Rejected.InvalidData -> {
+                        val outcome = submission.outcome
+                        Text(stringResource(when (outcome) {
+                            PostCompletionReportOutcome.Rejected.Forbidden -> R.string.provider_completion_forbidden
+                            PostCompletionReportOutcome.Rejected.NotFound -> R.string.provider_completion_missing
+                            PostCompletionReportOutcome.Rejected.Conflict -> when (availability) {
+                                CompletionFormAvailability.TooEarly -> R.string.provider_completion_too_early
+                                CompletionFormAvailability.AlreadyReported -> R.string.provider_completion_already_reported
+                                CompletionFormAvailability.Unavailable -> R.string.provider_completion_unavailable
+                                CompletionFormAvailability.Error -> R.string.provider_completion_report_query_failed
+                                else -> R.string.provider_completion_changed
+                            }
+                            else -> R.string.provider_completion_error
+                        }))
+                        if (outcome == PostCompletionReportOutcome.Rejected.Conflict &&
+                            availability == CompletionFormAvailability.Error) {
+                            Button(onClick = onRetryConflictQuery,
+                                modifier = Modifier.testTag("completion_retry_conflict_query")) {
+                                Text(stringResource(R.string.provider_completion_report_retry_query))
                             }
                         }
+                        if (outcome == PostCompletionReportOutcome.Rejected.NotFound) {
+                            NavigationBackButton(onClick = onBack,
+                                modifier = Modifier.testTag("completion_return_turns"),
+                                contentDescription = stringResource(R.string.provider_turns_back))
+                        }
                     }
-                    if (evidenceIssue != null) {
-                        Text(stringResource(when (evidenceIssue) {
-                            EvidenceSelectionIssue.MaximumReached -> R.string.provider_completion_photo_maximum
-                            EvidenceSelectionIssue.AlreadySelected -> R.string.provider_completion_photo_duplicate
-                        }), color = MaterialTheme.colorScheme.error)
+                    else -> when (availability) {
+                    CompletionFormAvailability.Checking -> {
+                        CircularProgressIndicator(Modifier.testTag("completion_checking"))
+                        Text(stringResource(R.string.provider_completion_checking))
                     }
-                    OutlinedButton(onClick = onAddPhotos,
-                        enabled = canAddPhotos && editable) {
-                        Text(stringResource(R.string.provider_completion_add_photos))
+                    CompletionFormAvailability.TooEarly -> Text(stringResource(R.string.provider_completion_too_early))
+                    CompletionFormAvailability.AlreadyReported -> Text(stringResource(R.string.provider_completion_already_reported))
+                    CompletionFormAvailability.Forbidden -> Text(stringResource(R.string.provider_completion_forbidden))
+                    CompletionFormAvailability.ChangedOrder,
+                    CompletionFormAvailability.Unavailable,
+                    CompletionFormAvailability.NotFound,
+                    CompletionFormAvailability.Error -> {
+                        Text(stringResource(when (availability) {
+                            CompletionFormAvailability.ChangedOrder -> R.string.provider_completion_changed
+                            CompletionFormAvailability.Unavailable -> R.string.provider_completion_unavailable
+                            CompletionFormAvailability.NotFound -> R.string.provider_completion_missing
+                            else -> R.string.provider_completion_error
+                        }))
+                        Button(onClick = onRetry) { Text(stringResource(R.string.provider_home_retry)) }
                     }
-                    TextButton(onClick = onBack) { Text(stringResource(R.string.provider_completion_cancel)) }
-                    if (validationIssue != null) {
-                        Text(stringResource(validationIssue.messageResource()),
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.testTag("completion_validation_issue"))
+                    CompletionFormAvailability.Eligible -> {
+                        if (submission == CompletionSubmissionState.Rejected(PostCompletionReportOutcome.Rejected.InvalidData)) {
+                            Text(stringResource(R.string.provider_completion_report_invalid_data),
+                                color = MaterialTheme.colorScheme.error)
+                        }
+                        when (submission) {
+                            CompletionSubmissionState.Checking -> Text(stringResource(R.string.provider_completion_report_checking))
+                            CompletionSubmissionState.Sending -> Text(stringResource(R.string.provider_completion_report_sending))
+                            else -> Unit
+                        }
+                        FormSection(R.string.provider_completion_details_heading) {
+                            Text(stringResource(R.string.provider_completion_description_hint),
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedTextField(value = description, onValueChange = onDescriptionChange,
+                                label = { Text(stringResource(R.string.provider_completion_description)) },
+                                modifier = Modifier.fillMaxWidth().testTag("completion_description"), minLines = 4,
+                                shape = MaterialTheme.shapes.small,
+                                isError = validationIssue == CompletionDraftValidation.Invalid.DescriptionRequired,
+                                enabled = editable)
+                        }
+                        FormSection(R.string.provider_completion_photos) {
+                            Text(stringResource(R.string.provider_completion_photos_hint),
+                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.provider_completion_photos_count, evidence.size),
+                                style = MaterialTheme.typography.labelLarge)
+                            Text(stringResource(R.string.provider_completion_photo_limit),
+                                style = MaterialTheme.typography.bodySmall)
+                            if (evidence.isNotEmpty()) {
+                                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    evidence.forEachIndexed { index, selection ->
+                                        CompletionEvidenceItem(index, selection, onRemoveEvidence, onRetryEvidence, editable)
+                                    }
+                                }
+                            }
+                            if (evidenceIssue != null) {
+                                Text(stringResource(when (evidenceIssue) {
+                                    EvidenceSelectionIssue.MaximumReached -> R.string.provider_completion_photo_maximum
+                                    EvidenceSelectionIssue.AlreadySelected -> R.string.provider_completion_photo_duplicate
+                                }), color = MaterialTheme.colorScheme.error)
+                            }
+                            OutlinedButton(onClick = onAddPhotos,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                                shape = MaterialTheme.shapes.medium,
+                                enabled = canAddPhotos && editable) {
+                                Text(stringResource(R.string.provider_completion_add_photos))
+                            }
+                        }
+                        if (validationIssue != null) {
+                            Text(stringResource(validationIssue.messageResource()),
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.testTag("completion_validation_issue"))
+                        }
+                        Button(onClick = onSubmitAttempt,
+                            enabled = canAttemptSubmit && editable,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("completion_submit"),
+                            shape = MaterialTheme.shapes.medium) {
+                            Text(stringResource(R.string.provider_completion_submit))
+                        }
+                        TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                            Text(stringResource(R.string.provider_completion_cancel))
+                        }
                     }
-                    Button(onClick = onSubmitAttempt,
-                        enabled = canAttemptSubmit && editable,
-                        modifier = Modifier.testTag("completion_submit")) {
-                        Text(stringResource(R.string.provider_completion_submit))
                     }
-                }
                 }
             }
         }
@@ -231,16 +262,16 @@ private fun CompletionEvidenceItem(
     onRetry: (Long) -> Unit,
     editable: Boolean,
 ) {
-    Column(Modifier.width(96.dp).testTag("completion_evidence_${index}_${selection.id}"),
-        verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(Modifier.size(96.dp).clip(RoundedCornerShape(8.dp))
+    Column(Modifier.width(144.dp).testTag("completion_evidence_${index}_${selection.id}"),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(144.dp).clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
             when (val status = selection.status) {
                 is EvidenceSelectionStatus.Ready -> AsyncImage(
                     model = File(status.image.localPath),
                     contentDescription = stringResource(R.string.provider_completion_photo_preview, index + 1),
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(96.dp),
+                    modifier = Modifier.size(144.dp),
                 )
                 EvidenceSelectionStatus.Preparing -> CircularProgressIndicator(Modifier.size(32.dp))
                 is EvidenceSelectionStatus.Invalid -> Text(stringResource(R.string.provider_completion_photo_invalid),
