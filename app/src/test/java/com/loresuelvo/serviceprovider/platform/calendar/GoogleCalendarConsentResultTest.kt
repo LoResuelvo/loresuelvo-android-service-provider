@@ -1,6 +1,7 @@
 package com.loresuelvo.serviceprovider.platform.calendar
 
 import com.google.android.gms.auth.api.identity.AuthorizationResult
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.loresuelvo.serviceprovider.domain.calendar.CalendarConsentResult
 import io.mockk.every
 import io.mockk.mockk
@@ -10,6 +11,15 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class GoogleCalendarConsentResultTest {
+    @Test
+    fun configuration_and_service_errors_are_not_user_cancellation() {
+        for (status in listOf(CommonStatusCodes.DEVELOPER_ERROR, CommonStatusCodes.INTERNAL_ERROR,
+            CommonStatusCodes.NETWORK_ERROR, null)) {
+            assertEquals(CalendarConsentResult.Failed, calendarConsentFailure(status))
+        }
+        assertEquals(CalendarConsentResult.Cancelled, calendarConsentFailure(CommonStatusCodes.CANCELED))
+    }
+
     @Test
     fun only_granted_owned_calendar_scope_and_nonblank_server_code_authorize() {
         val result = mockk<AuthorizationResult>()

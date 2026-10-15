@@ -54,6 +54,7 @@ class ProfileCalendarTestLauncher @Inject constructor() : CalendarConsentLaunche
     fun completeWithoutResolution(result: CalendarConsentResult, index: Int = calls - 1) = results[index].invoke(result)
     override fun result(activity: Activity, intent: Intent?): CalendarConsentResult {
         parsedResults++
+        if (intent?.getBooleanExtra("failed", false) == true) return CalendarConsentResult.Failed
         return if (intent?.getBooleanExtra("authorized", false) == true)
             CalendarConsentResult.Authorized("android-test-server-code") else CalendarConsentResult.Denied
     }

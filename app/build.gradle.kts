@@ -1,3 +1,4 @@
+import java.net.URI
 import java.util.Properties
 
 plugins {
@@ -147,7 +148,7 @@ android {
             val auth0Scheme = envVar("AUTH0_SCHEME_STAGING", "com.loresuelvo.provider.staging")
             val auth0Audience = envVar("AUTH0_AUDIENCE_STAGING")
             val apiUrl = envVar("API_URL_STAGING")
-            val paymentReturnHost = envVar("PAYMENT_RETURN_HOST_STAGING")
+            val paymentReturnHost = envVar("PAYMENT_RETURN_HOST_STAGING").ifBlank { "test.loresuelvo.com.ar" }
             val calendarClientId = envVar("GOOGLE_CALENDAR_SERVER_CLIENT_ID_STAGING")
 
             buildConfigField("String", "API_URL", "\"$apiUrl\"")
@@ -160,6 +161,7 @@ android {
 
             manifestPlaceholders["auth0Domain"] = auth0Domain
             manifestPlaceholders["auth0Scheme"] = auth0Scheme
+            manifestPlaceholders["paymentReturnHost"] = paymentReturnHost
         }
 
         create("prod") {
@@ -171,7 +173,7 @@ android {
             val auth0Scheme = envVar("AUTH0_SCHEME_PROD", "com.loresuelvo.provider.prod")
             val auth0Audience = envVar("AUTH0_AUDIENCE_PROD")
             val apiUrl = envVar("API_URL_PROD")
-            val paymentReturnHost = envVar("PAYMENT_RETURN_HOST_PROD")
+            val paymentReturnHost = envVar("PAYMENT_RETURN_HOST_PROD").ifBlank { "loresuelvo.com.ar" }
             val calendarClientId = envVar("GOOGLE_CALENDAR_SERVER_CLIENT_ID_PROD")
 
             buildConfigField("String", "API_URL", "\"$apiUrl\"")
@@ -184,6 +186,7 @@ android {
 
             manifestPlaceholders["auth0Domain"] = auth0Domain
             manifestPlaceholders["auth0Scheme"] = auth0Scheme
+            manifestPlaceholders["paymentReturnHost"] = paymentReturnHost
         }
     }
 }
@@ -194,6 +197,23 @@ android {
 // ==========================================
 gradle.taskGraph.whenReady {
     val runningTasks = allTasks.map { it.name }
+
+    // Distributed builds must be able to receive the payment provider return link.
+    for (flavor in listOf("Staging", "Prod")) {
+        if (runningTasks.any { it.contains("${flavor}Release") }) {
+            val key = "PAYMENT_RETURN_HOST_${flavor.uppercase()}"
+            val host = envVar(key).ifBlank {
+                if (flavor == "Staging") "test.loresuelvo.com.ar" else "loresuelvo.com.ar"
+            }
+            check(host.isNotBlank() && runCatching {
+                val uri = URI("https://$host")
+                uri.host == host && uri.port == -1 && uri.rawUserInfo == null &&
+                    uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawFragment == null
+            }.getOrDefault(false)) {
+                "$key must contain a hostname without a scheme, port, or path for release builds"
+            }
+        }
+    }
 
     val requiredForStaging = listOf(
         "AUTH0_DOMAIN_STAGING", "AUTH0_CLIENT_ID_STAGING",

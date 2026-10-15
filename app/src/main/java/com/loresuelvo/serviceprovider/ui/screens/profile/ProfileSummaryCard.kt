@@ -82,7 +82,7 @@ private fun ProfileNameAndCategory(provider: CurrentAccount.Provider, modifier: 
             text = "${provider.name} ${provider.surname}".trim(),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.semantics { heading() }.testTag(PROVIDER_PROFILE_NAME_TAG),
+            modifier = Modifier.fillMaxWidth().semantics { heading() }.testTag(PROVIDER_PROFILE_NAME_TAG),
         )
         Surface(
             color = MaterialTheme.colorScheme.secondaryContainer,
@@ -92,7 +92,7 @@ private fun ProfileNameAndCategory(provider: CurrentAccount.Provider, modifier: 
             Text(
                 text = provider.category.name,
                 style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             )
         }
     }

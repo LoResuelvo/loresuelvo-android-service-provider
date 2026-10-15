@@ -72,7 +72,8 @@ fun ProviderProfileRoute(
         // The registry owns this immutable attempt, including delayed restored results.
         if (!viewModel.acceptsCalendarResolution(id)) return@register
         if (calendarAttempt == id) calendarAttempt = null
-        viewModel.onCalendarResult(id, if (result.resultCode == Activity.RESULT_CANCELED) {
+        // Google can return SDK errors with RESULT_CANCELED; preserve its result data.
+        viewModel.onCalendarResult(id, if (result.resultCode == Activity.RESULT_CANCELED && result.data == null) {
             CalendarConsentResult.Cancelled
         } else calendarLauncher.result(activity, result.data))
     }

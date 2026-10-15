@@ -2,6 +2,7 @@ package com.loresuelvo.serviceprovider.platform.calendar
 
 import android.app.Activity
 import android.content.Intent
+import android.util.Log
 import android.content.IntentSender
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
@@ -48,9 +49,13 @@ class GoogleCalendarConsentLauncher @Inject constructor() : CalendarConsentLaunc
         error.toConsentFailure()
     }
 
-    private fun Exception.toConsentFailure(): CalendarConsentResult = when ((this as? ApiException)?.statusCode) {
-        CommonStatusCodes.CANCELED -> CalendarConsentResult.Cancelled
-        else -> CalendarConsentResult.Failed
+    private fun Exception.toConsentFailure(): CalendarConsentResult {
+        val statusCode = (this as? ApiException)?.statusCode
+        // Record only the SDK status, never the intent, exception message, or credentials.
+        if (statusCode != CommonStatusCodes.CANCELED) {
+            Log.w("CalendarConsent", "Authorization failed; statusCode=$statusCode")
+        }
+        return calendarConsentFailure(statusCode)
     }
 
 }
@@ -61,4 +66,9 @@ internal fun AuthorizationResult.toCalendarConsentResult(): CalendarConsentResul
     if (!grantedScopes.contains(CALENDAR_SCOPE)) return CalendarConsentResult.Denied
     val code = serverAuthCode?.takeIf { it.isNotBlank() } ?: return CalendarConsentResult.Failed
     return CalendarConsentResult.Authorized(code)
+}
+
+internal fun calendarConsentFailure(statusCode: Int?): CalendarConsentResult = when (statusCode) {
+    CommonStatusCodes.CANCELED -> CalendarConsentResult.Cancelled
+    else -> CalendarConsentResult.Failed
 }

@@ -158,6 +158,19 @@ class ProfileCalendarNavigationTest {
     }
 
     @Test
+    fun cancelled_activity_with_error_data_is_parsed_instead_of_reported_as_user_cancellation() {
+        start()
+        val activity = awaitConsent()
+        compose.runOnUiThread {
+            activity.setResult(Activity.RESULT_CANCELED, Intent().putExtra("failed", true))
+            activity.finish()
+        }
+        assertRecoverable(R.string.provider_profile_calendar_consent_failed)
+        assertEquals(1, dependencies.calendarLauncher().parsedResults)
+        assertEquals(0, dependencies.calendar().calls)
+    }
+
+    @Test
     fun denial_returns_to_profile_without_success_and_allows_another_attempt() {
         start(); finishConsent(Activity.RESULT_OK, authorized = false)
         assertRecoverable(R.string.provider_profile_calendar_denied)
@@ -373,7 +386,8 @@ class ProfileCalendarNavigationTest {
     private fun finishConsent(resultCode: Int, authorized: Boolean = false) {
         val activity = awaitConsent()
         compose.runOnUiThread {
-            activity.setResult(resultCode, Intent().putExtra("authorized", authorized))
+            activity.setResult(resultCode, if (resultCode == Activity.RESULT_CANCELED) null
+                else Intent().putExtra("authorized", authorized))
             activity.finish()
         }
         compose.waitForIdle()
